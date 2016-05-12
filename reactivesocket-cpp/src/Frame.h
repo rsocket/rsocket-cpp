@@ -101,8 +101,9 @@ std::ostream& operator<<(std::ostream&, const FrameHeader&);
 
 class FrameBufferAllocator {
  public:
-  virtual ~FrameBufferAllocator() = default;
   static std::unique_ptr<folly::IOBuf> allocate(size_t size);
+
+  virtual ~FrameBufferAllocator() = default;
 
  private:
   virtual std::unique_ptr<folly::IOBuf> allocateBuffer(size_t size);

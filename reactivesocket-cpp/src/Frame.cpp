@@ -25,8 +25,7 @@ namespace lithium {
 namespace reactivesocket {
 
 std::unique_ptr<folly::IOBuf> FrameBufferAllocator::allocate(size_t size) {
-  return folly::Singleton<FrameBufferAllocator>::get()->allocateBuffer(
-      size);
+  return folly::Singleton<FrameBufferAllocator>::get()->allocateBuffer(size);
 }
 
 std::unique_ptr<folly::IOBuf> FrameBufferAllocator::allocateBuffer(

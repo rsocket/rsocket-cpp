@@ -15,7 +15,7 @@
 using namespace ::testing;
 using namespace ::lithium::reactivesocket;
 
-class FrameBufferAllocationTest : public ::testing::Test {
+class FrameTest : public ::testing::Test {
   void SetUp() override {
     EXPECT_CALL(allocator, allocateBuffer_(_))
         .WillOnce(Invoke([](size_t size) {
@@ -26,25 +26,25 @@ class FrameBufferAllocationTest : public ::testing::Test {
         }));
 
     folly::Singleton<lithium::reactivesocket::FrameBufferAllocator>::make_mock(
-        [&] { return &allocator; }, /*no tear down*/ [](void*) {});
+        [&] { return &allocator; }, /* no tear down */ [](void*) {});
   }
 
   void TearDown() override {
     folly::SingletonVault::singleton()->destroyInstances();
+    // Bring the default allocator.
+    folly::Singleton<lithium::reactivesocket::FrameBufferAllocator>::make_mock(
+        nullptr);
     folly::SingletonVault::singleton()->reenableInstances();
   }
 
-  class MyBufferAllocator
-      : public lithium::reactivesocket::FrameBufferAllocator {
+  class MockBufferAllocator : public FrameBufferAllocator {
    public:
     MOCK_METHOD1(allocateBuffer_, folly::IOBuf*(size_t size));
 
     std::unique_ptr<folly::IOBuf> allocateBuffer(size_t size) override {
       return std::unique_ptr<folly::IOBuf>(allocateBuffer_(size));
     }
-  };
-
-  MyBufferAllocator allocator;
+  } allocator;
 };
 
 // TODO(stupaq): tests with malformed frames
@@ -68,7 +68,7 @@ void expectHeader(
   EXPECT_EQ(flags, frame.header_.flags_);
 }
 
-TEST_F(FrameBufferAllocationTest, Frame_REQUEST_CHANNEL) {
+TEST_F(FrameTest, Frame_REQUEST_CHANNEL) {
   uint32_t streamId = 42;
   FrameFlags flags = FrameFlags_COMPLETE | FrameFlags_REQN_PRESENT;
   uint32_t requestN = 3;
@@ -81,7 +81,7 @@ TEST_F(FrameBufferAllocationTest, Frame_REQUEST_CHANNEL) {
   EXPECT_TRUE(folly::IOBufEqual()(*data, *frame.data_));
 }
 
-TEST_F(FrameBufferAllocationTest, Frame_REQUEST_N) {
+TEST_F(FrameTest, Frame_REQUEST_N) {
   uint32_t streamId = 42;
   uint32_t requestN = 24;
   auto frame = reserialize<Frame_REQUEST_N>(streamId, requestN);
@@ -90,14 +90,14 @@ TEST_F(FrameBufferAllocationTest, Frame_REQUEST_N) {
   EXPECT_EQ(requestN, frame.requestN_);
 }
 
-TEST_F(FrameBufferAllocationTest, Frame_CANCEL) {
+TEST_F(FrameTest, Frame_CANCEL) {
   uint32_t streamId = 42;
   auto frame = reserialize<Frame_CANCEL>(streamId);
 
   expectHeader(FrameType::CANCEL, FrameFlags_EMPTY, streamId, frame);
 }
 
-TEST_F(FrameBufferAllocationTest, Frame_RESPONE) {
+TEST_F(FrameTest, Frame_RESPONE) {
   uint32_t streamId = 42;
   FrameFlags flags = FrameFlags_COMPLETE;
   auto data = folly::IOBuf::copyBuffer("424242");
@@ -107,7 +107,7 @@ TEST_F(FrameBufferAllocationTest, Frame_RESPONE) {
   EXPECT_TRUE(folly::IOBufEqual()(*data, *frame.data_));
 }
 
-TEST_F(FrameBufferAllocationTest, Frame_ERROR) {
+TEST_F(FrameTest, Frame_ERROR) {
   uint32_t streamId = 42;
   auto errorCode = ErrorCode::REJECTED;
   auto frame = reserialize<Frame_ERROR>(streamId, errorCode);
