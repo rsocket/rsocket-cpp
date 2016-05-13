@@ -1,7 +1,5 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-
-
 #include <cstddef>
 #include <exception>
 #include <limits>

@@ -1,6 +1,5 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-
 #pragma once
 
 #include <exception>
@@ -19,9 +18,10 @@ class Subscriber;
 ///
 /// Life cycle considerations:
 /// 1. The Publisher is not owned by Subscriber or Subscription.
-/// 2. The Publisher can be a temporary object, as it is only used to capture the
-///   indirection in creation of the Subscription instance. Publisher's lifetime
-///   does not need to extend beyond a lifetime of any of the Subscribers.
+/// 2. The Publisher can be a temporary object, as it is only used to capture
+///   the indirection in creation of the Subscription instance. Publisher's
+///   lifetime does not need to extend beyond a lifetime of any of the
+///   Subscribers.
 template <typename T, typename E = std::exception_ptr>
 class Publisher {
  public:

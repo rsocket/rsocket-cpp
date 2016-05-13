@@ -1,6 +1,5 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-
 #pragma once
 
 #include <exception>
@@ -64,16 +63,16 @@ class Subscriber {
   /// Called by or on behalf of Publisher when it wishes to terminate the
   /// abstract subscription gracefully.
   ///
-  /// Subscriber pointer passed to the Publisher::subscribe may become invalid as
-  /// a result of this call. No other method of the Subscriber can be called
+  /// Subscriber pointer passed to the Publisher::subscribe may become invalid
+  /// as a result of this call. No other method of the Subscriber can be called
   /// after or during an invocation of ::onComplete.
   virtual void onComplete() = 0;
 
   /// Called by or on behalf of Publisher when it wishes to terminate the
   /// abstract subscription with an error.
   ///
-  /// Subscriber pointer passed to the Publisher::subscribe may become invalid as
-  /// a result of this call. No other method of the Subscriber can be called
+  /// Subscriber pointer passed to the Publisher::subscribe may become invalid
+  /// as a result of this call. No other method of the Subscriber can be called
   /// after or during an invocation of ::onError.
   virtual void onError(E ex) = 0;
 };

@@ -1,6 +1,5 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-
 #pragma once
 
 #include "reactivesocket-cpp/src/Payload.h"

@@ -1,6 +1,5 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-
 #include "ChannelResponder.h"
 
 #include <folly/ExceptionWrapper.h>

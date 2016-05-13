@@ -1,6 +1,5 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-
 #include "SubscriptionResponder.h"
 
 #include <folly/ExceptionWrapper.h>

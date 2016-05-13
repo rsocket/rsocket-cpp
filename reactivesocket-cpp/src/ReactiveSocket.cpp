@@ -1,6 +1,5 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-
 #include "reactivesocket-cpp/src/ReactiveSocket.h"
 
 #include <cassert>

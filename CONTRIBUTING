@@ -13,7 +13,8 @@ We actively welcome your pull requests.
 3. If you've changed APIs, update the documentation.
 4. Ensure the test suite passes.
 5. Make sure your code lints.
-6. If you haven't already, complete the Contributor License Agreement ("CLA").
+6. Make sure your code is properly formatted by running `devtools/format_all.sh`.
+7. If you haven't already, complete the Contributor License Agreement ("CLA").
 
 ## Contributor License Agreement ("CLA")
 In order to accept your pull request, we need you to submit a CLA. You only need
@@ -29,10 +30,10 @@ Facebook has a [bounty program](https://www.facebook.com/whitehat/) for the safe
 disclosure of security bugs. In those cases, please go through the process
 outlined on that page and do not file a public issue.
 
-## Coding Style  
-* 2 spaces for indentation rather than tabs
-* 80 character line length
-* ...
+## Coding Style
+Most of the code formatting will be handled for you by marvellous `clang-format`, which, at least on OSX, you can obtain from Homebrew via `brew install clang-format`. To ensure proper formatting, simply run `devtools/format_all.sh` before submitting a patch.
+
+As far as naming conventions are concerned, please try matching existing code as much as possible.
 
 ## License
 By contributing to reactivesocket-cpp, you agree that your contributions will be licensed

@@ -1,6 +1,5 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-
 #pragma once
 
 #include <cstdint>
@@ -40,8 +39,7 @@ class MixinTerminator
   struct Parameters {
     Parameters() = default;
     Parameters(ConnectionAutomaton* _connection, StreamId _streamId)
-    : connection(_connection),
-      streamId(_streamId) {}
+        : connection(_connection), streamId(_streamId) {}
 
     ConnectionAutomaton* connection{nullptr};
     StreamId streamId{0};
