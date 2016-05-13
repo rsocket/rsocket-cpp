@@ -21,7 +21,7 @@ enum class StreamCompletionSignal;
 
 /// A mixin that represents a flow-control-aware producer of data.
 template <typename ProducedFrame, typename Base>
-class ProducerMixin : public Base {
+class PublisherMixin : public Base {
  public:
   using Base::Base;
 
@@ -64,7 +64,7 @@ class ProducerMixin : public Base {
   /// @}
 
   std::ostream& logPrefix(std::ostream& os) {
-    return os << "ProducerMixin(" << &this->connection_ << ", "
+    return os << "PublisherMixin(" << &this->connection_ << ", "
               << this->streamId_ << "): ";
   }
 

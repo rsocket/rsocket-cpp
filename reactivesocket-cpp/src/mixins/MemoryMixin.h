@@ -41,7 +41,7 @@ class MemoryMixin : public Base {
   ~MemoryMixin() {}
 
   /// @{
-  /// Producer<Payload>
+  /// Publisher<Payload>
   void subscribe(Subscriber<Payload>& subscriber) {
     Base::incrementRefCount();
     Base::subscribe(subscriber);

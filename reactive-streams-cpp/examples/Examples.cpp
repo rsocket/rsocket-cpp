@@ -14,7 +14,7 @@ TEST(Examples, SelfManagedMocks) {
   // double-free bugs.
   int value = 42;
 
-  UnmanagedMockProducer<int> producer;
+  UnmanagedMockPublisher<int> producer;
   auto* subscription = &makeMockSubscription();
   auto* subscriber = &makeMockSubscriber<int>();
   {
@@ -31,7 +31,7 @@ TEST(Examples, SelfManagedMocks) {
           // deliver one element, despite Subscription::cancel() has been
           // called.
           subscriber->onNext(value);
-          // This Producer never spontaneously terminates the subscription,
+          // This Publisher never spontaneously terminates the subscription,
           // hence we can respond with onComplete unconditionally.
           subscriber->onComplete();
           subscriber = nullptr;
@@ -50,7 +50,7 @@ TEST(Examples, UnmanagedMocks) {
   // double-free bugs.
   int value = 42;
 
-  UnmanagedMockProducer<int> producer;
+  UnmanagedMockPublisher<int> producer;
   UnmanagedMockSubscription subscription;
   UnmanagedMockSubscriber<int> subscriber;
   {
@@ -67,7 +67,7 @@ TEST(Examples, UnmanagedMocks) {
           // deliver one element, despite Subscription::cancel() has been
           // called.
           subscriber.onNext(value);
-          // This Producer never spontaneously terminates the subscription,
+          // This Publisher never spontaneously terminates the subscription,
           // hence we can respond with onComplete unconditionally.
           subscriber.onComplete();
         }));

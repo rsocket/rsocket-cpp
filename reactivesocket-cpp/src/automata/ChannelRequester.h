@@ -16,7 +16,7 @@
 #include "reactivesocket-cpp/src/mixins/LoggingMixin.h"
 #include "reactivesocket-cpp/src/mixins/MemoryMixin.h"
 #include "reactivesocket-cpp/src/mixins/MixinTerminator.h"
-#include "reactivesocket-cpp/src/mixins/ProducerMixin.h"
+#include "reactivesocket-cpp/src/mixins/PublisherMixin.h"
 #include "reactivesocket-cpp/src/mixins/SinkIfMixin.h"
 #include "reactivesocket-cpp/src/mixins/SourceIfMixin.h"
 #include "reactivesocket-cpp/src/mixins/StreamIfMixin.h"
@@ -32,10 +32,10 @@ enum class StreamCompletionSignal;
 
 /// Implementation of stream automaton that represents a Channel requester.
 class ChannelRequesterBase
-    : public LoggingMixin<ProducerMixin<
+    : public LoggingMixin<PublisherMixin<
           Frame_REQUEST_CHANNEL,
           LoggingMixin<ConsumerMixin<Frame_RESPONSE, MixinTerminator>>>> {
-  using Base = LoggingMixin<ProducerMixin<
+  using Base = LoggingMixin<PublisherMixin<
       Frame_REQUEST_CHANNEL,
       LoggingMixin<ConsumerMixin<Frame_RESPONSE, MixinTerminator>>>>;
 

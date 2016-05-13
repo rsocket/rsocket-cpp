@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "reactive-streams-cpp/Producer.h"
+#include "reactive-streams-cpp/Publisher.h"
 #include "reactive-streams-cpp/Subscriber.h"
 #include "reactive-streams-cpp/Subscription.h"
 
@@ -28,7 +28,7 @@ class SubscriptionPtr;
 namespace reactivesocket {
 
 template <typename T>
-using Producer = reactivestreams::Producer<T, folly::exception_wrapper>;
+using Publisher = reactivestreams::Publisher<T, folly::exception_wrapper>;
 template <typename T>
 using Subscriber = reactivestreams::Subscriber<T, folly::exception_wrapper>;
 using Subscription = reactivestreams::Subscription;

@@ -16,7 +16,7 @@ include_directories(${CMAKE_SOURCE_DIR})
 add_library(
   ReactiveSocket
   reactive-streams-cpp/Mocks.h
-  reactive-streams-cpp/Producer.h
+  reactive-streams-cpp/Publisher.h
   reactive-streams-cpp/README.md
   reactive-streams-cpp/Subscriber.h
   reactive-streams-cpp/Subscription.h
@@ -47,7 +47,7 @@ add_library(
   reactivesocket-cpp/src/mixins/LoggingMixin.h
   reactivesocket-cpp/src/mixins/MemoryMixin.h
   reactivesocket-cpp/src/mixins/MixinTerminator.h
-  reactivesocket-cpp/src/mixins/ProducerMixin.h
+  reactivesocket-cpp/src/mixins/PublisherMixin.h
   reactivesocket-cpp/src/mixins/README.md
   reactivesocket-cpp/src/mixins/SinkIfMixin.h
   reactivesocket-cpp/src/mixins/SourceIfMixin.h

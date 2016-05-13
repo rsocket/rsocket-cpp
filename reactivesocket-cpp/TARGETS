@@ -29,7 +29,7 @@ cpp_library(
         'src/mixins/MemoryMixin.h',
         'src/mixins/MixinTerminator.h',
         'src/mixins/LoggingMixin.h',
-        'src/mixins/ProducerMixin.h',
+        'src/mixins/PublisherMixin.h',
         'src/mixins/StreamIfMixin.h',
         'src/mixins/SinkIfMixin.h',
         'src/mixins/SourceIfMixin.h',

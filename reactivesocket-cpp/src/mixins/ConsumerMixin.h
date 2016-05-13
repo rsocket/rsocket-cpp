@@ -25,7 +25,7 @@ class ConsumerMixin : public Base {
   /// Adds implicit allowance.
   ///
   /// This portion of allowance will not be synced to the remote end, but will
-  /// count towards the limit of allowance the remote ProducerMixin may use.
+  /// count towards the limit of allowance the remote PublisherMixin may use.
   void addImplicitAllowance(size_t n) {
     allowance_.release(n);
   }

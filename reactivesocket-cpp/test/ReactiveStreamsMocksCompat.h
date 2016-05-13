@@ -16,8 +16,8 @@ namespace lithium {
 namespace reactivesocket {
 
 template <typename T>
-using UnmanagedMockProducer =
-    reactivestreams::UnmanagedMockProducer<T, folly::exception_wrapper>;
+using UnmanagedMockPublisher =
+    reactivestreams::UnmanagedMockPublisher<T, folly::exception_wrapper>;
 template <typename T>
 using UnmanagedMockSubscriber =
     reactivestreams::UnmanagedMockSubscriber<T, folly::exception_wrapper>;

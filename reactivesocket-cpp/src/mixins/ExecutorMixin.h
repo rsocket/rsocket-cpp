@@ -48,7 +48,7 @@ class ExecutorMixin : public Base {
   }
 
   /// @{
-  /// Producer<Payload>
+  /// Publisher<Payload>
   void subscribe(Subscriber<Payload>& subscriber) {
     // This call punches through the executor-enforced ordering, to ensure that
     // the Subscriber pointer is set as soon as possible.

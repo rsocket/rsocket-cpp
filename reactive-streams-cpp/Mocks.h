@@ -8,7 +8,7 @@
 
 #include <gmock/gmock.h>
 
-#include "reactive-streams-cpp/Producer.h"
+#include "reactive-streams-cpp/Publisher.h"
 #include "reactive-streams-cpp/Subscriber.h"
 #include "reactive-streams-cpp/Subscription.h"
 #include "reactive-streams-cpp/utilities/Ownership.h"
@@ -16,10 +16,10 @@
 namespace lithium {
 namespace reactivestreams {
 
-/// GoogleMock-compatible Producer implementation for fast prototyping.
-/// UnmanagedMockProducer's lifetime MUST be managed externally.
+/// GoogleMock-compatible Publisher implementation for fast prototyping.
+/// UnmanagedMockPublisher's lifetime MUST be managed externally.
 template <typename T, typename E = std::exception_ptr>
-class UnmanagedMockProducer : public Producer<T, E> {
+class UnmanagedMockPublisher : public Publisher<T, E> {
  public:
   MOCK_METHOD1_T(subscribe_, void(Subscriber<T, E>* subscriber));
 
@@ -93,7 +93,7 @@ class MockSubscriber : public Subscriber<T, E> {
 
   void onSubscribe(Subscription& subscription) override {
     subscription_ = &subscription;
-    // We allow registering the same subscriber with multiple Producers.
+    // We allow registering the same subscriber with multiple Publishers.
     // Otherwise, we could get rid of reference counting.
     refCount_.increment();
     onSubscribe_(&subscription);

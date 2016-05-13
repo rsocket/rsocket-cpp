@@ -15,7 +15,7 @@ class RequestHandler {
 
   /// Handles a new Channel requested by the other end.
   ///
-  /// Modelled after Producer::subscribe, hence must synchronously call
+  /// Modelled after Publisher::subscribe, hence must synchronously call
   /// Subscriber::onSubscribe, and provide a valid Subscription.
   virtual Subscriber<Payload>& handleRequestChannel(
       Payload request,

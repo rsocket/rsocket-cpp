@@ -39,7 +39,7 @@ class LoggingMixin : public Base {
   }
 
   /// @{
-  /// Producer<Payload>
+  /// Publisher<Payload>
   void subscribe(Subscriber<Payload>& subscriber) {
     Base::logPrefix(LOG(INFO)) << "subscribe(" << &subscriber << ")";
     Base::subscribe(subscriber);
