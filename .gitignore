@@ -1,1 +1,48 @@
+# Created by https://www.gitignore.io/api/cmake,c++
+
+### CMake ###
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Makefile
+cmake_install.cmake
+install_manifest.txt
+
+
+### C++ ###
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+### Project ###
+
 /build
+/reactivesocket-cpp/CTestTestfile.cmake
+/reactivesocket-cpp/ReactiveSocketTest
+/reactivesocket-cpp/compile_commands.json
+/reactivesocket-cpp/external/
