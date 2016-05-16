@@ -68,7 +68,8 @@ target_link_libraries(
 
 enable_testing()
 
-add_subdirectory(external/googletest)
+add_subdirectory(external/googletest EXCLUDE_FROM_ALL)
+# EXCLUDE_FROM_ALL so 'make install' doesn't attempt installation of googletest
 
 add_executable(
   ReactiveSocketTest
