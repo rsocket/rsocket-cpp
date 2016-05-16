@@ -40,6 +40,9 @@ install_manifest.txt
 *.out
 *.app
 
+# IDE
+.idea/
+
 ### Project ###
 
 /build
