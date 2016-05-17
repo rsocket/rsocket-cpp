@@ -31,6 +31,12 @@ using StreamId = uint32_t;
 using StreamAutomatonFactory = std::function<bool(StreamId, Payload&)>;
 
 /// Handles connection-level frames and (de)multiplexes streams.
+///
+/// Instances of this class should be accessed and managed via shared_ptr,
+/// instead of the pattern reflected in MemoryMixin and IntrusiveDeleter.
+/// The reason why such a simple memory management story is possible lies in the
+/// fact that there is no request(n)-based flow control between stream
+/// automata and ConnectionAutomaton.
 class ConnectionAutomaton :
     /// Registered as an input in the DuplexConnection.
     public Subscriber<Payload>,
@@ -48,11 +54,17 @@ class ConnectionAutomaton :
   /// processing of one or more frames.
   void connect();
 
+  /// Terminates underlying connection.
+  ///
+  /// This may synchronously deliver terminal signals to all
+  /// AbstractStreamAutomaton attached to this ConnectionAutomaton.
+  void disconnect();
+
   ~ConnectionAutomaton();
 
   /// @{
   /// A contract exposed to AbstractStreamAutomaton, modelled after Subscriber
-  /// and Subscription contracts, while omitting flow control related signals
+  /// and Subscription contracts, while omitting flow control related signals.
 
   /// Adds a stream automaton to the connection.
   ///
@@ -82,11 +94,14 @@ class ConnectionAutomaton :
   /// Per ReactiveStreams specification:
   /// 1. no other signal can be delivered during or after this one,
   /// 2. "unsubscribe handshake" guarantees that the signal will be delivered
-  ///   exactly once, even if the automaton initiated stream closure,
+  ///   at least once, even if the automaton initiated stream closure,
   /// 3. per "unsubscribe handshake", the automaton must deliver corresponding
   ///   terminal signal to the connection.
   ///
-  /// Additionally, the signal is idempotent.
+  /// Additionally, in order to simplify implementation of stream automaton:
+  /// 4. the signal bound with a particular StreamId is idempotent and may be
+  ///   delivered multiple times as long as the caller holds shared_ptr to
+  ///   ConnectionAutomaton.
   void endStream(StreamId streamId, StreamCompletionSignal signal);
   /// @}
 
@@ -127,10 +142,6 @@ class ConnectionAutomaton :
       connectionOutput_;
   reactivestreams::SubscriptionPtr<Subscription> connectionInputSub_;
 
-  enum class State : uint8_t {
-    OPEN,
-    CLOSED,
-  } state_{State::OPEN};
   std::unordered_map<StreamId, AbstractStreamAutomaton*> streams_;
   reactivestreams::AllowanceSemaphore writeAllowance_;
   std::deque<Payload> pendingWrites_; // TODO(stupaq): two vectors?

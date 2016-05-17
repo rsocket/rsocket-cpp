@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <iosfwd>
+#include <memory>
 
 #include "reactivesocket-cpp/src/mixins/IntrusiveDeleter.h"
 
@@ -38,14 +39,16 @@ class MixinTerminator
   /// constructor of any mixin and must be passed by const& to mixin's Base.
   struct Parameters {
     Parameters() = default;
-    Parameters(ConnectionAutomaton* _connection, StreamId _streamId)
+    Parameters(
+        const std::shared_ptr<ConnectionAutomaton>& _connection,
+        StreamId _streamId)
         : connection(_connection), streamId(_streamId) {}
 
-    ConnectionAutomaton* connection{nullptr};
+    std::shared_ptr<ConnectionAutomaton> connection{nullptr};
     StreamId streamId{0};
   };
-  explicit MixinTerminator(const Parameters& params)
-      : connection_(*params.connection), streamId_(params.streamId) {}
+  explicit MixinTerminator(Parameters params)
+      : connection_(std::move(params.connection)), streamId_(params.streamId) {}
 
  protected:
   /// @{
@@ -70,10 +73,8 @@ class MixinTerminator
   std::ostream& logPrefix(std::ostream& os) /* = 0 */;
   /// @}
 
-  /// A non-owning reference to the connection, the stream runs on.
-  /// The connection's lifetime is managed externally and the connection  is
-  /// guaranteed to outlive the automaon.
-  ConnectionAutomaton& connection_;
+  /// A partially-owning pointer to the connection, the stream runs on.
+  const std::shared_ptr<ConnectionAutomaton> connection_;
   /// An ID of the stream (within the connection) this automaton manages.
   const StreamId streamId_;
 };

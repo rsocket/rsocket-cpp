@@ -33,6 +33,15 @@ void ConnectionAutomaton::connect() {
   connection_->setInput(*this);
 }
 
+void ConnectionAutomaton::disconnect() {
+  // Send terminal signals to the DuplexConnection's input and output before
+  // tearing it down. We must do this per DuplexConnection specification (see
+  // interface definition).
+  connectionOutput_.onComplete();
+  connectionInputSub_.cancel();
+  connection_.reset();
+}
+
 ConnectionAutomaton::~ConnectionAutomaton() {
   // We rely on SubscriptionPtr and SubscriberPtr to dispatch appropriate
   // terminal signals.

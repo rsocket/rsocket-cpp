@@ -1,5 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
+#include <array>
 #include <chrono>
 #include <memory>
 #include <thread>
@@ -26,8 +27,8 @@ MATCHER_P(
 };
 
 TEST(ReactiveSocketTest, RequestChannel) {
-  // InlineConnection forward appropriate calls in-line, hence the order of mock
-  // calls will be deterministic.
+  // InlineConnection forwards appropriate calls in-line, hence the order of
+  // mock calls will be deterministic.
   Sequence s;
 
   auto clientConn = folly::make_unique<InlineConnection>();
@@ -50,9 +51,6 @@ TEST(ReactiveSocketTest, RequestChannel) {
       std::move(serverConn), std::move(serverHandler));
 
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
-  // Note that entire test executes in-line to ensure all state machines perform
-  // transitions BEFORE sending any signals, which are synchronous in the case
-  // of InlineConnection and this test case.
 
   // Client creates a channel.
   EXPECT_CALL(clientInput, onSubscribe_(_))
@@ -135,8 +133,8 @@ TEST(ReactiveSocketTest, RequestChannel) {
 }
 
 TEST(ReactiveSocketTest, RequestSubscription) {
-  // InlineConnection forward appropriate calls in-line, hence the order of mock
-  // calls will be deterministic.
+  // InlineConnection forwards appropriate calls in-line, hence the order of
+  // mock calls will be deterministic.
   Sequence s;
 
   auto clientConn = folly::make_unique<InlineConnection>();
@@ -159,9 +157,6 @@ TEST(ReactiveSocketTest, RequestSubscription) {
       std::move(serverConn), std::move(serverHandler));
 
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
-  // Note that entire test executes in-line to ensure all state machines perform
-  // transitions BEFORE sending any signals, which are synchronous in the case
-  // of InlineConnection and this test case.
 
   // Client creates a subscription.
   EXPECT_CALL(clientInput, onSubscribe_(_))
@@ -201,7 +196,7 @@ TEST(ReactiveSocketTest, RequestSubscription) {
   Sequence s0, s1;
   EXPECT_CALL(clientInput, onNext_(Equals(&originalPayload)))
       .InSequence(s, s0, s1)
-      // Client closes the channel in response.
+      // Client closes the subscription in response.
       .WillOnce(Invoke([&](Payload&) { clientInputSub->cancel(); }));
   EXPECT_CALL(serverOutputSub, cancel_())
       .InSequence(s0)
@@ -210,4 +205,77 @@ TEST(ReactiveSocketTest, RequestSubscription) {
 
   // Kick off the magic.
   clientSock->requestSubscription(originalPayload->clone(), clientInput);
+}
+
+TEST(ReactiveSocketTest, Destructor) {
+  // InlineConnection forwards appropriate calls in-line, hence the order of
+  // mock calls will be deterministic.
+  Sequence s;
+
+  auto clientConn = folly::make_unique<InlineConnection>();
+  auto serverConn = folly::make_unique<InlineConnection>();
+  clientConn->connectTo(*serverConn);
+
+  std::array<StrictMock<UnmanagedMockSubscriber<Payload>>, 2> clientInputs;
+  std::array<StrictMock<UnmanagedMockSubscription>, 2> serverOutputSubs;
+
+  auto clientSock = ReactiveSocket::fromClientConnection(
+      std::move(clientConn),
+      // No interactions on this mock, the client will not accept any requests.
+      folly::make_unique<StrictMock<MockRequestHandler>>());
+
+  auto serverHandler = folly::make_unique<StrictMock<MockRequestHandler>>();
+  auto& serverHandlerRef = *serverHandler;
+  auto serverSock = ReactiveSocket::fromServerConnection(
+      std::move(serverConn), std::move(serverHandler));
+
+  const auto originalPayload = folly::IOBuf::copyBuffer("foo");
+
+  // Two independent subscriptions.
+  for (size_t i = 0; i < 2; ++i) {
+    Subscription* clientInputSub = nullptr;
+    Subscriber<Payload>* serverOutput = nullptr;
+
+    // Client creates a subscription.
+    EXPECT_CALL(clientInputs[i], onSubscribe_(_))
+        .InSequence(s)
+        .WillOnce(Invoke([i, &clientInputSub](Subscription* sub) {
+          clientInputSub = sub;
+          // Request two payloads immediately.
+          clientInputSub->request(2);
+        }));
+    // The request reaches the other end and triggers new responder to be set
+    // up.
+    EXPECT_CALL(
+        serverHandlerRef,
+        handleRequestSubscription_(Equals(&originalPayload), _))
+        .InSequence(s)
+        .WillOnce(Invoke([i, &serverOutput, &serverOutputSubs](
+            Payload& request, Subscriber<Payload>* response) {
+          serverOutput = response;
+          serverOutput->onSubscribe(serverOutputSubs[i]);
+        }));
+    Sequence s0, s1;
+    EXPECT_CALL(serverOutputSubs[i], request_(2))
+        .InSequence(s, s0, s1)
+        .WillOnce(Invoke([i, &serverSock](size_t) {
+          if (i == 1) {
+            // The second subscription tears down server-side instance of
+            // ReactiveSocket immediately upon receiving request(n) signal.
+            serverSock.reset();
+          }
+        }));
+    // Subscriptions will be terminated by ReactiveSocket implementation.
+    EXPECT_CALL(serverOutputSubs[i], cancel_())
+        .InSequence(s0)
+        .WillOnce(Invoke([i, serverOutput]() { serverOutput->onComplete(); }));
+    EXPECT_CALL(clientInputs[i], onComplete_())
+        .InSequence(s1)
+        .WillOnce(Invoke([i, clientInputSub]() { clientInputSub->cancel(); }));
+  }
+
+  // Kick off the magic.
+  for (size_t i = 0; i < 2; ++i) {
+    clientSock->requestSubscription(originalPayload->clone(), clientInputs[i]);
+  }
 }

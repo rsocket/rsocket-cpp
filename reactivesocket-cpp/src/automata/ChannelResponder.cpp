@@ -29,8 +29,8 @@ void ChannelResponderBase::onComplete() {
     case State::RESPONDING: {
       state_ = State::CLOSED;
       Frame_RESPONSE frame(streamId_, FrameFlags_COMPLETE, nullptr);
-      connection_.onNextFrame(frame);
-      connection_.endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      connection_->onNextFrame(frame);
+      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
     } break;
     case State::CLOSED:
       break;
@@ -42,8 +42,8 @@ void ChannelResponderBase::onError(folly::exception_wrapper ex) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
       Frame_ERROR frame(streamId_, ErrorCode::APPLICATION_ERROR);
-      connection_.onNextFrame(frame);
-      connection_.endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      connection_->onNextFrame(frame);
+      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
     } break;
     case State::CLOSED:
       break;
@@ -64,8 +64,8 @@ void ChannelResponderBase::cancel() {
     case State::RESPONDING: {
       state_ = State::CLOSED;
       Frame_RESPONSE frame(streamId_, FrameFlags_COMPLETE, nullptr);
-      connection_.onNextFrame(frame);
-      connection_.endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      connection_->onNextFrame(frame);
+      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
     } break;
     case State::CLOSED:
       break;
@@ -99,7 +99,7 @@ void ChannelResponderBase::onNextFrame(Frame_REQUEST_CHANNEL& frame) {
   }
   Base::onNextFrame(frame);
   if (end) {
-    connection_.endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+    connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
   }
 }
 
@@ -107,7 +107,7 @@ void ChannelResponderBase::onNextFrame(Frame_CANCEL& frame) {
   switch (state_) {
     case State::RESPONDING:
       state_ = State::CLOSED;
-      connection_.endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
       break;
     case State::CLOSED:
       break;

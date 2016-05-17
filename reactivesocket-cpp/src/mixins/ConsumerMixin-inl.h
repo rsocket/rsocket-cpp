@@ -41,7 +41,7 @@ void ConsumerMixin<Frame, Base>::sendRequests() {
   toSync = pendingAllowance_.drainWithLimit(toSync);
   if (toSync > 0) {
     Frame_REQUEST_N frame(Base::streamId_, static_cast<uint32_t>(toSync));
-    Base::connection_.onNextFrame(frame);
+    Base::connection_->onNextFrame(frame);
   }
 }
 

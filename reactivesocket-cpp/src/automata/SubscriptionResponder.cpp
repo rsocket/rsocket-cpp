@@ -29,8 +29,8 @@ void SubscriptionResponderBase::onComplete() {
     case State::RESPONDING: {
       state_ = State::CLOSED;
       Frame_RESPONSE frame(streamId_, FrameFlags_COMPLETE, nullptr);
-      connection_.onNextFrame(frame);
-      connection_.endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      connection_->onNextFrame(frame);
+      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
     } break;
     case State::CLOSED:
       break;
@@ -42,8 +42,8 @@ void SubscriptionResponderBase::onError(folly::exception_wrapper ex) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
       Frame_ERROR frame(streamId_, ErrorCode::APPLICATION_ERROR);
-      connection_.onNextFrame(frame);
-      connection_.endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      connection_->onNextFrame(frame);
+      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
     } break;
     case State::CLOSED:
       break;
@@ -77,7 +77,7 @@ void SubscriptionResponderBase::onNextFrame(Frame_REQUEST_SUB& frame) {
   }
   Base::onNextFrame(frame);
   if (end) {
-    connection_.endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+    connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
   }
 }
 
@@ -85,7 +85,7 @@ void SubscriptionResponderBase::onNextFrame(Frame_CANCEL& frame) {
   switch (state_) {
     case State::RESPONDING:
       state_ = State::CLOSED;
-      connection_.endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
       break;
     case State::CLOSED:
       break;

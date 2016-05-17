@@ -6,13 +6,13 @@
 #include <functional>
 #include <memory>
 
-#include "reactivesocket-cpp/src/ConnectionAutomaton.h"
 #include "reactivesocket-cpp/src/Payload.h"
 #include "reactivesocket-cpp/src/ReactiveStreamsCompat.h"
 
 namespace lithium {
 namespace reactivesocket {
 
+class ConnectionAutomaton;
 class DuplexConnection;
 class RequestHandler;
 enum class FrameType : uint16_t;
@@ -58,9 +58,9 @@ class ReactiveSocket {
 
   bool createResponder(StreamId streamId, Payload& frame);
 
+  const std::shared_ptr<ConnectionAutomaton> connection_;
   std::unique_ptr<RequestHandler> handler_;
   StreamId nextStreamId_;
-  ConnectionAutomaton connection_;
 };
 }
 }

@@ -45,7 +45,7 @@ void ChannelRequesterBase::onNext(Payload request) {
       // We must inform ConsumerMixin about an implicit allowance we have
       // requested from the remote end.
       addImplicitAllowance(initialN);
-      connection_.onNextFrame(frame);
+      connection_->onNextFrame(frame);
       // Pump the remaining allowance into the ConsumerMixin _after_ sending the
       // initial request.
       if (remainingN) {
@@ -64,13 +64,13 @@ void ChannelRequesterBase::onComplete() {
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;
-      connection_.endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
       break;
     case State::REQUESTED: {
       state_ = State::CLOSED;
       Frame_REQUEST_CHANNEL frame(streamId_, FrameFlags_COMPLETE, 0, nullptr);
-      connection_.onNextFrame(frame);
-      connection_.endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      connection_->onNextFrame(frame);
+      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
     } break;
     case State::CLOSED:
       break;
@@ -81,13 +81,13 @@ void ChannelRequesterBase::onError(folly::exception_wrapper ex) {
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;
-      connection_.endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
       break;
     case State::REQUESTED: {
       state_ = State::CLOSED;
       Frame_CANCEL frame(streamId_);
-      connection_.onNextFrame(frame);
-      connection_.endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      connection_->onNextFrame(frame);
+      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
     } break;
     case State::CLOSED:
       break;
@@ -115,13 +115,13 @@ void ChannelRequesterBase::cancel() {
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;
-      connection_.endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
       break;
     case State::REQUESTED: {
       state_ = State::CLOSED;
       Frame_CANCEL frame(streamId_);
-      connection_.onNextFrame(frame);
-      connection_.endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      connection_->onNextFrame(frame);
+      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
     } break;
     case State::CLOSED:
       break;
@@ -160,7 +160,7 @@ void ChannelRequesterBase::onNextFrame(Frame_RESPONSE& frame) {
   }
   Base::onNextFrame(frame);
   if (end) {
-    connection_.endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+    connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
   }
 }
 
@@ -172,7 +172,7 @@ void ChannelRequesterBase::onNextFrame(Frame_ERROR& frame) {
       break;
     case State::REQUESTED:
       state_ = State::CLOSED;
-      connection_.endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
       break;
     case State::CLOSED:
       break;
