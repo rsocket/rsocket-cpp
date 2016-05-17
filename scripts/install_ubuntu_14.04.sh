@@ -1,3 +1,5 @@
+echo "Running with TRAVIS_SECURE_ENV_VARS=$TRAVIS_SECURE_ENV_VARS"
+
 # store binary on Github
 git config --global user.name "Travis Git"
 git config --global user.email "benjchristensen+travisgit@gmail.com"
