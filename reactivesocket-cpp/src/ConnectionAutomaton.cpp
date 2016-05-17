@@ -38,12 +38,20 @@ ConnectionAutomaton::~ConnectionAutomaton() {
   // terminal signals.
 }
 
+void ConnectionAutomaton::close() {
+  // closing duplex connection will trigger closing all streams
+  // which will eventually release this instance and destroy this
+  connection_.reset();
+}
+
 void ConnectionAutomaton::addStream(
     StreamId streamId,
     AbstractStreamAutomaton& automaton) {
   auto result = streams_.emplace(streamId, &automaton);
   (void)result;
   assert(result.second);
+  // new stream is using this instance
+  incrementRefCount();
 }
 
 template <typename Frame>
@@ -93,6 +101,8 @@ bool ConnectionAutomaton::endStreamInternal(
   auto automaton = it->second;
   streams_.erase(it);
   automaton->endStream(signal);
+  // the steam is not using this instance anymore
+  decrementRefCount();
   return true;
 }
 
@@ -102,6 +112,7 @@ void ConnectionAutomaton::onSubscribe(Subscription& subscription) {
   connectionInputSub_.reset(&subscription);
   // This may result in signals being issued by the connection in-line, see
   // ::connect.
+  // TODO: implement lease here. For now we will disable flow control
   connectionInputSub_.request(std::numeric_limits<size_t>::max());
 }
 

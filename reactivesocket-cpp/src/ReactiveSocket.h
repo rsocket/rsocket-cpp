@@ -60,7 +60,7 @@ class ReactiveSocket {
 
   std::unique_ptr<RequestHandler> handler_;
   StreamId nextStreamId_;
-  ConnectionAutomaton connection_;
+  ConnectionAutomaton* connection_;
 };
 }
 }

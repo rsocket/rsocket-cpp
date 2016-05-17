@@ -22,14 +22,17 @@
 namespace lithium {
 namespace reactivesocket {
 
-ReactiveSocket::~ReactiveSocket() {}
+ReactiveSocket::~ReactiveSocket() {
+  connection_->close();
+  connection_->decrementRefCount();
+}
 
 std::unique_ptr<ReactiveSocket> ReactiveSocket::fromClientConnection(
     std::unique_ptr<DuplexConnection> connection,
     std::unique_ptr<RequestHandler> handler) {
   std::unique_ptr<ReactiveSocket> socket(
       new ReactiveSocket(false, std::move(connection), std::move(handler)));
-  socket->connection_.connect();
+  socket->connection_->connect();
   return socket;
 }
 
@@ -38,7 +41,7 @@ std::unique_ptr<ReactiveSocket> ReactiveSocket::fromServerConnection(
     std::unique_ptr<RequestHandler> handler) {
   std::unique_ptr<ReactiveSocket> socket(
       new ReactiveSocket(true, std::move(connection), std::move(handler)));
-  socket->connection_.connect();
+  socket->connection_->connect();
   return socket;
 }
 
@@ -47,9 +50,9 @@ Subscriber<Payload>& ReactiveSocket::requestChannel(
   // TODO(stupaq): handle any exceptions
   StreamId streamId = nextStreamId_;
   nextStreamId_ += 2;
-  ChannelResponder::Parameters params = {&connection_, streamId};
+  ChannelResponder::Parameters params = {connection_, streamId};
   auto automaton = new ChannelRequester(params);
-  connection_.addStream(streamId, *automaton);
+  connection_->addStream(streamId, *automaton);
   automaton->subscribe(responseSink);
   responseSink.onSubscribe(*automaton);
   automaton->start();
@@ -62,9 +65,9 @@ void ReactiveSocket::requestSubscription(
   // TODO(stupaq): handle any exceptions
   StreamId streamId = nextStreamId_;
   nextStreamId_ += 2;
-  SubscriptionRequester::Parameters params = {&connection_, streamId};
+  SubscriptionRequester::Parameters params = {connection_, streamId};
   auto automaton = new SubscriptionRequester(params);
-  connection_.addStream(streamId, *automaton);
+  connection_->addStream(streamId, *automaton);
   automaton->subscribe(responseSink);
   responseSink.onSubscribe(*automaton);
   automaton->onNext(std::move(request));
@@ -77,13 +80,13 @@ ReactiveSocket::ReactiveSocket(
     std::unique_ptr<RequestHandler> handler)
     : handler_(std::move(handler)),
       nextStreamId_(isServer ? 1 : 2),
-      connection_(
+      connection_(new ConnectionAutomaton(
           std::move(connection),
           std::bind(
               &ReactiveSocket::createResponder,
               this,
               std::placeholders::_1,
-              std::placeholders::_2)) {}
+              std::placeholders::_2))) {}
 
 bool ReactiveSocket::createResponder(
     StreamId streamId,
@@ -95,14 +98,15 @@ bool ReactiveSocket::createResponder(
       if (!frame.deserializeFrom(std::move(serializedFrame))) {
         return false;
       }
-      ChannelResponder::Parameters params = {&connection_, streamId};
+      ChannelResponder::Parameters params = {connection_, streamId};
       auto automaton = new ChannelResponder(params);
-      connection_.addStream(streamId, *automaton);
+      connection_->addStream(streamId, *automaton);
       auto& requestSink =
           handler_->handleRequestChannel(std::move(frame.data_), *automaton);
+      // TODO: validate that the callback subscribed to the automaton (output)
       automaton->subscribe(requestSink);
-      automaton->onNextFrame(frame);
       requestSink.onSubscribe(*automaton);
+      automaton->onNextFrame(frame);
       automaton->start();
       break;
     }
@@ -111,9 +115,9 @@ bool ReactiveSocket::createResponder(
       if (!frame.deserializeFrom(std::move(serializedFrame))) {
         return false;
       }
-      SubscriptionResponder::Parameters params = {&connection_, streamId};
+      SubscriptionResponder::Parameters params = {connection_, streamId};
       auto automaton = new SubscriptionResponder(params);
-      connection_.addStream(streamId, *automaton);
+      connection_->addStream(streamId, *automaton);
       handler_->handleRequestSubscription(std::move(frame.data_), *automaton);
       automaton->onNextFrame(frame);
       automaton->start();
