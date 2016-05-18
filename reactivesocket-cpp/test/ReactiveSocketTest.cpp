@@ -218,6 +218,8 @@ TEST(ReactiveSocketTest, Destructor) {
 
   std::array<StrictMock<UnmanagedMockSubscriber<Payload>>, 2> clientInputs;
   std::array<StrictMock<UnmanagedMockSubscription>, 2> serverOutputSubs;
+  std::array<Subscription*, 2> clientInputSubs = {nullptr};
+  std::array<Subscriber<Payload>*, 2> serverOutputs = {nullptr};
 
   auto clientSock = ReactiveSocket::fromClientConnection(
       std::move(clientConn),
@@ -233,16 +235,13 @@ TEST(ReactiveSocketTest, Destructor) {
 
   // Two independent subscriptions.
   for (size_t i = 0; i < 2; ++i) {
-    Subscription* clientInputSub = nullptr;
-    Subscriber<Payload>* serverOutput = nullptr;
-
     // Client creates a subscription.
     EXPECT_CALL(clientInputs[i], onSubscribe_(_))
         .InSequence(s)
-        .WillOnce(Invoke([i, &clientInputSub](Subscription* sub) {
-          clientInputSub = sub;
+        .WillOnce(Invoke([i, &clientInputSubs](Subscription* sub) {
+          clientInputSubs[i] = sub;
           // Request two payloads immediately.
-          clientInputSub->request(2);
+          sub->request(2);
         }));
     // The request reaches the other end and triggers new responder to be set
     // up.
@@ -250,10 +249,10 @@ TEST(ReactiveSocketTest, Destructor) {
         serverHandlerRef,
         handleRequestSubscription_(Equals(&originalPayload), _))
         .InSequence(s)
-        .WillOnce(Invoke([i, &serverOutput, &serverOutputSubs](
+        .WillOnce(Invoke([i, &serverOutputs, &serverOutputSubs](
             Payload& request, Subscriber<Payload>* response) {
-          serverOutput = response;
-          serverOutput->onSubscribe(serverOutputSubs[i]);
+          serverOutputs[i] = response;
+          response->onSubscribe(serverOutputSubs[i]);
         }));
     Sequence s0, s1;
     EXPECT_CALL(serverOutputSubs[i], request_(2))
@@ -268,10 +267,12 @@ TEST(ReactiveSocketTest, Destructor) {
     // Subscriptions will be terminated by ReactiveSocket implementation.
     EXPECT_CALL(serverOutputSubs[i], cancel_())
         .InSequence(s0)
-        .WillOnce(Invoke([i, serverOutput]() { serverOutput->onComplete(); }));
+        .WillOnce(
+            Invoke([i, &serverOutputs]() { serverOutputs[i]->onComplete(); }));
     EXPECT_CALL(clientInputs[i], onComplete_())
         .InSequence(s1)
-        .WillOnce(Invoke([i, clientInputSub]() { clientInputSub->cancel(); }));
+        .WillOnce(
+            Invoke([i, &clientInputSubs]() { clientInputSubs[i]->cancel(); }));
   }
 
   // Kick off the magic.
