@@ -1,35 +1,29 @@
-sudo: required
-dist: trusty
-
 language: cpp
 
-os:
-  - linux
-  - osx
-
-compiler:
-  - gcc
-  - clang
-  
 matrix:
   include:
-    - compiler: gcc
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - g++-4.9
-      env: COMPILER=g++-4.9
-    - compiler: gcc
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - g++-5
-      env: COMPILER=g++-5
-      
+    - os: linux
+      dist: trusty
+      sudo: required
+      - compiler: gcc
+        addons:
+          apt:
+            sources:
+              - ubuntu-toolchain-r-test
+            packages:
+              - g++-4.9
+        env: COMPILER=g++-4.9
+      - compiler: gcc
+        addons:
+          apt:
+            sources:
+              - ubuntu-toolchain-r-test
+            packages:
+              - g++-5
+        env: COMPILER=g++-5
+    - os: osx
+      osx_image: xcode7.2
+
 
 before_script:
   - ./scripts/fetch_folly_ubuntu_trusty.sh
