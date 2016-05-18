@@ -13,7 +13,7 @@ compiler:
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update          ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install folly   ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then sudo brew install folly   ; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then ./scripts/fetch_folly_ubuntu_trusty.sh   ; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then ./scripts/prepare_ubuntu_trusty.sh   ; fi
 
