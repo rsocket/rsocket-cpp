@@ -13,5 +13,5 @@ script:
   - mkdir build
   - cd build
   - cmake ..
-  - make
+  - make -j8
   - ./ReactiveSocketTest
