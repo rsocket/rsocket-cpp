@@ -1,14 +1,22 @@
-sudo: required
-dist: trusty
-
 language: cpp
+
+dist: trusty
+sudo: required
+      
+os:
+  - linux
+  - osx
 
 compiler:
   - gcc
+  - clang
 
-before_script:
-  - ./scripts/fetch_folly_ubuntu_trusty.sh
-  - ./scripts/prepare_ubuntu_trusty.sh
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update          ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then sudo brew install folly   ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then ./scripts/fetch_folly_ubuntu_trusty.sh   ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then ./scripts/prepare_ubuntu_trusty.sh   ; fi
+
 script:
   - mkdir build
   - cd build
