@@ -6,6 +6,26 @@ language: cpp
 compiler:
   - gcc
   - clang
+  
+matrix:
+  include:
+    - compiler: gcc
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-4.9
+      env: COMPILER=g++-4.9
+    - compiler: gcc
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
+      env: COMPILER=g++-5
+      
 
 before_script:
   - ./scripts/fetch_folly_ubuntu_trusty.sh
