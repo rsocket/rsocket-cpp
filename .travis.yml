@@ -3,6 +3,10 @@ dist: trusty
 
 language: cpp
 
+os:
+  - linux
+  - osx
+
 compiler:
   - gcc
   - clang
