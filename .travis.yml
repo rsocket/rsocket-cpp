@@ -1,14 +1,17 @@
 sudo: required
 dist: trusty
 
-env:
-  global:
-    - secure: "Y7yT+6s/jtFOoatyLxWWu6aEfcQyPxzAj33iSsl3PTu93gDHggmN3aNsvMmWU0un+n6YEyKZqk2u5wpaIGzRLvVCd2fqXoF5QJ06XrnC+prlCoepYWBqjRNX8aNSwyo5E9sbhqA4PKO0NnQChBg/mtmvne5jLlY+kIyF57pomObpSTJuG6jNyGi0+Zk1Ht+9K6E9YzwaW7aqEurByxAWfQb7ZSa0ylFzZo8yDQRTicsTmsx3Tc19eT9RZpP7zzBn0EqeJuzEgxT4e+P2wFBdp/++1Kbp/NmhYSDq9RnEMjS1WM5oFcPVdP5GOGk0C4koUytJntSeRjKkpBYohEQ1erUzHgOUJb2KxOodS7yJGtiuSQVHPw9i1sESxGZ7r/y9Rw7g78FXoKNnkcLeemJZxoKagvOmwsYQJNEKGA4Oz4aaWD/h+GWlJeGv4P4ad6k9xsrlJhdOnJGi0C1TwR2QYEJnWgLyrtKzWb28x5krCUVGuPQkrTf20tDqYyTlloqmmu3OW0/yxJq5OoFq0HhME3ilyU09SnL+1wrFwLiWxMG7f1ZE1d6lNYv+ApUr73FRpBdxob1bPEC/41LW+z8TcrKjGevY/MuIUipF6Oubcwrus9EQbWotL0NZVmi52rDV4DE6S07vdUIxIm0kkka4fAGxq7puKftY/3tuB3gKvME="
-    - secure: "UT/EoNNzrYM7h8ysXm8/16NafzohCE5s9/4jhII9qakTbIb27WgCoaoYi/3IP5GMhqIGjQVPUEZGmxxU4dAz0BAw2np96WkvMCavIjtW+nhbUss2xx1714XYkVACDm9NN+rceWcLJs0OCYMCdrQPzYMJkedW6bvsCmUJMFfvKY4ReNwXpfQHSt9z/vIlEy0ODW5Z4eaKFAwfsfvifd/HkBdsosJrC57D1v4GSjiwyhGXj6oy+BPT1zSSXNnGT4fX3KTpIsXIN8y4QjaeukZxUKusInzoV+NyMYhQZ+HeJdei0wwTItShmaE6OjcBaDyK3y24rhZVEXwKwY09sYE4RzuVMOE8f9yBTWOjPqM4ixflwTxrHc8M5D7aaQQkPW+HPUSFgGMQd76paHAR7JJHok9dXHTcHUT5zztMKXOVInqLz3b65+h8ZYhzXixB0blvct1UzG/7+jIVrr2B24qd1PGVFxXBXEoq8cyV4ZV9V9YFgYtl1Rk18K+Bp1DP9eRMrHKtbQNE4fB1OQzYsDhGvHqD0x1FKepg+EgUUSHUZmgEgZ1SmvElQIlETufRToKyb23oFGG1kVojvf0rNC+fwMxJqO3q0ZNl9yGUrX3J3XFjgEQTDSh/PenPHZkyrvBTE9XaoNEHMjIM+od+XPnfnNKFHvwbWvMT9ZM72fWN6Rw="
-
 language: cpp
 
 compiler:
   - gcc
 
-script: ./scripts/install_ubuntu_14.04.sh
+before_script:
+  - ./scripts/fetch_folly_ubuntu_trusty.sh
+  - ./scripts/prepare_ubuntu_trusty.sh
+script:
+  - mkdir build
+  - cd build
+  - cmake ..
+  - make
+  - ./ReactiveSocketTest
