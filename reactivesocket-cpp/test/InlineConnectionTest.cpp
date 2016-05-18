@@ -50,10 +50,8 @@ TEST(InlineConnectionTest, PingPong) {
   EXPECT_CALL(outputSub[1], request_(1)).InSequence(s);
   EXPECT_CALL(outputSub[0], request_(1))
       .InSequence(s)
-      .WillOnce(Invoke([&](size_t n) {
-        ASSERT_GE(n, 1);
-        output[0]->onNext(originalPayload->clone());
-      }));
+      .WillOnce(
+          Invoke([&](size_t) { output[0]->onNext(originalPayload->clone()); }));
   EXPECT_CALL(input[1], onNext_(_))
       .InSequence(s)
       .WillOnce(Invoke([&](Payload& payload) {

@@ -1,12 +1,20 @@
 cmake_minimum_required(VERSION 3.2)
 project(ReactiveSocket)
 
+# Cmake modules.
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
+
 # Generate compilation database for use by YouCompleteMe.
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
-add_definitions(-std=c++11)
+# Common configuration for all build modes.
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -momit-leaf-frame-pointer")
 
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/)
+# Configuration for Debug build mode.
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
+
 find_package(Folly REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system thread)
 include_directories(SYSTEM ${FOLLY_INCLUDE_DIR})
@@ -72,7 +80,7 @@ add_subdirectory(external/googletest EXCLUDE_FROM_ALL)
 # EXCLUDE_FROM_ALL so 'make install' doesn't attempt installation of googletest
 
 add_executable(
-  ReactiveSocketTest
+  tests
   reactive-streams-cpp/examples/Examples.cpp
   reactive-streams-cpp/test/AllowanceSemaphoreTest.cpp
   reactive-streams-cpp/test/OwnershipTest.cpp
@@ -88,7 +96,7 @@ add_executable(
   )
 
 target_link_libraries(
-  ReactiveSocketTest
+  tests
   ReactiveSocket
   ${FOLLY_LIBRARIES}
   gtest

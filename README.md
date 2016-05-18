@@ -36,7 +36,7 @@ After installing dependencies as above, you can build and run tests with:
 # inside root ./reactivesocket-cpp
 mkdir -p build
 cd build
-cmake ../
-make
-./ReactiveSocketTest
+cmake ../ -DCMAKE_BUILD_TYPE=DEBUG
+make -j
+./tests
 ```

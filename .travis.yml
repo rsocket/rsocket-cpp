@@ -12,6 +12,6 @@ before_script:
 script:
   - mkdir build
   - cd build
-  - cmake ..
+  - cmake .. -DCMAKE_BUILD_TYPE=DEBUG
   - make -j8
-  - ./ReactiveSocketTest
+  - ./tests

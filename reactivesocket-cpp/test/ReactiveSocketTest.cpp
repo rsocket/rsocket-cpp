@@ -218,8 +218,8 @@ TEST(ReactiveSocketTest, Destructor) {
 
   std::array<StrictMock<UnmanagedMockSubscriber<Payload>>, 2> clientInputs;
   std::array<StrictMock<UnmanagedMockSubscription>, 2> serverOutputSubs;
-  std::array<Subscription*, 2> clientInputSubs = {nullptr};
-  std::array<Subscriber<Payload>*, 2> serverOutputs = {nullptr};
+  std::array<Subscription*, 2> clientInputSubs = {{nullptr}};
+  std::array<Subscriber<Payload>*, 2> serverOutputs = {{nullptr}};
 
   auto clientSock = ReactiveSocket::fromClientConnection(
       std::move(clientConn),
