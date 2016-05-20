@@ -32,4 +32,3 @@ class IntrusiveDeleter {
 
 inline IntrusiveDeleter::~IntrusiveDeleter() = default;
 }
-}

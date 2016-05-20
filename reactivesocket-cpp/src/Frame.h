@@ -234,4 +234,3 @@ class Frame_ERROR {
 std::ostream& operator<<(std::ostream&, const Frame_ERROR&);
 /// @}
 }
-}

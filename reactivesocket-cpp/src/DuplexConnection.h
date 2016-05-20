@@ -41,4 +41,3 @@ class DuplexConnection {
   virtual Subscriber<Payload>& getOutput() = 0;
 };
 }
-}

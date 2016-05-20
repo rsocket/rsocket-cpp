@@ -50,4 +50,3 @@ void ConsumerMixin<Frame, Base>::handleFlowControlError() {
   CHECK(false);
 }
 }
-}

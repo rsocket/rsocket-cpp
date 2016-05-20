@@ -96,4 +96,3 @@ std::ostream& SubscriptionResponderBase::logPrefix(std::ostream& os) {
             << "): ";
 }
 }
-}

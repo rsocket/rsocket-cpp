@@ -300,4 +300,3 @@ std::ostream& operator<<(std::ostream& os, const Frame_ERROR& frame) {
 }
 /// @}
 }
-}

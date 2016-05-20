@@ -69,4 +69,3 @@ class AllowanceSemaphore {
   ValueType value_{0};
 };
 }
-}

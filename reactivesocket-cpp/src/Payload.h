@@ -13,4 +13,3 @@ namespace reactivesocket {
 /// MUST manage the lifetime of the underlying buffer.
 using Payload = std::unique_ptr<folly::IOBuf>;
 }
-}

@@ -157,4 +157,3 @@ inline MockSubscription& makeMockSubscription() {
   return *(new MockSubscription());
 }
 }
-}

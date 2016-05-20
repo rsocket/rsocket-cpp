@@ -70,4 +70,3 @@ void AbstractStreamAutomaton::deserializeAndDispatch(Payload& payload) {
   }
 }
 }
-}

@@ -80,6 +80,5 @@ class ConsumerMixin : public Base {
   reactivestreams::AllowanceSemaphore pendingAllowance_;
 };
 }
-}
 
 #include "ConsumerMixin-inl.h"

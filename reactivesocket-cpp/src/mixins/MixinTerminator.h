@@ -78,4 +78,3 @@ class MixinTerminator
   const StreamId streamId_;
 };
 }
-}

@@ -93,4 +93,3 @@ RefCountedDeleter<T>::decrementDeferred() {
   return Handle(*this);
 }
 }
-}

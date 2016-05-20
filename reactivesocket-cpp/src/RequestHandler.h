@@ -25,4 +25,3 @@ class RequestHandler {
       Subscriber<Payload>& response) = 0;
 };
 }
-}

@@ -74,4 +74,3 @@ class Subscription {
   virtual void cancel() = 0;
 };
 }
-}

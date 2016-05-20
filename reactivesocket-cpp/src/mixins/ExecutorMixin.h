@@ -129,4 +129,3 @@ class ExecutorMixin : public Base {
       folly::make_unique<PendingSignals>()};
 };
 }
-}

@@ -39,4 +39,3 @@ class SinkIfMixin : public Base, public Subscriber<Payload> {
   }
 };
 }
-}

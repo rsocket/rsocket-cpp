@@ -76,4 +76,3 @@ class Subscriber {
   virtual void onError(E ex) = 0;
 };
 }
-}

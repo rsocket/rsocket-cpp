@@ -35,4 +35,3 @@ inline MockSubscription& makeMockSubscription() {
   return reactivestreams::makeMockSubscription();
 }
 }
-}

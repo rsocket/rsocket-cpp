@@ -62,4 +62,3 @@ class ReactiveSocket {
   StreamId nextStreamId_;
 };
 }
-}

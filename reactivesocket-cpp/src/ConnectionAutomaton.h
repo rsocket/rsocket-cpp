@@ -146,4 +146,3 @@ class ConnectionAutomaton :
   std::deque<Payload> pendingWrites_; // TODO(stupaq): two vectors?
 };
 }
-}

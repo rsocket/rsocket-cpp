@@ -75,4 +75,3 @@ using SubscriptionRequester =
     SourceIfMixin<StreamIfMixin<LoggingMixin<ExecutorMixin<
         LoggingMixin<MemoryMixin<LoggingMixin<SubscriptionRequesterBase>>>>>>>;
 }
-}

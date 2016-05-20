@@ -47,4 +47,3 @@ class StreamIfMixin : public Base, public AbstractStreamAutomaton {
   }
 };
 }
-}

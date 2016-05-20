@@ -141,4 +141,3 @@ std::ostream& SubscriptionRequesterBase::logPrefix(std::ostream& os) {
             << "): ";
 }
 }
-}

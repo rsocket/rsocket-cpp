@@ -136,4 +136,3 @@ Subscriber<Payload>& InlineConnection::getOutput() {
   return outputSink;
 }
 }
-}

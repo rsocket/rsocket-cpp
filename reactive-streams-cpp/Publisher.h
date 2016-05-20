@@ -40,4 +40,3 @@ class Publisher {
   virtual void subscribe(Subscriber<T, E>& subscriber) = 0;
 };
 }
-}

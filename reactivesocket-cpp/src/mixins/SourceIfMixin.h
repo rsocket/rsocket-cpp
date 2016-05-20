@@ -28,4 +28,3 @@ class SourceIfMixin : public Base, public Subscription {
   }
 };
 }
-}

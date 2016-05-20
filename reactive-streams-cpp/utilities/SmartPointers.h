@@ -161,4 +161,3 @@ SubscriptionPtr<S> makeSubscriptionPtr(S* subscription) {
   return SubscriptionPtr<S>(subscription);
 }
 }
-}

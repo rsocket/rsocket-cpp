@@ -54,4 +54,3 @@ class InlineConnection : public DuplexConnection {
   Subscription* outputSubscription_;
 };
 }
-}

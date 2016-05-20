@@ -109,4 +109,3 @@ class AbstractStreamAutomaton {
   void deserializeAndDispatch(Payload& paylaod);
 };
 }
-}

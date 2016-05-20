@@ -200,4 +200,3 @@ void ConnectionAutomaton::handleUnknownStream(
 }
 /// @}
 }
-}

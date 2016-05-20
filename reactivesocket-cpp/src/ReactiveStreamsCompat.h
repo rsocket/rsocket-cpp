@@ -38,4 +38,3 @@ template <typename S>
 using SubscriptionPtr = reactivestreams::SubscriptionPtr<S>;
 
 } // namespace reactivesocket
-} // namespace lithium

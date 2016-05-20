@@ -73,4 +73,3 @@ class PublisherMixin : public Base {
   reactivestreams::SubscriptionPtr<Subscription> producingSubscription_;
 };
 }
-}

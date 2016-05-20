@@ -118,4 +118,3 @@ std::ostream& ChannelResponderBase::logPrefix(std::ostream& os) {
             << "): ";
 }
 }
-}

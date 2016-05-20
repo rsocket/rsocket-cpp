@@ -70,4 +70,3 @@ using SubscriptionResponder =
     SinkIfMixin<StreamIfMixin<LoggingMixin<ExecutorMixin<
         LoggingMixin<MemoryMixin<LoggingMixin<SubscriptionResponderBase>>>>>>>;
 }
-}
