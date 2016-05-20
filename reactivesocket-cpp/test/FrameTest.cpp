@@ -30,8 +30,7 @@ class FrameTest : public ::testing::Test {
   void TearDown() override {
     folly::SingletonVault::singleton()->destroyInstances();
     // Bring the default allocator.
-    folly::Singleton<reactivesocket::FrameBufferAllocator>::make_mock(
-        nullptr);
+    folly::Singleton<reactivesocket::FrameBufferAllocator>::make_mock(nullptr);
     folly::SingletonVault::singleton()->reenableInstances();
   }
 

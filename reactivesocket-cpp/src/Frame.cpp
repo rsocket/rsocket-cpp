@@ -13,8 +13,7 @@
 #include <folly/io/IOBuf.h>
 
 namespace {
-folly::Singleton<reactivesocket::FrameBufferAllocator>
-    bufferAllocatorSingleton;
+folly::Singleton<reactivesocket::FrameBufferAllocator> bufferAllocatorSingleton;
 }
 
 // TODO(stupaq): strict enum validation
