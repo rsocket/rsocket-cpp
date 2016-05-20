@@ -24,7 +24,6 @@ namespace folly {
 class exception_wrapper;
 }
 
-namespace lithium {
 namespace reactivesocket {
 
 enum class StreamCompletionSignal;

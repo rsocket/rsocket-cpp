@@ -12,7 +12,6 @@
 #include "reactivesocket-cpp/src/Payload.h"
 #include "reactivesocket-cpp/src/ReactiveStreamsCompat.h"
 
-namespace lithium {
 namespace reactivesocket {
 
 class IntrusiveDeleter;

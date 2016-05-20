@@ -11,7 +11,6 @@ namespace folly {
 class exception_wrapper;
 }
 
-namespace lithium {
 namespace reactivesocket {
 
 class ConnectionAutomaton;

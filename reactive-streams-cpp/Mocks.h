@@ -12,7 +12,6 @@
 #include "reactive-streams-cpp/Subscription.h"
 #include "reactive-streams-cpp/utilities/Ownership.h"
 
-namespace lithium {
 namespace reactivestreams {
 
 /// GoogleMock-compatible Publisher implementation for fast prototyping.

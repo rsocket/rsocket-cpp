@@ -10,7 +10,6 @@
 #include "reactivesocket-cpp/src/ReactiveStreamsCompat.h"
 #include "reactivesocket-cpp/test/ReactiveStreamsMocksCompat.h"
 
-namespace lithium {
 namespace reactivesocket {
 
 InlineConnection::InlineConnection()

@@ -20,7 +20,6 @@ class Cursor;
 }
 }
 
-namespace lithium {
 namespace reactivesocket {
 
 /// A unique identifier of a stream.

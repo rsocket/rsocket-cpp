@@ -6,7 +6,6 @@
 #include <cstddef>
 #include <memory>
 
-namespace lithium {
 namespace reactivestreams {
 
 /// Deletes specified object using std::default_delete<T> the first time

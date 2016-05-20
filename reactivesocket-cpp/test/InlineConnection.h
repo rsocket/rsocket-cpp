@@ -7,7 +7,6 @@
 #include "reactivesocket-cpp/src/DuplexConnection.h"
 #include "reactivesocket-cpp/src/ReactiveStreamsCompat.h"
 
-namespace lithium {
 namespace reactivesocket {
 
 /// An intra-thread implementation of DuplexConnection that synchronously passes

@@ -6,7 +6,6 @@
 #include <cstddef>
 #include <limits>
 
-namespace lithium {
 namespace reactivestreams {
 
 class AllowanceSemaphore {

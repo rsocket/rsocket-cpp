@@ -20,7 +20,6 @@ folly::Singleton<lithium::reactivesocket::FrameBufferAllocator>
 // TODO(stupaq): strict enum validation
 // TODO(stupaq): verify whether frames contain extra data
 // TODO(stupaq): get rid of these try-catch blocks
-namespace lithium {
 namespace reactivesocket {
 
 std::unique_ptr<folly::IOBuf> FrameBufferAllocator::allocate(size_t size) {

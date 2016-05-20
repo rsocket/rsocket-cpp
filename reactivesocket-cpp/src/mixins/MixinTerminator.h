@@ -8,7 +8,6 @@
 
 #include "reactivesocket-cpp/src/mixins/IntrusiveDeleter.h"
 
-namespace lithium {
 namespace reactivesocket {
 
 class ConnectionAutomaton;

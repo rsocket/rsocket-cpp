@@ -9,7 +9,6 @@
 #include "reactivesocket-cpp/src/Frame.h"
 #include "reactivesocket-cpp/src/Payload.h"
 
-namespace lithium {
 namespace reactivesocket {
 
 std::ostream& operator<<(std::ostream& os, StreamCompletionSignal signal) {

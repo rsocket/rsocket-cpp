@@ -8,7 +8,6 @@
 #include "reactivesocket-cpp/src/Payload.h"
 #include "reactivesocket-cpp/src/ReactiveStreamsCompat.h"
 
-namespace lithium {
 namespace reactivesocket {
 
 /// A mixin which provides dynamic dispatch for a chain of mixins and

@@ -8,7 +8,6 @@ namespace folly {
 class IOBuf;
 }
 
-namespace lithium {
 namespace reactivesocket {
 /// The type of a read-only view on a binary buffer.
 /// MUST manage the lifetime of the underlying buffer.

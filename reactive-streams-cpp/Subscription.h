@@ -4,7 +4,6 @@
 
 #include <cstddef>
 
-namespace lithium {
 namespace reactivestreams {
 
 /// Represents a connection between Publisher and Subscriber established by an

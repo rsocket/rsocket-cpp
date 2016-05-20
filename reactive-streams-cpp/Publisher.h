@@ -4,7 +4,6 @@
 
 #include <exception>
 
-namespace lithium {
 namespace reactivestreams {
 
 template <typename T, typename E>

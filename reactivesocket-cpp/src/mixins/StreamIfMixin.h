@@ -5,7 +5,6 @@
 #include "reactivesocket-cpp/src/AbstractStreamAutomaton.h"
 #include "reactivesocket-cpp/src/Payload.h"
 
-namespace lithium {
 namespace reactivesocket {
 
 /// A mixin which provides dynamic dispatch for a chain of mixins and

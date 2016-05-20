@@ -13,7 +13,6 @@ class exception_wrapper;
 /// This header defines aliases to the interfaces defined in the ReactiveStream
 /// specification, which replace std::exception_ptr with more efficient
 /// folly::exception_wrapper.
-namespace lithium {
 namespace reactivestreams {
 
 template <typename S>

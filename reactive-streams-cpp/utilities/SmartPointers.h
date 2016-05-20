@@ -6,7 +6,6 @@
 #include <cstddef>
 #include <utility>
 
-namespace lithium {
 namespace reactivestreams {
 
 /// A "smart pointer" to an arbitrary Subscriber.

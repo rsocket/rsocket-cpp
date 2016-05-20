@@ -20,7 +20,6 @@
 #include "reactivesocket-cpp/src/automata/SubscriptionRequester.h"
 #include "reactivesocket-cpp/src/automata/SubscriptionResponder.h"
 
-namespace lithium {
 namespace reactivesocket {
 
 ReactiveSocket::~ReactiveSocket() {

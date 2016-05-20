@@ -17,7 +17,6 @@
 #include "reactivesocket-cpp/src/Payload.h"
 #include "reactivesocket-cpp/src/ReactiveStreamsCompat.h"
 
-namespace lithium {
 namespace reactivesocket {
 
 /// Instead of calling into the respective Base methods, schedules signals
