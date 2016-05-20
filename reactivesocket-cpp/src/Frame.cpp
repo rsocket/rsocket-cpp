@@ -13,7 +13,7 @@
 #include <folly/io/IOBuf.h>
 
 namespace {
-folly::Singleton<lithium::reactivesocket::FrameBufferAllocator>
+folly::Singleton<reactivesocket::FrameBufferAllocator>
     bufferAllocatorSingleton;
 }
 

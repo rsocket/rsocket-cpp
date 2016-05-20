@@ -12,7 +12,7 @@
 #include "reactivesocket-cpp/test/ReactiveStreamsMocksCompat.h"
 
 using namespace ::testing;
-using namespace ::lithium::reactivesocket;
+using namespace ::reactivesocket;
 
 TEST(InlineConnectionTest, PingPong) {
   // InlineConnection forward appropriate calls in-line, hence the order of mock

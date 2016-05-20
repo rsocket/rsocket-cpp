@@ -11,7 +11,7 @@
 #include "reactive-streams-cpp/utilities/SmartPointers.h"
 
 using namespace ::testing;
-using namespace ::lithium::reactivestreams;
+using namespace ::reactivestreams;
 
 TEST(SubscriberPtrTest, ResetDtorRelease) {
   StrictMock<UnmanagedMockSubscriber<int>> subscriber0, subscriber1,

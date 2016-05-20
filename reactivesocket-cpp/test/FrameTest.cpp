@@ -11,7 +11,7 @@
 #include "reactivesocket-cpp/src/Payload.h"
 
 using namespace ::testing;
-using namespace ::lithium::reactivesocket;
+using namespace ::reactivesocket;
 
 class FrameTest : public ::testing::Test {
   void SetUp() override {
@@ -23,14 +23,14 @@ class FrameTest : public ::testing::Test {
           return buf.release();
         }));
 
-    folly::Singleton<lithium::reactivesocket::FrameBufferAllocator>::make_mock(
+    folly::Singleton<reactivesocket::FrameBufferAllocator>::make_mock(
         [&] { return &allocator; }, /* no tear down */ [](void*) {});
   }
 
   void TearDown() override {
     folly::SingletonVault::singleton()->destroyInstances();
     // Bring the default allocator.
-    folly::Singleton<lithium::reactivesocket::FrameBufferAllocator>::make_mock(
+    folly::Singleton<reactivesocket::FrameBufferAllocator>::make_mock(
         nullptr);
     folly::SingletonVault::singleton()->reenableInstances();
   }

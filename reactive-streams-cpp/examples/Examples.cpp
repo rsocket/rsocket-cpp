@@ -6,7 +6,7 @@
 #include <gtest/gtest.h>
 
 using namespace ::testing;
-using namespace lithium::reactivestreams;
+using namespace reactivestreams;
 
 TEST(Examples, SelfManagedMocks) {
   // Best run with ASAN, to detect potential leaks, use-after-free or

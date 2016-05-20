@@ -17,7 +17,7 @@
 #include "reactivesocket-cpp/test/ReactiveStreamsMocksCompat.h"
 
 using namespace ::testing;
-using namespace ::lithium::reactivesocket;
+using namespace ::reactivesocket;
 
 MATCHER_P(
     Equals,

@@ -7,7 +7,7 @@
 #include "reactive-streams-cpp/utilities/Ownership.h"
 
 using namespace ::testing;
-using namespace ::lithium::reactivestreams;
+using namespace ::reactivestreams;
 
 class TestObject {
  public:

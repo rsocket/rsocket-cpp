@@ -8,7 +8,7 @@
 #include "reactive-streams-cpp/utilities/AllowanceSemaphore.h"
 
 using namespace ::testing;
-using namespace ::lithium::reactivestreams;
+using namespace ::reactivestreams;
 
 TEST(AllowanceSemaphoreTest, Finite) {
   AllowanceSemaphore sem;
