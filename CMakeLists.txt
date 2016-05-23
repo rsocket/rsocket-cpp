@@ -24,11 +24,7 @@ include_directories(${CMAKE_SOURCE_DIR})
 add_library(
   ReactiveSocket
   reactive-streams-cpp/Mocks.h
-  reactive-streams-cpp/Publisher.h
-  reactive-streams-cpp/README.md
-  reactive-streams-cpp/Subscriber.h
-  reactive-streams-cpp/Subscription.h
-  reactive-streams-cpp/TARGETS
+  reactive-streams-cpp/ReactiveStreams.h
   reactive-streams-cpp/utilities/AllowanceSemaphore.h
   reactive-streams-cpp/utilities/Ownership.h
   reactive-streams-cpp/utilities/SmartPointers.h
