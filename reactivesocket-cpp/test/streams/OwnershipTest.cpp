@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "reactive-streams-cpp/utilities/Ownership.h"
+#include "reactivesocket-cpp/src/streams/Ownership.h"
 
 using namespace ::testing;
 using namespace ::reactivestreams;
