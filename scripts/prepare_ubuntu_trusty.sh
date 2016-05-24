@@ -21,6 +21,8 @@ sudo apt-get -y install \
     libiberty-dev
 
 # install reactive-streams-cpp
+mkdir working
+cd working
 git clone https://github.com/ReactiveSocket/reactive-streams-cpp
 cd reactive-streams-cpp
 git submodule init
