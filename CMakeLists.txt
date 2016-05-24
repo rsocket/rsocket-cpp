@@ -23,12 +23,6 @@ include_directories(${CMAKE_SOURCE_DIR})
 
 add_library(
   ReactiveSocket
-  reactive-streams-cpp/Mocks.h
-  reactive-streams-cpp/ReactiveStreams.h
-  reactive-streams-cpp/utilities/AllowanceSemaphore.h
-  reactive-streams-cpp/utilities/Ownership.h
-  reactive-streams-cpp/utilities/SmartPointers.h
-  reactivesocket-cpp/README.md
   reactivesocket-cpp/src/AbstractStreamAutomaton.cpp
   reactivesocket-cpp/src/AbstractStreamAutomaton.h
   reactivesocket-cpp/src/automata/ChannelRequester.cpp
@@ -61,7 +55,6 @@ add_library(
   reactivesocket-cpp/src/ReactiveSocket.h
   reactivesocket-cpp/src/ReactiveStreamsCompat.h
   reactivesocket-cpp/src/RequestHandler.h
-  reactivesocket-cpp/TARGETS
   )
 
 target_link_libraries(
@@ -77,10 +70,9 @@ add_subdirectory(external/googletest EXCLUDE_FROM_ALL)
 
 add_executable(
   tests
-  reactive-streams-cpp/examples/Examples.cpp
-  reactive-streams-cpp/test/AllowanceSemaphoreTest.cpp
-  reactive-streams-cpp/test/OwnershipTest.cpp
-  reactive-streams-cpp/test/SmartPointersTest.cpp
+  reactivesocket-cpp/test/streams/AllowanceSemaphoreTest.cpp
+  reactivesocket-cpp/test/streams/OwnershipTest.cpp
+  reactivesocket-cpp/test/streams/SmartPointersTest.cpp
   reactivesocket-cpp/test/FrameTest.cpp
   reactivesocket-cpp/test/InlineConnection.cpp
   reactivesocket-cpp/test/InlineConnection.h

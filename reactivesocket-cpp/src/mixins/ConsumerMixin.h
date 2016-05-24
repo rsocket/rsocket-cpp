@@ -5,8 +5,8 @@
 #include <cstddef>
 #include <iostream>
 
-#include "reactive-streams-cpp/utilities/AllowanceSemaphore.h"
-#include "reactive-streams-cpp/utilities/SmartPointers.h"
+#include "reactivesocket-cpp/src/streams/AllowanceSemaphore.h"
+#include "reactivesocket-cpp/src/streams/SmartPointers.h"
 #include "reactivesocket-cpp/src/Payload.h"
 #include "reactivesocket-cpp/src/ReactiveStreamsCompat.h"
 
