@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "reactive-streams-cpp/ReactiveStreams.h"
+#include <reactive-streams/ReactiveStreams.h>
 
 namespace folly {
 class exception_wrapper;
