@@ -76,7 +76,7 @@ class LoggingMixin : public Base {
   }
 
   void onError(folly::exception_wrapper ex) {
-    Base::logPrefix(LOG(INFO)) << "onComplete(" << ex.class_name() << ")";
+    Base::logPrefix(LOG(INFO)) << "onError(" << ex.class_name() << ")";
     Base::onError(std::move(ex));
   }
   /// @}
