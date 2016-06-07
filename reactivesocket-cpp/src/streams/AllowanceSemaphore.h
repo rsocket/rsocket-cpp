@@ -59,6 +59,10 @@ class AllowanceSemaphore {
     return limit;
   }
 
+  ValueType current() {
+    return value_;
+  }
+
  private:
   static_assert(
       !std::numeric_limits<ValueType>::is_signed,

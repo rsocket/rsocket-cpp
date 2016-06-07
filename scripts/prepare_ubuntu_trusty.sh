@@ -1,3 +1,4 @@
+#@IgnoreInspection BashAddShebang
 # libs required for Folly
 sudo apt-get -y install \
     g++ \
