@@ -88,7 +88,7 @@ class TcpDuplexConnection
  private:
   folly::IOBufQueue readBuffer_{folly::IOBufQueue::cacheChainLength()};
   std::unique_ptr<TcpOutputSubscriber> outputSubscriber_;
-  reactivesocket::Subscriber<Payload>* inputSubscriber_{nullptr};
+  SubscriberPtr<Subscriber<Payload>> inputSubscriber_;
   folly::AsyncSocket::UniquePtr socket_;
 };
 }

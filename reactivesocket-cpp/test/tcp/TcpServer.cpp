@@ -59,6 +59,8 @@ class ServerRequestHandler : public RequestHandler {
               << request->moveToFbString() << "\n";
 
     response.onNext(folly::IOBuf::copyBuffer("from server"));
+    // TODO AddressSanitizer: heap-use-after-free
+//    response.onComplete();
   }
 };
 

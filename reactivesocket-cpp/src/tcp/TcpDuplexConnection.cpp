@@ -24,11 +24,11 @@ Subscriber<Payload>& TcpDuplexConnection::getOutput() {
 };
 
 void TcpDuplexConnection::setInput(Subscriber<Payload>& inputSubscriber) {
-  inputSubscriber_ = &inputSubscriber;
+  inputSubscriber_.reset(&inputSubscriber);
 
   auto* subscription = new MemoryMixin<TcpSubscriptionBase>();
 
-  inputSubscriber_->onSubscribe(*subscription);
+  inputSubscriber.onSubscribe(*subscription);
 
   socket_->setReadCB(this);
 };
@@ -74,7 +74,7 @@ bool TcpDuplexConnection::isBufferMovable() noexcept {
 
 void TcpDuplexConnection::readBufferAvailable(
     std::unique_ptr<IOBuf> readBuf) noexcept {
-  inputSubscriber_->onNext(std::move(readBuf));
+  inputSubscriber_.onNext(std::move(readBuf));
 }
 
 void TcpOutputSubscriber::onSubscribe(Subscription& subscription) {

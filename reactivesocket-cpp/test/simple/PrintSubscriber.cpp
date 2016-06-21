@@ -12,7 +12,9 @@ void PrintSubscriber::onNext(Payload element) {
   std::cout << "PrintSubscriber.onNext " << element->moveToFbString() << "\n";
 }
 
-void PrintSubscriber::onComplete() {}
+void PrintSubscriber::onComplete() {
+  std::cout << "PrintSubscriber.onComplete\n";
+}
 
 void PrintSubscriber::onError(folly::exception_wrapper ex) {
   std::cout << "PrintSubscriber.onError " << ex.what() << "\n";
