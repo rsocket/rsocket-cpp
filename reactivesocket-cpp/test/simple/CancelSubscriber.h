@@ -2,23 +2,22 @@
 
 #pragma once
 
-#include <reactivesocket-cpp/src/ReactiveStreamsCompat.h>
-#include "reactivesocket-cpp/src/mixins/IntrusiveDeleter.h"
-#include "reactivesocket-cpp/src/Payload.h"
 #include <folly/ExceptionWrapper.h>
+#include <reactivesocket-cpp/src/ReactiveStreamsCompat.h>
+#include "reactivesocket-cpp/src/Payload.h"
+#include "reactivesocket-cpp/src/mixins/IntrusiveDeleter.h"
 
 namespace reactivesocket {
-    class CancelSubscriber : public IntrusiveDeleter, public Subscriber<Payload> {
+class CancelSubscriber : public IntrusiveDeleter, public Subscriber<Payload> {
+ public:
+  ~CancelSubscriber() override = default;
 
-    public:
-        ~CancelSubscriber() override = default;
+  void onSubscribe(Subscription& subscription) override;
 
-        void onSubscribe(Subscription &subscription) override;
+  void onNext(Payload element) override;
 
-        void onNext(Payload element) override;
+  void onComplete() override;
 
-        void onComplete() override;
-
-        void onError(folly::exception_wrapper ex) override;
-    };
+  void onError(folly::exception_wrapper ex) override;
+};
 }

@@ -1,82 +1,97 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
+#include "TcpDuplexConnection.h"
 #include <folly/Memory.h>
 #include <reactivesocket-cpp/src/mixins/MemoryMixin.h>
-#include "TcpDuplexConnection.h"
 
 namespace reactivesocket {
-    using namespace ::folly;
+using namespace ::folly;
 
-    Subscriber<Payload> &TcpDuplexConnection::getOutput() {
-        if (!outputSubscriber_) {
-            outputSubscriber_ = folly::make_unique<TcpOutputSubscriber>(*this);
-        }
-        return *outputSubscriber_;
-    };
+void TcpSubscriptionBase::request(size_t n) {
+  // ignored for now, currently flow control at higher layers
+}
 
-    void TcpDuplexConnection::setInput(Subscriber<Payload> &inputSubscriber) {
-      inputSubscriber_ = &inputSubscriber;
+void TcpSubscriptionBase::cancel() {
+  // TODO should this close the socket, or is this better handled by framed protocol layer cleanly closing
+  // and destructing?
+}
 
-      auto* subscription = new MemoryMixin<TcpSubscriptionBase>();
+Subscriber<Payload>& TcpDuplexConnection::getOutput() {
+  if (!outputSubscriber_) {
+    outputSubscriber_ = folly::make_unique<TcpOutputSubscriber>(*this);
+  }
+  return *outputSubscriber_;
+};
 
-      inputSubscriber_->onSubscribe(*subscription);
+void TcpDuplexConnection::setInput(Subscriber<Payload>& inputSubscriber) {
+  inputSubscriber_ = &inputSubscriber;
 
-      socket_->setReadCB(this);
-    };
+  auto* subscription = new MemoryMixin<TcpSubscriptionBase>();
 
-    void TcpDuplexConnection::send(Payload element) {
-      socket_->writeChain(this, std::move(element));
-    }
+  inputSubscriber_->onSubscribe(*subscription);
 
-    void TcpDuplexConnection::writeSuccess() noexcept {
-    }
+  socket_->setReadCB(this);
+};
 
-    void TcpDuplexConnection::writeErr(size_t bytesWritten, const AsyncSocketException& ex) noexcept {
-      std::cout << "TODO writeErr" << bytesWritten << ex.what() << "\n";
-    }
+void TcpDuplexConnection::send(Payload element) {
+  socket_->writeChain(this, std::move(element));
+}
 
-    void TcpDuplexConnection::getReadBuffer(void **bufReturn, size_t *lenReturn) noexcept {
-      std::tie(*bufReturn, *lenReturn) = readBuffer_.preallocate(4096, 4096);
-    }
+void TcpDuplexConnection::writeSuccess() noexcept {}
 
-    void TcpDuplexConnection::readDataAvailable(size_t len) noexcept {
-      readBuffer_.postallocate(len);
+void TcpDuplexConnection::writeErr(
+    size_t bytesWritten,
+    const AsyncSocketException& ex) noexcept {
+  std::cout << "TODO writeErr" << bytesWritten << ex.what() << "\n";
+}
 
-      if (inputSubscriber_) {
-        readBufferAvailable(readBuffer_.split(len));
-      }
-    }
+void TcpDuplexConnection::getReadBuffer(
+    void** bufReturn,
+    size_t* lenReturn) noexcept {
+  std::tie(*bufReturn, *lenReturn) = readBuffer_.preallocate(4096, 4096);
+}
 
-    void TcpDuplexConnection::readEOF() noexcept {
-      std::cout << "TODO readEOF\n";
-    }
+void TcpDuplexConnection::readDataAvailable(size_t len) noexcept {
+  readBuffer_.postallocate(len);
 
-    void TcpDuplexConnection::readErr(const folly::AsyncSocketException &ex) noexcept {
-      std::cout << "TODO readErr " << ex.what() << "\n";
-    }
+  if (inputSubscriber_) {
+    readBufferAvailable(readBuffer_.split(len));
+  }
+}
 
-    bool TcpDuplexConnection::isBufferMovable() noexcept {
-      return true;
-    }
+void TcpDuplexConnection::readEOF() noexcept {
+  std::cout << "TODO readEOF\n";
+}
 
-    void TcpDuplexConnection::readBufferAvailable(std::unique_ptr<IOBuf> readBuf) noexcept {
-      inputSubscriber_->onNext(std::move(readBuf));
-    }
+void TcpDuplexConnection::readErr(
+    const folly::AsyncSocketException& ex) noexcept {
+  std::cout << "TODO readErr " << ex.what() << "\n";
+}
 
-    void TcpOutputSubscriber::onSubscribe(Subscription& subscription) {
-      // no flow control at tcp level, since we can't know the size of messages
-      subscription.request(std::numeric_limits<size_t>::max());
-    };
+bool TcpDuplexConnection::isBufferMovable() noexcept {
+  return true;
+}
 
-    void TcpOutputSubscriber::onNext(Payload element) {
-      connection_.send(std::move(element));
-    };
+void TcpDuplexConnection::readBufferAvailable(
+    std::unique_ptr<IOBuf> readBuf) noexcept {
+  inputSubscriber_->onNext(std::move(readBuf));
+}
 
-    void TcpOutputSubscriber::onComplete() {
-      std::cout << "TODO onComplete" << "\n";
-    };
+void TcpOutputSubscriber::onSubscribe(Subscription& subscription) {
+  // no flow control at tcp level, since we can't know the size of messages
+  subscription.request(std::numeric_limits<size_t>::max());
+};
 
-    void TcpOutputSubscriber::onError(folly::exception_wrapper ex) {
-      std::cout << "TODO onError" << ex.what() << "\n";
-    };
+void TcpOutputSubscriber::onNext(Payload element) {
+  connection_.send(std::move(element));
+};
+
+void TcpOutputSubscriber::onComplete() {
+  std::cout << "TODO onComplete"
+            << "\n";
+};
+
+void TcpOutputSubscriber::onError(folly::exception_wrapper ex) {
+  std::cout << "TODO onError" << ex.what() << "\n";
+};
 }

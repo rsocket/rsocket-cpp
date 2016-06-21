@@ -110,8 +110,8 @@ add_executable(
         reactivesocket-cpp/test/simple/CancelSubscriber.h
         reactivesocket-cpp/src/ReactiveSocket.cpp
         reactivesocket-cpp/src/ReactiveSocket.h
-        reactivesocket-cpp/test/simple/CancelSubscription.cpp
-        reactivesocket-cpp/test/simple/CancelSubscription.h)
+        reactivesocket-cpp/test/simple/NullSubscription.cpp
+        reactivesocket-cpp/test/simple/NullSubscription.h)
 
 target_link_libraries(
         tcpclient
@@ -129,8 +129,8 @@ add_executable(
         reactivesocket-cpp/test/tcp/TcpServer.cpp
         reactivesocket-cpp/test/simple/PrintSubscriber.cpp
         reactivesocket-cpp/test/simple/PrintSubscriber.h
-        reactivesocket-cpp/test/simple/CancelSubscription.cpp
-        reactivesocket-cpp/test/simple/CancelSubscription.h
+        reactivesocket-cpp/test/simple/NullSubscription.cpp
+        reactivesocket-cpp/test/simple/NullSubscription.h
         reactivesocket-cpp/test/simple/CancelSubscriber.cpp
         reactivesocket-cpp/test/simple/CancelSubscriber.h)
 
