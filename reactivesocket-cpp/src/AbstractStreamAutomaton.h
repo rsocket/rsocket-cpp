@@ -20,6 +20,7 @@ class Frame_REQUEST_N;
 class Frame_CANCEL;
 class Frame_RESPONSE;
 class Frame_ERROR;
+class Frame_KEEPALIVE;
 using StreamId = uint32_t;
 
 /// Indicates the reason why the stream automaton received a terminal signal

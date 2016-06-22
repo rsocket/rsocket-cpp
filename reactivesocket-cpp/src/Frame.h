@@ -31,7 +31,7 @@ enum class FrameType : uint16_t {
   RESERVED = 0x0000,
   // SETUP = 0x0001,
   // LEASE = 0x0002,
-  // KEEPALIVE = 0x0003,
+  KEEPALIVE = 0x0003,
   // REQUEST_RESPONSE = 0x0004,
   // REQUEST_FNF = 0x0005,
   // REQUEST_STREAM = 0x0006,
@@ -66,7 +66,7 @@ const FrameFlags FrameFlags_EMPTY = 0;
 // const FrameFlags FrameFlags_IGNORE = 1 << 0;
 // const FrameFlags FrameFlags_METADATA = 1 << 1;
 // const FrameFlags FrameFlags_FOLLOWS = 1 << 2;
-// const FrameFlags FrameFlags_KEEPALIVE = 1 << 2;
+const FrameFlags FrameFlags_KEEPALIVE_RESPOND = 1 << 2;
 // const FrameFlags FrameFlags_LEASE = 1 << 2;
 const FrameFlags FrameFlags_COMPLETE = 1 << 3;
 // const FrameFlags FrameFlags_STRICT = 1 << 3;
@@ -232,5 +232,22 @@ class Frame_ERROR {
   ErrorCode errorCode_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_ERROR&);
+
+class Frame_KEEPALIVE {
+public:
+    static constexpr bool Trait_CarriesAllowance = false;
+
+    Frame_KEEPALIVE() {}
+    Frame_KEEPALIVE(StreamId streamId, FrameFlags flags, Payload data)
+        : header_(FrameType::KEEPALIVE, flags, streamId),
+          data_(std::move(data)) {}
+
+    Payload serializeOut();
+    bool deserializeFrom(Payload in);
+
+    FrameHeader header_;
+    Payload data_;
+};
+std::ostream& operator<<(std::ostream&, const Frame_KEEPALIVE&);
 /// @}
 }

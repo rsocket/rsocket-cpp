@@ -121,6 +121,8 @@ class ConnectionAutomaton :
   void onError(folly::exception_wrapper) override;
 
   void onTerminal(folly::exception_wrapper ex);
+
+  void onConnectionFrame(Payload);
   /// @}
 
   /// @{

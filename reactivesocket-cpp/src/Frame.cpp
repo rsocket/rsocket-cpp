@@ -46,6 +46,8 @@ std::ostream& operator<<(std::ostream& os, FrameType type) {
       return os << "ERROR";
     case FrameType::RESERVED:
       return os << "RESERVED";
+    case FrameType::KEEPALIVE:
+      return os << "KEEPALIVE";
   }
   // this should be never hit because the switch is over all cases
   std::abort();
@@ -296,6 +298,39 @@ bool Frame_ERROR::deserializeFrom(Payload in) {
 
 std::ostream& operator<<(std::ostream& os, const Frame_ERROR& frame) {
   return os << frame.header_ << "(" << frame.errorCode_ << ")";
+}
+/// @}
+
+/// @{
+Payload Frame_KEEPALIVE::serializeOut() {
+  auto buf = FrameBufferAllocator::allocate(FrameHeader::kSize);
+
+  folly::io::Appender app(buf.get(), /* do not grow */ 0);
+  header_.serializeInto(app);
+  if (data_) {
+    buf->appendChain(std::move(data_));
+  }
+  return buf;
+}
+
+bool Frame_KEEPALIVE::deserializeFrom(Payload in) {
+  folly::io::Cursor cur(in.get());
+  if (!header_.deserializeFrom(cur)) {
+    return false;
+  }
+  auto totalLength = cur.totalLength();
+  if (totalLength > 0) {
+    cur.clone(data_, totalLength);
+  } else {
+    data_.reset();
+  }
+  return true;
+}
+
+std::ostream& operator<<(std::ostream& os, const Frame_KEEPALIVE& frame) {
+  return os << frame.header_ << "(<"
+         << (frame.data_ ? frame.data_->computeChainDataLength() : 0)
+         << ">)";
 }
 /// @}
 }

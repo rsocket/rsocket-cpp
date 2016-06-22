@@ -41,7 +41,7 @@ void FramedReader::parseFrames() {
     const auto nextFrameSize = c.readBE<int32_t>();
     CHECK_GE(nextFrameSize, sizeof(int32_t));
 
-    if (payloadQueue_.chainLength() < nextFrameSize) {
+    if (payloadQueue_.chainLength() < (size_t)nextFrameSize) {
       // need to accumulate more data
       break;
     }
