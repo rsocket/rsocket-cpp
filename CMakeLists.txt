@@ -38,6 +38,12 @@ add_library(
   reactivesocket-cpp/src/DuplexConnection.h
   reactivesocket-cpp/src/Frame.cpp
   reactivesocket-cpp/src/Frame.h
+  reactivesocket-cpp/src/framed/FramedDuplexConnection.cpp
+  reactivesocket-cpp/src/framed/FramedDuplexConnection.h
+  reactivesocket-cpp/src/framed/FramedReader.h
+  reactivesocket-cpp/src/framed/FramedReader.cpp
+  reactivesocket-cpp/src/framed/FramedWriter.h
+  reactivesocket-cpp/src/framed/FramedWriter.cpp
   reactivesocket-cpp/src/mixins/ConsumerMixin-inl.h
   reactivesocket-cpp/src/mixins/ConsumerMixin.h
   reactivesocket-cpp/src/mixins/ExecutorMixin.h
@@ -70,6 +76,8 @@ add_subdirectory(external/googletest EXCLUDE_FROM_ALL)
 
 add_executable(
   tests
+  reactivesocket-cpp/test/framed/FramedReaderTest.cpp
+  reactivesocket-cpp/test/framed/FramedWriterTest.cpp
   reactivesocket-cpp/test/streams/AllowanceSemaphoreTest.cpp
   reactivesocket-cpp/test/streams/OwnershipTest.cpp
   reactivesocket-cpp/test/streams/SmartPointersTest.cpp
