@@ -62,15 +62,15 @@ std::ostream& operator<<(std::ostream&, FrameType);
 
 // TODO(stupaq): strong typedef
 using FrameFlags = uint16_t;
-const FrameFlags FrameFlags_EMPTY = 0;
-// const FrameFlags FrameFlags_IGNORE = 1 << 0;
-// const FrameFlags FrameFlags_METADATA = 1 << 1;
-// const FrameFlags FrameFlags_FOLLOWS = 1 << 2;
-// const FrameFlags FrameFlags_KEEPALIVE = 1 << 2;
-// const FrameFlags FrameFlags_LEASE = 1 << 2;
-const FrameFlags FrameFlags_COMPLETE = 1 << 3;
-// const FrameFlags FrameFlags_STRICT = 1 << 3;
-const FrameFlags FrameFlags_REQN_PRESENT = 1 << 4;
+const FrameFlags FrameFlags_EMPTY = 0x0000;
+// const FrameFlags FrameFlags_IGNORE = 0x8000;
+// const FrameFlags FrameFlags_METADATA = 0x4000;
+// const FrameFlags FrameFlags_FOLLOWS = 0x2000;
+// const FrameFlags FrameFlags_KEEPALIVE = 0x2000;
+// const FrameFlags FrameFlags_LEASE = 0x2000;
+const FrameFlags FrameFlags_COMPLETE = 0x1000;
+// const FrameFlags FrameFlags_STRICT = 0x1000;
+const FrameFlags FrameFlags_REQN_PRESENT = 0x0800;
 
 class FrameHeader {
  public:
