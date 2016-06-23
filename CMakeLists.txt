@@ -79,6 +79,8 @@ add_subdirectory(external/googletest EXCLUDE_FROM_ALL)
 
 add_executable(
   tests
+  reactivesocket-cpp/test/framed/FramedReaderTest.cpp
+  reactivesocket-cpp/test/framed/FramedWriterTest.cpp
   reactivesocket-cpp/test/streams/AllowanceSemaphoreTest.cpp
   reactivesocket-cpp/test/streams/OwnershipTest.cpp
   reactivesocket-cpp/test/streams/SmartPointersTest.cpp
