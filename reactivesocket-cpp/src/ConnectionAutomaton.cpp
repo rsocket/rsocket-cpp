@@ -161,6 +161,9 @@ void ConnectionAutomaton::onConnectionFrame(Payload payload) {
       }
     }
       return;
+    case FrameType::SETUP:
+      std::cout << "ignoring setup frame\n";
+      return;
     default:
       // TODO(yschimke): check ignore flag and fail
       assert(false);

@@ -29,7 +29,7 @@ using StreamId = uint32_t;
 enum class FrameType : uint16_t {
   // TODO(stupaq): commented frame types indicate unimplemented frames
   RESERVED = 0x0000,
-  // SETUP = 0x0001,
+  SETUP = 0x0001,
   // LEASE = 0x0002,
   KEEPALIVE = 0x0003,
   // REQUEST_RESPONSE = 0x0004,
