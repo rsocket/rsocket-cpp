@@ -52,8 +52,8 @@ TEST(FramedReaderTest, Read1Frame) {
   EXPECT_CALL(frameSubscriber, onComplete_()).Times(1);
   EXPECT_CALL(wireSubscription, cancel_()).Times(1);
 
-  framedReader.onComplete();
   frameSubscriber.subscription()->cancel();
+  framedReader.onComplete();
 }
 
 TEST(FramedReaderTest, Read3Frames) {
@@ -81,6 +81,9 @@ TEST(FramedReaderTest, Read3Frames) {
   bufQueue.append(std::move(payload2));
 
   FramedReader framedReader(frameSubscriber);
+
+  EXPECT_CALL(frameSubscriber, onSubscribe_(_)).Times(1);
+
   framedReader.onSubscribe(wireSubscription);
 
   EXPECT_CALL(frameSubscriber, onNext_(_)).Times(0);
@@ -106,8 +109,8 @@ TEST(FramedReaderTest, Read3Frames) {
   EXPECT_CALL(frameSubscriber, onComplete_()).Times(1);
   EXPECT_CALL(wireSubscription, cancel_()).Times(1);
 
-  framedReader.onComplete();
   frameSubscriber.subscription()->cancel();
+  framedReader.onComplete();
 }
 
 TEST(FramedReaderTest, Read1FrameIncomplete) {
@@ -159,6 +162,6 @@ TEST(FramedReaderTest, Read1FrameIncomplete) {
   EXPECT_CALL(frameSubscriber, onComplete_()).Times(1);
   EXPECT_CALL(wireSubscription, cancel_()).Times(1);
 
-  framedReader.onComplete();
   frameSubscriber.subscription()->cancel();
+  framedReader.onComplete();
 }
