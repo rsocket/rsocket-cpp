@@ -7,8 +7,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "reactivesocket-cpp/src/framed/FramedWriter.h"
 #include "reactivesocket-cpp/src/Payload.h"
+#include "reactivesocket-cpp/src/framed/FramedWriter.h"
 #include "reactivesocket-cpp/test/ReactiveStreamsMocksCompat.h"
 
 using namespace ::testing;
@@ -42,7 +42,7 @@ TEST(FramedWriterTest, Error) {
   EXPECT_CALL(subscriber, onError_(_)).Times(1);
   writer.onError(std::runtime_error("error1"));
 
-//  subscriber.subscription()->cancel();
+  //  subscriber.subscription()->cancel();
 }
 
 TEST(FramedWriterTest, Complete) {
@@ -58,7 +58,7 @@ TEST(FramedWriterTest, Complete) {
   EXPECT_CALL(subscriber, onComplete_()).Times(1);
   writer.onComplete();
 
-//  subscriber.subscription()->cancel();
+  //  subscriber.subscription()->cancel();
 }
 
 static void nextSingleFrameTest(int headroom) {

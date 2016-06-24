@@ -9,8 +9,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "reactivesocket-cpp/src/framed/FramedReader.h"
 #include "reactivesocket-cpp/src/Payload.h"
+#include "reactivesocket-cpp/src/framed/FramedReader.h"
 #include "reactivesocket-cpp/test/ReactiveStreamsMocksCompat.h"
 
 using namespace ::testing;
