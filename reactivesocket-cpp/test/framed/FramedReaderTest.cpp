@@ -9,14 +9,14 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "reactivesocket-cpp/src/framed/FramedReader.h"
 #include "reactivesocket-cpp/src/Payload.h"
+#include "reactivesocket-cpp/src/framed/FramedReader.h"
 #include "reactivesocket-cpp/test/ReactiveStreamsMocksCompat.h"
 
 using namespace ::testing;
 using namespace ::reactivesocket;
 
-TEST(FramedWriterTest, Read1Frame) {
+TEST(FramedReaderTest, Read1Frame) {
   auto& frameSubscriber = makeMockSubscriber<Payload>();
   auto& wireSubscription = makeMockSubscription();
 
@@ -28,6 +28,9 @@ TEST(FramedWriterTest, Read1Frame) {
   folly::format("{}", msg1.c_str())(a1);
 
   FramedReader framedReader(frameSubscriber);
+
+  EXPECT_CALL(frameSubscriber, onSubscribe_(_)).Times(1);
+
   framedReader.onSubscribe(wireSubscription);
 
   EXPECT_CALL(frameSubscriber, onNext_(_)).Times(0);
@@ -41,17 +44,19 @@ TEST(FramedWriterTest, Read1Frame) {
         ASSERT_EQ(msg1, p->moveToFbString().toStdString());
       }));
 
+  EXPECT_CALL(wireSubscription, request_(_)).Times(1);
+
   frameSubscriber.subscription()->request(3);
 
   // to delete objects
   EXPECT_CALL(frameSubscriber, onComplete_()).Times(1);
   EXPECT_CALL(wireSubscription, cancel_()).Times(1);
 
-  framedReader.onComplete();
   frameSubscriber.subscription()->cancel();
+  framedReader.onComplete();
 }
 
-TEST(FramedWriterTest, Read3Frames) {
+TEST(FramedReaderTest, Read3Frames) {
   auto& frameSubscriber = makeMockSubscriber<Payload>();
   auto& wireSubscription = makeMockSubscription();
 
@@ -76,6 +81,9 @@ TEST(FramedWriterTest, Read3Frames) {
   bufQueue.append(std::move(payload2));
 
   FramedReader framedReader(frameSubscriber);
+
+  EXPECT_CALL(frameSubscriber, onSubscribe_(_)).Times(1);
+
   framedReader.onSubscribe(wireSubscription);
 
   EXPECT_CALL(frameSubscriber, onNext_(_)).Times(0);
@@ -101,11 +109,11 @@ TEST(FramedWriterTest, Read3Frames) {
   EXPECT_CALL(frameSubscriber, onComplete_()).Times(1);
   EXPECT_CALL(wireSubscription, cancel_()).Times(1);
 
-  framedReader.onComplete();
   frameSubscriber.subscription()->cancel();
+  framedReader.onComplete();
 }
 
-TEST(FramedWriterTest, Read1FrameIncomplete) {
+TEST(FramedReaderTest, Read1FrameIncomplete) {
   auto& frameSubscriber = makeMockSubscriber<Payload>();
   auto& wireSubscription = makeMockSubscription();
 
@@ -154,6 +162,6 @@ TEST(FramedWriterTest, Read1FrameIncomplete) {
   EXPECT_CALL(frameSubscriber, onComplete_()).Times(1);
   EXPECT_CALL(wireSubscription, cancel_()).Times(1);
 
-  framedReader.onComplete();
   frameSubscriber.subscription()->cancel();
+  framedReader.onComplete();
 }

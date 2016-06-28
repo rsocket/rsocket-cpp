@@ -62,7 +62,6 @@ std::ostream& operator<<(std::ostream&, FrameType);
 
 // TODO(stupaq): strong typedef
 using FrameFlags = uint16_t;
-
 const FrameFlags FrameFlags_EMPTY = 0x0000;
 // const FrameFlags FrameFlags_IGNORE = 0x8000;
 // const FrameFlags FrameFlags_METADATA = 0x4000;

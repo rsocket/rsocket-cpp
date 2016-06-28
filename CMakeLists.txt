@@ -42,10 +42,17 @@ add_library(
   reactivesocket-cpp/src/Frame.h
   reactivesocket-cpp/src/framed/FramedDuplexConnection.cpp
   reactivesocket-cpp/src/framed/FramedDuplexConnection.h
+<<<<<<< HEAD
   reactivesocket-cpp/src/framed/FramedReader.cpp
   reactivesocket-cpp/src/framed/FramedReader.h
   reactivesocket-cpp/src/framed/FramedWriter.cpp
   reactivesocket-cpp/src/framed/FramedWriter.h
+=======
+  reactivesocket-cpp/src/framed/FramedReader.h
+  reactivesocket-cpp/src/framed/FramedReader.cpp
+  reactivesocket-cpp/src/framed/FramedWriter.h
+  reactivesocket-cpp/src/framed/FramedWriter.cpp
+>>>>>>> master
   reactivesocket-cpp/src/mixins/ConsumerMixin-inl.h
   reactivesocket-cpp/src/mixins/ConsumerMixin.h
   reactivesocket-cpp/src/mixins/ExecutorMixin.h
