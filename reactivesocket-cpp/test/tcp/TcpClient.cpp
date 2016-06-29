@@ -92,8 +92,6 @@ int main(int argc, char* argv[]) {
         std::unique_ptr<RequestHandler> requestHandler =
             folly::make_unique<ClientRequestHandler>();
 
-        // TODO add framing
-
         reactiveSocket = ReactiveSocket::fromClientConnection(
             std::move(framedConnection), std::move(requestHandler));
 
@@ -103,9 +101,6 @@ int main(int argc, char* argv[]) {
             folly::IOBuf::copyBuffer("from client"), *subscriber);
       });
 
-  //  connection->getOutput().onSubscribe();
-  //  connection->setInput();
-
   std::string name;
   std::getline(std::cin, name);
 
@@ -114,4 +109,7 @@ int main(int argc, char* argv[]) {
       [&reactiveSocket]() { reactiveSocket.reset(nullptr); });
 
   eventBase.terminateLoopSoon();
+  thread.join();
+
+  return 0;
 }

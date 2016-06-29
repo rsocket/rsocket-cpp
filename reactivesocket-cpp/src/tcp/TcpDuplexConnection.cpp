@@ -3,17 +3,17 @@
 #include "TcpDuplexConnection.h"
 #include <folly/Memory.h>
 #include <reactivesocket-cpp/src/mixins/MemoryMixin.h>
+#include <folly/ExceptionWrapper.h>
 
 namespace reactivesocket {
 using namespace ::folly;
 
 void TcpSubscriptionBase::request(size_t n) {
-  // ignored for now, currently flow control at higher layers
+  // ignored for now, currently flow control is only at higher layers
 }
 
 void TcpSubscriptionBase::cancel() {
-  // TODO should this close the socket, or is this better handled by framed protocol layer cleanly closing
-  // and destructing?
+  connection_.closeFromReader();
 }
 
 Subscriber<Payload>& TcpDuplexConnection::getOutput() {
@@ -26,7 +26,7 @@ Subscriber<Payload>& TcpDuplexConnection::getOutput() {
 void TcpDuplexConnection::setInput(Subscriber<Payload>& inputSubscriber) {
   inputSubscriber_.reset(&inputSubscriber);
 
-  auto* subscription = new MemoryMixin<TcpSubscriptionBase>();
+  auto* subscription = new MemoryMixin<TcpSubscriptionBase>(*this);
 
   inputSubscriber.onSubscribe(*subscription);
 
@@ -42,6 +42,7 @@ void TcpDuplexConnection::writeSuccess() noexcept {}
 void TcpDuplexConnection::writeErr(
     size_t bytesWritten,
     const AsyncSocketException& ex) noexcept {
+  
   std::cout << "TODO writeErr" << bytesWritten << ex.what() << "\n";
 }
 
@@ -60,12 +61,12 @@ void TcpDuplexConnection::readDataAvailable(size_t len) noexcept {
 }
 
 void TcpDuplexConnection::readEOF() noexcept {
-  std::cout << "TODO readEOF\n";
+  inputSubscriber_.onComplete();
 }
 
 void TcpDuplexConnection::readErr(
     const folly::AsyncSocketException& ex) noexcept {
-  std::cout << "TODO readErr " << ex.what() << "\n";
+  inputSubscriber_.onError(ex);
 }
 
 bool TcpDuplexConnection::isBufferMovable() noexcept {
@@ -75,6 +76,14 @@ bool TcpDuplexConnection::isBufferMovable() noexcept {
 void TcpDuplexConnection::readBufferAvailable(
     std::unique_ptr<IOBuf> readBuf) noexcept {
   inputSubscriber_.onNext(std::move(readBuf));
+}
+
+void TcpDuplexConnection::closeFromWriter() {
+  socket_->close();
+}
+
+void TcpDuplexConnection::closeFromReader() {
+  socket_->close();
 }
 
 void TcpOutputSubscriber::onSubscribe(Subscription& subscription) {
@@ -87,11 +96,10 @@ void TcpOutputSubscriber::onNext(Payload element) {
 };
 
 void TcpOutputSubscriber::onComplete() {
-  std::cout << "TODO onComplete"
-            << "\n";
+  connection_.closeFromWriter();
 };
 
 void TcpOutputSubscriber::onError(folly::exception_wrapper ex) {
-  std::cout << "TODO onError" << ex.what() << "\n";
+  connection_.closeFromWriter();
 };
 }

@@ -18,15 +18,23 @@ class exception_wrapper;
 }
 
 namespace reactivesocket {
+class TcpDuplexConnection;
+
 class TcpSubscriptionBase : public virtual ::reactivesocket::IntrusiveDeleter,
                             public ::reactivesocket::Subscription {
  public:
+  TcpSubscriptionBase(TcpDuplexConnection& connection)
+    : connection_(connection){};
+
   ~TcpSubscriptionBase() = default;
 
   // Subscription methods
   void request(size_t n) override;
 
   void cancel() override;
+
+  private:
+    TcpDuplexConnection& connection_;
 };
 
 class TcpDuplexConnection;
@@ -57,7 +65,7 @@ class TcpDuplexConnection
       : socket_(std::move(socket)){};
 
   ~TcpDuplexConnection() {
-    socket_->closeNow();
+    socket_->close();
   };
 
   Subscriber<Payload>& getOutput() override;
@@ -84,6 +92,10 @@ class TcpDuplexConnection
 
   void readBufferAvailable(
       std::unique_ptr<folly::IOBuf> readBuf) noexcept override;
+
+  void closeFromWriter();
+
+  void closeFromReader();
 
  private:
   folly::IOBufQueue readBuffer_{folly::IOBufQueue::cacheChainLength()};

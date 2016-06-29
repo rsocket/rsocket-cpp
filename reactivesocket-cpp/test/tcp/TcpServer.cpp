@@ -60,7 +60,7 @@ class ServerRequestHandler : public RequestHandler {
 
     response.onNext(folly::IOBuf::copyBuffer("from server"));
     // TODO AddressSanitizer: heap-use-after-free
-//    response.onComplete();
+    response.onComplete();
   }
 };
 
