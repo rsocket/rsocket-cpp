@@ -25,17 +25,21 @@ ConnectionAutomaton::ConnectionAutomaton(
   // ::onSubscribe.
 }
 
-void ConnectionAutomaton::connect() {
+void ConnectionAutomaton::connect(bool client) {
   connectionOutput_.reset(&connection_->getOutput());
   connectionOutput_.get()->onSubscribe(*this);
   // This may call ::onSubscribe in-line, which calls ::request on the provided
   // subscription, which might deliver frames in-line.
   connection_->setInput(*this);
 
-  // TODO set correct version
-  auto data = folly::IOBuf::create(0);
-  Frame_SETUP frame(0, 0, 0, std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(), std::move(data));
-  connectionOutput_.onNext(frame.serializeOut());
+
+  if (client) {
+    // TODO set correct version
+    auto data = folly::IOBuf::create(0);
+    Frame_SETUP frame(0, 0, 0, std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(),
+                      std::move(data));
+    onNext(frame.serializeOut());
+  }
 }
 
 void ConnectionAutomaton::disconnect() {
@@ -229,9 +233,8 @@ void ConnectionAutomaton::cancel() {
 void ConnectionAutomaton::handleUnknownStream(
     StreamId streamId,
     Payload payload) {
-  // TODO(stupaq): there are some rules about monothonically increasing stream
+  // TODO(stupaq): there are some rules about monotonically increasing stream
   // IDs -- let's forget about them for a moment
-  std::cout << streamId << "\n";
   if (!factory_(streamId, payload)) {
     // TODO(stupaq): handle connection-level error
     assert(false);

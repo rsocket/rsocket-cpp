@@ -33,7 +33,7 @@ std::unique_ptr<ReactiveSocket> ReactiveSocket::fromClientConnection(
     std::unique_ptr<RequestHandler> handler) {
   std::unique_ptr<ReactiveSocket> socket(
       new ReactiveSocket(false, std::move(connection), std::move(handler)));
-  socket->connection_->connect();
+  socket->connection_->connect(true);
   return socket;
 }
 
@@ -42,7 +42,7 @@ std::unique_ptr<ReactiveSocket> ReactiveSocket::fromServerConnection(
     std::unique_ptr<RequestHandler> handler) {
   std::unique_ptr<ReactiveSocket> socket(
       new ReactiveSocket(true, std::move(connection), std::move(handler)));
-  socket->connection_->connect();
+  socket->connection_->connect(false);
   return socket;
 }
 

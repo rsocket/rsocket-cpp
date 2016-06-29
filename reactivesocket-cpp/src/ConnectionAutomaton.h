@@ -51,7 +51,7 @@ class ConnectionAutomaton :
   ///
   /// May result, depending on the implementation of the DuplexConnection, in
   /// processing of one or more frames.
-  void connect();
+  void connect(bool client);
 
   /// Terminates underlying connection.
   ///
