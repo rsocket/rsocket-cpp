@@ -64,7 +64,7 @@ std::ostream& operator<<(std::ostream&, FrameType);
 using FrameFlags = uint16_t;
 const FrameFlags FrameFlags_EMPTY = 0x0000;
 // const FrameFlags FrameFlags_IGNORE = 0x8000;
-// const FrameFlags FrameFlags_METADATA = 0x4000;
+const FrameFlags FrameFlags_METADATA = 0x4000;
 // const FrameFlags FrameFlags_FOLLOWS = 0x2000;
 const FrameFlags FrameFlags_KEEPALIVE_RESPOND = 0x2000;
 // const FrameFlags FrameFlags_LEASE = 0x2000;
@@ -234,20 +234,49 @@ class Frame_ERROR {
 std::ostream& operator<<(std::ostream&, const Frame_ERROR&);
 
 class Frame_KEEPALIVE {
-public:
-    static constexpr bool Trait_CarriesAllowance = false;
+ public:
+  static constexpr bool Trait_CarriesAllowance = false;
 
-    Frame_KEEPALIVE() {}
-    Frame_KEEPALIVE(StreamId streamId, FrameFlags flags, Payload data)
-        : header_(FrameType::KEEPALIVE, flags, streamId),
-          data_(std::move(data)) {}
+  Frame_KEEPALIVE() {}
+  Frame_KEEPALIVE(StreamId streamId, FrameFlags flags, Payload data)
+      : header_(FrameType::KEEPALIVE, flags, streamId),
+        data_(std::move(data)) {}
 
-    Payload serializeOut();
-    bool deserializeFrom(Payload in);
+  Payload serializeOut();
+  bool deserializeFrom(Payload in);
 
-    FrameHeader header_;
-    Payload data_;
+  FrameHeader header_;
+  Payload data_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_KEEPALIVE&);
+
+class Frame_SETUP {
+ public:
+  static constexpr bool Trait_CarriesAllowance = false;
+
+  Frame_SETUP() {}
+  Frame_SETUP(
+      StreamId streamId,
+      FrameFlags flags,
+      uint32_t version,
+      uint32_t keepaliveTime,
+      uint32_t maxLifetime,
+      Payload data)
+      : header_(FrameType::SETUP, flags, streamId),
+        version_(version),
+        keepaliveTime_(keepaliveTime),
+        maxLifetime_(maxLifetime),
+        data_(std::move(data)) {}
+
+  Payload serializeOut();
+  bool deserializeFrom(Payload in);
+
+  FrameHeader header_;
+  uint32_t version_;
+  uint32_t keepaliveTime_;
+  uint32_t maxLifetime_;
+  Payload data_;
+};
+std::ostream& operator<<(std::ostream&, const Frame_SETUP&);
 /// @}
 }

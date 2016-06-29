@@ -48,6 +48,8 @@ std::ostream& operator<<(std::ostream& os, FrameType type) {
       return os << "RESERVED";
     case FrameType::KEEPALIVE:
       return os << "KEEPALIVE";
+    case FrameType::SETUP:
+      return os << "SETUP";
   }
   // this should be never hit because the switch is over all cases
   std::abort();
@@ -133,6 +135,8 @@ bool Frame_REQUEST_SUB::deserializeFrom(Payload in) {
   if (!header_.deserializeFrom(cur)) {
     return false;
   }
+  // TODO support metadata
+  assert((header_.flags_ & FrameFlags_METADATA) == 0);
   try {
     requestN_ = cur.readBE<uint32_t>();
   } catch (...) {
@@ -173,6 +177,8 @@ bool Frame_REQUEST_CHANNEL::deserializeFrom(Payload in) {
   if (!header_.deserializeFrom(cur)) {
     return false;
   }
+  // TODO support metadata
+  assert((header_.flags_ & FrameFlags_METADATA) == 0);
   try {
     requestN_ = cur.readBE<uint32_t>();
   } catch (...) {
@@ -232,7 +238,12 @@ Payload Frame_CANCEL::serializeOut() {
 
 bool Frame_CANCEL::deserializeFrom(Payload in) {
   folly::io::Cursor cur(in.get());
-  return header_.deserializeFrom(cur);
+  if (!header_.deserializeFrom(cur)) {
+    return false;
+  }
+  // TODO support metadata
+  assert((header_.flags_ & FrameFlags_METADATA) == 0);
+  return true;
 }
 
 std::ostream& operator<<(std::ostream& os, const Frame_CANCEL& frame) {
@@ -257,6 +268,8 @@ bool Frame_RESPONSE::deserializeFrom(Payload in) {
   if (!header_.deserializeFrom(cur)) {
     return false;
   }
+  // TODO support metadata
+  assert((header_.flags_ & FrameFlags_METADATA) == 0);
   auto totalLength = cur.totalLength();
   if (totalLength > 0) {
     cur.clone(data_, totalLength);
@@ -288,6 +301,8 @@ bool Frame_ERROR::deserializeFrom(Payload in) {
   if (!header_.deserializeFrom(cur)) {
     return false;
   }
+  // TODO support metadata
+  assert((header_.flags_ & FrameFlags_METADATA) == 0);
   try {
     errorCode_ = static_cast<ErrorCode>(cur.readBE<uint32_t>());
     return true;
@@ -318,6 +333,7 @@ bool Frame_KEEPALIVE::deserializeFrom(Payload in) {
   if (!header_.deserializeFrom(cur)) {
     return false;
   }
+  assert((header_.flags_ & FrameFlags_METADATA) == 0);
   auto totalLength = cur.totalLength();
   if (totalLength > 0) {
     cur.clone(data_, totalLength);
@@ -332,5 +348,52 @@ std::ostream& operator<<(std::ostream& os, const Frame_KEEPALIVE& frame) {
          << (frame.data_ ? frame.data_->computeChainDataLength() : 0)
          << ">)";
 }
+/// @}
+
+/// @{
+    Payload Frame_SETUP::serializeOut() {
+      auto buf = FrameBufferAllocator::allocate(FrameHeader::kSize + 3 * sizeof(uint32_t));
+
+      folly::io::Appender app(buf.get(), /* do not grow */ 0);
+      header_.serializeInto(app);
+      app.writeBE(static_cast<uint32_t>(version_));
+      app.writeBE(static_cast<uint32_t>(keepaliveTime_));
+      app.writeBE(static_cast<uint32_t>(maxLifetime_));
+      // TODO encode mime types
+      if (data_) {
+        buf->appendChain(std::move(data_));
+      }
+      return buf;
+    }
+
+    bool Frame_SETUP::deserializeFrom(Payload in) {
+      folly::io::Cursor cur(in.get());
+      if (!header_.deserializeFrom(cur)) {
+        return false;
+      }
+      // TODO support metadata
+      assert((header_.flags_ & FrameFlags_METADATA) == 0);
+      try {
+        version_ = cur.readBE<uint32_t>();
+        keepaliveTime_ = cur.readBE<uint32_t>();
+        maxLifetime_ = cur.readBE<uint32_t>();
+      } catch (...) {
+        return false;
+      }
+      // TODO decode mime types
+      auto totalLength = cur.totalLength();
+      if (totalLength > 0) {
+        cur.clone(data_, totalLength);
+      } else {
+        data_.reset();
+      }
+      return true;
+    }
+
+    std::ostream& operator<<(std::ostream& os, const Frame_SETUP& frame) {
+      return os << frame.header_ << "(<"
+             << (frame.data_ ? frame.data_->computeChainDataLength() : 0)
+             << ">)";
+    }
 /// @}
 }

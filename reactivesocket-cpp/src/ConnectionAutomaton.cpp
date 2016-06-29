@@ -31,6 +31,11 @@ void ConnectionAutomaton::connect() {
   // This may call ::onSubscribe in-line, which calls ::request on the provided
   // subscription, which might deliver frames in-line.
   connection_->setInput(*this);
+
+  // TODO set correct version
+  auto data = folly::IOBuf::create(0);
+  Frame_SETUP frame(0, 0, 0, std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(), std::move(data));
+  connectionOutput_.onNext(frame.serializeOut());
 }
 
 void ConnectionAutomaton::disconnect() {
@@ -162,7 +167,8 @@ void ConnectionAutomaton::onConnectionFrame(Payload payload) {
     }
       return;
     case FrameType::SETUP:
-      std::cout << "ignoring setup frame\n";
+      // TODO handle lease logic
+      LOG(INFO) << "ignoring setup frame";
       return;
     default:
       // TODO(yschimke): check ignore flag and fail
