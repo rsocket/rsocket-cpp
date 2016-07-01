@@ -24,14 +24,14 @@ TEST(InlineConnectionTest, PingPong) {
   std::array<UnmanagedMockSubscriber<Payload>, 2> input;
   std::array<UnmanagedMockSubscription, 2> outputSub;
 
-  std::array<Subscription*, 2> inputSub {};
+  std::array<Subscription*, 2> inputSub;
   for (size_t i = 0; i < 2; ++i) {
     EXPECT_CALL(input[i], onSubscribe_(_))
         .InSequence(s)
         .WillRepeatedly(
             Invoke([&inputSub, i](Subscription* sub) { inputSub[i] = sub; }));
   }
-  std::array<Subscriber<Payload>*, 2> output {};
+  std::array<Subscriber<Payload>*, 2> output;
 
   // Register inputs and outputs in two different orders for two different
   // "directions" of the connection.
