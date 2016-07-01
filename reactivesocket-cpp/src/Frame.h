@@ -11,6 +11,7 @@
 #include <folly/io/IOBufQueue.h>
 #include <folly/Memory.h>
 #include <folly/Optional.h>
+#include <folly/io/Cursor.h>
 
 #include "reactivesocket-cpp/src/Payload.h"
 
@@ -18,9 +19,12 @@ namespace folly {
 template <typename V>
 class Optional;
 namespace io {
-class Appender;
-class QueueAppender;
 class Cursor;
+
+namespace detail {
+  template <typename Derived>
+  class Writable;
+}
 }
 }
 
@@ -92,8 +96,8 @@ class FrameHeader {
   FrameHeader(FrameType type, FrameFlags flags, StreamId streamId)
       : type_(type), flags_(flags), streamId_(streamId) {}
 
-  void serializeInto(folly::io::Appender& app);
-  void serializeInto(folly::io::QueueAppender& app);
+  template<typename T>
+  void serializeInto(folly::io::detail::Writable<T>& app);
   bool deserializeFrom(folly::io::Cursor& cur);
 
   FrameType type_;
@@ -121,13 +125,15 @@ class FrameMetadata {
   explicit FrameMetadata()
   : metadataPayload_(folly::make_unique<folly::IOBuf>()) {}
 
-  std::unique_ptr<folly::IOBuf> serialize();
+  void serializeInto(folly::io::QueueAppender& app);
 
   /// if metadata is present, deserializes it into metadata
   static bool deserializeFrom(folly::io::Cursor& cur,
                               const FrameFlags& flags,
                               folly::Optional<FrameMetadata>& metadata);
   bool deserializeFrom(folly::io::Cursor& cur);
+
+  uint32_t size();
 
   std::unique_ptr<folly::IOBuf> metadataPayload_;
 };
