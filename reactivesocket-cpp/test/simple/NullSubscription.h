@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <stddef.h>
 #include <reactivesocket-cpp/src/ReactiveStreamsCompat.h>
 #include <reactivesocket-cpp/src/mixins/IntrusiveDeleter.h>
 
