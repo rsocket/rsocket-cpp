@@ -27,7 +27,7 @@ void SubscriptionResponderBase::onComplete() {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
-      Frame_RESPONSE frame(streamId_, FrameFlags_COMPLETE, nullptr);
+      Frame_RESPONSE frame(streamId_, FrameFlags_COMPLETE, FrameMetadata(), nullptr);
       connection_->onNextFrame(frame);
       connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
     } break;
