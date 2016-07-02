@@ -90,11 +90,10 @@ folly::Optional<StreamId> FrameHeader::peekStreamId(const folly::IOBuf& in) {
   }
 }
 
-template<typename T>
-void FrameHeader::serializeInto(folly::io::detail::Writable<T>& app) {
-  app.template writeBE(static_cast<uint16_t>(type_));
-  app.template writeBE<uint16_t>(flags_);
-  app.template writeBE<uint32_t>(streamId_);
+void FrameHeader::serializeInto(folly::io::QueueAppender& app) {
+  app.writeBE<uint16_t>(static_cast<uint16_t>(type_));
+  app.writeBE<uint16_t>(flags_);
+  app.writeBE<uint32_t>(streamId_);
 }
 
 bool FrameHeader::deserializeFrom(folly::io::Cursor& cur) {
@@ -265,13 +264,14 @@ std::ostream& operator<<(std::ostream& os, const Frame_REQUEST_CHANNEL& frame) {
 
 /// @{
 Payload Frame_REQUEST_N::serializeOut() {
+  auto queue = FrameBufferAllocator::allocateQueue();
   const auto bufSize = FrameHeader::kSize + sizeof(uint32_t);
-  auto buf =
-      FrameBufferAllocator::allocate(bufSize);
-  folly::io::Appender app(buf.get(), /* do not grow */ 0);
+  auto buf = FrameBufferAllocator::allocate(bufSize);
+  queue->append(std::move(buf));
+    folly::io::QueueAppender app(queue.get(), /* do not grow */ 0);
   header_.serializeInto(app);
   app.writeBE<uint32_t>(requestN_);
-  return buf;
+  return queue->move();
 }
 
 bool Frame_REQUEST_N::deserializeFrom(Payload in) {
@@ -407,14 +407,15 @@ std::ostream& operator<<(std::ostream& os, const Frame_ERROR& frame) {
 
 /// @{
 Payload Frame_KEEPALIVE::serializeOut() {
+  auto queue = FrameBufferAllocator::allocateQueue();
   auto buf = FrameBufferAllocator::allocate(FrameHeader::kSize);
-
-  folly::io::Appender app(buf.get(), /* do not grow */ 0);
+  queue->append(std::move(buf));
+  folly::io::QueueAppender app(queue.get(), /* do not grow */ 0);
   header_.serializeInto(app);
   if (data_) {
-    buf->appendChain(std::move(data_));
+    app.insert(std::move(data_));
   }
-  return buf;
+  return queue->move();
 }
 
 bool Frame_KEEPALIVE::deserializeFrom(Payload in) {

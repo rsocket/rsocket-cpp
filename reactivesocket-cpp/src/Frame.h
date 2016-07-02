@@ -20,11 +20,7 @@ template <typename V>
 class Optional;
 namespace io {
 class Cursor;
-
-namespace detail {
-  template <typename Derived>
-  class Writable;
-}
+class QueueAppender;
 }
 }
 
@@ -96,8 +92,7 @@ class FrameHeader {
   FrameHeader(FrameType type, FrameFlags flags, StreamId streamId)
       : type_(type), flags_(flags), streamId_(streamId) {}
 
-  template<typename T>
-  void serializeInto(folly::io::detail::Writable<T>& app);
+  void serializeInto(folly::io::QueueAppender& app);
   bool deserializeFrom(folly::io::Cursor& cur);
 
   FrameType type_;
