@@ -4,20 +4,16 @@
 
 #include <iosfwd>
 #include <limits>
-#include <memory>
 
-/// Needed for inline d'tors of frames.
-#include <folly/io/IOBuf.h>
-#include <folly/io/IOBufQueue.h>
-#include <folly/Memory.h>
 #include <folly/Optional.h>
-#include <folly/io/Cursor.h>
 
 #include "reactivesocket-cpp/src/Payload.h"
 
 namespace folly {
 template <typename V>
 class Optional;
+class IOBuf;
+class IOBufQueue;
 namespace io {
 class Cursor;
 class QueueAppender;
@@ -92,7 +88,7 @@ class FrameHeader {
   FrameHeader(FrameType type, FrameFlags flags, StreamId streamId)
       : type_(type), flags_(flags), streamId_(streamId) {}
 
-  void serializeInto(folly::io::QueueAppender& app);
+  void serializeInto(folly::io::QueueAppender& appender);
   bool deserializeFrom(folly::io::Cursor& cur);
 
   FrameType type_;
@@ -118,23 +114,22 @@ class FrameMetadata {
   : metadataPayload_(std::move(metadataPayload)) {}
   /// Empty metadata
   explicit FrameMetadata()
-  : metadataPayload_(folly::make_unique<folly::IOBuf>()) {}
+  : metadataPayload_(nullptr) {}
 
-  void serializeInto(folly::io::QueueAppender& app);
+  void serializeInto(folly::io::QueueAppender& appender);
 
   /// if metadata is present, deserializes it into metadata
   static bool deserializeFrom(folly::io::Cursor& cur,
                               const FrameFlags& flags,
-                              folly::Optional<FrameMetadata>& metadata);
+                              FrameMetadata& metadata);
   bool deserializeFrom(folly::io::Cursor& cur);
 
   uint32_t size();
 
   std::unique_ptr<folly::IOBuf> metadataPayload_;
 };
-std::ostream& operator<<(std::ostream&, const folly::Optional<FrameMetadata>&);
+std::ostream& operator<<(std::ostream&, const FrameMetadata&);
 
-static const folly::Optional<FrameMetadata> FrameMetadata_EMPTY { folly::none };
 
 /// @{
 /// Frames do not form hierarchy, as we never perform type erasure on a frame.
@@ -151,7 +146,7 @@ class Frame_REQUEST_SUB {
       StreamId streamId,
       FrameFlags flags,
       uint32_t requestN,
-      folly::Optional<FrameMetadata> metadata,
+      FrameMetadata metadata,
       Payload data)
       : header_(FrameType::REQUEST_SUB, flags, streamId),
         requestN_(requestN),
@@ -159,7 +154,7 @@ class Frame_REQUEST_SUB {
         data_(std::move(data)) {}
 
   /// For compatibility with other data-carrying frames.
-  Frame_REQUEST_SUB(StreamId streamId, FrameFlags flags, folly::Optional<FrameMetadata> metadata, Payload data)
+  Frame_REQUEST_SUB(StreamId streamId, FrameFlags flags, FrameMetadata metadata, Payload data)
       : Frame_REQUEST_SUB(streamId, flags, 0, std::move(metadata), std::move(data)) {}
 
   Payload serializeOut();
@@ -167,7 +162,7 @@ class Frame_REQUEST_SUB {
 
   FrameHeader header_;
   uint32_t requestN_;
-  folly::Optional<FrameMetadata> metadata_;
+  FrameMetadata metadata_;
   Payload data_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_REQUEST_SUB&);
@@ -181,7 +176,7 @@ class Frame_REQUEST_CHANNEL {
       StreamId streamId,
       FrameFlags flags,
       uint32_t requestN,
-      folly::Optional<FrameMetadata> metadata,
+      FrameMetadata metadata,
       Payload data)
       : header_(FrameType::REQUEST_CHANNEL, flags, streamId),
         requestN_(requestN),
@@ -189,7 +184,7 @@ class Frame_REQUEST_CHANNEL {
         data_(std::move(data)) {}
 
   /// For compatibility with other data-carrying frames.
-  Frame_REQUEST_CHANNEL(StreamId streamId, FrameFlags flags, folly::Optional<FrameMetadata> metadata, Payload data)
+  Frame_REQUEST_CHANNEL(StreamId streamId, FrameFlags flags, FrameMetadata metadata, Payload data)
       : Frame_REQUEST_CHANNEL(streamId, flags, 0, std::move(metadata), std::move(data)) {}
 
   Payload serializeOut();
@@ -197,7 +192,7 @@ class Frame_REQUEST_CHANNEL {
 
   FrameHeader header_;
   uint32_t requestN_;
-  folly::Optional<FrameMetadata> metadata_;
+  FrameMetadata metadata_;
   Payload data_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_REQUEST_CHANNEL&);
@@ -226,15 +221,15 @@ class Frame_CANCEL {
 
   Frame_CANCEL() {}
   explicit Frame_CANCEL(StreamId streamId)
-      : Frame_CANCEL(streamId, FrameFlags_EMPTY, folly::none) {}
-  Frame_CANCEL(StreamId streamId, FrameFlags flags, folly::Optional<FrameMetadata> metadata)
+      : Frame_CANCEL(streamId, FrameFlags_EMPTY, FrameMetadata()) {}
+  Frame_CANCEL(StreamId streamId, FrameFlags flags, FrameMetadata metadata)
       : header_(FrameType::CANCEL, flags, streamId), metadata_(std::move(metadata)) {}
 
   Payload serializeOut();
   bool deserializeFrom(Payload in);
 
   FrameHeader header_;
-  folly::Optional<FrameMetadata> metadata_;
+  FrameMetadata metadata_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_CANCEL&);
 
@@ -243,14 +238,14 @@ class Frame_RESPONSE {
   static constexpr bool Trait_CarriesAllowance = false;
 
   Frame_RESPONSE() {}
-  Frame_RESPONSE(StreamId streamId, FrameFlags flags, folly::Optional<FrameMetadata> metadata, Payload data)
+  Frame_RESPONSE(StreamId streamId, FrameFlags flags, FrameMetadata metadata, Payload data)
       : header_(FrameType::RESPONSE, flags, streamId), metadata_(std::move(metadata)), data_(std::move(data)) {}
 
   Payload serializeOut();
   bool deserializeFrom(Payload in);
 
   FrameHeader header_;
-  folly::Optional<FrameMetadata> metadata_;
+  FrameMetadata metadata_;
   Payload data_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_RESPONSE&);
@@ -261,8 +256,8 @@ class Frame_ERROR {
 
   Frame_ERROR() {}
   Frame_ERROR(StreamId streamId, ErrorCode errorCode)
-      : Frame_ERROR(streamId, FrameFlags_EMPTY, errorCode, folly::none) {}
-  Frame_ERROR(StreamId streamId, FrameFlags flags, ErrorCode errorCode, folly::Optional<FrameMetadata> metadata)
+      : Frame_ERROR(streamId, FrameFlags_EMPTY, errorCode, FrameMetadata()) {}
+  Frame_ERROR(StreamId streamId, FrameFlags flags, ErrorCode errorCode, FrameMetadata metadata)
       : header_(FrameType::ERROR, flags, streamId),
         errorCode_(errorCode),
         metadata_(std::move(metadata)) {}
@@ -272,7 +267,7 @@ class Frame_ERROR {
 
   FrameHeader header_;
   ErrorCode errorCode_;
-  folly::Optional<FrameMetadata> metadata_;
+  FrameMetadata metadata_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_ERROR&);
 
@@ -304,7 +299,7 @@ class Frame_SETUP {
       uint32_t version,
       uint32_t keepaliveTime,
       uint32_t maxLifetime,
-      folly::Optional<FrameMetadata> metadata,
+      FrameMetadata metadata,
       Payload data)
       : header_(FrameType::SETUP, flags, streamId),
         version_(version),
@@ -320,7 +315,7 @@ class Frame_SETUP {
   uint32_t version_;
   uint32_t keepaliveTime_;
   uint32_t maxLifetime_;
-  folly::Optional<FrameMetadata> metadata_;
+  FrameMetadata metadata_;
   Payload data_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_SETUP&);

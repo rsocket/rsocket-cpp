@@ -96,10 +96,10 @@ folly::Optional<StreamId> FrameHeader::peekStreamId(const folly::IOBuf& in) {
   }
 }
 
-void FrameHeader::serializeInto(folly::io::QueueAppender& app) {
-  app.writeBE<uint16_t>(static_cast<uint16_t>(type_));
-  app.writeBE<uint16_t>(flags_);
-  app.writeBE<uint32_t>(streamId_);
+void FrameHeader::serializeInto(folly::io::QueueAppender& appender) {
+  appender.writeBE<uint16_t>(static_cast<uint16_t>(type_));
+  appender.writeBE<uint16_t>(flags_);
+  appender.writeBE<uint32_t>(streamId_);
 }
 
 bool FrameHeader::deserializeFrom(folly::io::Cursor& cur) {
@@ -118,25 +118,25 @@ std::ostream& operator<<(std::ostream& os, const FrameHeader& header) {
   return os << header.type_ << "[" << flags << ", " << header.streamId_ << "]";
 }
 
-constexpr auto MAX_META_LENGTH = std::numeric_limits<int32_t>::max();
+constexpr auto kMAX_META_LENGTH = std::numeric_limits<int32_t>::max();
 
-void FrameMetadata::serializeInto(folly::io::QueueAppender& app) {
+void FrameMetadata::serializeInto(folly::io::QueueAppender& appender) {
   // use signed int because the first bit in metadata length is reserved
-  assert(metadataPayload_->length() + sizeof(uint32_t) < MAX_META_LENGTH);
+  assert(metadataPayload_->length() + sizeof(uint32_t) < kMAX_META_LENGTH);
 
-  app.writeBE<uint32_t>(static_cast<uint32_t>(metadataPayload_->length()) + sizeof(uint32_t));
-  app.insert(std::move(metadataPayload_));
+  appender.writeBE<uint32_t>(static_cast<uint32_t>(metadataPayload_->length()) + sizeof(uint32_t));
+  appender.insert(std::move(metadataPayload_));
 }
 
 bool FrameMetadata::deserializeFrom(folly::io::Cursor& cur,
                                     const FrameFlags& flags,
-                                    folly::Optional<FrameMetadata>& metadata) {
+                                    FrameMetadata& metadata) {
   if (flags & FrameFlags_METADATA) {
     FrameMetadata m;
-    if (! m.deserializeFrom(cur)) {
+    if (!m.deserializeFrom(cur)) {
       return false;
     } else {
-      metadata.assign(std::move(m));
+      metadata = std::move(m);
       return true;
     }
   } else { // no metadata was set
@@ -147,7 +147,7 @@ bool FrameMetadata::deserializeFrom(folly::io::Cursor& cur,
 bool FrameMetadata::deserializeFrom(folly::io::Cursor& cur) {
   try {
     const auto length = cur.readBE<uint32_t>();
-    assert(length < MAX_META_LENGTH);
+    assert(length < kMAX_META_LENGTH);
     const auto metadataPayloadLength = length - sizeof(uint32_t);
     
     if (metadataPayloadLength > 0) {
@@ -161,9 +161,9 @@ bool FrameMetadata::deserializeFrom(folly::io::Cursor& cur) {
   }
 }
 
-std::ostream& operator<<(std::ostream& os, const folly::Optional<FrameMetadata>& metadata) {
-  return os << "[meta: " << (metadata.hasValue() ?
-                              folly::to<std::string>(metadata->metadataPayload_->computeChainDataLength())
+std::ostream& operator<<(std::ostream& os, const FrameMetadata& metadata) {
+  return os << "[meta: " << (metadata.metadataPayload_ ?
+                              folly::to<std::string>(metadata.metadataPayload_->computeChainDataLength())
                               : "empty") << "]";
 }
 /// @}
@@ -177,14 +177,14 @@ Payload Frame_REQUEST_SUB::serializeOut() {
   auto buf =
     FrameBufferAllocator::allocate(bufSize);
   queue->append(std::move(buf));
-  folly::io::QueueAppender app(queue.get(), /* do not grow */ 0);
-  header_.serializeInto(app);
-  app.writeBE<uint32_t>(requestN_);
-  if (metadataPresent) {
-    metadata_->serializeInto(app);
+  folly::io::QueueAppender appender(queue.get(), /* do not grow */ 0);
+  header_.serializeInto(appender);
+  appender.writeBE<uint32_t>(requestN_);
+  if (metadataPresent && metadata_.metadataPayload_) {
+    metadata_.serializeInto(appender);
   }
   if (data_) {
-    app.insert(std::move(data_));
+    appender.insert(std::move(data_));
   }
   return queue->move();
 }
@@ -226,15 +226,15 @@ Payload Frame_REQUEST_CHANNEL::serializeOut() {
   auto buf =
     FrameBufferAllocator::allocate(bufSize);
   queue->append(std::move(buf));
-  folly::io::QueueAppender app(queue.get(), /* do not grow */ 0);
+  folly::io::QueueAppender appender(queue.get(), /* do not grow */ 0);
 
-  header_.serializeInto(app);
-  app.writeBE<uint32_t>(requestN_);
-  if (metadataPresent) {
-    metadata_->serializeInto(app);
+  header_.serializeInto(appender);
+  appender.writeBE<uint32_t>(requestN_);
+  if (metadataPresent && metadata_.metadataPayload_) {
+    metadata_.serializeInto(appender);
   }
   if (data_) {
-    app.insert(std::move(data_));
+    appender.insert(std::move(data_));
   }
 
   return queue->move();
@@ -274,9 +274,9 @@ Payload Frame_REQUEST_N::serializeOut() {
   const auto bufSize = FrameHeader::kSize + sizeof(uint32_t);
   auto buf = FrameBufferAllocator::allocate(bufSize);
   queue->append(std::move(buf));
-    folly::io::QueueAppender app(queue.get(), /* do not grow */ 0);
-  header_.serializeInto(app);
-  app.writeBE<uint32_t>(requestN_);
+    folly::io::QueueAppender appender(queue.get(), /* do not grow */ 0);
+  header_.serializeInto(appender);
+  appender.writeBE<uint32_t>(requestN_);
   return queue->move();
 }
 
@@ -306,10 +306,10 @@ Payload Frame_CANCEL::serializeOut() {
     (metadataPresent ? sizeof(uint32_t) : 0);
   auto buf = FrameBufferAllocator::allocate(bufSize);
   queue->append(std::move(buf));
-  folly::io::QueueAppender app(queue.get(), /* do not grow */ 0);
-  header_.serializeInto(app);
-  if (metadataPresent) {
-    metadata_->serializeInto(app);
+  folly::io::QueueAppender appender(queue.get(), /* do not grow */ 0);
+  header_.serializeInto(appender);
+  if (metadataPresent && metadata_.metadataPayload_) {
+    metadata_.serializeInto(appender);
   }
   return queue->move();
 }
@@ -338,13 +338,13 @@ Payload Frame_RESPONSE::serializeOut() {
     (metadataPresent ? sizeof(uint32_t) : 0);
   auto buf = FrameBufferAllocator::allocate(bufSize);
   queue->append(std::move(buf));
-  folly::io::QueueAppender app(queue.get(), /* do not grow */ 0);
-  header_.serializeInto(app);
-  if (metadataPresent) {
-    metadata_->serializeInto(app);
+  folly::io::QueueAppender appender(queue.get(), /* do not grow */ 0);
+  header_.serializeInto(appender);
+  if (metadataPresent && metadata_.metadataPayload_) {
+    metadata_.serializeInto(appender);
   }
   if (data_) {
-    app.insert(std::move(data_));
+    appender.insert(std::move(data_));
   }
   return queue->move();
 }
@@ -381,11 +381,11 @@ Payload Frame_ERROR::serializeOut() {
     (metadataPresent ? sizeof(uint32_t) : 0);
   auto buf = FrameBufferAllocator::allocate(bufSize);
   queue->append(std::move(buf));
-  folly::io::QueueAppender app(queue.get(), /* do not grow */ 0);
-  header_.serializeInto(app);
-  app.writeBE(static_cast<uint32_t>(errorCode_));
-  if (metadataPresent) {
-    metadata_->serializeInto(app);
+  folly::io::QueueAppender appender(queue.get(), /* do not grow */ 0);
+  header_.serializeInto(appender);
+  appender.writeBE(static_cast<uint32_t>(errorCode_));
+  if (metadataPresent && metadata_.metadataPayload_) {
+    metadata_.serializeInto(appender);
   }
   return queue->move();
 }
@@ -416,10 +416,10 @@ Payload Frame_KEEPALIVE::serializeOut() {
   auto queue = FrameBufferAllocator::allocateQueue();
   auto buf = FrameBufferAllocator::allocate(FrameHeader::kSize);
   queue->append(std::move(buf));
-  folly::io::QueueAppender app(queue.get(), /* do not grow */ 0);
-  header_.serializeInto(app);
+  folly::io::QueueAppender appender(queue.get(), /* do not grow */ 0);
+  header_.serializeInto(appender);
   if (data_) {
-    app.insert(std::move(data_));
+    appender.insert(std::move(data_));
   }
   return queue->move();
 }
@@ -451,16 +451,16 @@ Payload Frame_SETUP::serializeOut() {
   auto queue = FrameBufferAllocator::allocateQueue();
   auto buf = FrameBufferAllocator::allocate(FrameHeader::kSize + 3 * sizeof(uint32_t));
   queue->append(std::move(buf));
-  folly::io::QueueAppender app(queue.get(), /* do not grow */ 0);
+  folly::io::QueueAppender appender(queue.get(), /* do not grow */ 0);
 
-  header_.serializeInto(app);
-  app.writeBE(static_cast<uint32_t>(version_));
-  app.writeBE(static_cast<uint32_t>(keepaliveTime_));
-  app.writeBE(static_cast<uint32_t>(maxLifetime_));
+  header_.serializeInto(appender);
+  appender.writeBE(static_cast<uint32_t>(version_));
+  appender.writeBE(static_cast<uint32_t>(keepaliveTime_));
+  appender.writeBE(static_cast<uint32_t>(maxLifetime_));
   // TODO encode mime types
   // TODO encode metadata
   if (data_) {
-    app.insert(std::move(data_));
+    appender.insert(std::move(data_));
   }
   return queue->move();
 }
