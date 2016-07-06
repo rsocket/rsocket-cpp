@@ -5,15 +5,15 @@
 #include <iosfwd>
 #include <limits>
 
-#include <folly/Optional.h>
+/// Needed for inline d'tors of frames.
+#include <folly/io/IOBuf.h>
+#include <folly/io/IOBufQueue.h>
 
 #include "reactivesocket-cpp/src/Payload.h"
 
 namespace folly {
 template <typename V>
 class Optional;
-class IOBuf;
-class IOBufQueue;
 namespace io {
 class Cursor;
 class QueueAppender;
