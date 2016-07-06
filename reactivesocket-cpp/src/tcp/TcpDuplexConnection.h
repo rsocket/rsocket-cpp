@@ -7,7 +7,7 @@
 #include <folly/io/IOBufQueue.h>
 #include <folly/io/async/AsyncSocket.h>
 #include <folly/io/async/AsyncTransport.h>
-#include <reactivesocket-cpp/src/streams/SmartPointers.h>
+#include <reactive-streams/utilities/SmartPointers.h>
 #include "reactivesocket-cpp/src/DuplexConnection.h"
 #include "reactivesocket-cpp/src/Payload.h"
 #include "reactivesocket-cpp/src/ReactiveStreamsCompat.h"

@@ -8,7 +8,7 @@
 #include <gmock/gmock.h>
 
 #include <reactive-streams/ReactiveStreams.h>
-#include "reactivesocket-cpp/src/streams/Ownership.h"
+#include <reactive-streams/utilities/Ownership.h>
 
 namespace reactivestreams {
 

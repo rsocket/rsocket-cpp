@@ -7,7 +7,7 @@
 
 #include <glog/logging.h>
 
-#include "reactivesocket-cpp/src/streams/SmartPointers.h"
+#include "reactive-streams/utilities/SmartPointers.h"
 #include "reactivesocket-cpp/src/ConnectionAutomaton.h"
 #include "reactivesocket-cpp/src/Frame.h"
 #include "reactivesocket-cpp/src/Payload.h"

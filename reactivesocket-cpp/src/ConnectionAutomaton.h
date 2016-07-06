@@ -6,8 +6,8 @@
 #include <memory>
 #include <unordered_map>
 
-#include "reactivesocket-cpp/src/streams/AllowanceSemaphore.h"
-#include "reactivesocket-cpp/src/streams/SmartPointers.h"
+#include "reactive-streams/utilities/AllowanceSemaphore.h"
+#include "reactive-streams/utilities/SmartPointers.h"
 #include "reactivesocket-cpp/src/Payload.h"
 #include "reactivesocket-cpp/src/ReactiveStreamsCompat.h"
 

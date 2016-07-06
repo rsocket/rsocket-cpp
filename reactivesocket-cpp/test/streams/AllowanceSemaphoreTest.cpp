@@ -5,7 +5,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "reactivesocket-cpp/src/streams/AllowanceSemaphore.h"
+#include <reactive-streams/utilities/AllowanceSemaphore.h>
 
 using namespace ::testing;
 using namespace ::reactivestreams;

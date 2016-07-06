@@ -4,8 +4,8 @@
 
 #include <iosfwd>
 
-#include "reactivesocket-cpp/src/streams/AllowanceSemaphore.h"
-#include "reactivesocket-cpp/src/streams/SmartPointers.h"
+#include "reactive-streams/utilities/AllowanceSemaphore.h"
+#include "reactive-streams/utilities/SmartPointers.h"
 #include "reactivesocket-cpp/src/AbstractStreamAutomaton.h"
 #include "reactivesocket-cpp/src/Frame.h"
 #include "reactivesocket-cpp/src/Payload.h"

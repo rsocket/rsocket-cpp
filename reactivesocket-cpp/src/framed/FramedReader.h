@@ -1,10 +1,10 @@
 // Copyright 2004-present Facebook.  All rights reserved.
 #pragma once
 
-#include <folly/io/IOBufQueue.h>
-#include <reactivesocket-cpp/src/streams/AllowanceSemaphore.h>
 #include <folly/ExceptionWrapper.h>
-#include <reactivesocket-cpp/src/streams/SmartPointers.h>
+#include <folly/io/IOBufQueue.h>
+#include <reactive-streams/utilities/AllowanceSemaphore.h>
+#include <reactive-streams/utilities/SmartPointers.h>
 #include "reactivesocket-cpp/src/Payload.h"
 #include "reactivesocket-cpp/src/ReactiveStreamsCompat.h"
 

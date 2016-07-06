@@ -2,7 +2,7 @@
 #pragma once
 
 #include <folly/ExceptionWrapper.h>
-#include <reactivesocket-cpp/src/streams/SmartPointers.h>
+#include <reactive-streams/utilities/SmartPointers.h>
 #include "reactivesocket-cpp/src/Payload.h"
 #include "reactivesocket-cpp/src/ReactiveStreamsCompat.h"
 
