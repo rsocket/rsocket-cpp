@@ -33,7 +33,7 @@ void SubscriptionRequesterBase::onNext(Payload request) {
           streamId_,
           flags,
           static_cast<uint32_t>(initialN),
-          FrameMetadata(),
+          FrameMetadata::empty(),
           std::move(request));
       // We must inform ConsumerMixin about an implicit allowance we have
       // requested from the remote end.

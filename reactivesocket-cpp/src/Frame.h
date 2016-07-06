@@ -115,6 +115,9 @@ class FrameMetadata {
   explicit FrameMetadata()
   : metadataPayload_(nullptr) {}
 
+  static FrameMetadata empty();
+  void checkFlags(FrameFlags flags);
+
   void serializeInto(folly::io::QueueAppender& appender);
 
   /// if metadata is present, deserializes it into metadata
@@ -122,8 +125,6 @@ class FrameMetadata {
                               const FrameFlags& flags,
                               FrameMetadata& metadata);
   bool deserializeFrom(folly::io::Cursor& cur);
-
-  uint32_t size();
 
   std::unique_ptr<folly::IOBuf> metadataPayload_;
 };
@@ -150,7 +151,9 @@ class Frame_REQUEST_SUB {
       : header_(FrameType::REQUEST_SUB, flags, streamId),
         requestN_(requestN),
         metadata_(std::move(metadata)),
-        data_(std::move(data)) {}
+        data_(std::move(data)) {
+    metadata_.checkFlags(flags);
+  }
 
   /// For compatibility with other data-carrying frames.
   Frame_REQUEST_SUB(StreamId streamId, FrameFlags flags, FrameMetadata metadata, Payload data)
@@ -180,7 +183,9 @@ class Frame_REQUEST_CHANNEL {
       : header_(FrameType::REQUEST_CHANNEL, flags, streamId),
         requestN_(requestN),
         metadata_(std::move(metadata)),
-        data_(std::move(data)) {}
+        data_(std::move(data)) {
+    metadata_.checkFlags(flags);
+  }
 
   /// For compatibility with other data-carrying frames.
   Frame_REQUEST_CHANNEL(StreamId streamId, FrameFlags flags, FrameMetadata metadata, Payload data)
@@ -220,9 +225,11 @@ class Frame_CANCEL {
 
   Frame_CANCEL() {}
   explicit Frame_CANCEL(StreamId streamId)
-      : Frame_CANCEL(streamId, FrameFlags_EMPTY, FrameMetadata()) {}
+      : Frame_CANCEL(streamId, FrameFlags_EMPTY, FrameMetadata::empty()) {}
   Frame_CANCEL(StreamId streamId, FrameFlags flags, FrameMetadata metadata)
-      : header_(FrameType::CANCEL, flags, streamId), metadata_(std::move(metadata)) {}
+      : header_(FrameType::CANCEL, flags, streamId), metadata_(std::move(metadata)) {
+    metadata_.checkFlags(flags);
+  }
 
   Payload serializeOut();
   bool deserializeFrom(Payload in);
@@ -238,7 +245,9 @@ class Frame_RESPONSE {
 
   Frame_RESPONSE() {}
   Frame_RESPONSE(StreamId streamId, FrameFlags flags, FrameMetadata metadata, Payload data)
-      : header_(FrameType::RESPONSE, flags, streamId), metadata_(std::move(metadata)), data_(std::move(data)) {}
+      : header_(FrameType::RESPONSE, flags, streamId), metadata_(std::move(metadata)), data_(std::move(data)) {
+    metadata_.checkFlags(flags);
+  }
 
   Payload serializeOut();
   bool deserializeFrom(Payload in);
@@ -255,11 +264,13 @@ class Frame_ERROR {
 
   Frame_ERROR() {}
   Frame_ERROR(StreamId streamId, ErrorCode errorCode)
-      : Frame_ERROR(streamId, FrameFlags_EMPTY, errorCode, FrameMetadata()) {}
+      : Frame_ERROR(streamId, FrameFlags_EMPTY, errorCode, FrameMetadata::empty()) {}
   Frame_ERROR(StreamId streamId, FrameFlags flags, ErrorCode errorCode, FrameMetadata metadata)
       : header_(FrameType::ERROR, flags, streamId),
         errorCode_(errorCode),
-        metadata_(std::move(metadata)) {}
+        metadata_(std::move(metadata)) {
+    metadata_.checkFlags(flags);
+  }
 
   Payload serializeOut();
   bool deserializeFrom(Payload in);
@@ -305,7 +316,9 @@ class Frame_SETUP {
         keepaliveTime_(keepaliveTime),
         maxLifetime_(maxLifetime),
         metadata_(std::move(metadata)),
-        data_(std::move(data)) {}
+        data_(std::move(data)) {
+    metadata_.checkFlags(flags);
+  }
 
   Payload serializeOut();
   bool deserializeFrom(Payload in);

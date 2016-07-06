@@ -40,7 +40,7 @@ void ChannelRequesterBase::onNext(Payload request) {
           streamId_,
           flags,
           static_cast<uint32_t>(initialN),
-          FrameMetadata(),
+          FrameMetadata::empty(),
           std::move(request));
       // We must inform ConsumerMixin about an implicit allowance we have
       // requested from the remote end.
@@ -68,7 +68,7 @@ void ChannelRequesterBase::onComplete() {
       break;
     case State::REQUESTED: {
       state_ = State::CLOSED;
-      Frame_REQUEST_CHANNEL frame(streamId_, FrameFlags_COMPLETE, 0, FrameMetadata(), nullptr);
+      Frame_REQUEST_CHANNEL frame(streamId_, FrameFlags_COMPLETE, 0, FrameMetadata::empty(), nullptr);
       connection_->onNextFrame(frame);
       connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
     } break;

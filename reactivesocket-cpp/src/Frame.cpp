@@ -116,6 +116,15 @@ std::ostream& operator<<(std::ostream& os, const FrameHeader& header) {
 
 constexpr auto kMaxMetaLength = std::numeric_limits<int32_t>::max();
 
+FrameMetadata FrameMetadata::empty() {
+  return FrameMetadata();
+}
+
+void FrameMetadata::checkFlags(FrameFlags flags) {
+  const bool metadataPresent = (flags & FrameFlags_METADATA) != 0;
+  assert(metadataPresent == (metadataPayload_ != nullptr));
+}
+
 void FrameMetadata::serializeInto(folly::io::QueueAppender& appender) {
   if (metadataPayload_ != nullptr) {
     // use signed int because the first bit in metadata length is reserved
@@ -178,7 +187,6 @@ Payload Frame_REQUEST_SUB::serializeOut() {
   folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
   header_.serializeInto(appender);
   appender.writeBE<uint32_t>(requestN_);
-  ASSERT(metadataPresent == (metadata_.metadataPayload_ != nullptr));
   metadata_.serializeInto(appender);
   if (data_) {
     appender.insert(std::move(data_));
@@ -227,7 +235,6 @@ Payload Frame_REQUEST_CHANNEL::serializeOut() {
 
   header_.serializeInto(appender);
   appender.writeBE<uint32_t>(requestN_);
-  ASSERT(metadataPresent == (metadata_.metadataPayload_ != nullptr));
   metadata_.serializeInto(appender);
   if (data_) {
     appender.insert(std::move(data_));
@@ -304,7 +311,6 @@ Payload Frame_CANCEL::serializeOut() {
   queue.append(std::move(buf));
   folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
   header_.serializeInto(appender);
-  ASSERT(metadataPresent == (metadata_.metadataPayload_ != nullptr));
   metadata_.serializeInto(appender);
   return queue.move();
 }
@@ -335,7 +341,6 @@ Payload Frame_RESPONSE::serializeOut() {
   queue.append(std::move(buf));
   folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
   header_.serializeInto(appender);
-  ASSERT(metadataPresent == (metadata_.metadataPayload_ != nullptr));
   metadata_.serializeInto(appender);
   if (data_) {
     appender.insert(std::move(data_));
@@ -378,7 +383,6 @@ Payload Frame_ERROR::serializeOut() {
   folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
   header_.serializeInto(appender);
   appender.writeBE(static_cast<uint32_t>(errorCode_));
-  ASSERT(metadataPresent == (metadata_.metadataPayload_ != nullptr));
   metadata_.serializeInto(appender);
   return queue.move();
 }

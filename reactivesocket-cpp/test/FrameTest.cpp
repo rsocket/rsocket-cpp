@@ -113,7 +113,7 @@ TEST_F(FrameTest, Frame_RESPONSE_NoMeta) {
   uint32_t streamId = 42;
   FrameFlags flags = FrameFlags_COMPLETE;
   auto data = folly::IOBuf::copyBuffer("424242");
-  auto frame = reserialize<Frame_RESPONSE>(streamId, flags, FrameMetadata(), data->clone());
+  auto frame = reserialize<Frame_RESPONSE>(streamId, flags, FrameMetadata::empty(), data->clone());
 
   expectHeader(FrameType::RESPONSE, flags, streamId, frame);
   EXPECT_FALSE(frame.metadata_.metadataPayload_);
@@ -159,7 +159,7 @@ TEST_F(FrameTest, Frame_SETUP) {
                                         version,
                                         keepaliveTime,
                                         maxLifetime,
-                                        FrameMetadata(),
+                                        FrameMetadata::empty(),
                                         data->clone());
 
   expectHeader(FrameType::SETUP, flags, streamId, frame);
