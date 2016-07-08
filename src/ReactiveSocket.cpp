@@ -17,7 +17,6 @@
 #include "src/RequestHandler.h"
 #include "src/automata/ChannelRequester.h"
 #include "src/automata/ChannelResponder.h"
-#include "src/automata/FireAndForgetRequester.h"
 #include "src/automata/SubscriptionRequester.h"
 #include "src/automata/SubscriptionResponder.h"
 
@@ -76,18 +75,16 @@ void ReactiveSocket::requestSubscription(
   automaton->start();
 }
 
-void ReactiveSocket::requestFireAndForget(
-    Payload request,
-    Subscriber<Payload>& responseSink) {
+void ReactiveSocket::requestFireAndForget(Payload request) {
   // TODO(stupaq): handle any exceptions
   StreamId streamId = nextStreamId_;
   nextStreamId_ += 2;
-  SubscriptionRequester::Parameters params = {connection_, streamId};
-  auto automaton = new FireAndForgetRequester(connection_, streamId, std::move(request), responseSink);
-  responseSink.onSubscribe(*automaton);
-  // at this point, we are waiting for the request(N>0) to get called on the subscription,
-  // and will dispatch the request. because of the short-lived nature of this interaction,
-  // we are not using the same interface as the other automata
+  Frame_REQUEST_FNF frame(
+    streamId,
+    FrameFlags_EMPTY,
+    FrameMetadata::empty(),
+    std::move(std::move(request)));
+  connection_->onNextFrame(frame);
 }
 
 ReactiveSocket::ReactiveSocket(

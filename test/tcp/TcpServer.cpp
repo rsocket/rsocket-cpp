@@ -64,7 +64,8 @@ class ServerRequestHandler : public RequestHandler {
   }
 
   void handleFireAndForgetRequest(Payload request) override {
-    // ignore for now
+    std::cout << "ServerRequestHandler.handleFireAndForgetRequest "
+              << request->moveToFbString() << "\n";
   }
 };
 

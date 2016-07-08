@@ -233,23 +233,10 @@ TEST(ReactiveSocketTest, RequestFireAndForget) {
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
 
   // Client sends a fire-and-forget
-
-  EXPECT_CALL(clientInput, onSubscribe_(_))
-              .InSequence(s)
-              .WillOnce(Invoke([&](Subscription* sub) {
-                clientInputSub = sub;
-              }));
-
-  clientSock->requestFireAndForget(originalPayload->clone(), clientInput);
-
   EXPECT_CALL(serverHandlerRef, handleFireAndForgetRequest_(Equals(&originalPayload)))
               .InSequence(s);
 
-  // only now will the request get dispatched
-  clientInputSub->request(1);
-
-  // we only expect one call on the server side - the following line should therefore not trigger any action
-  clientInputSub->request(25);
+  clientSock->requestFireAndForget(originalPayload->clone());
 }
 
 TEST(ReactiveSocketTest, Destructor) {
