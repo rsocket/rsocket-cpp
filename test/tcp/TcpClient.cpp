@@ -49,6 +49,10 @@ class ClientRequestHandler : public RequestHandler {
     auto* subscription = new MemoryMixin<NullSubscription>();
     response.onSubscribe(*subscription);
   }
+
+  void handleFireAndForgetRequest(Payload request) override {
+    LOG(ERROR) << "not expecting server call";
+  }
 };
 
 class Callback : public AsyncSocket::ConnectCallback {

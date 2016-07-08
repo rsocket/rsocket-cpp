@@ -37,6 +37,8 @@ std::ostream& operator<<(std::ostream& os, FrameType type) {
       return os << "REQUEST_CHANNEL";
     case FrameType::REQUEST_N:
       return os << "REQUEST_N";
+    case FrameType::REQUEST_FNF:
+      return os << "REQUEST_FNF";
     case FrameType::CANCEL:
       return os << "CANCEL";
     case FrameType::RESPONSE:
@@ -298,6 +300,48 @@ bool Frame_REQUEST_N::deserializeFrom(Payload in) {
 
 std::ostream& operator<<(std::ostream& os, const Frame_REQUEST_N& frame) {
   return os << frame.header_ << "(" << frame.requestN_ << ")";
+}
+/// @}
+
+/// @{
+Payload Frame_REQUEST_FNF::serializeOut() {
+  folly::IOBufQueue queue(folly::IOBufQueue::cacheChainLength());
+  const auto metadataPresent = header_.flags_ & FrameFlags_METADATA;
+  const auto bufSize = FrameHeader::kSize + sizeof(uint32_t) +
+                       (metadataPresent ? sizeof(uint32_t) : 0);
+  auto buf = FrameBufferAllocator::allocate(bufSize);
+  queue.append(std::move(buf));
+  folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
+  header_.serializeInto(appender);
+  if (metadataPresent && metadata_.metadataPayload_) {
+    metadata_.serializeInto(appender);
+  }
+  if (data_) {
+    appender.insert(std::move(data_));
+  }
+  return queue.move();
+}
+
+bool Frame_REQUEST_FNF::deserializeFrom(Payload in) {
+  folly::io::Cursor cur(in.get());
+  if (!header_.deserializeFrom(cur)) {
+    return false;
+  }
+  if (!FrameMetadata::deserializeFrom(cur, header_.flags_, metadata_)) {
+    return false;
+  }
+  auto totalLength = cur.totalLength();
+  if (totalLength > 0) {
+    cur.clone(data_, totalLength);
+  } else {
+    data_.reset();
+  }
+  return true;
+}
+
+std::ostream& operator<<(std::ostream& os, const Frame_REQUEST_FNF& frame) {
+  return os << frame.header_ << ", " << frame.metadata_ << ", <"
+    << (frame.data_ ? frame.data_->computeChainDataLength() : 0) << ">)";
 }
 /// @}
 

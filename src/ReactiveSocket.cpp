@@ -17,6 +17,7 @@
 #include "src/RequestHandler.h"
 #include "src/automata/ChannelRequester.h"
 #include "src/automata/ChannelResponder.h"
+#include "src/automata/FireAndForgetRequester.h"
 #include "src/automata/SubscriptionRequester.h"
 #include "src/automata/SubscriptionResponder.h"
 
@@ -75,6 +76,17 @@ void ReactiveSocket::requestSubscription(
   automaton->start();
 }
 
+void ReactiveSocket::requestFireAndForget(
+    Payload request,
+    Subscriber<Payload>& responseSink) {
+  // TODO(stupaq): handle any exceptions
+  StreamId streamId = nextStreamId_;
+  nextStreamId_ += 2;
+  SubscriptionRequester::Parameters params = {connection_, streamId};
+  auto automaton = new FireAndForgetRequester(connection_, streamId, std::move(request), responseSink);
+  responseSink.onSubscribe(*automaton);
+}
+
 ReactiveSocket::ReactiveSocket(
     bool isServer,
     std::unique_ptr<DuplexConnection> connection,
@@ -121,6 +133,15 @@ bool ReactiveSocket::createResponder(
       handler_->handleRequestSubscription(std::move(frame.data_), *automaton);
       automaton->onNextFrame(frame);
       automaton->start();
+      break;
+    }
+    case FrameType::REQUEST_FNF: {
+      Frame_REQUEST_FNF frame;
+      if (!frame.deserializeFrom(std::move(serializedFrame))) {
+        return false;
+      }
+      // no stream tracking is necessary
+      handler_->handleFireAndForgetRequest(std::move(frame.data_));
       break;
     }
     // Other frames cannot start a stream.

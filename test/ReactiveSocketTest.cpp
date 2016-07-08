@@ -207,6 +207,51 @@ TEST(ReactiveSocketTest, RequestSubscription) {
   clientSock->requestSubscription(originalPayload->clone(), clientInput);
 }
 
+TEST(ReactiveSocketTest, RequestFireAndForget) {
+  // InlineConnection forwards appropriate calls in-line, hence the order of
+  // mock calls will be deterministic.
+  Sequence s;
+
+  auto clientConn = folly::make_unique<InlineConnection>();
+  auto serverConn = folly::make_unique<InlineConnection>();
+  clientConn->connectTo(*serverConn);
+
+  StrictMock<UnmanagedMockSubscriber<Payload>> clientInput;
+  StrictMock<UnmanagedMockSubscription> serverOutputSub;
+  Subscription* clientInputSub = nullptr;
+
+  auto clientSock = ReactiveSocket::fromClientConnection(
+      std::move(clientConn),
+      // No interactions on this mock, the client will not accept any requests.
+      folly::make_unique<StrictMock<MockRequestHandler>>());
+
+  auto serverHandler = folly::make_unique<StrictMock<MockRequestHandler>>();
+  auto& serverHandlerRef = *serverHandler;
+  auto serverSock = ReactiveSocket::fromServerConnection(
+      std::move(serverConn), std::move(serverHandler));
+
+  const auto originalPayload = folly::IOBuf::copyBuffer("foo");
+
+  // Client sends a fire-and-forget
+
+  EXPECT_CALL(clientInput, onSubscribe_(_))
+              .InSequence(s)
+              .WillOnce(Invoke([&](Subscription* sub) {
+                clientInputSub = sub;
+              }));
+
+  clientSock->requestFireAndForget(originalPayload->clone(), clientInput);
+
+  EXPECT_CALL(serverHandlerRef, handleFireAndForgetRequest_(Equals(&originalPayload)))
+              .InSequence(s);
+
+  // only now will the request get dispatched
+  clientInputSub->request(1);
+
+  // we only expect one call on the server side - the following line should therefore not trigger any action
+  clientInputSub->request(25);
+}
+
 TEST(ReactiveSocketTest, Destructor) {
   // InlineConnection forwards appropriate calls in-line, hence the order of
   // mock calls will be deterministic.

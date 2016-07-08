@@ -62,6 +62,10 @@ class ServerRequestHandler : public RequestHandler {
     response.onNext(folly::IOBuf::copyBuffer("from server2"));
     response.onComplete();
   }
+
+  void handleFireAndForgetRequest(Payload request) override {
+    // ignore for now
+  }
 };
 
 class Callback : public AsyncServerSocket::AcceptCallback {

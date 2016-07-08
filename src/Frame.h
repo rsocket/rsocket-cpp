@@ -33,7 +33,7 @@ enum class FrameType : uint16_t {
   // LEASE = 0x0002,
   KEEPALIVE = 0x0003,
   // REQUEST_RESPONSE = 0x0004,
-  // REQUEST_FNF = 0x0005,
+  REQUEST_FNF = 0x0005,
   // REQUEST_STREAM = 0x0006,
   REQUEST_SUB = 0x0007,
   REQUEST_CHANNEL = 0x0008,
@@ -218,6 +218,25 @@ class Frame_REQUEST_N {
   uint32_t requestN_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_REQUEST_N&);
+
+class Frame_REQUEST_FNF {
+public:
+  static constexpr bool Trait_CarriesAllowance = false;
+
+  Frame_REQUEST_FNF() {}
+  Frame_REQUEST_FNF(StreamId streamId, FrameFlags flags, FrameMetadata metadata, Payload data)
+    : header_(FrameType::REQUEST_FNF, flags, streamId),
+      metadata_(std::move(metadata)),
+      data_(std::move(data)) {}
+
+  Payload serializeOut();
+  bool deserializeFrom(Payload in);
+
+  FrameHeader header_;
+  FrameMetadata metadata_;
+  Payload data_;
+};
+std::ostream& operator<<(std::ostream&, const Frame_REQUEST_FNF&);
 
 class Frame_CANCEL {
  public:
