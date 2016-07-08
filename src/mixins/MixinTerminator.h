@@ -60,8 +60,6 @@ class MixinTerminator
 
   void onNextFrame(Frame_REQUEST_N&) {}
 
-  void onNextFrame(Frame_REQUEST_FNF&) {}
-
   void onNextFrame(Frame_CANCEL&) {}
 
   void onNextFrame(Frame_RESPONSE&) {}

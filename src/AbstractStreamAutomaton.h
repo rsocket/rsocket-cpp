@@ -94,7 +94,6 @@ class AbstractStreamAutomaton {
   virtual void onNextFrame(Frame_REQUEST_SUB& frame) = 0;
   virtual void onNextFrame(Frame_REQUEST_CHANNEL& frame) = 0;
   virtual void onNextFrame(Frame_REQUEST_N& frame) = 0;
-  virtual void onNextFrame(Frame_REQUEST_FNF& frame) = 0;
   virtual void onNextFrame(Frame_CANCEL& frame) = 0;
   virtual void onNextFrame(Frame_RESPONSE& frame) = 0;
   virtual void onNextFrame(Frame_ERROR& frame) = 0;
