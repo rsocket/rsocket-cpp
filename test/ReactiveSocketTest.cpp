@@ -233,8 +233,9 @@ TEST(ReactiveSocketTest, RequestFireAndForget) {
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
 
   // Client sends a fire-and-forget
-  EXPECT_CALL(serverHandlerRef, handleFireAndForgetRequest_(Equals(&originalPayload)))
-              .InSequence(s);
+  EXPECT_CALL(
+      serverHandlerRef, handleFireAndForgetRequest_(Equals(&originalPayload)))
+      .InSequence(s);
 
   clientSock->requestFireAndForget(originalPayload->clone());
 }

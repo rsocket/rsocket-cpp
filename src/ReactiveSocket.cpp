@@ -80,10 +80,10 @@ void ReactiveSocket::requestFireAndForget(Payload request) {
   StreamId streamId = nextStreamId_;
   nextStreamId_ += 2;
   Frame_REQUEST_FNF frame(
-    streamId,
-    FrameFlags_EMPTY,
-    FrameMetadata::empty(),
-    std::move(std::move(request)));
+      streamId,
+      FrameFlags_EMPTY,
+      FrameMetadata::empty(),
+      std::move(std::move(request)));
   connection_->onNextFrame(frame);
 }
 

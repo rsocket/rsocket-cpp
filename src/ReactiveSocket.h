@@ -49,7 +49,7 @@ class ReactiveSocket {
 
   void requestSubscription(Payload payload, Subscriber<Payload>& responseSink);
 
-	void requestFireAndForget(Payload request);
+  void requestFireAndForget(Payload request);
 
  private:
   ReactiveSocket(

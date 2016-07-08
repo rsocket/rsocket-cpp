@@ -55,8 +55,8 @@ class ServerRequestHandler : public RequestHandler {
     auto* subscription = new MemoryMixin<ServerSubscription>();
     response.onSubscribe(*subscription);
 
-    std::cout << "ServerRequestHandler.handleRequestSubscription "
-              << request->moveToFbString() << "\n";
+    LOG(INFO) << "ServerRequestHandler.handleRequestSubscription "
+              << request->moveToFbString();
 
     response.onNext(folly::IOBuf::copyBuffer("from server"));
     response.onNext(folly::IOBuf::copyBuffer("from server2"));
@@ -64,7 +64,7 @@ class ServerRequestHandler : public RequestHandler {
   }
 
   void handleFireAndForgetRequest(Payload request) override {
-    std::cout << "ServerRequestHandler.handleFireAndForgetRequest "
+    LOG(INFO) << "ServerRequestHandler.handleFireAndForgetRequest "
               << request->moveToFbString() << "\n";
   }
 };
