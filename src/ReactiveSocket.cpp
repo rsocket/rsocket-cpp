@@ -85,6 +85,9 @@ void ReactiveSocket::requestFireAndForget(
   SubscriptionRequester::Parameters params = {connection_, streamId};
   auto automaton = new FireAndForgetRequester(connection_, streamId, std::move(request), responseSink);
   responseSink.onSubscribe(*automaton);
+  // at this point, we are waiting for the request(N>0) to get called on the subscription,
+  // and will dispatch the request. because of the short-lived nature of this interaction,
+  // we are not using the same interface as the other automata
 }
 
 ReactiveSocket::ReactiveSocket(
