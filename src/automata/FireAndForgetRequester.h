@@ -40,7 +40,6 @@ public:
 	void cancel() override;
 	/// @}
 private:
-
 	/// State of the Subscription requester.
 	enum class State : uint8_t {
 		NEW,
@@ -52,6 +51,5 @@ private:
 	/// An ID of the stream within the connection
 	const StreamId streamId_;
 	Payload payload_;
-
 };
 }
