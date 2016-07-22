@@ -18,4 +18,4 @@ script:
   - cd build
   - cmake .. -DCMAKE_BUILD_TYPE=DEBUG
   - make -j8
-  - ./tests
+  - ctest -V -C DEBUG

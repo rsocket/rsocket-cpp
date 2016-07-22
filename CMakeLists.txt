@@ -7,6 +7,53 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 # Generate compilation database for use by YouCompleteMe.
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
+# make sure to bail on in-source builds for cleanliness
+if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
+  message(FATAL_ERROR "In-source builds not allowed. Please make a new directory (called a build directory)"
+          "and run CMake from there. You may need to remove CMakeCache.txt.")
+endif()
+
+# default built type is Release
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build" FORCE)
+endif(NOT CMAKE_BUILD_TYPE)
+
+# default is to use ReactiveStreams location from github directly
+if(NOT REACTIVE_STREAMS_GIT_URL)
+  set(REACTIVE_STREAMS_GIT_URL "https://github.com/ReactiveSocket/reactive-streams-cpp.git" CACHE STRING "Location of the ReactiveStreams C++ git repo" FORCE)
+endif(NOT REACTIVE_STREAMS_GIT_URL)
+
+enable_testing()
+
+include(ExternalProject)
+include(CTest)
+
+# gmock
+ExternalProject_Add(
+  gmock
+  URL ${CMAKE_CURRENT_SOURCE_DIR}/googletest-master-20160722.zip
+  INSTALL_COMMAND ""
+)
+
+ExternalProject_Get_Property(gmock source_dir)
+set(GMOCK_SOURCE_DIR ${source_dir})
+ExternalProject_Get_Property(gmock binary_dir)
+set(GMOCK_BINARY_DIR ${binary_dir})
+
+set(GMOCK_LIBS
+  ${GMOCK_BINARY_DIR}/${CMAKE_CFG_INTDIR}/googlemock/${CMAKE_STATIC_LIBRARY_PREFIX}gmock${CMAKE_STATIC_LIBRARY_SUFFIX}
+  ${GMOCK_BINARY_DIR}/${CMAKE_CFG_INTDIR}/googlemock/${CMAKE_STATIC_LIBRARY_PREFIX}gmock_main${CMAKE_STATIC_LIBRARY_SUFFIX}
+  )
+
+# ReactiveStreams C++
+ExternalProject_Add(
+  ReactiveStreams
+  GIT_REPOSITORY ${REACTIVE_STREAMS_GIT_URL}
+  CMAKE_ARGS "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/reactivestreams"
+)
+
+find_package(Threads)
+
 # Common configuration for all build modes.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
@@ -22,6 +69,10 @@ include_directories(SYSTEM ${FOLLY_INCLUDE_DIR})
 include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
 
 include_directories(${CMAKE_SOURCE_DIR})
+
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/reactivesocket/include)
+include_directories(${GMOCK_SOURCE_DIR}/googlemock/include)
+include_directories(${GMOCK_SOURCE_DIR}/googletest/include)
 
 add_library(
   ReactiveSocket
@@ -72,10 +123,12 @@ target_link_libraries(
   glog
   )
 
+add_dependencies(ReactiveSocket ReactiveStreams)
+
 enable_testing()
 
 # EXCLUDE_FROM_ALL so 'make install' doesn't attempt installation of googletest
-add_subdirectory(external/googletest EXCLUDE_FROM_ALL)
+#add_subdirectory(external/googletest EXCLUDE_FROM_ALL)
 
 add_executable(
   tests
@@ -97,11 +150,14 @@ target_link_libraries(
   tests
   ReactiveSocket
   ${FOLLY_LIBRARIES}
-  gtest
-  gmock
-  gmock_main
+  ${GMOCK_LIBS}
   glog
+  ${CMAKE_THREAD_LIBS_INIT}
   )
+
+add_dependencies(tests gmock ReactiveSocket)
+
+add_test(NAME ReactiveSocketTests COMMAND tests)
 
 add_executable(
         tcpclient
@@ -119,12 +175,13 @@ target_link_libraries(
         tcpclient
         ReactiveSocket
         ${FOLLY_LIBRARIES}
-        gtest
         gflags
-        gmock
-        gmock_main
+        ${GMOCK_LIBS}
         glog
+        ${CMAKE_THREAD_LIBS_INIT}
 )
+
+add_dependencies(tcpclient gmock)
 
 add_executable(
         tcpserver
@@ -140,12 +197,13 @@ target_link_libraries(
         tcpserver
         ReactiveSocket
         ${FOLLY_LIBRARIES}
-        gtest
         gflags
-        gmock
-        gmock_main
+        ${GMOCK_LIBS}
         glog
+        ${CMAKE_THREAD_LIBS_INIT}
 )
+
+add_dependencies(tcpserver gmock)
 
 add_executable(
         tckclient
@@ -161,9 +219,10 @@ add_executable(
 target_link_libraries(
         tckclient
         ${FOLLY_LIBRARIES}
-        gtest
         gflags
         glog
 )
+
+add_dependencies(tckclient gmock)
 
 # EOF
