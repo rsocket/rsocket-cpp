@@ -91,15 +91,16 @@ add_executable(
   test/MockDuplexConnection.h
   test/MockRequestHandler.h
   test/ReactiveSocketTest.cpp
-  test/ReactiveStreamsMocksCompat.h)
+  test/ReactiveStreamsMocksCompat.h
+  test/Test.cpp)
 
 target_link_libraries(
   tests
   ReactiveSocket
   ${FOLLY_LIBRARIES}
-  gtest
+  gflags
   gmock
-  gmock_main
+  gtest
   glog
   )
 
