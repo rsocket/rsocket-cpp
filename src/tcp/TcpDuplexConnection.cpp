@@ -1,8 +1,8 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "TcpDuplexConnection.h"
-#include <folly/Memory.h>
 #include <folly/ExceptionWrapper.h>
+#include <folly/Memory.h>
 #include "src/mixins/MemoryMixin.h"
 
 namespace reactivesocket {
@@ -34,6 +34,7 @@ void TcpDuplexConnection::setInput(Subscriber<Payload>& inputSubscriber) {
 };
 
 void TcpDuplexConnection::send(Payload element) {
+  stats_.bytesWritten(element->computeChainDataLength());
   socket_->writeChain(this, std::move(element));
 }
 
@@ -42,7 +43,6 @@ void TcpDuplexConnection::writeSuccess() noexcept {}
 void TcpDuplexConnection::writeErr(
     size_t bytesWritten,
     const AsyncSocketException& ex) noexcept {
-  
   std::cout << "TODO writeErr" << bytesWritten << ex.what() << "\n";
 }
 
@@ -54,6 +54,8 @@ void TcpDuplexConnection::getReadBuffer(
 
 void TcpDuplexConnection::readDataAvailable(size_t len) noexcept {
   readBuffer_.postallocate(len);
+
+  stats_.bytesRead(len);
 
   if (inputSubscriber_) {
     readBufferAvailable(readBuffer_.split(len));

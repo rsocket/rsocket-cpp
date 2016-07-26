@@ -5,6 +5,7 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <glog/logging.h>
+#include <folly/Optional.h>
 
 namespace reactivesocket {
 
@@ -25,6 +26,8 @@ void FramedWriter::onNext(std::unique_ptr<folly::IOBuf> payload) {
     return;
   }
 
+  auto type = FrameHeader::peekType(*payload);
+
   if (payload->headroom() >= sizeof(int32_t)) {
     // move the data pointer back and write value to the payload
     payload->prepend(sizeof(int32_t));
@@ -38,6 +41,8 @@ void FramedWriter::onNext(std::unique_ptr<folly::IOBuf> payload) {
     newPayload->appendChain(std::move(payload));
     stream_.onNext(std::move(newPayload));
   }
+
+  stats_.frameWritten(type);
 }
 
 void FramedWriter::onComplete() {

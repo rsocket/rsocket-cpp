@@ -49,8 +49,12 @@ void FramedReader::parseFrames() {
     // the frame size includes the payload size and the size value
     auto nextFrame = payloadQueue_.split(nextFrameSize - sizeof(int32_t));
 
+    auto type = FrameHeader::peekType(*nextFrame);
+
     CHECK(allowance_.tryAcquire(1));
     frames_.onNext(std::move(nextFrame));
+
+    stats_.frameRead(type);
   }
   dispatchingFrames_ = false;
 }

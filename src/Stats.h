@@ -1,0 +1,29 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
+#pragma once
+
+#include <string>
+#include "DuplexConnection.h"
+#include "Frame.h"
+
+namespace reactivesocket {
+class Stats {
+ public:
+  static Stats& noop();
+
+  virtual void socketCreated() = 0;
+  virtual void socketClosed() = 0;
+  virtual void connectionCreated(
+      const std::string& type,
+      reactivesocket::DuplexConnection* connection) = 0;
+  virtual void connectionClosed(
+      const std::string& type,
+      reactivesocket::DuplexConnection* connection) = 0;
+  virtual void bytesWritten(size_t bytes) = 0;
+  virtual void bytesRead(size_t bytes) = 0;
+  virtual void frameWritten(FrameType type) = 0;
+  virtual void frameRead(FrameType type) = 0;
+
+  virtual ~Stats() = default;
+};
+}

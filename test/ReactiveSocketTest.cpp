@@ -10,6 +10,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "MockStats.h"
 #include "src/Payload.h"
 #include "src/ReactiveSocket.h"
 #include "test/InlineConnection.h"
@@ -248,20 +249,30 @@ TEST(ReactiveSocketTest, Destructor) {
   auto serverConn = folly::make_unique<InlineConnection>();
   clientConn->connectTo(*serverConn);
 
+  // TODO: since we don't assert anything, should we just use the StatsPrinter
+  // instead?
+  NiceMock<MockStats> clientStats;
+  NiceMock<MockStats> serverStats;
   std::array<StrictMock<UnmanagedMockSubscriber<Payload>>, 2> clientInputs;
   std::array<StrictMock<UnmanagedMockSubscription>, 2> serverOutputSubs;
   std::array<Subscription*, 2> clientInputSubs = {{nullptr}};
   std::array<Subscriber<Payload>*, 2> serverOutputs = {{nullptr}};
 
+  EXPECT_CALL(clientStats, socketCreated_()).Times(1);
+  EXPECT_CALL(serverStats, socketCreated_()).Times(1);
+  EXPECT_CALL(clientStats, socketClosed_()).Times(1);
+  EXPECT_CALL(serverStats, socketClosed_()).Times(1);
+
   auto clientSock = ReactiveSocket::fromClientConnection(
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
-      folly::make_unique<StrictMock<MockRequestHandler>>());
+      folly::make_unique<StrictMock<MockRequestHandler>>(),
+      clientStats);
 
   auto serverHandler = folly::make_unique<StrictMock<MockRequestHandler>>();
   auto& serverHandlerRef = *serverHandler;
   auto serverSock = ReactiveSocket::fromServerConnection(
-      std::move(serverConn), std::move(serverHandler));
+      std::move(serverConn), std::move(serverHandler), serverStats);
 
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
 
@@ -311,4 +322,7 @@ TEST(ReactiveSocketTest, Destructor) {
   for (size_t i = 0; i < 2; ++i) {
     clientSock->requestSubscription(originalPayload->clone(), clientInputs[i]);
   }
+
+//  clientSock.reset(nullptr);
+//  serverSock.reset(nullptr);
 }
