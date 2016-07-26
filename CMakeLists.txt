@@ -122,8 +122,7 @@ add_library(
 target_link_libraries(
   ReactiveSocket
   ${FOLLY_LIBRARIES}
-  glog
-  )
+  glog)
 
 add_dependencies(ReactiveSocket ReactiveStreams)
 
@@ -157,8 +156,7 @@ target_link_libraries(
   ${GMOCK_LIBS}
   gflags
   glog
-  ${CMAKE_THREAD_LIBS_INIT}
-  )
+  ${CMAKE_THREAD_LIBS_INIT})
 
 add_dependencies(tests gmock ReactiveSocket)
 
@@ -185,8 +183,7 @@ target_link_libraries(
         gflags
         ${GMOCK_LIBS}
         glog
-        ${CMAKE_THREAD_LIBS_INIT}
-)
+        ${CMAKE_THREAD_LIBS_INIT})
 
 add_dependencies(tcpclient gmock)
 
@@ -209,8 +206,7 @@ target_link_libraries(
         gflags
         ${GMOCK_LIBS}
         glog
-        ${CMAKE_THREAD_LIBS_INIT}
-)
+        ${CMAKE_THREAD_LIBS_INIT})
 
 add_dependencies(tcpserver gmock)
 
@@ -229,8 +225,7 @@ target_link_libraries(
         tckclient
         ${FOLLY_LIBRARIES}
         gflags
-        glog
-)
+        glog)
 
 add_dependencies(tckclient gmock)
 
