@@ -437,6 +437,9 @@ Payload Frame_ERROR::serializeOut() {
   header_.serializeInto(appender);
   appender.writeBE(static_cast<uint32_t>(errorCode_));
   metadata_.serializeInto(appender);
+  if (data_) {
+    appender.insert(std::move(data_));
+  }
   return queue.move();
 }
 
@@ -452,6 +455,12 @@ bool Frame_ERROR::deserializeFrom(Payload in) {
   }
   if (!FrameMetadata::deserializeFrom(cur, header_.flags_, metadata_)) {
     return false;
+  }
+  auto totalLength = cur.totalLength();
+  if (totalLength > 0) {
+    cur.clone(data_, totalLength);
+  } else {
+    data_.reset();
   }
   return true;
 }

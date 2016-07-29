@@ -41,9 +41,14 @@ void ChannelResponderBase::onError(folly::exception_wrapper ex) {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
-      Frame_ERROR frame(streamId_, ErrorCode::APPLICATION_ERROR);
+      Frame_ERROR frame(
+          streamId_,
+          FrameFlags_EMPTY,
+          ErrorCode::APPLICATION_ERROR,
+          FrameMetadata::empty(),
+          folly::IOBuf::copyBuffer(ex.what().toStdString()));
       connection_->onNextFrame(frame);
-      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      connection_->endStream(streamId_, StreamCompletionSignal::ERROR);
     } break;
     case State::CLOSED:
       break;

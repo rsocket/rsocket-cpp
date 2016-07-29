@@ -34,7 +34,7 @@ class SubscriptionRequesterBase
  public:
   using Base::Base;
 
-  /// Degenerate form of the Subscriber interface -- only one request paylaod
+  /// Degenerate form of the Subscriber interface -- only one request payload
   /// will be sent to the server.
   void onNext(Payload);
 

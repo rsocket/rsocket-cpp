@@ -26,6 +26,7 @@ using StreamId = uint32_t;
 /// from the connection.
 enum class StreamCompletionSignal {
   GRACEFUL,
+  ERROR,
   INVALID_SETUP,
   UNSUPPORTED_SETUP,
   REJECTED_SETUP,

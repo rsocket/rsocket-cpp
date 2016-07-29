@@ -82,13 +82,13 @@ void ChannelRequesterBase::onError(folly::exception_wrapper ex) {
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;
-      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      connection_->endStream(streamId_, StreamCompletionSignal::ERROR);
       break;
     case State::REQUESTED: {
       state_ = State::CLOSED;
       Frame_CANCEL frame(streamId_);
       connection_->onNextFrame(frame);
-      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      connection_->endStream(streamId_, StreamCompletionSignal::ERROR);
     } break;
     case State::CLOSED:
       break;

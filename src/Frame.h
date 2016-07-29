@@ -310,20 +310,23 @@ class Frame_ERROR {
   static constexpr bool Trait_CarriesAllowance = false;
 
   Frame_ERROR() {}
-  Frame_ERROR(StreamId streamId, ErrorCode errorCode)
+  Frame_ERROR(StreamId streamId, ErrorCode errorCode, Payload data)
       : Frame_ERROR(
             streamId,
             FrameFlags_EMPTY,
             errorCode,
-            FrameMetadata::empty()) {}
+            FrameMetadata::empty(),
+            std::move(data)) {}
   Frame_ERROR(
       StreamId streamId,
       FrameFlags flags,
       ErrorCode errorCode,
-      FrameMetadata metadata)
+      FrameMetadata metadata,
+      Payload data)
       : header_(FrameType::ERROR, flags, streamId),
         errorCode_(errorCode),
-        metadata_(std::move(metadata)) {
+        metadata_(std::move(metadata)),
+        data_(std::move(data)) {
     metadata_.checkFlags(flags);
   }
 
@@ -333,6 +336,7 @@ class Frame_ERROR {
   FrameHeader header_;
   ErrorCode errorCode_;
   FrameMetadata metadata_;
+  Payload data_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_ERROR&);
 

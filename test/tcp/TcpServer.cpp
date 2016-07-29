@@ -22,14 +22,22 @@ namespace {
 class ServerSubscription : public virtual IntrusiveDeleter,
                            public Subscription {
  public:
-  ~ServerSubscription() {}
+  explicit ServerSubscription(Subscriber<Payload>& response): response_(response) {}
+
+  ~ServerSubscription() {};
 
   // Subscription methods
   void request(size_t n) override {
-    // TODO delay sending responses until this is triggered
+    response_.onNext(folly::IOBuf::copyBuffer("from server"));
+//    response.onNext(folly::IOBuf::copyBuffer("from server2"));
+//    response.onComplete();
+    response_.onError(std::runtime_error("XXX"));
   }
 
   void cancel() override {}
+
+private:
+    Subscriber<Payload>& response_;
 };
 
 class ServerRequestHandler : public RequestHandler {
@@ -53,15 +61,11 @@ class ServerRequestHandler : public RequestHandler {
   /// Handles a new inbound Subscription requested by the other end.
   void handleRequestSubscription(Payload request, Subscriber<Payload>& response)
       override {
-    auto* subscription = new MemoryMixin<ServerSubscription>();
-    response.onSubscribe(*subscription);
-
     LOG(INFO) << "ServerRequestHandler.handleRequestSubscription "
               << request->moveToFbString();
 
-    response.onNext(folly::IOBuf::copyBuffer("from server"));
-    response.onNext(folly::IOBuf::copyBuffer("from server2"));
-    response.onComplete();
+    auto* subscription = new MemoryMixin<ServerSubscription>(response);
+    response.onSubscribe(*subscription);
   }
 
   void handleFireAndForgetRequest(Payload request) override {
