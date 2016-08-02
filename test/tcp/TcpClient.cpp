@@ -54,6 +54,10 @@ class ClientRequestHandler : public RequestHandler {
   void handleFireAndForgetRequest(Payload request) override {
     LOG(ERROR) << "not expecting server call";
   }
+
+  void handleMetadataPush(Payload request) override {
+    LOG(ERROR) << "not expecting server call";
+  }
 };
 
 class Callback : public AsyncSocket::ConnectCallback {

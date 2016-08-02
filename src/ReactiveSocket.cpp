@@ -90,6 +90,12 @@ void ReactiveSocket::requestFireAndForget(Payload request) {
   connection_->onNextFrame(frame);
 }
 
+void ReactiveSocket::metadataPush(Payload metadata) {
+  FrameMetadata metadata_ = FrameMetadata(std::move(metadata));
+  Frame_METADATA_PUSH frame(std::move(metadata_));
+  connection_->onNextFrame(frame);
+}
+
 ReactiveSocket::ReactiveSocket(
     bool isServer,
     std::unique_ptr<DuplexConnection> connection,
@@ -149,6 +155,14 @@ bool ReactiveSocket::createResponder(
       }
       // no stream tracking is necessary
       handler_->handleFireAndForgetRequest(std::move(frame.data_));
+      break;
+    }
+    case FrameType::METADATA_PUSH: {
+      Frame_METADATA_PUSH frame;
+      if (!frame.deserializeFrom(std::move(serializedFrame))) {
+        return false;
+      }
+      handler_->handleMetadataPush(std::move(frame.metadata_.metadataPayload_));
       break;
     }
     // Other frames cannot start a stream.

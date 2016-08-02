@@ -68,6 +68,11 @@ class ServerRequestHandler : public RequestHandler {
     LOG(INFO) << "ServerRequestHandler.handleFireAndForgetRequest "
               << request->moveToFbString() << "\n";
   }
+
+  void handleMetadataPush(Payload request) override {
+    LOG(INFO) << "ServerRequestHandler.handleMetadataPush "
+              << request->moveToFbString() << "\n";
+  }
 };
 
 class Callback : public AsyncServerSocket::AcceptCallback {

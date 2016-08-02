@@ -54,6 +54,8 @@ class ReactiveSocket {
 
   void requestFireAndForget(Payload request);
 
+  void metadataPush(Payload metadata);
+
  private:
   ReactiveSocket(
       bool isServer,
