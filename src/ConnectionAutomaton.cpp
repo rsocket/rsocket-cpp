@@ -104,7 +104,9 @@ void ConnectionAutomaton::endStream(
     return;
   }
   // TODO(stupaq): handle connection-level errors
-  assert(signal == StreamCompletionSignal::GRACEFUL || signal == StreamCompletionSignal::ERROR);
+  assert(
+      signal == StreamCompletionSignal::GRACEFUL ||
+      signal == StreamCompletionSignal::ERROR);
 }
 
 bool ConnectionAutomaton::endStreamInternal(

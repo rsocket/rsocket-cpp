@@ -139,14 +139,17 @@ TEST_F(FrameTest, Frame_ERROR) {
   auto metadata = folly::IOBuf::copyBuffer("i'm so meta even this acronym");
   auto data = folly::IOBuf::copyBuffer("DAHTA");
   auto frame = reserialize<Frame_ERROR>(
-      streamId, flags, errorCode, FrameMetadata(metadata->clone()), data->clone());
+      streamId,
+      flags,
+      errorCode,
+      FrameMetadata(metadata->clone()),
+      data->clone());
 
   expectHeader(FrameType::ERROR, flags, streamId, frame);
   EXPECT_EQ(errorCode, frame.errorCode_);
   EXPECT_TRUE(
       folly::IOBufEqual()(*metadata, *frame.metadata_.metadataPayload_));
-  EXPECT_TRUE(
-      folly::IOBufEqual()(*data, *frame.data_));
+  EXPECT_TRUE(folly::IOBufEqual()(*data, *frame.data_));
 }
 
 TEST_F(FrameTest, Frame_KEEPALIVE) {

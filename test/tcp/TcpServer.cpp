@@ -22,22 +22,23 @@ namespace {
 class ServerSubscription : public virtual IntrusiveDeleter,
                            public Subscription {
  public:
-  explicit ServerSubscription(Subscriber<Payload>& response): response_(response) {}
+  explicit ServerSubscription(Subscriber<Payload>& response)
+      : response_(response) {}
 
-  ~ServerSubscription() {};
+  ~ServerSubscription(){};
 
   // Subscription methods
   void request(size_t n) override {
     response_.onNext(folly::IOBuf::copyBuffer("from server"));
-//    response.onNext(folly::IOBuf::copyBuffer("from server2"));
-//    response.onComplete();
+    //    response.onNext(folly::IOBuf::copyBuffer("from server2"));
+    //    response.onComplete();
     response_.onError(std::runtime_error("XXX"));
   }
 
   void cancel() override {}
 
-private:
-    Subscriber<Payload>& response_;
+ private:
+  Subscriber<Payload>& response_;
 };
 
 class ServerRequestHandler : public RequestHandler {
