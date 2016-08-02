@@ -117,7 +117,7 @@ std::ostream& operator<<(std::ostream& os, const FrameHeader& header) {
   return os << header.type_ << "[" << flags << ", " << header.streamId_ << "]";
 }
 
-constexpr auto kMaxMetaLength = std::numeric_limits<int32_t>::max();
+constexpr static auto kMaxMetaLength = std::numeric_limits<int32_t>::max();
 
 FrameMetadata FrameMetadata::empty() {
   return FrameMetadata();
@@ -126,12 +126,14 @@ FrameMetadata FrameMetadata::empty() {
 void FrameMetadata::checkFlags(FrameFlags flags) {
   const bool metadataPresent = (flags & FrameFlags_METADATA) != 0;
   assert(metadataPresent == (metadataPayload_ != nullptr));
+  (void)metadataPresent;
 }
 
 void FrameMetadata::serializeInto(folly::io::QueueAppender& appender) {
   if (metadataPayload_ != nullptr) {
     // use signed int because the first bit in metadata length is reserved
     assert(metadataPayload_->length() + sizeof(uint32_t) < kMaxMetaLength);
+    (void)kMaxMetaLength;
 
     appender.writeBE<uint32_t>(
         static_cast<uint32_t>(metadataPayload_->length()) + sizeof(uint32_t));
@@ -159,7 +161,10 @@ bool FrameMetadata::deserializeFrom(
 bool FrameMetadata::deserializeFrom(folly::io::Cursor& cur) {
   try {
     const auto length = cur.readBE<uint32_t>();
+
     assert(length < kMaxMetaLength);
+    (void)kMaxMetaLength;
+
     const auto metadataPayloadLength = length - sizeof(uint32_t);
 
     if (metadataPayloadLength > 0) {

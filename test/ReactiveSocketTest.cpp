@@ -121,12 +121,12 @@ TEST(ReactiveSocketTest, RequestChannel) {
       }));
   EXPECT_CALL(serverOutputSub, cancel_()).InSequence(s0);
   EXPECT_CALL(serverInput, onComplete_()).InSequence(s1);
-  EXPECT_CALL(clientInput, onComplete_())
-      .InSequence(s2)
-      .WillOnce(Invoke([&]() { clientInputSub->cancel(); }));
-  EXPECT_CALL(clientOutputSub, cancel_())
-      .InSequence(s3)
-      .WillOnce(Invoke([&]() { clientOutput->onComplete(); }));
+  EXPECT_CALL(clientInput, onComplete_()).InSequence(s2).WillOnce(Invoke([&]() {
+    clientInputSub->cancel();
+  }));
+  EXPECT_CALL(clientOutputSub, cancel_()).InSequence(s3).WillOnce(Invoke([&]() {
+    clientOutput->onComplete();
+  }));
 
   // Kick off the magic.
   clientOutput = &clientSock->requestChannel(clientInput);
@@ -199,9 +199,9 @@ TEST(ReactiveSocketTest, RequestSubscription) {
       .InSequence(s, s0, s1)
       // Client closes the subscription in response.
       .WillOnce(Invoke([&](Payload&) { clientInputSub->cancel(); }));
-  EXPECT_CALL(serverOutputSub, cancel_())
-      .InSequence(s0)
-      .WillOnce(Invoke([&]() { serverOutput->onComplete(); }));
+  EXPECT_CALL(serverOutputSub, cancel_()).InSequence(s0).WillOnce(Invoke([&]() {
+    serverOutput->onComplete();
+  }));
   EXPECT_CALL(clientInput, onComplete_()).InSequence(s1);
 
   // Kick off the magic.

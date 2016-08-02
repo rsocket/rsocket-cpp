@@ -52,10 +52,8 @@ class ServerRequestHandler : public RequestHandler {
     LOG(ERROR) << "not expecting server call";
     response.onError(std::runtime_error("incoming channel not supported"));
 
-    auto* subscription = new MemoryMixin<NullSubscription>();
-    response.onSubscribe(*subscription);
-
-    return *(new MemoryMixin<CancelSubscriber>());
+    response.onSubscribe(createManagedInstance<NullSubscription>());
+    return createManagedInstance<CancelSubscriber>();
   }
 
   /// Handles a new inbound Subscription requested by the other end.
@@ -64,8 +62,7 @@ class ServerRequestHandler : public RequestHandler {
     LOG(INFO) << "ServerRequestHandler.handleRequestSubscription "
               << request->moveToFbString();
 
-    auto* subscription = new MemoryMixin<ServerSubscription>(response);
-    response.onSubscribe(*subscription);
+    response.onSubscribe(createManagedInstance<ServerSubscription>(response));
   }
 
   void handleFireAndForgetRequest(Payload request) override {

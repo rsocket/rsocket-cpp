@@ -71,13 +71,12 @@ static void nextSingleFrameTest(int headroom) {
 
   std::string msg("hello");
 
-  EXPECT_CALL(subscriber, onNext_(_))
-      .WillOnce(Invoke([&](Payload& p) {
-        ASSERT_EQ(
-            folly::to<std::string>(
-                '\0', '\0', '\0', char(msg.size() + sizeof(int32_t)), msg),
-            p->moveToFbString().toStdString());
-      }));
+  EXPECT_CALL(subscriber, onNext_(_)).WillOnce(Invoke([&](Payload& p) {
+    ASSERT_EQ(
+        folly::to<std::string>(
+            '\0', '\0', '\0', char(msg.size() + sizeof(int32_t)), msg),
+        p->moveToFbString().toStdString());
+  }));
 
   FramedWriter writer(subscriber, Stats::noop());
   writer.onSubscribe(subscription);

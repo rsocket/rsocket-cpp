@@ -39,10 +39,9 @@ TEST(FramedReaderTest, Read1Frame) {
 
   framedReader.onNext(std::move(payload1));
 
-  EXPECT_CALL(frameSubscriber, onNext_(_))
-      .WillOnce(Invoke([&](Payload& p) {
-        ASSERT_EQ(msg1, p->moveToFbString().toStdString());
-      }));
+  EXPECT_CALL(frameSubscriber, onNext_(_)).WillOnce(Invoke([&](Payload& p) {
+    ASSERT_EQ(msg1, p->moveToFbString().toStdString());
+  }));
 
   EXPECT_CALL(wireSubscription, request_(_)).Times(1);
 
@@ -152,10 +151,9 @@ TEST(FramedReaderTest, Read1FrameIncomplete) {
     folly::format("{}", part2.c_str())(appender);
   }
 
-  EXPECT_CALL(frameSubscriber, onNext_(_))
-      .WillOnce(Invoke([&](Payload& p) {
-        ASSERT_EQ(msg1, p->moveToFbString().toStdString());
-      }));
+  EXPECT_CALL(frameSubscriber, onNext_(_)).WillOnce(Invoke([&](Payload& p) {
+    ASSERT_EQ(msg1, p->moveToFbString().toStdString());
+  }));
 
   framedReader.onNext(std::move(payload));
   // to delete objects
