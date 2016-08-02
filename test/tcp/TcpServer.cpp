@@ -2,13 +2,11 @@
 #include <folly/io/async/AsyncServerSocket.h>
 #include <gmock/gmock.h>
 #include <thread>
+#include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"
-#include "src/RequestHandler.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/mixins/MemoryMixin.h"
 #include "src/tcp/TcpDuplexConnection.h"
-#include "test/simple/CancelSubscriber.h"
-#include "test/simple/NullSubscription.h"
 #include "test/simple/PrintSubscriber.h"
 #include "test/simple/StatsPrinter.h"
 
@@ -41,22 +39,8 @@ class ServerSubscription : public virtual IntrusiveDeleter,
   Subscriber<Payload>& response_;
 };
 
-class ServerRequestHandler : public RequestHandler {
+class ServerRequestHandler : public DefaultRequestHandler {
  public:
-  /// Handles a new Channel requested by the other end.
-  ///
-  /// Modelled after Producer::subscribe, hence must synchronously call
-  /// Subscriber::onSubscribe, and provide a valid Subscription.
-  Subscriber<Payload>& handleRequestChannel(
-      reactivesocket::Payload request,
-      Subscriber<Payload>& response) override {
-    LOG(ERROR) << "not expecting server call";
-    response.onError(std::runtime_error("incoming channel not supported"));
-
-    response.onSubscribe(createManagedInstance<NullSubscription>());
-    return createManagedInstance<CancelSubscriber>();
-  }
-
   /// Handles a new inbound Subscription requested by the other end.
   void handleRequestSubscription(Payload request, Subscriber<Payload>& response)
       override {

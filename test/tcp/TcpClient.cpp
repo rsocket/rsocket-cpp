@@ -1,13 +1,11 @@
 #include <folly/Memory.h>
 #include <gmock/gmock.h>
 #include <thread>
+#include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"
-#include "src/RequestHandler.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/mixins/MemoryMixin.h"
 #include "src/tcp/TcpDuplexConnection.h"
-#include "test/simple/CancelSubscriber.h"
-#include "test/simple/NullSubscription.h"
 #include "test/simple/PrintSubscriber.h"
 #include "test/simple/StatsPrinter.h"
 
@@ -19,38 +17,6 @@ DEFINE_string(host, "localhost", "host to connect to");
 DEFINE_int32(port, 9898, "host:port to connect to");
 
 namespace {
-class ClientRequestHandler : public RequestHandler {
- public:
-  ~ClientRequestHandler() {
-    LOG(INFO) << "~ClientRequestHandler()";
-  }
-
-  /// Handles a new Channel requested by the other end.
-  ///
-  /// Modelled after Producer::subscribe, hence must synchronously call
-  /// Subscriber::onSubscribe, and provide a valid Subscription.
-  Subscriber<Payload>& handleRequestChannel(
-      Payload request,
-      Subscriber<Payload>& response) override {
-    LOG(ERROR) << "not expecting server call";
-    response.onError(std::runtime_error("incoming request not supported"));
-    response.onSubscribe(createManagedInstance<NullSubscription>());
-    return createManagedInstance<CancelSubscriber>();
-  }
-
-  /// Handles a new inbound Subscription requested by the other end.
-  void handleRequestSubscription(Payload request, Subscriber<Payload>& response)
-      override {
-    LOG(ERROR) << "not expecting server call";
-    response.onError(std::runtime_error("incoming request not supported"));
-    response.onSubscribe(createManagedInstance<NullSubscription>());
-  }
-
-  void handleFireAndForgetRequest(Payload request) override {
-    LOG(ERROR) << "not expecting server call";
-  }
-};
-
 class Callback : public AsyncSocket::ConnectCallback {
  public:
   virtual ~Callback() = default;
@@ -95,7 +61,7 @@ int main(int argc, char* argv[]) {
             folly::make_unique<FramedDuplexConnection>(
                 std::move(connection), stats);
         std::unique_ptr<RequestHandler> requestHandler =
-            folly::make_unique<ClientRequestHandler>();
+            folly::make_unique<DefaultRequestHandler>();
 
         reactiveSocket = ReactiveSocket::fromClientConnection(
             std::move(framedConnection), std::move(requestHandler), stats);
