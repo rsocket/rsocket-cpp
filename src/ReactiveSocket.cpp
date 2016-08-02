@@ -63,6 +63,13 @@ Subscriber<Payload>& ReactiveSocket::requestChannel(
   return *automaton;
 }
 
+void ReactiveSocket::requestStream(
+    Payload request,
+    Subscriber<Payload>& responseSink) {
+  // TODO(stupaq): handle any exceptions
+  // TODO(jprahman): Implement later
+}
+
 void ReactiveSocket::requestSubscription(
     Payload request,
     Subscriber<Payload>& responseSink) {
@@ -127,6 +134,10 @@ bool ReactiveSocket::createResponder(
       automaton->onNextFrame(frame);
       requestSink.onSubscribe(*automaton);
       automaton->start();
+      break;
+    }
+    case FrameType::REQUEST_STREAM: {
+      // TODO(jprahman): Implement this later
       break;
     }
     case FrameType::REQUEST_SUB: {

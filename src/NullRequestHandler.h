@@ -28,6 +28,10 @@ class NullRequestHandler : public RequestHandler {
       Payload request,
       Subscriber<Payload>& response) override;
 
+  void handleRequestStream(
+      Payload request,
+      Subscriber<Payload>& response) override;
+
   void handleRequestSubscription(
       Payload request,
       Subscriber<Payload>& response) override;

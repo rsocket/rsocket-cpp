@@ -75,6 +75,7 @@ template <typename Frame>
 void ConnectionAutomaton::onNextFrame(Frame& frame) {
   onNextFrame(frame.serializeOut());
 }
+template void ConnectionAutomaton::onNextFrame(Frame_REQUEST_STREAM&);
 template void ConnectionAutomaton::onNextFrame(Frame_REQUEST_SUB&);
 template void ConnectionAutomaton::onNextFrame(Frame_REQUEST_CHANNEL&);
 template void ConnectionAutomaton::onNextFrame(Frame_REQUEST_N&);

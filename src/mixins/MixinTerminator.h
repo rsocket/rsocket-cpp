@@ -11,7 +11,7 @@
 namespace reactivesocket {
 
 class ConnectionAutomaton;
-class ConnectionAutomaton;
+class Frame_REQUEST_STREAM;
 class Frame_REQUEST_SUB;
 class Frame_REQUEST_CHANNEL;
 class Frame_REQUEST_N;
@@ -53,6 +53,8 @@ class MixinTerminator
   /// @{
   /// Each mixin in the stack implements a subset of this API.
   void endStream(StreamCompletionSignal) {}
+
+  void onNextFrame(Frame_REQUEST_STREAM&) {}
 
   void onNextFrame(Frame_REQUEST_SUB&) {}
 

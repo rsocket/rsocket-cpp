@@ -34,6 +34,14 @@ Subscriber<Payload>& NullRequestHandler::handleRequestChannel(
   return createManagedInstance<NullSubscriber>();
 }
 
+void NullRequestHandler::handleRequestStream(
+    Payload /*request*/,
+    Subscriber<Payload>& response) {
+  // TODO(lehecka): get rid of onSubscribe call
+  response.onSubscribe(createManagedInstance<NullSubscription>());
+  response.onError(std::runtime_error("NullRequestHandler"));
+}
+
 void NullRequestHandler::handleRequestSubscription(
     Payload /*request*/,
     Subscriber<Payload>& response) {

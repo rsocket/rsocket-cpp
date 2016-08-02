@@ -64,6 +64,27 @@ void expectHeader(
   EXPECT_EQ(flags, frame.header_.flags_);
 }
 
+TEST_F(FrameTest, Frame_REQUEST_STREAM) {
+  uint32_t streamId = 42;
+  FrameFlags flags =
+      FrameFlags_COMPLETE | FrameFlags_REQN_PRESENT | FrameFlags_METADATA;
+  uint32_t requestN = 3;
+  auto metadata = folly::IOBuf::copyBuffer("i'm so meta even this acyonym");
+  auto data = folly::IOBuf::copyBuffer("424242");
+  auto frame = reserialize<Frame_REQUEST_STREAM>(
+      streamId,
+      flags,
+      requestN,
+      FrameMetadata(metadata->clone()),
+      data->clone());
+
+  expectHeader(FrameType::REQUEST_STREAM, flags, streamId, frame);
+  EXPECT_EQ(requestN, frame.requestN_);
+  EXPECT_TRUE(
+      folly::IOBufEqual()(*metadata, *frame.metadata_.metadataPayload_));
+  EXPECT_TRUE(folly::IOBufEqual()(*data, *frame.data_));
+}
+
 TEST_F(FrameTest, Frame_REQUEST_CHANNEL) {
   uint32_t streamId = 42;
   FrameFlags flags =
