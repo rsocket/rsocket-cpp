@@ -1,4 +1,4 @@
-// Copyright 2004-present Facebook.  All rights reserved.
+// Copyright 2004-present Facebook. All rights reserved.
 #include "FramedDuplexConnection.h"
 
 #include <folly/Memory.h>
