@@ -82,6 +82,10 @@ add_library(
   src/automata/ChannelRequester.h
   src/automata/ChannelResponder.cpp
   src/automata/ChannelResponder.h
+  src/automata/StreamRequester.cpp
+  src/automata/StreamRequester.h
+  src/automata/StreamResponder.cpp
+  src/automata/StreamResponder.h
   src/automata/SubscriptionRequester.cpp
   src/automata/SubscriptionRequester.h
   src/automata/SubscriptionResponder.cpp
