@@ -38,7 +38,6 @@ void ConnectionAutomaton::connect(bool client) {
     auto data = folly::IOBuf::create(0);
     auto flags = FrameFlags_METADATA;
     Frame_SETUP frame(
-        0,
         flags,
         0,
         std::numeric_limits<uint32_t>::max(),

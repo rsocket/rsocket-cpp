@@ -66,7 +66,7 @@ find_package(Folly REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system thread)
 include_directories(SYSTEM ${FOLLY_INCLUDE_DIR})
-include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
+include_directories(SYSTEM /usr/local/Cellar/openssl/1.0.2h_1/include)
 
 include_directories(${CMAKE_SOURCE_DIR})
 

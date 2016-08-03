@@ -52,6 +52,8 @@ std::ostream& operator<<(std::ostream& os, FrameType type) {
       return os << "KEEPALIVE";
     case FrameType::SETUP:
       return os << "SETUP";
+    case FrameType::LEASE:
+      return os << "LEASE";
   }
   // this should be never hit because the switch is over all cases
   std::abort();
