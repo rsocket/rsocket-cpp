@@ -151,7 +151,7 @@ class Frame_REQUEST_STREAM {
         requestN_(requestN),
         metadata_(std::move(metadata)),
         data_(std::move(data)) {
-      metadata_.checkFlags(flags);
+    metadata_.checkFlags(flags);
   }
 
   /// For compatibility with other data-carrying frames.
@@ -161,11 +161,11 @@ class Frame_REQUEST_STREAM {
       FrameMetadata metadata,
       Payload data)
       : Frame_REQUEST_STREAM(
-          streamId,
-          flags,
-          0,
-          std::move(metadata),
-          std::move(data)) {}
+            streamId,
+            flags,
+            0,
+            std::move(metadata),
+            std::move(data)) {}
 
   Payload serializeOut();
   bool deserializeFrom(Payload in);

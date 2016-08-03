@@ -10,7 +10,7 @@
 #include "src/Frame.h"
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
-#include "src/mixins/ConsumerMixin.h"
+#include "src/automata/StreamSubscriptionRequesterBase.h"
 #include "src/mixins/ExecutorMixin.h"
 #include "src/mixins/LoggingMixin.h"
 #include "src/mixins/MemoryMixin.h"
@@ -28,47 +28,16 @@ enum class StreamCompletionSignal;
 
 /// Implementation of stream automaton that represents a Subscription requester.
 class SubscriptionRequesterBase
-    : public LoggingMixin<ConsumerMixin<Frame_RESPONSE, MixinTerminator>> {
-  using Base = LoggingMixin<ConsumerMixin<Frame_RESPONSE, MixinTerminator>>;
+    : public StreamSubscriptionRequesterBase<Frame_REQUEST_SUB> {
+  using Base = StreamSubscriptionRequesterBase<Frame_REQUEST_SUB>;
 
  public:
   using Base::Base;
 
-  /// Degenerate form of the Subscriber interface -- only one request payload
-  /// will be sent to the server.
-  void onNext(Payload);
-
-  /// @{
-  /// A Subscriber interface to control ingestion of response payloads.
-  void request(size_t);
-
-  void cancel();
-  /// @}
-
  protected:
   /// @{
-  void endStream(StreamCompletionSignal);
-
-  /// Not all frames are intercepted, some just pass through.
-  using Base::onNextFrame;
-
-  void onNextFrame(Frame_RESPONSE&);
-
-  void onNextFrame(Frame_ERROR&);
-
   std::ostream& logPrefix(std::ostream& os);
   /// @}
-
- private:
-  /// State of the Subscription requester.
-  enum class State : uint8_t {
-    NEW,
-    REQUESTED,
-    CLOSED,
-  } state_{State::NEW};
-  /// An allowance accumulated before the stream is initialised.
-  /// Remaining part of the allowance is forwarded to the ConsumerMixin.
-  reactivestreams::AllowanceSemaphore initialResponseAllowance_;
 };
 
 using SubscriptionRequester =
