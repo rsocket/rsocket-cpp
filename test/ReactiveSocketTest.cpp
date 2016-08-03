@@ -188,7 +188,7 @@ TEST(ReactiveSocketTest, RequestStreamComplete) {
   EXPECT_CALL(clientInput, onNext_(Equals(&originalPayload)))
       .InSequence(s)
       .WillOnce(Invoke([&](Payload&) { clientInputSub->request(1); }));
-  // Server now sends one more payload.
+  // Server now sends one more payload with the complete bit set.
   EXPECT_CALL(serverOutputSub, request_(1))
       .InSequence(s)
       .WillOnce(Invoke(
@@ -204,7 +204,11 @@ TEST(ReactiveSocketTest, RequestStreamComplete) {
             .InSequence(s0);
         serverOutput->onComplete();
       }));
-  EXPECT_CALL(clientInput, onComplete_()).InSequence(s1);
+  EXPECT_CALL(clientInput, onComplete_())
+      .InSequence(s1)
+      .WillOnce(Invoke([&]() {
+        clientInputSub->cancel();
+      }));
 
   // Kick off the magic.
   clientSock->requestStream(originalPayload->clone(), clientInput);
@@ -285,8 +289,6 @@ TEST(ReactiveSocketTest, RequestStreamCancel) {
   // Kick off the magic.
   clientSock->requestStream(originalPayload->clone(), clientInput);
 }
-
-// TODO(jprahman) Add test to verify the server can terminate a stream
 
 TEST(ReactiveSocketTest, RequestSubscription) {
   // InlineConnection forwards appropriate calls in-line, hence the order of
