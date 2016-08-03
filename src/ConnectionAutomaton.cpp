@@ -43,6 +43,8 @@ void ConnectionAutomaton::connect(bool client) {
         0,
         std::numeric_limits<uint32_t>::max(),
         std::numeric_limits<uint32_t>::max(),
+        "",
+        "",
         FrameMetadata(std::move(metadata)),
         std::move(data));
     onNext(frame.serializeOut());
@@ -180,9 +182,23 @@ void ConnectionAutomaton::onConnectionFrame(Payload payload) {
       }
     }
       return;
-    case FrameType::SETUP:
-      // TODO handle lease logic
-      LOG(INFO) << "ignoring setup frame";
+    case FrameType::SETUP: {
+      Frame_SETUP frame;
+      if (frame.deserializeFrom(std::move(payload))) {
+        if (frame.header_.flags_ & FrameFlags_LEASE) {
+          Frame_LEASE leaseFrame(
+              FrameFlags_EMPTY,
+              std::numeric_limits<uint32_t>::max(),
+              std::numeric_limits<uint32_t>::max(),
+              FrameMetadata::empty());
+          connectionOutput_.onNext(leaseFrame.serializeOut());
+        }
+      } else {
+        // TODO(yschimke): handle connection-level error
+        DCHECK(false);
+        LOG(INFO) << "ignoring bad setup frame";
+      }
+    }
       return;
     default:
       // TODO(yschimke): check ignore flag and fail

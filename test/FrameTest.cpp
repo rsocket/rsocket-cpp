@@ -164,18 +164,43 @@ TEST_F(FrameTest, Frame_KEEPALIVE) {
 }
 
 TEST_F(FrameTest, Frame_SETUP) {
-  uint32_t streamId = 0;
   FrameFlags flags = FrameFlags_EMPTY;
   uint32_t version = 0;
   uint32_t keepaliveTime = std::numeric_limits<uint32_t>::max();
   uint32_t maxLifetime = std::numeric_limits<uint32_t>::max();
   auto data = folly::IOBuf::copyBuffer("424242");
   auto frame = reserialize<Frame_SETUP>(
-      streamId,
       flags,
       version,
       keepaliveTime,
       maxLifetime,
+      "md",
+      "d",
+      FrameMetadata::empty(),
+      data->clone());
+
+  expectHeader(FrameType::SETUP, flags, streamId, frame);
+  EXPECT_EQ(version, frame.version_);
+  EXPECT_EQ(keepaliveTime, frame.keepaliveTime_);
+  EXPECT_EQ(maxLifetime, frame.maxLifetime_);
+  EXPECT_EQ("md", frame.metadataMimeType_);
+  EXPECT_EQ("d", frame.dataMimeType_);
+  EXPECT_TRUE(folly::IOBufEqual()(*data, *frame.data_));
+}
+
+TEST_F(FrameTest, Frame_LEASE) {
+  FrameFlags flags = FrameFlags_EMPTY;
+  uint32_t version = 0;
+  uint32_t keepaliveTime = std::numeric_limits<uint32_t>::max();
+  uint32_t maxLifetime = std::numeric_limits<uint32_t>::max();
+  auto data = folly::IOBuf::copyBuffer("424242");
+  auto frame = reserialize<Frame_LEASE>(
+      flags,
+      version,
+      keepaliveTime,
+      maxLifetime,
+      "md",
+      "d",
       FrameMetadata::empty(),
       data->clone());
 
