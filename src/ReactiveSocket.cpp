@@ -17,6 +17,8 @@
 #include "src/RequestHandler.h"
 #include "src/automata/ChannelRequester.h"
 #include "src/automata/ChannelResponder.h"
+#include "src/automata/StreamRequester.h"
+#include "src/automata/StreamResponder.h"
 #include "src/automata/SubscriptionRequester.h"
 #include "src/automata/SubscriptionResponder.h"
 
@@ -67,7 +69,15 @@ void ReactiveSocket::requestStream(
     Payload request,
     Subscriber<Payload>& responseSink) {
   // TODO(stupaq): handle any exceptions
-  // TODO(jprahman): Implement later
+  StreamId streamId = nextStreamId_;
+  nextStreamId_ += 2;
+  StreamRequester::Parameters params = {connection_, streamId};
+  auto automaton = new StreamRequester(params);
+  connection_->addStream(streamId, *automaton);
+  automaton->subscribe(responseSink);
+  responseSink.onSubscribe(*automaton);
+  automaton->onNext(std::move(request));
+  automaton->start();
 }
 
 void ReactiveSocket::requestSubscription(
@@ -137,7 +147,16 @@ bool ReactiveSocket::createResponder(
       break;
     }
     case FrameType::REQUEST_STREAM: {
-      // TODO(jprahman): Implement this later
+      Frame_REQUEST_STREAM frame;
+      if (!frame.deserializeFrom(std::move(serializedFrame))) {
+        return false;
+      }
+      StreamResponder::Parameters params = {connection_, streamId};
+      auto automaton = new StreamResponder(params);
+      connection_->addStream(streamId, *automaton);
+      handler_->handleRequestStream(std::move(frame.data_), *automaton);
+      automaton->onNextFrame(frame);
+      automaton->start();
       break;
     }
     case FrameType::REQUEST_SUB: {
