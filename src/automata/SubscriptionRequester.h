@@ -27,12 +27,13 @@ namespace reactivesocket {
 enum class StreamCompletionSignal;
 
 /// Implementation of stream automaton that represents a Subscription requester.
-class SubscriptionRequesterBase
-    : public StreamSubscriptionRequesterBase<Frame_REQUEST_SUB> {
-  using Base = StreamSubscriptionRequesterBase<Frame_REQUEST_SUB>;
+class SubscriptionRequesterBase : public StreamSubscriptionRequesterBase {
+  using Base = StreamSubscriptionRequesterBase;
 
  public:
   using Base::Base;
+
+  void onNext(Payload request) override;
 
  protected:
   /// @{
