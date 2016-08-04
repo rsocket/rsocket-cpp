@@ -200,20 +200,16 @@ TEST(ReactiveSocketTest, RequestStreamComplete) {
       // Server closes the subscription by calling onComplete() in response
       // to sending the final item
       .WillOnce(Invoke([&](Payload&) {
-        EXPECT_CALL(serverOutputSub, cancel_())
-            .InSequence(s0);
+        EXPECT_CALL(serverOutputSub, cancel_()).InSequence(s0);
         serverOutput->onComplete();
       }));
-  EXPECT_CALL(clientInput, onComplete_())
-      .InSequence(s1)
-      .WillOnce(Invoke([&]() {
-        clientInputSub->cancel();
-      }));
+  EXPECT_CALL(clientInput, onComplete_()).InSequence(s1).WillOnce(Invoke([&]() {
+    clientInputSub->cancel();
+  }));
 
   // Kick off the magic.
   clientSock->requestStream(originalPayload->clone(), clientInput);
 }
-
 
 TEST(ReactiveSocketTest, RequestStreamCancel) {
   // InlineConnection forwards appropriate calls in-line, hence the order of

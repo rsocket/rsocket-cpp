@@ -13,17 +13,13 @@ void NullSubscriber::onSubscribe(Subscription& subscription) {
 
 void NullSubscriber::onNext(Payload /*element*/) {}
 
-void NullSubscriber::onComplete() {
-}
+void NullSubscriber::onComplete() {}
 
-void NullSubscriber::onError(folly::exception_wrapper /*ex*/) {
-}
+void NullSubscriber::onError(folly::exception_wrapper /*ex*/) {}
 
-void NullSubscription::request(size_t /*n*/) {
-};
+void NullSubscription::request(size_t /*n*/){};
 
-void NullSubscription::cancel() {
-}
+void NullSubscription::cancel() {}
 
 Subscriber<Payload>& NullRequestHandler::handleRequestChannel(
     Payload /*request*/,
@@ -50,8 +46,5 @@ void NullRequestHandler::handleRequestSubscription(
   response.onError(std::runtime_error("NullRequestHandler"));
 }
 
-void NullRequestHandler::handleFireAndForgetRequest(
-    Payload /*request*/) {
-}
-
+void NullRequestHandler::handleFireAndForgetRequest(Payload /*request*/) {}
 }
