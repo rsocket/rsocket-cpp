@@ -53,7 +53,7 @@ class ServerRequestHandler : public DefaultRequestHandler {
   /// Handles a new inbound Stream requested by the other end.
   void handleRequestStream(Payload request, Subscriber<Payload>& response)
       override {
-    LOG(INFO) << "ServerRequestHandler.handleRequestSubscription "
+    LOG(INFO) << "ServerRequestHandler.handleRequestStream "
               << request->moveToFbString();
 
     response.onSubscribe(createManagedInstance<ServerSubscription>(response));
