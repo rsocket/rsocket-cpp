@@ -176,8 +176,13 @@ void ConnectionAutomaton::onConnectionFrame(Payload payload) {
         frame.header_.flags_ &= ~(FrameFlags_KEEPALIVE_RESPOND);
         connectionOutput_.onNext(frame.serializeOut());
       } else {
-        // TODO(yschimke): handle connection-level error
-        assert(false);
+        Frame_ERROR errorFrame(
+            0,
+            ErrorCode::INVALID,
+            folly::IOBuf::copyBuffer("unexpected frame"));
+        connectionOutput_.onNext(errorFrame.serializeOut());
+        // TODO(yschimke) should this be onTerminal
+        cancel();
       }
     }
       return;
@@ -185,23 +190,36 @@ void ConnectionAutomaton::onConnectionFrame(Payload payload) {
       Frame_SETUP frame;
       if (frame.deserializeFrom(std::move(payload))) {
         if (frame.header_.flags_ & FrameFlags_LEASE) {
-          Frame_LEASE leaseFrame(
-              FrameFlags_EMPTY,
-              std::numeric_limits<uint32_t>::max(),
-              std::numeric_limits<uint32_t>::max(),
-              FrameMetadata::empty());
-          connectionOutput_.onNext(leaseFrame.serializeOut());
+          // We don't have the correct lease and wait logic above yet
+          Frame_ERROR errorFrame(
+              0,
+              ErrorCode::UNSUPPORTED_SETUP,
+          folly::IOBuf::copyBuffer("leases not supported"));
+          connectionOutput_.onNext(errorFrame.serializeOut());
+          // TODO(yschimke) should this be onTerminal
+          cancel();
         }
       } else {
-        // TODO(yschimke): handle connection-level error
-        DCHECK(false);
-        LOG(INFO) << "ignoring bad setup frame";
+        // TODO(yschimke) make this conditional if we have versioning problems
+        Frame_ERROR errorFrame(
+            0,
+            ErrorCode::INVALID_SETUP,
+            folly::IOBuf::copyBuffer("bad setup frame"));
+        connectionOutput_.onNext(errorFrame.serializeOut());
+        // TODO(yschimke) should this be onTerminal
+        cancel();
       }
     }
       return;
     default:
-      // TODO(yschimke): check ignore flag and fail
-      assert(false);
+      // TODO(yschimke) make this conditional if we have versioning problems
+      Frame_ERROR errorFrame(
+          0,
+          ErrorCode::INVALID,
+          folly::IOBuf::copyBuffer("unexpected frame"));
+      connectionOutput_.onNext(errorFrame.serializeOut());
+      // TODO(yschimke) should this be onTerminal
+      cancel();
       return;
   }
 }
@@ -262,8 +280,13 @@ void ConnectionAutomaton::handleUnknownStream(
   // TODO(stupaq): there are some rules about monotonically increasing stream
   // IDs -- let's forget about them for a moment
   if (!factory_(streamId, payload)) {
-    // TODO(stupaq): handle connection-level error
-    assert(false);
+    Frame_ERROR errorFrame(
+        0,
+        ErrorCode::INVALID,
+        folly::IOBuf::copyBuffer("unknown stream " + streamId));
+    connectionOutput_.onNext(errorFrame.serializeOut());
+    // TODO(yschimke) should this be onTerminal
+    cancel();
   }
 }
 /// @}

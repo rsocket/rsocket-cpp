@@ -23,10 +23,28 @@
 namespace reactivesocket {
 
 ReactiveSocket::~ReactiveSocket() {
-  stats_.socketClosed();
-  // Force connection closure, this will trigger terminal signals to be
-  // delivered to all stream automata.
-  connection_->disconnect();
+  close();
+}
+
+void ReactiveSocket::close() {
+  // TODO(yschimke) discuss correct concurrency.  mutex? assert on single controlling thread?
+  if (!closed_) {
+    stats_.socketClosed();
+    // Force connection closure, this will trigger terminal signals to be
+    // delivered to all stream automata.
+    connection_->disconnect();
+
+    closed_ = true;
+
+    if (closeCallback_) {
+      closeCallback_->closed(nullptr);
+    }
+  }
+}
+
+void ReactiveSocket::onClose(std::unique_ptr<CloseCallback> closeCallback) {
+  closeCallback_ = std::move(closeCallback);
+  connection_->
 }
 
 std::unique_ptr<ReactiveSocket> ReactiveSocket::fromClientConnection(

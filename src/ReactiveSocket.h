@@ -15,10 +15,16 @@ namespace reactivesocket {
 class ConnectionAutomaton;
 class DuplexConnection;
 class RequestHandler;
+class ReactiveSocket;
 enum class FrameType : uint16_t;
 using StreamId = uint32_t;
 
 // TODO(stupaq): consider using error codes in place of folly::exception_wrapper
+
+class CloseCallback {
+ public:
+  virtual void closed(ReactiveSocket* socket) = 0;
+};
 
 // TODO(stupaq): Here is some heavy problem with the recursion on shutdown.
 // Giving someone ownership over this object would probably lead to a deadlock
@@ -54,6 +60,10 @@ class ReactiveSocket {
 
   void requestFireAndForget(Payload request);
 
+  void close();
+
+  void onClose(std::unique_ptr<CloseCallback> closeCallback);
+
  private:
   ReactiveSocket(
       bool isServer,
@@ -67,5 +77,7 @@ class ReactiveSocket {
   std::unique_ptr<RequestHandler> handler_;
   StreamId nextStreamId_;
   Stats& stats_;
+  bool closed_{false};
+  std::unique_ptr<CloseCallback> closeCallback_;
 };
 }

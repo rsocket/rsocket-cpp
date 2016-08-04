@@ -71,6 +71,14 @@ std::ostream& operator<<(std::ostream& os, ErrorCode errorCode) {
       return os << "CANCELED";
     case ErrorCode::INVALID:
       return os << "INVALID";
+    case ErrorCode::INVALID_SETUP:
+      return os << "INVALID_SETUP";
+    case ErrorCode::REJECTED_SETUP:
+      return os << "REJECTED_SETUP";
+    case ErrorCode::UNSUPPORTED_SETUP:
+      return os << "UNSUPPORTED_SETUP";
+    case ErrorCode::CONNECTION_ERROR:
+      return os << "CONNECTION_ERROR";
   }
   // this should be never hit because the switch is over all cases
   std::abort();

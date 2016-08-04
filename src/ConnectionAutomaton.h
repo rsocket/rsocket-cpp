@@ -10,6 +10,7 @@
 #include <reactive-streams/utilities/SmartPointers.h>
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
+#include "ReactiveSocket.h"
 
 namespace reactivesocket {
 
@@ -58,6 +59,8 @@ class ConnectionAutomaton :
   /// This may synchronously deliver terminal signals to all
   /// AbstractStreamAutomaton attached to this ConnectionAutomaton.
   void disconnect();
+
+  void onClose(std::unique_ptr<CloseCallback> closeCallback);
 
   ~ConnectionAutomaton();
 
