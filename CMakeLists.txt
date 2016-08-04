@@ -70,7 +70,7 @@ include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
 
 include_directories(${CMAKE_SOURCE_DIR})
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/reactivesocket/include)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/reactivestreams/include)
 include_directories(${GMOCK_SOURCE_DIR}/googlemock/include)
 include_directories(${GMOCK_SOURCE_DIR}/googletest/include)
 
