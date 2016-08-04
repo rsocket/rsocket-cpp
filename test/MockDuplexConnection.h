@@ -4,9 +4,9 @@
 
 #include <gmock/gmock.h>
 
-#include "reactivesocket-cpp/src/DuplexConnection.h"
-#include "reactivesocket-cpp/src/Payload.h"
-#include "reactivesocket-cpp/src/ReactiveStreamsCompat.h"
+#include "src/DuplexConnection.h"
+#include "src/Payload.h"
+#include "src/ReactiveStreamsCompat.h"
 
 namespace reactivesocket {
 

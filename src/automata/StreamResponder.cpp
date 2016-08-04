@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "SubscriptionResponder.h"
+#include "StreamResponder.h"
 
 #include <folly/ExceptionWrapper.h>
 #include <folly/io/IOBuf.h>
@@ -13,7 +13,7 @@
 
 namespace reactivesocket {
 
-void SubscriptionResponderBase::onNextFrame(Frame_REQUEST_SUB& frame) {
+void StreamResponderBase::onNextFrame(Frame_REQUEST_STREAM& frame) {
   bool end = false;
   switch (state_) {
     case State::RESPONDING:
@@ -31,8 +31,7 @@ void SubscriptionResponderBase::onNextFrame(Frame_REQUEST_SUB& frame) {
   }
 }
 
-std::ostream& SubscriptionResponderBase::logPrefix(std::ostream& os) {
-  return os << "SubscriptionResponder(" << &connection_ << ", " << streamId_
-            << "): ";
+std::ostream& StreamResponderBase::logPrefix(std::ostream& os) {
+  return os << "StreamResponder(" << &connection_ << ", " << streamId_ << "): ";
 }
 }

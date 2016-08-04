@@ -50,6 +50,8 @@ class ReactiveSocket {
 
   Subscriber<Payload>& requestChannel(Subscriber<Payload>& responseSink);
 
+  void requestStream(Payload payload, Subscriber<Payload>& responseSink);
+
   void requestSubscription(Payload payload, Subscriber<Payload>& responseSink);
 
   void requestFireAndForget(Payload request);

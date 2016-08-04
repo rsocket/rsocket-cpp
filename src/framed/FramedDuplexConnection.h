@@ -1,4 +1,5 @@
-// Copyright 2004-present Facebook.  All rights reserved.
+// Copyright 2004-present Facebook. All Rights Reserved.
+
 #pragma once
 
 #include <src/Stats.h>
@@ -11,7 +12,7 @@ class FramedWriter;
 
 class FramedDuplexConnection : public DuplexConnection {
  public:
-  FramedDuplexConnection(
+  explicit FramedDuplexConnection(
       std::unique_ptr<DuplexConnection> connection,
       Stats& stats = Stats::noop());
   ~FramedDuplexConnection();

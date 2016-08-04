@@ -1,7 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include <glog/logging.h>
 #include "TestSuite.h"
+#include <glog/logging.h>
 
 namespace reactivesocket {
 namespace tck {
@@ -18,5 +18,3 @@ void Test::addCommand(TestCommand command) {
 
 } // tck
 } // reactive socket
-
-

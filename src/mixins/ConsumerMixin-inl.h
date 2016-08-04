@@ -13,6 +13,10 @@
 #include "src/ReactiveStreamsCompat.h"
 
 namespace reactivesocket {
+template <typename Frame, typename Base>
+void ConsumerMixin<Frame, Base>::onError(folly::exception_wrapper ex) {
+  consumingSubscriber_.onError(ex);
+};
 
 template <typename Frame, typename Base>
 void ConsumerMixin<Frame, Base>::onNextFrame(Frame& frame) {
@@ -27,7 +31,7 @@ void ConsumerMixin<Frame, Base>::onNextFrame(Frame& frame) {
       return;
     }
   }
-  // After the applocation-level payload is delivered we inspect the frame's
+  // After the application-level payload is delivered we inspect the frame's
   // metadata, as it could carry information important for other mixins.
   Base::onNextFrame(frame);
 }

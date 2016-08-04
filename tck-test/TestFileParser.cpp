@@ -1,14 +1,14 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include <glog/logging.h>
-#include <folly/String.h>
 #include "TestFileParser.h"
+#include <folly/String.h>
+#include <glog/logging.h>
 
 namespace reactivesocket {
 namespace tck {
 
-TestFileParser::TestFileParser(const std::string& fileName) : input_(fileName) {
-}
+TestFileParser::TestFileParser(const std::string& fileName)
+    : input_(fileName) {}
 
 TestSuite TestFileParser::parse() {
   currentLine_ = 0;
@@ -38,7 +38,7 @@ void TestFileParser::parseCommand(const std::string& command) {
   }
 
   std::vector<std::string> parameters;
-  folly::split("%%", command, parameters, /*ignoreEmpty=*/ true);
+  folly::split("%%", command, parameters, /*ignoreEmpty=*/true);
 
   if (parameters.size() == 2 && parameters[0] == "name") {
     currentTest_.setName(parameters[1]);
@@ -47,13 +47,12 @@ void TestFileParser::parseCommand(const std::string& command) {
 
   TestCommand newCommand(std::move(parameters));
   if (!newCommand.valid()) {
-    LOG(ERROR) << "invalid command on line " << currentLine_
-    << ": " << command << " (ignoring)";
+    LOG(ERROR) << "invalid command on line " << currentLine_ << ": " << command
+               << " (ignoring)";
   } else {
     currentTest_.addCommand(std::move(newCommand));
   }
 }
-
 
 } // tck
 } // reactive socket

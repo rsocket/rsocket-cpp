@@ -25,8 +25,8 @@ namespace reactivesocket {
 
 enum class StreamCompletionSignal;
 
-/// Implementation of stream automaton that represents a Subscription responder.
-class SubscriptionResponderBase : public StreamSubscriptionResponderBase {
+/// Implementation of stream automaton that represents a Stream responder
+class StreamResponderBase : public StreamSubscriptionResponderBase {
   using Base = StreamSubscriptionResponderBase;
 
  public:
@@ -34,16 +34,16 @@ class SubscriptionResponderBase : public StreamSubscriptionResponderBase {
 
  protected:
   /// @{
+
   /// Not all frames are intercepted, some just pass through.
   using Base::onNextFrame;
 
-  void onNextFrame(Frame_REQUEST_SUB&);
+  void onNextFrame(Frame_REQUEST_STREAM&);
 
   std::ostream& logPrefix(std::ostream& os);
   /// @}
 };
 
-using SubscriptionResponder =
-    SinkIfMixin<StreamIfMixin<LoggingMixin<ExecutorMixin<
-        LoggingMixin<MemoryMixin<LoggingMixin<SubscriptionResponderBase>>>>>>>;
+using StreamResponder = SinkIfMixin<StreamIfMixin<LoggingMixin<ExecutorMixin<
+    LoggingMixin<MemoryMixin<LoggingMixin<StreamResponderBase>>>>>>>;
 }

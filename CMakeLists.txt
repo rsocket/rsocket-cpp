@@ -70,7 +70,7 @@ include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
 
 include_directories(${CMAKE_SOURCE_DIR})
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/reactivesocket/include)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/reactivestreams/include)
 include_directories(${GMOCK_SOURCE_DIR}/googlemock/include)
 include_directories(${GMOCK_SOURCE_DIR}/googletest/include)
 
@@ -82,6 +82,13 @@ add_library(
   src/automata/ChannelRequester.h
   src/automata/ChannelResponder.cpp
   src/automata/ChannelResponder.h
+  src/automata/StreamSubscriptionRequesterBase.h
+  src/automata/StreamSubscriptionResponderBase.cpp
+  src/automata/StreamSubscriptionResponderBase.h
+  src/automata/StreamRequester.cpp
+  src/automata/StreamRequester.h
+  src/automata/StreamResponder.cpp
+  src/automata/StreamResponder.h
   src/automata/SubscriptionRequester.cpp
   src/automata/SubscriptionRequester.h
   src/automata/SubscriptionResponder.cpp
@@ -109,14 +116,16 @@ add_library(
   src/mixins/SinkIfMixin.h
   src/mixins/SourceIfMixin.h
   src/mixins/StreamIfMixin.h
+  src/NullRequestHandler.cpp
+  src/NullRequestHandler.h
   src/Payload.h
   src/ReactiveSocket.cpp
   src/ReactiveSocket.h
   src/ReactiveStreamsCompat.h
   src/RequestHandler.h
   src/tcp/TcpDuplexConnection.cpp
-  src/tcp/TcpDuplexConnection.h 
-  src/Stats.h 
+  src/tcp/TcpDuplexConnection.h
+  src/Stats.h
   src/Stats.cpp)
 
 target_link_libraries(
@@ -167,12 +176,8 @@ add_executable(
         test/tcp/TcpClient.cpp
         test/simple/PrintSubscriber.cpp
         test/simple/PrintSubscriber.h
-        test/simple/CancelSubscriber.cpp
-        test/simple/CancelSubscriber.h
         src/ReactiveSocket.cpp
         src/ReactiveSocket.h
-        test/simple/NullSubscription.cpp
-        test/simple/NullSubscription.h
         test/simple/StatsPrinter.cpp
         test/simple/StatsPrinter.h)
 
@@ -192,10 +197,6 @@ add_executable(
         test/tcp/TcpServer.cpp
         test/simple/PrintSubscriber.cpp
         test/simple/PrintSubscriber.h
-        test/simple/NullSubscription.cpp
-        test/simple/NullSubscription.h
-        test/simple/CancelSubscriber.cpp
-        test/simple/CancelSubscriber.h
         test/simple/StatsPrinter.cpp
         test/simple/StatsPrinter.h)
 

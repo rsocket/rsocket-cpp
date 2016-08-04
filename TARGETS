@@ -1,104 +1,130 @@
 # A target, on which implementations of various pluggable strategies depend.
 # Contains minimal amount of code needed to implement those strategies.
 cpp_library(
-    name = 'plugins',
+    name = 'reactivesocket-plugins',
+
     headers = [
         'src/DuplexConnection.h',
         'src/Payload.h',
+        'src/framed/FramedReader.h',
+        'src/framed/FramedWriter.h',
+        'src/framed/FramedDuplexConnection.h',
+    ],
+    srcs = [
+        'src/framed/FramedReader.cpp',
+        'src/framed/FramedWriter.cpp',
+        'src/framed/FramedDuplexConnection.cpp',
     ],
     deps = [
-        ':streams',
+        ':reactivesocket-streams',
+        ':reactivesocket-internal',
         '@/folly:exception_wrapper',
         '@/folly/io:iobuf',
     ],
-    preprocessor_flags = ['-Ilithium',],
 )
 
 # Actual implementation of the ReactiveSocket library.
-cpp_library(
-    name = 'library',
-    headers = [
-        'src/automata/ChannelRequester.h',
-        'src/automata/ChannelResponder.h',
-        'src/automata/SubscriptionRequester.h',
-        'src/automata/SubscriptionResponder.h',
-        'src/mixins/ConsumerMixin-inl.h',
-        'src/mixins/ConsumerMixin.h',
-        'src/mixins/ExecutorMixin.h',
-        'src/mixins/IntrusiveDeleter.h',
-        'src/mixins/MemoryMixin.h',
-        'src/mixins/MixinTerminator.h',
-        'src/mixins/LoggingMixin.h',
-        'src/mixins/PublisherMixin.h',
-        'src/mixins/StreamIfMixin.h',
-        'src/mixins/SinkIfMixin.h',
-        'src/mixins/SourceIfMixin.h',
-        'src/AbstractStreamAutomaton.h',
-        'src/ConnectionAutomaton.h',
-        'src/Frame.h',
-        'src/ReactiveSocket.h',
-        'src/RequestHandler.h',
-    ],
+cxx_library(
+    name = 'reactivesocket-internal',
+
+    header_namespace = "src",
+    exported_headers = subdir_glob([
+        ('src', '**/*.h'),
+    ]),
     srcs = [
+        'src/AbstractStreamAutomaton.cpp',
         'src/automata/ChannelRequester.cpp',
         'src/automata/ChannelResponder.cpp',
+        'src/automata/StreamSubscriptionResponderBase.cpp',
+        'src/automata/StreamRequester.cpp',
+        'src/automata/StreamResponder.cpp',
         'src/automata/SubscriptionRequester.cpp',
         'src/automata/SubscriptionResponder.cpp',
-        'src/AbstractStreamAutomaton.cpp',
         'src/ConnectionAutomaton.cpp',
         'src/Frame.cpp',
+        'src/NullRequestHandler.cpp',
         'src/ReactiveSocket.cpp',
+        'src/Stats.cpp',
     ],
     deps = [
-        ':plugins',
-        ':streams',
-        '@/folly/futures:futures',
-        '@/folly/io:iobuf',
-        '@/folly:singleton',
-        '@/lithium/reactive-streams-cpp:utilities',
+        ':reactivesocket-streams',
+        '//folly:exception_wrapper',
+        '//folly/futures:futures',
+        '//folly/io:iobuf',
+        '//lithium/reactive-streams-cpp:reactive-streams-utilities',
     ],
-    preprocessor_flags = ['-Ilithium',],
 )
 
-# Bundles all tests and test helpers.
-cpp_unittest(
-    name = 'frame_tests',
-    headers = glob(['test/*.h']),
-    srcs = glob(['test/FrameTest.cpp']),
-    deps = [
-        ':library',
-        ':plugins',
-        ':streams-mocks',
-        '@/folly/futures:futures',
+cpp_library(
+    name = 'reactivesocket',
+
+    headers = [
+        'src/NullRequestHandler.h',
+        'src/Payload.h',
+        'src/RequestHandler.h',
+        'src/ReactiveSocket.h',
+        'src/Stats.h',
+        'src/mixins/IntrusiveDeleter.h', #TODO(lehecka): remove from public api
+        'src/mixins/MemoryMixin.h', #TODO(lehecka): remove from public api
     ],
-    preprocessor_flags = ['-Ilithium',],
+    deps = [
+        ':reactivesocket-internal',
+    ],
 )
 
-cpp_unittest(
-    name = 'tests',
-    headers = glob(['test/*.h']),
-    srcs = glob(['test/*.cpp'], excludes=['test/FrameTest.cpp']),
-    deps = [
-        ':library',
-        ':plugins',
-        ':streams-mocks',
-        '@/folly/futures:futures',
+cxx_library(
+    name = 'reactivesocket-tcp-internal',
+
+    header_namespace = "src",
+    headers = subdir_glob([
+        ('src/tcp', '**/*.h'),
+    ]),
+    srcs = [
+        'src/tcp/TcpDuplexConnection.cpp',
     ],
-    preprocessor_flags = ['-Ilithium',],
+    deps = [
+        ':reactivesocket-internal',
+        '//folly/io/async:async',
+    ],
+)
+
+cpp_library(
+    name = 'reactivesocket-tcp',
+
+    headers = [
+        'src/tcp/TcpDuplexConnection.h',
+    ],
+    deps = [
+        ':reactivesocket-tcp-internal',
+    ],
+)
+
+cxx_test(
+    name = 'reactivesocket-tests',
+
+    header_namespace = 'test',
+    headers = subdir_glob([
+        ('test', '**/*.h'),
+    ]),
+    srcs = glob(['test/*.cpp']),
+    deps = [
+        ':reactivesocket-internal',
+        ':reactivesocket-streams-mocks',
+    ],
 )
 
 # Compatibility target for ReactiveStreams API.
 cpp_library(
-    name = 'streams',
+    name = 'reactivesocket-streams',
+
     headers = ['src/ReactiveStreamsCompat.h',],
-    deps = ['@/lithium/reactive-streams-cpp:api',],
-    preprocessor_flags = ['-Ilithium',],
+    deps = ['@/lithium/reactive-streams-cpp:reactive-streams',],
 )
 
 # Compatibility target for ReactiveStreams mocking helpers.
 cpp_library(
-    name = 'streams-mocks',
-    headers = ['test/ReactiveStreamsMocksCompat.h',],
-    deps = ['@/lithium/reactive-streams-cpp:mocks',],
-    preprocessor_flags = ['-Ilithium',],
+    name = 'reactivesocket-streams-mocks',
+
+    headers = ['test/ReactiveStreamsMocksCompat.h', 'test/streams/Mocks.h'],
+    deps = ['@/lithium/reactive-streams-cpp:reactive-streams-mocks',],
 )

@@ -6,15 +6,14 @@
 
 #include <reactive-streams/utilities/AllowanceSemaphore.h>
 #include <reactive-streams/utilities/SmartPointers.h>
-#include "src/AbstractStreamAutomaton.h"
 #include "src/Frame.h"
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
 #include "src/automata/StreamSubscriptionRequesterBase.h"
+#include "src/mixins/ConsumerMixin.h"
 #include "src/mixins/ExecutorMixin.h"
 #include "src/mixins/LoggingMixin.h"
 #include "src/mixins/MemoryMixin.h"
-#include "src/mixins/MixinTerminator.h"
 #include "src/mixins/SourceIfMixin.h"
 #include "src/mixins/StreamIfMixin.h"
 
@@ -26,10 +25,10 @@ namespace reactivesocket {
 
 enum class StreamCompletionSignal;
 
-/// Implementation of stream automaton that represents a Subscription requester.
-class SubscriptionRequesterBase
-    : public StreamSubscriptionRequesterBase<Frame_REQUEST_SUB> {
-  using Base = StreamSubscriptionRequesterBase<Frame_REQUEST_SUB>;
+/// Implementation of stream automaton that represents a Stream requester
+class StreamRequesterBase
+    : public StreamSubscriptionRequesterBase<Frame_REQUEST_STREAM> {
+  using Base = StreamSubscriptionRequesterBase<Frame_REQUEST_STREAM>;
 
  public:
   using Base::Base;
@@ -40,7 +39,6 @@ class SubscriptionRequesterBase
   /// @}
 };
 
-using SubscriptionRequester =
-    SourceIfMixin<StreamIfMixin<LoggingMixin<ExecutorMixin<
-        LoggingMixin<MemoryMixin<LoggingMixin<SubscriptionRequesterBase>>>>>>>;
+using StreamRequester = SourceIfMixin<StreamIfMixin<LoggingMixin<ExecutorMixin<
+    LoggingMixin<MemoryMixin<LoggingMixin<StreamRequesterBase>>>>>>>;
 }

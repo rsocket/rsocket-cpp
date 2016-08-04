@@ -1,7 +1,8 @@
-// Copyright 2004-present Facebook.  All rights reserved.
+// Copyright 2004-present Facebook. All Rights Reserved.
 
 #include <array>
 
+#include <folly/Conv.h>
 #include <folly/ExceptionWrapper.h>
 #include <folly/io/IOBuf.h>
 #include <gmock/gmock.h>
@@ -71,13 +72,12 @@ static void nextSingleFrameTest(int headroom) {
 
   std::string msg("hello");
 
-  EXPECT_CALL(subscriber, onNext_(_))
-      .WillOnce(Invoke([&](Payload& p) {
-        ASSERT_EQ(
-            folly::to<std::string>(
-                '\0', '\0', '\0', char(msg.size() + sizeof(int32_t)), msg),
-            p->moveToFbString().toStdString());
-      }));
+  EXPECT_CALL(subscriber, onNext_(_)).WillOnce(Invoke([&](Payload& p) {
+    ASSERT_EQ(
+        folly::to<std::string>(
+            '\0', '\0', '\0', char(msg.size() + sizeof(int32_t)), msg),
+        p->moveToFbString().toStdString());
+  }));
 
   FramedWriter writer(subscriber, Stats::noop());
   writer.onSubscribe(subscription);

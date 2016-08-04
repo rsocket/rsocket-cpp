@@ -10,11 +10,14 @@ namespace tck {
 
 class TestCommand {
  public:
-  explicit TestCommand(std::vector<std::string> params) : params_(std::move(params)) { }
+  explicit TestCommand(std::vector<std::string> params)
+      : params_(std::move(params)) {}
 
-  const std::string& name() const { return params_[0]; }
+  const std::string& name() const {
+    return params_[0];
+  }
 
-  template<typename T>
+  template <typename T>
   T as() const {
     return T(*this);
   }
@@ -70,5 +73,3 @@ class TestSuite {
 
 } // tck
 } // reactive socket
-
-

@@ -3,8 +3,8 @@
 #pragma once
 
 #include <folly/ExceptionWrapper.h>
-#include "src/ReactiveStreamsCompat.h"
 #include "src/Payload.h"
+#include "src/ReactiveStreamsCompat.h"
 #include "src/mixins/IntrusiveDeleter.h"
 
 namespace reactivesocket {

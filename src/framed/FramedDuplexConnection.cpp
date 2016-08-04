@@ -1,4 +1,4 @@
-// Copyright 2004-present Facebook.  All rights reserved.
+// Copyright 2004-present Facebook. All Rights Reserved.
 #include "FramedDuplexConnection.h"
 
 #include <folly/Memory.h>
@@ -26,7 +26,8 @@ FramedDuplexConnection::~FramedDuplexConnection() {
 
 Subscriber<Payload>& FramedDuplexConnection::getOutput() noexcept {
   if (!outputWriter_) {
-    outputWriter_ = folly::make_unique<FramedWriter>(connection_->getOutput(), stats_);
+    outputWriter_ =
+        folly::make_unique<FramedWriter>(connection_->getOutput(), stats_);
   }
   return *outputWriter_;
 }
