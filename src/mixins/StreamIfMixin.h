@@ -23,6 +23,10 @@ class StreamIfMixin : public Base, public AbstractStreamAutomaton {
     Base::endStream(signal);
   }
 
+  void onNextFrame(Frame_REQUEST_STREAM& frame) override final {
+    Base::onNextFrame(frame);
+  }
+
   void onNextFrame(Frame_REQUEST_SUB& frame) override final {
     Base::onNextFrame(frame);
   }

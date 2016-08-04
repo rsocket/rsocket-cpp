@@ -17,6 +17,9 @@ class MockRequestHandler : public RequestHandler {
       handleRequestChannel_,
       Subscriber<Payload>*(Payload& request, Subscriber<Payload>*));
   MOCK_METHOD2(
+      handleRequestStream_,
+      void(Payload& request, Subscriber<Payload>*));
+  MOCK_METHOD2(
       handleRequestSubscription_,
       void(Payload& request, Subscriber<Payload>*));
   MOCK_METHOD1(handleFireAndForgetRequest_, void(Payload& request));
@@ -25,6 +28,11 @@ class MockRequestHandler : public RequestHandler {
       Payload request,
       Subscriber<Payload>& response) override {
     return *handleRequestChannel_(request, &response);
+  }
+
+  void handleRequestStream(Payload request, Subscriber<Payload>& response)
+      override {
+    handleRequestStream_(request, &response);
   }
 
   void handleRequestSubscription(Payload request, Subscriber<Payload>& response)

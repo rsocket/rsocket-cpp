@@ -70,7 +70,7 @@ include_directories(SYSTEM /usr/local/Cellar/openssl/1.0.2h_1/include)
 
 include_directories(${CMAKE_SOURCE_DIR})
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/reactivesocket/include)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/reactivestreams/include)
 include_directories(${GMOCK_SOURCE_DIR}/googlemock/include)
 include_directories(${GMOCK_SOURCE_DIR}/googletest/include)
 
@@ -82,6 +82,13 @@ add_library(
   src/automata/ChannelRequester.h
   src/automata/ChannelResponder.cpp
   src/automata/ChannelResponder.h
+  src/automata/StreamSubscriptionRequesterBase.h
+  src/automata/StreamSubscriptionResponderBase.cpp
+  src/automata/StreamSubscriptionResponderBase.h
+  src/automata/StreamRequester.cpp
+  src/automata/StreamRequester.h
+  src/automata/StreamResponder.cpp
+  src/automata/StreamResponder.h
   src/automata/SubscriptionRequester.cpp
   src/automata/SubscriptionRequester.h
   src/automata/SubscriptionResponder.cpp

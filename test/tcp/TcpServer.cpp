@@ -28,9 +28,9 @@ class ServerSubscription : public virtual IntrusiveDeleter,
   // Subscription methods
   void request(size_t n) override {
     response_.onNext(folly::IOBuf::copyBuffer("from server"));
-    //    response.onNext(folly::IOBuf::copyBuffer("from server2"));
-    //    response.onComplete();
-    response_.onError(std::runtime_error("XXX"));
+    response_.onNext(folly::IOBuf::copyBuffer("from server2"));
+    response_.onComplete();
+    //    response_.onError(std::runtime_error("XXX"));
   }
 
   void cancel() override {}
@@ -45,6 +45,15 @@ class ServerRequestHandler : public DefaultRequestHandler {
   void handleRequestSubscription(Payload request, Subscriber<Payload>& response)
       override {
     LOG(INFO) << "ServerRequestHandler.handleRequestSubscription "
+              << request->moveToFbString();
+
+    response.onSubscribe(createManagedInstance<ServerSubscription>(response));
+  }
+
+  /// Handles a new inbound Stream requested by the other end.
+  void handleRequestStream(Payload request, Subscriber<Payload>& response)
+      override {
+    LOG(INFO) << "ServerRequestHandler.handleRequestStream "
               << request->moveToFbString();
 
     response.onSubscribe(createManagedInstance<ServerSubscription>(response));

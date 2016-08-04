@@ -14,6 +14,7 @@ class exception_wrapper;
 namespace reactivesocket {
 
 class ConnectionAutomaton;
+class Frame_REQUEST_STREAM;
 class Frame_REQUEST_SUB;
 class Frame_REQUEST_CHANNEL;
 class Frame_REQUEST_N;
@@ -91,6 +92,7 @@ class AbstractStreamAutomaton {
   /// actual frame type. It is guaranteed that ::onNextFrame(Payload) does not
   /// access `this` after calling into one of the handlers below. This
   /// assumption is important for memory management.
+  virtual void onNextFrame(Frame_REQUEST_STREAM& frame) = 0;
   virtual void onNextFrame(Frame_REQUEST_SUB& frame) = 0;
   virtual void onNextFrame(Frame_REQUEST_CHANNEL& frame) = 0;
   virtual void onNextFrame(Frame_REQUEST_N& frame) = 0;

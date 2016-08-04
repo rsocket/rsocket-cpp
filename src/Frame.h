@@ -34,7 +34,7 @@ enum class FrameType : uint16_t {
   KEEPALIVE = 0x0003,
   // REQUEST_RESPONSE = 0x0004,
   REQUEST_FNF = 0x0005,
-  // REQUEST_STREAM = 0x0006,
+  REQUEST_STREAM = 0x0006,
   REQUEST_SUB = 0x0007,
   REQUEST_CHANNEL = 0x0008,
   REQUEST_N = 0x0009,
@@ -136,6 +136,47 @@ std::ostream& operator<<(std::ostream&, const FrameMetadata&);
 /// Since frames are only meaningful for stream automata on both ends of a
 /// stream, intermediate layers that are frame-type-agnostic pass around
 /// serialized frame.
+class Frame_REQUEST_STREAM {
+ public:
+  static constexpr bool Trait_CarriesAllowance = true;
+
+  Frame_REQUEST_STREAM() {}
+  Frame_REQUEST_STREAM(
+      StreamId streamId,
+      FrameFlags flags,
+      uint32_t requestN,
+      FrameMetadata metadata,
+      Payload data)
+      : header_(FrameType::REQUEST_STREAM, flags, streamId),
+        requestN_(requestN),
+        metadata_(std::move(metadata)),
+        data_(std::move(data)) {
+    metadata_.checkFlags(flags);
+  }
+
+  /// For compatibility with other data-carrying frames.
+  Frame_REQUEST_STREAM(
+      StreamId streamId,
+      FrameFlags flags,
+      FrameMetadata metadata,
+      Payload data)
+      : Frame_REQUEST_STREAM(
+            streamId,
+            flags,
+            0,
+            std::move(metadata),
+            std::move(data)) {}
+
+  Payload serializeOut();
+  bool deserializeFrom(Payload in);
+
+  FrameHeader header_;
+  uint32_t requestN_;
+  FrameMetadata metadata_;
+  Payload data_;
+};
+std::ostream& operator<<(std::ostream&, const Frame_REQUEST_STREAM&);
+
 class Frame_REQUEST_SUB {
  public:
   static constexpr bool Trait_CarriesAllowance = true;
