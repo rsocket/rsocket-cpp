@@ -8,9 +8,10 @@
 
 #include <reactive-streams/utilities/AllowanceSemaphore.h>
 #include <reactive-streams/utilities/SmartPointers.h>
+#include "ReactiveSocket.h"
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
-#include "ReactiveSocket.h"
+#include "src/Stats.h"
 
 namespace reactivesocket {
 
@@ -23,12 +24,17 @@ using StreamId = uint32_t;
 /// Creates, registers and spins up responder for provided new stream ID and
 /// serialised frame.
 ///
-/// It is a responsibility of this startegy to register the responder with the
+/// It is a responsibility of this strategy to register the responder with the
 /// connection automaton and provide it with the initial frame if needed.
 /// Returns true if the responder has been created successfully, false if the
 /// frame cannot start a new stream, in which case the frame (passed by a
 /// mutable referece) must not be modified.
 using StreamAutomatonFactory = std::function<bool(StreamId, Payload&)>;
+
+class ConnectionCloseCallback {
+ public:
+  virtual void closed() = 0;
+};
 
 /// Handles connection-level frames and (de)multiplexes streams.
 ///
@@ -46,13 +52,14 @@ class ConnectionAutomaton :
   ConnectionAutomaton(
       std::unique_ptr<DuplexConnection> connection,
       // TODO(stupaq): for testing only, can devirtualise if necessary
-      StreamAutomatonFactory factory);
+      StreamAutomatonFactory factory,
+      Stats& stats, bool client);
 
   /// Kicks off connection procedure.
   ///
   /// May result, depending on the implementation of the DuplexConnection, in
   /// processing of one or more frames.
-  void connect(bool client);
+  void connect();
 
   /// Terminates underlying connection.
   ///
@@ -139,6 +146,12 @@ class ConnectionAutomaton :
   void handleUnknownStream(StreamId streamId, Payload frame);
   /// @}
 
+  void scheduleKeepalive();
+
+  void sendKeepalive();
+
+  void onClose(std::unique_ptr<ConnectionCloseCallback> closeCallback);
+
   std::unique_ptr<DuplexConnection> connection_;
   StreamAutomatonFactory factory_;
   // TODO(stupaq): looks like a bug that I have to qualify this
@@ -149,5 +162,8 @@ class ConnectionAutomaton :
   std::unordered_map<StreamId, AbstractStreamAutomaton*> streams_;
   reactivestreams::AllowanceSemaphore writeAllowance_;
   std::deque<Payload> pendingWrites_; // TODO(stupaq): two vectors?
+  std::unique_ptr<ConnectionCloseCallback> closeCallback_;
+  Stats& stats_;
+    bool client_;
 };
 }

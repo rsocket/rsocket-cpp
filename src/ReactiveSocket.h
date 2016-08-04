@@ -69,15 +69,12 @@ class ReactiveSocket {
       bool isServer,
       std::unique_ptr<DuplexConnection> connection,
       std::unique_ptr<RequestHandler> handler,
-      Stats& stats);
+      Stats& stats, bool client);
 
   bool createResponder(StreamId streamId, Payload& frame);
 
   const std::shared_ptr<ConnectionAutomaton> connection_;
   std::unique_ptr<RequestHandler> handler_;
   StreamId nextStreamId_;
-  Stats& stats_;
-  bool closed_{false};
-  std::unique_ptr<CloseCallback> closeCallback_;
 };
 }

@@ -27,24 +27,15 @@ ReactiveSocket::~ReactiveSocket() {
 }
 
 void ReactiveSocket::close() {
-  // TODO(yschimke) discuss correct concurrency.  mutex? assert on single controlling thread?
-  if (!closed_) {
-    stats_.socketClosed();
-    // Force connection closure, this will trigger terminal signals to be
-    // delivered to all stream automata.
-    connection_->disconnect();
-
-    closed_ = true;
-
-    if (closeCallback_) {
-      closeCallback_->closed(nullptr);
-    }
-  }
+  // Force connection closure, this will trigger terminal signals to be
+  // delivered to all stream automata.
+  connection_->disconnect();
 }
 
 void ReactiveSocket::onClose(std::unique_ptr<CloseCallback> closeCallback) {
-  closeCallback_ = std::move(closeCallback);
-  connection_->
+  // unimplemented
+  CHECK(false);
+  //  connection_->onClose(std::move(closeCallback));
 }
 
 std::unique_ptr<ReactiveSocket> ReactiveSocket::fromClientConnection(
@@ -53,7 +44,7 @@ std::unique_ptr<ReactiveSocket> ReactiveSocket::fromClientConnection(
     Stats& stats) {
   std::unique_ptr<ReactiveSocket> socket(new ReactiveSocket(
       false, std::move(connection), std::move(handler), stats));
-  socket->connection_->connect(true);
+  socket->connection_->connect();
   return socket;
 }
 
@@ -63,7 +54,7 @@ std::unique_ptr<ReactiveSocket> ReactiveSocket::fromServerConnection(
     Stats& stats) {
   std::unique_ptr<ReactiveSocket> socket(new ReactiveSocket(
       true, std::move(connection), std::move(handler), stats));
-  socket->connection_->connect(false);
+  socket->connection_->connect();
   return socket;
 }
 
@@ -112,19 +103,17 @@ ReactiveSocket::ReactiveSocket(
     bool isServer,
     std::unique_ptr<DuplexConnection> connection,
     std::unique_ptr<RequestHandler> handler,
-    Stats& stats)
+    Stats& stats, bool client)
     : connection_(new ConnectionAutomaton(
           std::move(connection),
           std::bind(
               &ReactiveSocket::createResponder,
               this,
               std::placeholders::_1,
-              std::placeholders::_2))),
+              std::placeholders::_2),
+          stats, client)),
       handler_(std::move(handler)),
-      nextStreamId_(isServer ? 1 : 2),
-      stats_(stats) {
-  stats_.socketCreated();
-}
+      nextStreamId_(isServer ? 1 : 2) {}
 
 bool ReactiveSocket::createResponder(
     StreamId streamId,

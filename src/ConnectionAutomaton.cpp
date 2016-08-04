@@ -7,6 +7,7 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/Optional.h>
 #include <folly/io/IOBuf.h>
+#include <folly/io/async/EventBaseManager.h>
 #include <iostream>
 
 #include "src/AbstractStreamAutomaton.h"
@@ -18,24 +19,24 @@ namespace reactivesocket {
 
 ConnectionAutomaton::ConnectionAutomaton(
     std::unique_ptr<DuplexConnection> connection,
-    StreamAutomatonFactory factory)
-    : connection_(std::move(connection)), factory_(std::move(factory)) {
+    StreamAutomatonFactory factory,
+    Stats& stats,
+bool client)
+    : connection_(std::move(connection)), factory_(std::move(factory)), stats_(stats), client_(client) {
   // We deliberately do not "open" input or output to avoid having c'tor on the
   // stack when processing any signals from the connection. See ::connect and
   // ::onSubscribe.
 }
 
-void ConnectionAutomaton::connect(bool client) {
+void ConnectionAutomaton::connect() {
   connectionOutput_.reset(&connection_->getOutput());
   connectionOutput_.get()->onSubscribe(*this);
   // This may call ::onSubscribe in-line, which calls ::request on the provided
   // subscription, which might deliver frames in-line.
   connection_->setInput(*this);
 
-  if (client) {
+  if (client_) {
     // TODO set correct version
-    auto metadata = folly::IOBuf::create(0);
-    auto data = folly::IOBuf::create(0);
     auto flags = FrameFlags_METADATA;
     Frame_SETUP frame(
         flags,
@@ -44,10 +45,13 @@ void ConnectionAutomaton::connect(bool client) {
         std::numeric_limits<uint32_t>::max(),
         "",
         "",
-        FrameMetadata(std::move(metadata)),
-        std::move(data));
+        FrameMetadata::empty(),
+        folly::IOBuf::create(0));
     onNext(frame.serializeOut());
+
+    scheduleKeepalive();
   }
+  stats_.socketCreated();
 }
 
 void ConnectionAutomaton::disconnect() {
@@ -57,6 +61,13 @@ void ConnectionAutomaton::disconnect() {
   connectionOutput_.onComplete();
   connectionInputSub_.cancel();
   connection_.reset();
+  stats_.socketClosed();
+}
+
+void onClose(std::unique_ptr<ConnectionCloseCallback> closeCallback) {
+  if (closeCallback) {
+    closeCallback->closed();
+  }
 }
 
 ConnectionAutomaton::~ConnectionAutomaton() {
@@ -194,7 +205,7 @@ void ConnectionAutomaton::onConnectionFrame(Payload payload) {
           Frame_ERROR errorFrame(
               0,
               ErrorCode::UNSUPPORTED_SETUP,
-          folly::IOBuf::copyBuffer("leases not supported"));
+              folly::IOBuf::copyBuffer("leases not supported"));
           connectionOutput_.onNext(errorFrame.serializeOut());
           // TODO(yschimke) should this be onTerminal
           cancel();
@@ -214,9 +225,7 @@ void ConnectionAutomaton::onConnectionFrame(Payload payload) {
     default:
       // TODO(yschimke) make this conditional if we have versioning problems
       Frame_ERROR errorFrame(
-          0,
-          ErrorCode::INVALID,
-          folly::IOBuf::copyBuffer("unexpected frame"));
+          0, ErrorCode::INVALID, folly::IOBuf::copyBuffer("unexpected frame"));
       connectionOutput_.onNext(errorFrame.serializeOut());
       // TODO(yschimke) should this be onTerminal
       cancel();
@@ -273,6 +282,25 @@ void ConnectionAutomaton::cancel() {
 }
 /// @}
 
+void ConnectionAutomaton::scheduleKeepalive() {
+  auto eventBase = folly::EventBaseManager::get()->getExistingEventBase();
+  CHECK(eventBase);
+
+  eventBase->runAfterDelay([this]() { sendKeepalive(); }, 5000);
+}
+
+void ConnectionAutomaton::sendKeepalive() {
+  // TODO is this check safe? or needs to check a sycnhronized shared flag?
+  if (!connectionOutput_) {
+    return;
+  }
+
+  Frame_KEEPALIVE pingFrame(
+      FrameFlags_KEEPALIVE_RESPOND,
+      folly::IOBuf::create(0));
+  connectionOutput_.onNext(pingFrame.serializeOut());
+}
+
 /// @{
 void ConnectionAutomaton::handleUnknownStream(
     StreamId streamId,
@@ -283,7 +311,7 @@ void ConnectionAutomaton::handleUnknownStream(
     Frame_ERROR errorFrame(
         0,
         ErrorCode::INVALID,
-        folly::IOBuf::copyBuffer("unknown stream " + streamId));
+        folly::IOBuf::copyBuffer("unknown stream " + std::to_string(streamId)));
     connectionOutput_.onNext(errorFrame.serializeOut());
     // TODO(yschimke) should this be onTerminal
     cancel();

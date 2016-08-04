@@ -1,4 +1,5 @@
 #include <folly/Memory.h>
+#include <folly/io/async/EventBaseManager.h>
 #include <gmock/gmock.h>
 #include <thread>
 #include "src/NullRequestHandler.h"
@@ -38,7 +39,10 @@ int main(int argc, char* argv[]) {
   google::InstallFailureSignalHandler();
 
   EventBase eventBase;
-  auto thread = std::thread([&]() { eventBase.loopForever(); });
+  auto thread = std::thread([&eventBase]() {
+    EventBaseManager::get()->setEventBase(&eventBase, true);
+    eventBase.loopForever();
+  });
 
   std::unique_ptr<ReactiveSocket> reactiveSocket;
   Callback callback;

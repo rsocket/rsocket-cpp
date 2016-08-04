@@ -345,8 +345,8 @@ class Frame_KEEPALIVE {
   static constexpr bool Trait_CarriesAllowance = false;
 
   Frame_KEEPALIVE() {}
-  Frame_KEEPALIVE(StreamId streamId, FrameFlags flags, Payload data)
-      : header_(FrameType::KEEPALIVE, flags, streamId),
+  Frame_KEEPALIVE(FrameFlags flags, Payload data)
+      : header_(FrameType::KEEPALIVE, flags, 0),
         data_(std::move(data)) {}
 
   Payload serializeOut();
