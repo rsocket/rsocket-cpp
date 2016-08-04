@@ -21,8 +21,11 @@ ConnectionAutomaton::ConnectionAutomaton(
     std::unique_ptr<DuplexConnection> connection,
     StreamAutomatonFactory factory,
     Stats& stats,
-bool client)
-    : connection_(std::move(connection)), factory_(std::move(factory)), stats_(stats), client_(client) {
+    bool client)
+    : connection_(std::move(connection)),
+      factory_(std::move(factory)),
+      stats_(stats),
+      client_(client) {
   // We deliberately do not "open" input or output to avoid having c'tor on the
   // stack when processing any signals from the connection. See ::connect and
   // ::onSubscribe.
@@ -297,8 +300,7 @@ void ConnectionAutomaton::sendKeepalive() {
   }
 
   Frame_KEEPALIVE pingFrame(
-      FrameFlags_KEEPALIVE_RESPOND,
-      folly::IOBuf::create(0));
+      FrameFlags_KEEPALIVE_RESPOND, folly::IOBuf::create(0));
   connectionOutput_.onNext(pingFrame.serializeOut());
 }
 

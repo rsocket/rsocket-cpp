@@ -589,11 +589,12 @@ Payload Frame_SETUP::serializeOut() {
 
   CHECK(metadataMimeType_.length() <= std::numeric_limits<uint8_t>::max());
   appender.writeBE(static_cast<uint8_t>(metadataMimeType_.length()));
-  appender.push((const uint8_t *) metadataMimeType_.data(), metadataMimeType_.length());
+  appender.push(
+      (const uint8_t*)metadataMimeType_.data(), metadataMimeType_.length());
 
   CHECK(dataMimeType_.length() <= std::numeric_limits<uint8_t>::max());
   appender.writeBE(static_cast<uint8_t>(dataMimeType_.length()));
-  appender.push((const uint8_t *) dataMimeType_.data(), dataMimeType_.length());
+  appender.push((const uint8_t*)dataMimeType_.data(), dataMimeType_.length());
 
   metadata_.serializeInto(appender);
 

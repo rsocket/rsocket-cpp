@@ -99,7 +99,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
   }
 
   void shutdown() {
-    for (auto const &s : reactiveSockets_) {
+    for (auto const& s : reactiveSockets_) {
       s->close();
     }
     reactiveSockets_.clear();

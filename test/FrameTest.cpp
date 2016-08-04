@@ -214,10 +214,7 @@ TEST_F(FrameTest, Frame_LEASE) {
   uint32_t ttl = std::numeric_limits<uint32_t>::max();
   uint32_t numberOfRequests = std::numeric_limits<uint32_t>::max();
   auto frame = reserialize<Frame_LEASE>(
-      flags,
-      ttl,
-      numberOfRequests,
-      FrameMetadata::empty());
+      flags, ttl, numberOfRequests, FrameMetadata::empty());
 
   expectHeader(FrameType::LEASE, flags, 0, frame);
   EXPECT_EQ(ttl, frame.ttl_);

@@ -120,7 +120,8 @@ ReactiveSocket::ReactiveSocket(
     bool isServer,
     std::unique_ptr<DuplexConnection> connection,
     std::unique_ptr<RequestHandler> handler,
-    Stats& stats, bool client)
+    Stats& stats,
+    bool client)
     : connection_(new ConnectionAutomaton(
           std::move(connection),
           std::bind(
@@ -128,7 +129,8 @@ ReactiveSocket::ReactiveSocket(
               this,
               std::placeholders::_1,
               std::placeholders::_2),
-          stats, client)),
+          stats,
+          client)),
       handler_(std::move(handler)),
       nextStreamId_(isServer ? 1 : 2) {}
 

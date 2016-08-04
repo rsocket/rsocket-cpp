@@ -71,7 +71,8 @@ class ReactiveSocket {
       bool isServer,
       std::unique_ptr<DuplexConnection> connection,
       std::unique_ptr<RequestHandler> handler,
-      Stats& stats, bool client);
+      Stats& stats,
+      bool client);
 
   bool createResponder(StreamId streamId, Payload& frame);
 

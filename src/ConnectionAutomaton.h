@@ -53,7 +53,8 @@ class ConnectionAutomaton :
       std::unique_ptr<DuplexConnection> connection,
       // TODO(stupaq): for testing only, can devirtualise if necessary
       StreamAutomatonFactory factory,
-      Stats& stats, bool client);
+      Stats& stats,
+      bool client);
 
   /// Kicks off connection procedure.
   ///
@@ -164,6 +165,6 @@ class ConnectionAutomaton :
   std::deque<Payload> pendingWrites_; // TODO(stupaq): two vectors?
   std::unique_ptr<ConnectionCloseCallback> closeCallback_;
   Stats& stats_;
-    bool client_;
+  bool client_;
 };
 }

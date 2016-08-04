@@ -387,8 +387,7 @@ class Frame_KEEPALIVE {
 
   Frame_KEEPALIVE() {}
   Frame_KEEPALIVE(FrameFlags flags, Payload data)
-      : header_(FrameType::KEEPALIVE, flags, 0),
-        data_(std::move(data)) {}
+      : header_(FrameType::KEEPALIVE, flags, 0), data_(std::move(data)) {}
 
   Payload serializeOut();
   bool deserializeFrom(Payload in);
