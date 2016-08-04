@@ -31,7 +31,7 @@ ConnectionAutomaton::ConnectionAutomaton(
   // ::onSubscribe.
 }
 
-void ConnectionAutomaton::connect() {
+void ConnectionAutomaton::connect(const uint32_t keepAliveDelay) {
   connectionOutput_.reset(&connection_->getOutput());
   connectionOutput_.get()->onSubscribe(*this);
   // This may call ::onSubscribe in-line, which calls ::request on the provided
@@ -51,7 +51,7 @@ void ConnectionAutomaton::connect() {
         folly::IOBuf::create(0));
     onNext(frame.serializeOut());
 
-    scheduleKeepalive();
+    scheduleKeepalive(keepAliveDelay);
   }
   stats_.socketCreated();
 }
@@ -297,14 +297,18 @@ void ConnectionAutomaton::cancel() {
 }
 /// @}
 
-void ConnectionAutomaton::scheduleKeepalive() {
-  auto eventBase = folly::EventBaseManager::get()->getExistingEventBase();
-  CHECK(eventBase);
+void ConnectionAutomaton::scheduleKeepalive(const uint32_t keepAliveDelay) {
+  if (keepAliveDelay > 0) {
+    auto eventBase = folly::EventBaseManager::get()->getExistingEventBase();
+    CHECK(eventBase);
 
-  eventBase->runAfterDelay([this]() { sendKeepalive(); }, 5000);
+    eventBase->runAfterDelay(
+        [this, keepAliveDelay]() { sendKeepalive(keepAliveDelay); },
+        keepAliveDelay);
+  }
 }
 
-void ConnectionAutomaton::sendKeepalive() {
+void ConnectionAutomaton::sendKeepalive(const uint32_t keepAliveDelay) {
   // TODO is this check safe? or needs to check a synchronized shared flag?
   if (!connectionOutput_) {
     return;
@@ -314,7 +318,7 @@ void ConnectionAutomaton::sendKeepalive() {
       FrameFlags_KEEPALIVE_RESPOND, folly::IOBuf::create(0));
   connectionOutput_.onNext(pingFrame.serializeOut());
 
-  scheduleKeepalive();
+  scheduleKeepalive(keepAliveDelay);
 }
 
 /// @{

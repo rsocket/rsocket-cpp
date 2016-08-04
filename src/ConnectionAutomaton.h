@@ -60,7 +60,7 @@ class ConnectionAutomaton :
   ///
   /// May result, depending on the implementation of the DuplexConnection, in
   /// processing of one or more frames.
-  void connect();
+  void connect(const uint32_t keepAliveDelay);
 
   /// Terminates underlying connection.
   ///
@@ -147,9 +147,9 @@ class ConnectionAutomaton :
   void handleUnknownStream(StreamId streamId, Payload frame);
   /// @}
 
-  void scheduleKeepalive();
+  void scheduleKeepalive(const uint32_t keepAliveDelay);
 
-  void sendKeepalive();
+  void sendKeepalive(const uint32_t keepAliveDelay);
 
   void onClose(std::unique_ptr<ConnectionCloseCallback> closeCallback);
 

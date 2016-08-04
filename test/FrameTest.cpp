@@ -177,7 +177,7 @@ TEST_F(FrameTest, Frame_KEEPALIVE) {
   uint32_t streamId = 0;
   auto flags = FrameFlags_KEEPALIVE_RESPOND;
   auto data = folly::IOBuf::copyBuffer("424242");
-  auto frame = reserialize<Frame_KEEPALIVE>(streamId, flags, data->clone());
+  auto frame = reserialize<Frame_KEEPALIVE>(flags, data->clone());
 
   expectHeader(
       FrameType::KEEPALIVE, FrameFlags_KEEPALIVE_RESPOND, streamId, frame);

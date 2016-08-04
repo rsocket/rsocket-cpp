@@ -43,10 +43,11 @@ void ReactiveSocket::onClose(std::unique_ptr<CloseCallback> closeCallback) {
 std::unique_ptr<ReactiveSocket> ReactiveSocket::fromClientConnection(
     std::unique_ptr<DuplexConnection> connection,
     std::unique_ptr<RequestHandler> handler,
-    Stats& stats) {
+    Stats& stats,
+    uint32_t keepAliveDelay) {
   std::unique_ptr<ReactiveSocket> socket(new ReactiveSocket(
       false, std::move(connection), std::move(handler), stats, true));
-  socket->connection_->connect();
+  socket->connection_->connect(keepAliveDelay);
   return socket;
 }
 
@@ -56,7 +57,7 @@ std::unique_ptr<ReactiveSocket> ReactiveSocket::fromServerConnection(
     Stats& stats) {
   std::unique_ptr<ReactiveSocket> socket(new ReactiveSocket(
       true, std::move(connection), std::move(handler), stats, false));
-  socket->connection_->connect();
+  socket->connection_->connect(0);
   return socket;
 }
 

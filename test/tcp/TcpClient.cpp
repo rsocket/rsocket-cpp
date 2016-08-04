@@ -68,7 +68,10 @@ int main(int argc, char* argv[]) {
             folly::make_unique<DefaultRequestHandler>();
 
         reactiveSocket = ReactiveSocket::fromClientConnection(
-            std::move(framedConnection), std::move(requestHandler), stats);
+            std::move(framedConnection),
+            std::move(requestHandler),
+            stats,
+            5000);
 
         reactiveSocket->requestSubscription(
             folly::IOBuf::copyBuffer("from client"),
