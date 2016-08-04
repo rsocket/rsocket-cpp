@@ -40,9 +40,8 @@ void ConnectionAutomaton::connect() {
 
   if (client_) {
     // TODO set correct version
-    auto flags = FrameFlags_METADATA;
     Frame_SETUP frame(
-        flags,
+        FrameFlags_EMPTY,
         0,
         std::numeric_limits<uint32_t>::max(),
         std::numeric_limits<uint32_t>::max(),
@@ -187,9 +186,21 @@ void ConnectionAutomaton::onConnectionFrame(Payload payload) {
     case FrameType::KEEPALIVE: {
       Frame_KEEPALIVE frame;
       if (frame.deserializeFrom(std::move(payload))) {
-        assert(frame.header_.flags_ & FrameFlags_KEEPALIVE_RESPOND);
-        frame.header_.flags_ &= ~(FrameFlags_KEEPALIVE_RESPOND);
-        connectionOutput_.onNext(frame.serializeOut());
+        if (!client_) {
+          if (frame.header_.flags_ & FrameFlags_KEEPALIVE_RESPOND) {
+            frame.header_.flags_ &= ~(FrameFlags_KEEPALIVE_RESPOND);
+            connectionOutput_.onNext(frame.serializeOut());
+          } else {
+            Frame_ERROR errorFrame(
+                0,
+                ErrorCode::INVALID,
+                folly::IOBuf::copyBuffer("keepalive without flag"));
+            connectionOutput_.onNext(errorFrame.serializeOut());
+            // TODO(yschimke) should this be onTerminal
+            cancel();
+          }
+        }
+        // TODO(yschimke) client *should* check the respond flag
       } else {
         Frame_ERROR errorFrame(
             0,
@@ -294,7 +305,7 @@ void ConnectionAutomaton::scheduleKeepalive() {
 }
 
 void ConnectionAutomaton::sendKeepalive() {
-  // TODO is this check safe? or needs to check a sycnhronized shared flag?
+  // TODO is this check safe? or needs to check a synchronized shared flag?
   if (!connectionOutput_) {
     return;
   }
@@ -302,6 +313,8 @@ void ConnectionAutomaton::sendKeepalive() {
   Frame_KEEPALIVE pingFrame(
       FrameFlags_KEEPALIVE_RESPOND, folly::IOBuf::create(0));
   connectionOutput_.onNext(pingFrame.serializeOut());
+
+  scheduleKeepalive();
 }
 
 /// @{
