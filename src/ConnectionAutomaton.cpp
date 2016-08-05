@@ -34,17 +34,15 @@ void ConnectionAutomaton::connect(bool client) {
 
   if (client) {
     // TODO set correct version
-    auto metadata = folly::IOBuf::create(0);
-    auto data = folly::IOBuf::create(0);
-    auto flags = FrameFlags_METADATA;
     Frame_SETUP frame(
-        0,
-        flags,
+        FrameFlags_EMPTY,
         0,
         std::numeric_limits<uint32_t>::max(),
         std::numeric_limits<uint32_t>::max(),
-        FrameMetadata(std::move(metadata)),
-        std::move(data));
+        "",
+        "",
+        FrameMetadata::empty(),
+        folly::IOBuf::create(0));
     onNext(frame.serializeOut());
   }
 }
