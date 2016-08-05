@@ -7,6 +7,7 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/Optional.h>
 #include <folly/io/IOBuf.h>
+#include <glog/logging.h>
 #include <iostream>
 
 #include "src/AbstractStreamAutomaton.h"
@@ -20,11 +21,13 @@ ConnectionAutomaton::ConnectionAutomaton(
     std::unique_ptr<DuplexConnection> connection,
     StreamAutomatonFactory factory,
     Stats& stats,
-    bool isServer)
+    bool isServer,
+    std::unique_ptr<KeepaliveTimer> keepAliveTimer)
     : connection_(std::move(connection)),
       factory_(std::move(factory)),
       stats_(stats),
-      isServer_(isServer) {
+      isServer_(isServer),
+      keepaliveTimer_(std::move(keepAliveTimer)) {
   // We deliberately do not "open" input or output to avoid having c'tor on the
   // stack when processing any signals from the connection. See ::connect and
   // ::onSubscribe.
@@ -38,11 +41,15 @@ void ConnectionAutomaton::connect() {
   connection_->setInput(*this);
 
   if (!isServer_) {
+    uint32_t keepaliveTime = keepaliveTimer_
+        ? keepaliveTimer_->keepaliveTime().count()
+        : std::numeric_limits<uint32_t>::max();
+
     // TODO set correct version
     Frame_SETUP frame(
         FrameFlags_EMPTY,
         0,
-        std::numeric_limits<uint32_t>::max(),
+        keepaliveTime,
         std::numeric_limits<uint32_t>::max(),
         "",
         "",
@@ -51,19 +58,31 @@ void ConnectionAutomaton::connect() {
     onNext(frame.serializeOut());
   }
   stats_.socketCreated();
+
+  if (keepaliveTimer_) {
+    keepaliveTimer_->start(this);
+  }
 }
 
 void ConnectionAutomaton::disconnect() {
+  VLOG(6) << "disconnect";
+
+  if (keepaliveTimer_) {
+    keepaliveTimer_->stop();
+  }
+
   // Send terminal signals to the DuplexConnection's input and output before
   // tearing it down. We must do this per DuplexConnection specification (see
   // interface definition).
   connectionOutput_.onComplete();
   connectionInputSub_.cancel();
   connection_.reset();
+
   stats_.socketClosed();
 }
 
 ConnectionAutomaton::~ConnectionAutomaton() {
+  VLOG(6) << "~ConnectionAutomaton";
   // We rely on SubscriptionPtr and SubscriberPtr to dispatch appropriate
   // terminal signals.
 }
@@ -105,6 +124,7 @@ void ConnectionAutomaton::onNextFrame(Payload frame) {
 void ConnectionAutomaton::endStream(
     StreamId streamId,
     StreamCompletionSignal signal) {
+  VLOG(6) << "endStream";
   // The signal must be idempotent.
   if (!endStreamInternal(streamId, signal)) {
     return;
@@ -118,6 +138,7 @@ void ConnectionAutomaton::endStream(
 bool ConnectionAutomaton::endStreamInternal(
     StreamId streamId,
     StreamCompletionSignal signal) {
+  VLOG(6) << "endStreamInternal";
   auto it = streams_.find(streamId);
   if (it == streams_.end()) {
     // Unsubscribe handshake initiated by the connection, we're done.
@@ -182,7 +203,8 @@ void ConnectionAutomaton::onConnectionFrame(Payload payload) {
             frame.header_.flags_ &= ~(FrameFlags_KEEPALIVE_RESPOND);
             connectionOutput_.onNext(frame.serializeOut());
           } else {
-            connectionOutput_.onNext(Frame_ERROR::invalid("keepalive without flag").serializeOut());
+            connectionOutput_.onNext(
+                Frame_ERROR::invalid("keepalive without flag").serializeOut());
             disconnect();
           }
         }
@@ -197,14 +219,21 @@ void ConnectionAutomaton::onConnectionFrame(Payload payload) {
       Frame_SETUP frame;
       if (frame.deserializeFrom(std::move(payload))) {
         if (frame.header_.flags_ & FrameFlags_LEASE) {
-          // We don't have the correct lease and wait logic above yet
-          connectionOutput_.onNext(Frame_ERROR::badSetupFrame("leases not supported").serializeOut());
-          disconnect();
+          // TODO(yschimke) We don't have the correct lease and wait logic above
+          // yet
+          LOG(WARNING) << "ignoring bad setup frame";
+          //          connectionOutput_.onNext(
+          //              Frame_ERROR::badSetupFrame("leases not supported")
+          //                  .serializeOut());
+          //          disconnect();
         }
       } else {
-        // TODO(yschimke) make this conditional if we have versioning problems
-        connectionOutput_.onNext(Frame_ERROR::badSetupFrame("bad setup frame").serializeOut());
-        disconnect();
+        // TODO(yschimke) enable this later after clients upgraded
+        LOG(WARNING) << "ignoring bad setup frame";
+        //        connectionOutput_.onNext(
+        //            Frame_ERROR::badSetupFrame("bad setup
+        //            frame").serializeOut());
+        //        disconnect();
       }
     }
       return;
@@ -217,6 +246,7 @@ void ConnectionAutomaton::onConnectionFrame(Payload payload) {
 /// @}
 
 void ConnectionAutomaton::onTerminal(folly::exception_wrapper ex) {
+  VLOG(6) << "onTerminal";
   // TODO(stupaq): we should rather use error codes that we do understand
   // instead of exceptions we have no idea about
   auto signal = ex ? StreamCompletionSignal::CONNECTION_ERROR
@@ -230,6 +260,10 @@ void ConnectionAutomaton::onTerminal(folly::exception_wrapper ex) {
     // TODO(stupaq): what kind of a user action could violate these assertions?
     assert(result);
     assert(streams_.size() == oldSize - 1);
+  }
+
+  if (keepaliveTimer_) {
+    keepaliveTimer_->stop();
   }
 
   // Complete the handshake.
@@ -253,10 +287,17 @@ void ConnectionAutomaton::request(size_t n) {
 }
 
 void ConnectionAutomaton::cancel() {
+  VLOG(6) << "cancel";
+
   if (!connectionOutput_) {
     // Unsubscribe handshake completed.
     return;
   }
+
+  if (keepaliveTimer_) {
+    keepaliveTimer_->stop();
+  }
+
   // We will tear down all streams after receiving a terminal signal on the read
   // path, therefore we just drop the queue and complete the handshake.
   pendingWrites_.clear();
@@ -271,9 +312,17 @@ void ConnectionAutomaton::handleUnknownStream(
   // TODO(stupaq): there are some rules about monotonically increasing stream
   // IDs -- let's forget about them for a moment
   if (!factory_(streamId, payload)) {
-    connectionOutput_.onNext(Frame_ERROR::invalid("unknown stream " + std::to_string(streamId)).serializeOut());
+    connectionOutput_.onNext(
+        Frame_ERROR::invalid("unknown stream " + std::to_string(streamId))
+            .serializeOut());
     disconnect();
   }
 }
 /// @}
+
+void ConnectionAutomaton::sendKeepalive() {
+  Frame_KEEPALIVE pingFrame(
+      FrameFlags_KEEPALIVE_RESPOND, folly::IOBuf::create(0));
+  connectionOutput_.onNext(pingFrame.serializeOut());
+}
 }

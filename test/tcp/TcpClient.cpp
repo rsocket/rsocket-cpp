@@ -1,4 +1,5 @@
 #include <folly/Memory.h>
+#include <folly/io/async/EventBaseManager.h>
 #include <gmock/gmock.h>
 #include <thread>
 #include "src/NullRequestHandler.h"
@@ -26,6 +27,46 @@ class Callback : public AsyncSocket::ConnectCallback {
   void connectErr(const AsyncSocketException& ex) noexcept override {
     std::cout << "TODO error" << ex.what() << " " << ex.getType() << "\n";
   }
+};
+
+class FollyKeepaliveTimer : public KeepaliveTimer {
+ public:
+  explicit FollyKeepaliveTimer(folly::EventBase& eventBase)
+      : eventBase_(eventBase) {
+    running_ = std::make_shared<bool>(false);
+  }
+
+  std::chrono::milliseconds keepaliveTime() override {
+    return std::chrono::milliseconds(5000);
+  };
+
+  void schedule() {
+    auto running = running_;
+    eventBase_.runAfterDelay(
+        [this, running]() {
+          if (*running) {
+            automaton_->sendKeepalive();
+            schedule();
+          }
+        },
+        keepaliveTime().count());
+  }
+
+  void stop() override {
+    *running_ = false;
+  };
+
+  void start(ConnectionAutomaton* automaton) override {
+    automaton_ = automaton;
+    *running_ = true;
+
+    schedule();
+  };
+
+ private:
+  ConnectionAutomaton* automaton_{nullptr};
+  folly::EventBase& eventBase_;
+  std::shared_ptr<bool> running_;
 };
 }
 
@@ -64,7 +105,10 @@ int main(int argc, char* argv[]) {
             folly::make_unique<DefaultRequestHandler>();
 
         reactiveSocket = ReactiveSocket::fromClientConnection(
-            std::move(framedConnection), std::move(requestHandler), stats);
+            std::move(framedConnection),
+            std::move(requestHandler),
+            stats,
+            folly::make_unique<FollyKeepaliveTimer>(eventBase));
 
         reactiveSocket->requestSubscription(
             folly::IOBuf::copyBuffer("from client"),

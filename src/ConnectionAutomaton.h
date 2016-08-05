@@ -49,7 +49,8 @@ class ConnectionAutomaton :
       // TODO(stupaq): for testing only, can devirtualise if necessary
       StreamAutomatonFactory factory,
       Stats& stats,
-      bool client);
+      bool client,
+      std::unique_ptr<KeepaliveTimer> keepaliveTimer);
 
   /// Kicks off connection procedure.
   ///
@@ -108,6 +109,8 @@ class ConnectionAutomaton :
   void endStream(StreamId streamId, StreamCompletionSignal signal);
   /// @}
 
+  void sendKeepalive();
+
  private:
   /// Performs the same actions as ::endStream without propagating closure
   /// signal to the underlying connection.
@@ -152,5 +155,6 @@ class ConnectionAutomaton :
   std::deque<Payload> pendingWrites_; // TODO(stupaq): two vectors?
   Stats& stats_;
   bool isServer_;
+  std::unique_ptr<KeepaliveTimer> keepaliveTimer_;
 };
 }

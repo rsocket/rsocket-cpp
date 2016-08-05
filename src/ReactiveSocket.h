@@ -3,6 +3,7 @@
 #pragma once
 
 #include <atomic>
+#include <chrono>
 #include <functional>
 #include <memory>
 
@@ -17,6 +18,13 @@ class DuplexConnection;
 class RequestHandler;
 enum class FrameType : uint16_t;
 using StreamId = uint32_t;
+
+class KeepaliveTimer {
+ public:
+  virtual std::chrono::milliseconds keepaliveTime() = 0;
+  virtual void stop() = 0;
+  virtual void start(ConnectionAutomaton* automaton) = 0;
+};
 
 // TODO(stupaq): consider using error codes in place of folly::exception_wrapper
 
@@ -41,7 +49,9 @@ class ReactiveSocket {
   static std::unique_ptr<ReactiveSocket> fromClientConnection(
       std::unique_ptr<DuplexConnection> connection,
       std::unique_ptr<RequestHandler> handler,
-      Stats& stats = Stats::noop());
+      Stats& stats = Stats::noop(),
+      std::unique_ptr<KeepaliveTimer> keepaliveTimer =
+          std::unique_ptr<KeepaliveTimer>(nullptr));
 
   static std::unique_ptr<ReactiveSocket> fromServerConnection(
       std::unique_ptr<DuplexConnection> connection,
@@ -61,7 +71,8 @@ class ReactiveSocket {
       bool isServer,
       std::unique_ptr<DuplexConnection> connection,
       std::unique_ptr<RequestHandler> handler,
-      Stats& stats);
+      Stats& stats,
+      std::unique_ptr<KeepaliveTimer> keepaliveTimer);
 
   bool createResponder(StreamId streamId, Payload& frame);
 
