@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.2)
+set(CMAKE_CXX_STANDARD 14)
 project(ReactiveSocket)
 
 # Cmake modules.
@@ -55,7 +56,7 @@ ExternalProject_Add(
 find_package(Threads)
 
 # Common configuration for all build modes.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -momit-leaf-frame-pointer")
 
