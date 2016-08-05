@@ -17,9 +17,6 @@ void SubscriptionRequesterBase::sendRequestFrame(
       static_cast<uint32_t>(initialN),
       FrameMetadata::empty(),
       std::move(request));
-  // We must inform ConsumerMixin about an implicit allowance we have
-  // requested from the remote end.
-  addImplicitAllowance(initialN);
   connection_->onNextFrame(frame);
 }
 

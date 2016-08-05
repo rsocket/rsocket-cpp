@@ -17,6 +17,10 @@ void StreamSubscriptionRequesterBase::onNext(Payload request) {
       // Send as much as possible with the initial request.
       CHECK_GE(Frame_REQUEST_N::kMaxRequestN, initialN);
       auto flags = initialN > 0 ? FrameFlags_REQN_PRESENT : FrameFlags_EMPTY;
+      
+      // We must inform ConsumerMixin about an implicit allowance we have
+      // requested from the remote end.
+      addImplicitAllowance(initialN);
       sendRequestFrame(flags, initialN, std::move(request));
       // Pump the remaining allowance into the ConsumerMixin _after_ sending the
       // initial request.
