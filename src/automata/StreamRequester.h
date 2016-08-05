@@ -32,10 +32,9 @@ class StreamRequesterBase : public StreamSubscriptionRequesterBase {
  public:
   using Base::Base;
 
-  void onNext(Payload request) override;
-
  protected:
   /// @{
+  void sendRequestFrame(FrameFlags, size_t, Payload&&) override;
   std::ostream& logPrefix(std::ostream& os);
   /// @}
 };

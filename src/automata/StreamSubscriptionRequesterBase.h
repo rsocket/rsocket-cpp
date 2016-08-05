@@ -36,7 +36,7 @@ class StreamSubscriptionRequesterBase
 
   /// Degenerate form of the Subscriber interface -- only one request payload
   /// will be sent to the server.
-  virtual void onNext(Payload) = 0;
+  void onNext(Payload);
 
   /// @{
   /// A Subscriber interface to control ingestion of response payloads.
@@ -46,6 +46,9 @@ class StreamSubscriptionRequesterBase
   /// @}
 
  protected:
+  /// Override in subclass to send the correct type of request frame
+  virtual void sendRequestFrame(FrameFlags, size_t, Payload&&) = 0;
+
   /// @{
   void endStream(StreamCompletionSignal);
 
