@@ -35,7 +35,7 @@ cxx_library(
         'src/AbstractStreamAutomaton.cpp',
         'src/automata/ChannelRequester.cpp',
         'src/automata/ChannelResponder.cpp',
-        /src/automata/StreamSubscriptionRequesterBase.cpp',
+        'src/automata/StreamSubscriptionRequesterBase.cpp',
         'src/automata/StreamSubscriptionResponderBase.cpp',
         'src/automata/StreamRequester.cpp',
         'src/automata/StreamResponder.cpp',
