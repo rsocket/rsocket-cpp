@@ -491,6 +491,21 @@ std::ostream& operator<<(std::ostream& os, const Frame_RESPONSE& frame) {
 /// @}
 
 /// @{
+
+Frame_ERROR Frame_ERROR::unexpectedFrame() {
+  return Frame_ERROR(
+      0, ErrorCode::INVALID, folly::IOBuf::copyBuffer("unexpected frame"));
+}
+
+Frame_ERROR Frame_ERROR::badSetupFrame(const std::string& message) {
+  return Frame_ERROR(
+      0, ErrorCode::INVALID_SETUP, folly::IOBuf::copyBuffer(message));
+}
+
+Frame_ERROR Frame_ERROR::invalid(const std::string& message) {
+  return Frame_ERROR(0, ErrorCode::INVALID, folly::IOBuf::copyBuffer(message));
+}
+
 Payload Frame_ERROR::serializeOut() {
   folly::IOBufQueue queue(folly::IOBufQueue::cacheChainLength());
   const bool metadataPresent = (header_.flags_ & FrameFlags_METADATA) != 0;

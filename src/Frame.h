@@ -374,6 +374,10 @@ class Frame_ERROR {
   Payload serializeOut();
   bool deserializeFrom(Payload in);
 
+  static Frame_ERROR unexpectedFrame();
+  static Frame_ERROR badSetupFrame(const std::string& message);
+  static Frame_ERROR invalid(const std::string& message);
+
   FrameHeader header_;
   ErrorCode errorCode_;
   FrameMetadata metadata_;

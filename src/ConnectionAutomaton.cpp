@@ -18,21 +18,26 @@ namespace reactivesocket {
 
 ConnectionAutomaton::ConnectionAutomaton(
     std::unique_ptr<DuplexConnection> connection,
-    StreamAutomatonFactory factory)
-    : connection_(std::move(connection)), factory_(std::move(factory)) {
+    StreamAutomatonFactory factory,
+    Stats& stats,
+    bool isServer)
+    : connection_(std::move(connection)),
+      factory_(std::move(factory)),
+      stats_(stats),
+      isServer_(isServer) {
   // We deliberately do not "open" input or output to avoid having c'tor on the
   // stack when processing any signals from the connection. See ::connect and
   // ::onSubscribe.
 }
 
-void ConnectionAutomaton::connect(bool client) {
+void ConnectionAutomaton::connect() {
   connectionOutput_.reset(&connection_->getOutput());
   connectionOutput_.get()->onSubscribe(*this);
   // This may call ::onSubscribe in-line, which calls ::request on the provided
   // subscription, which might deliver frames in-line.
   connection_->setInput(*this);
 
-  if (client) {
+  if (!isServer_) {
     // TODO set correct version
     Frame_SETUP frame(
         FrameFlags_EMPTY,
@@ -45,6 +50,7 @@ void ConnectionAutomaton::connect(bool client) {
         folly::IOBuf::create(0));
     onNext(frame.serializeOut());
   }
+  stats_.socketCreated();
 }
 
 void ConnectionAutomaton::disconnect() {
@@ -54,6 +60,7 @@ void ConnectionAutomaton::disconnect() {
   connectionOutput_.onComplete();
   connectionInputSub_.cancel();
   connection_.reset();
+  stats_.socketClosed();
 }
 
 ConnectionAutomaton::~ConnectionAutomaton() {
@@ -170,22 +177,40 @@ void ConnectionAutomaton::onConnectionFrame(Payload payload) {
     case FrameType::KEEPALIVE: {
       Frame_KEEPALIVE frame;
       if (frame.deserializeFrom(std::move(payload))) {
-        assert(frame.header_.flags_ & FrameFlags_KEEPALIVE_RESPOND);
-        frame.header_.flags_ &= ~(FrameFlags_KEEPALIVE_RESPOND);
-        connectionOutput_.onNext(frame.serializeOut());
+        if (isServer_) {
+          if (frame.header_.flags_ & FrameFlags_KEEPALIVE_RESPOND) {
+            frame.header_.flags_ &= ~(FrameFlags_KEEPALIVE_RESPOND);
+            connectionOutput_.onNext(frame.serializeOut());
+          } else {
+            connectionOutput_.onNext(Frame_ERROR::invalid("keepalive without flag").serializeOut());
+            disconnect();
+          }
+        }
+        // TODO(yschimke) client *should* check the respond flag
       } else {
-        // TODO(yschimke): handle connection-level error
-        assert(false);
+        connectionOutput_.onNext(Frame_ERROR::unexpectedFrame().serializeOut());
+        disconnect();
       }
     }
       return;
-    case FrameType::SETUP:
-      // TODO handle lease logic
-      LOG(INFO) << "ignoring setup frame";
+    case FrameType::SETUP: {
+      Frame_SETUP frame;
+      if (frame.deserializeFrom(std::move(payload))) {
+        if (frame.header_.flags_ & FrameFlags_LEASE) {
+          // We don't have the correct lease and wait logic above yet
+          connectionOutput_.onNext(Frame_ERROR::badSetupFrame("leases not supported").serializeOut());
+          disconnect();
+        }
+      } else {
+        // TODO(yschimke) make this conditional if we have versioning problems
+        connectionOutput_.onNext(Frame_ERROR::badSetupFrame("bad setup frame").serializeOut());
+        disconnect();
+      }
+    }
       return;
     default:
-      // TODO(yschimke): check ignore flag and fail
-      assert(false);
+      connectionOutput_.onNext(Frame_ERROR::unexpectedFrame().serializeOut());
+      disconnect();
       return;
   }
 }
@@ -246,8 +271,8 @@ void ConnectionAutomaton::handleUnknownStream(
   // TODO(stupaq): there are some rules about monotonically increasing stream
   // IDs -- let's forget about them for a moment
   if (!factory_(streamId, payload)) {
-    // TODO(stupaq): handle connection-level error
-    assert(false);
+    connectionOutput_.onNext(Frame_ERROR::invalid("unknown stream " + std::to_string(streamId)).serializeOut());
+    disconnect();
   }
 }
 /// @}

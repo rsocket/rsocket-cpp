@@ -68,6 +68,5 @@ class ReactiveSocket {
   const std::shared_ptr<ConnectionAutomaton> connection_;
   std::unique_ptr<RequestHandler> handler_;
   StreamId nextStreamId_;
-  Stats& stats_;
 };
 }

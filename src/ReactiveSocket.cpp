@@ -25,11 +25,28 @@
 namespace reactivesocket {
 
 ReactiveSocket::~ReactiveSocket() {
-  stats_.socketClosed();
   // Force connection closure, this will trigger terminal signals to be
   // delivered to all stream automata.
   connection_->disconnect();
 }
+
+ReactiveSocket::ReactiveSocket(
+    bool isServer,
+    std::unique_ptr<DuplexConnection> connection,
+    std::unique_ptr<RequestHandler> handler,
+    Stats& stats)
+    : connection_(new ConnectionAutomaton(
+          std::move(connection),
+          std::bind(
+              &ReactiveSocket::createResponder,
+              this,
+              std::placeholders::_1,
+              std::placeholders::_2),
+          stats,
+          isServer)),
+      handler_(std::move(handler)),
+      nextStreamId_(isServer ? 1 : 2)
+{}
 
 std::unique_ptr<ReactiveSocket> ReactiveSocket::fromClientConnection(
     std::unique_ptr<DuplexConnection> connection,
@@ -37,7 +54,7 @@ std::unique_ptr<ReactiveSocket> ReactiveSocket::fromClientConnection(
     Stats& stats) {
   std::unique_ptr<ReactiveSocket> socket(new ReactiveSocket(
       false, std::move(connection), std::move(handler), stats));
-  socket->connection_->connect(true);
+  socket->connection_->connect();
   return socket;
 }
 
@@ -47,7 +64,7 @@ std::unique_ptr<ReactiveSocket> ReactiveSocket::fromServerConnection(
     Stats& stats) {
   std::unique_ptr<ReactiveSocket> socket(new ReactiveSocket(
       true, std::move(connection), std::move(handler), stats));
-  socket->connection_->connect(false);
+  socket->connection_->connect();
   return socket;
 }
 
@@ -105,24 +122,6 @@ void ReactiveSocket::requestFireAndForget(Payload request) {
       FrameMetadata::empty(),
       std::move(std::move(request)));
   connection_->onNextFrame(frame);
-}
-
-ReactiveSocket::ReactiveSocket(
-    bool isServer,
-    std::unique_ptr<DuplexConnection> connection,
-    std::unique_ptr<RequestHandler> handler,
-    Stats& stats)
-    : connection_(new ConnectionAutomaton(
-          std::move(connection),
-          std::bind(
-              &ReactiveSocket::createResponder,
-              this,
-              std::placeholders::_1,
-              std::placeholders::_2))),
-      handler_(std::move(handler)),
-      nextStreamId_(isServer ? 1 : 2),
-      stats_(stats) {
-  stats_.socketCreated();
 }
 
 bool ReactiveSocket::createResponder(
