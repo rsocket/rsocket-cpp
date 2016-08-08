@@ -221,7 +221,7 @@ void ConnectionAutomaton::onConnectionFrame(Payload payload) {
         if (frame.header_.flags_ & FrameFlags_LEASE) {
           // TODO(yschimke) We don't have the correct lease and wait logic above
           // yet
-          LOG(WARNING) << "ignoring bad setup frame";
+          LOG(WARNING) << "ignoring setup frame with lease";
           //          connectionOutput_.onNext(
           //              Frame_ERROR::badSetupFrame("leases not supported")
           //                  .serializeOut());
