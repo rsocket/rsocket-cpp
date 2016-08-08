@@ -15,10 +15,16 @@ namespace reactivesocket {
 class ConnectionAutomaton;
 class DuplexConnection;
 class RequestHandler;
+class ReactiveSocket;
 enum class FrameType : uint16_t;
 using StreamId = uint32_t;
 
 // TODO(stupaq): consider using error codes in place of folly::exception_wrapper
+
+class CloseCallback {
+ public:
+  virtual void closed(ReactiveSocket* socket) = 0;
+};
 
 // TODO(stupaq): Here is some heavy problem with the recursion on shutdown.
 // Giving someone ownership over this object would probably lead to a deadlock
@@ -41,7 +47,8 @@ class ReactiveSocket {
   static std::unique_ptr<ReactiveSocket> fromClientConnection(
       std::unique_ptr<DuplexConnection> connection,
       std::unique_ptr<RequestHandler> handler,
-      Stats& stats = Stats::noop());
+      Stats& stats = Stats::noop(),
+      uint32_t keepAliveDelay = 0);
 
   static std::unique_ptr<ReactiveSocket> fromServerConnection(
       std::unique_ptr<DuplexConnection> connection,
@@ -56,18 +63,22 @@ class ReactiveSocket {
 
   void requestFireAndForget(Payload request);
 
+  void close();
+
+  void onClose(std::unique_ptr<CloseCallback> closeCallback);
+
  private:
   ReactiveSocket(
       bool isServer,
       std::unique_ptr<DuplexConnection> connection,
       std::unique_ptr<RequestHandler> handler,
-      Stats& stats);
+      Stats& stats,
+      bool client);
 
   bool createResponder(StreamId streamId, Payload& frame);
 
   const std::shared_ptr<ConnectionAutomaton> connection_;
   std::unique_ptr<RequestHandler> handler_;
   StreamId nextStreamId_;
-  Stats& stats_;
 };
 }

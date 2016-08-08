@@ -88,8 +88,10 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     std::unique_ptr<RequestHandler> requestHandler =
         folly::make_unique<ServerRequestHandler>();
 
-    reactiveSocket_ = ReactiveSocket::fromServerConnection(
+    auto reactiveSocket = ReactiveSocket::fromServerConnection(
         std::move(framedConnection), std::move(requestHandler), stats_);
+
+    reactiveSockets_.emplace_back(std::move(reactiveSocket));
   }
 
   virtual void acceptError(const std::exception& ex) noexcept override {
@@ -97,11 +99,14 @@ class Callback : public AsyncServerSocket::AcceptCallback {
   }
 
   void shutdown() {
-    reactiveSocket_.reset(nullptr);
+    for (auto const& s : reactiveSockets_) {
+      s->close();
+    }
+    reactiveSockets_.clear();
   }
 
  private:
-  std::unique_ptr<ReactiveSocket> reactiveSocket_;
+  std::vector<std::unique_ptr<ReactiveSocket>> reactiveSockets_;
   EventBase& eventBase_;
   Stats& stats_;
 };
