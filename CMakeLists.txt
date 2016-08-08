@@ -127,7 +127,9 @@ add_library(
   src/tcp/TcpDuplexConnection.cpp
   src/tcp/TcpDuplexConnection.h
   src/Stats.h
-  src/Stats.cpp)
+  src/Stats.cpp
+  src/folly/FollyKeepaliveTimer.cpp
+  src/folly/FollyKeepaliveTimer.h)
 
 target_link_libraries(
   ReactiveSocket

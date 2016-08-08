@@ -41,6 +41,7 @@ cxx_library(
         'src/automata/StreamResponder.cpp',
         'src/automata/SubscriptionRequester.cpp',
         'src/automata/SubscriptionResponder.cpp',
+        'src/folly/FollyKeepaliveTimer.cpp',
         'src/ConnectionAutomaton.cpp',
         'src/Frame.cpp',
         'src/NullRequestHandler.cpp',

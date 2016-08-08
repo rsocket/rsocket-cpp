@@ -16,15 +16,20 @@ namespace reactivesocket {
 class ConnectionAutomaton;
 class DuplexConnection;
 class RequestHandler;
+class ReactiveSocket;
 enum class FrameType : uint16_t;
 using StreamId = uint32_t;
 
 class KeepaliveTimer {
  public:
+  virtual ~KeepaliveTimer() = default;
+
   virtual std::chrono::milliseconds keepaliveTime() = 0;
   virtual void stop() = 0;
   virtual void start(ConnectionAutomaton* automaton) = 0;
 };
+
+using CloseListener = std::function<void(ReactiveSocket&)>;
 
 // TODO(stupaq): consider using error codes in place of folly::exception_wrapper
 
@@ -65,6 +70,10 @@ class ReactiveSocket {
   void requestSubscription(Payload payload, Subscriber<Payload>& responseSink);
 
   void requestFireAndForget(Payload request);
+
+  void close();
+
+  void onClose(CloseListener listener);
 
  private:
   ReactiveSocket(

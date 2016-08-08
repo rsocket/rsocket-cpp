@@ -71,6 +71,10 @@ void ConnectionAutomaton::disconnect() {
     keepaliveTimer_->stop();
   }
 
+  if (!connectionOutput_) {
+    return;
+  }
+
   // Send terminal signals to the DuplexConnection's input and output before
   // tearing it down. We must do this per DuplexConnection specification (see
   // interface definition).
@@ -79,6 +83,10 @@ void ConnectionAutomaton::disconnect() {
   connection_.reset();
 
   stats_.socketClosed();
+
+  for (auto closeListener : closeListeners_) {
+    closeListener();
+  }
 }
 
 ConnectionAutomaton::~ConnectionAutomaton() {
@@ -262,13 +270,7 @@ void ConnectionAutomaton::onTerminal(folly::exception_wrapper ex) {
     assert(streams_.size() == oldSize - 1);
   }
 
-  if (keepaliveTimer_) {
-    keepaliveTimer_->stop();
-  }
-
-  // Complete the handshake.
-  connectionInputSub_.cancel();
-  connectionOutput_.onComplete();
+  disconnect();
 }
 
 /// @{
@@ -289,19 +291,9 @@ void ConnectionAutomaton::request(size_t n) {
 void ConnectionAutomaton::cancel() {
   VLOG(6) << "cancel";
 
-  if (!connectionOutput_) {
-    // Unsubscribe handshake completed.
-    return;
-  }
-
-  if (keepaliveTimer_) {
-    keepaliveTimer_->stop();
-  }
-
-  // We will tear down all streams after receiving a terminal signal on the read
-  // path, therefore we just drop the queue and complete the handshake.
   pendingWrites_.clear();
-  connectionOutput_.onComplete();
+
+  disconnect();
 }
 /// @}
 
@@ -324,5 +316,9 @@ void ConnectionAutomaton::sendKeepalive() {
   Frame_KEEPALIVE pingFrame(
       FrameFlags_KEEPALIVE_RESPOND, folly::IOBuf::create(0));
   connectionOutput_.onNext(pingFrame.serializeOut());
+}
+
+void ConnectionAutomaton::onClose(ConnectionCloseListener listener) {
+  closeListeners_.push_back(listener);
 }
 }

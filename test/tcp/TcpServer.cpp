@@ -88,8 +88,32 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     std::unique_ptr<RequestHandler> requestHandler =
         folly::make_unique<ServerRequestHandler>();
 
-    reactiveSocket_ = ReactiveSocket::fromServerConnection(
+    auto rs = ReactiveSocket::fromServerConnection(
         std::move(framedConnection), std::move(requestHandler), stats_);
+
+    //    rs->onClose([&reactiveSockets_](ReactiveSocket* socket) {
+    //      reactiveSockets_.erase(std::remove_if(
+    //          reactiveSockets_.begin(), reactiveSockets_.end(), [](auto
+    //          vecSocket) {
+    //            return vecSocket == socket;
+    //          }));
+    //    });
+
+    rs->onClose(
+        std::bind(&Callback::removeSocket, this, std::placeholders::_1));
+
+    reactiveSockets_.push_back(std::move(rs));
+
+    std::cout << reactiveSockets_.size() << " ADD \n";
+  }
+
+  void removeSocket(ReactiveSocket& socket) {
+    reactiveSockets_.erase(std::remove_if(
+        reactiveSockets_.begin(),
+        reactiveSockets_.end(),
+        [&socket](std::unique_ptr<ReactiveSocket>& vecSocket) {
+          return vecSocket.get() == &socket;
+        }));
   }
 
   virtual void acceptError(const std::exception& ex) noexcept override {
@@ -97,11 +121,11 @@ class Callback : public AsyncServerSocket::AcceptCallback {
   }
 
   void shutdown() {
-    reactiveSocket_.reset(nullptr);
+    reactiveSockets_.clear();
   }
 
  private:
-  std::unique_ptr<ReactiveSocket> reactiveSocket_;
+  std::vector<std::unique_ptr<ReactiveSocket>> reactiveSockets_;
   EventBase& eventBase_;
   Stats& stats_;
 };

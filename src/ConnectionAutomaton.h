@@ -31,6 +31,8 @@ using StreamId = uint32_t;
 /// mutable referece) must not be modified.
 using StreamAutomatonFactory = std::function<bool(StreamId, Payload&)>;
 
+using ConnectionCloseListener = std::function<void()>;
+
 /// Handles connection-level frames and (de)multiplexes streams.
 ///
 /// Instances of this class should be accessed and managed via shared_ptr,
@@ -111,6 +113,8 @@ class ConnectionAutomaton :
 
   void sendKeepalive();
 
+  void onClose(ConnectionCloseListener listener);
+
  private:
   /// Performs the same actions as ::endStream without propagating closure
   /// signal to the underlying connection.
@@ -156,5 +160,6 @@ class ConnectionAutomaton :
   Stats& stats_;
   bool isServer_;
   std::unique_ptr<KeepaliveTimer> keepaliveTimer_;
+  std::vector<ConnectionCloseListener> closeListeners_;
 };
 }

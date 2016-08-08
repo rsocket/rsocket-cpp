@@ -196,4 +196,12 @@ bool ReactiveSocket::createResponder(
   }
   return true;
 }
+
+void ReactiveSocket::close() {
+  connection_->disconnect();
+}
+
+void ReactiveSocket::onClose(CloseListener listener) {
+  connection_->onClose([listener, this]() { listener(*this); });
+}
 }
