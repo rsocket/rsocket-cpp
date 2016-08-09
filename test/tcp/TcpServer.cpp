@@ -2,13 +2,11 @@
 #include <folly/io/async/AsyncServerSocket.h>
 #include <gmock/gmock.h>
 #include <thread>
+#include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"
-#include "src/RequestHandler.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/mixins/MemoryMixin.h"
 #include "src/tcp/TcpDuplexConnection.h"
-#include "test/simple/CancelSubscriber.h"
-#include "test/simple/NullSubscription.h"
 #include "test/simple/PrintSubscriber.h"
 #include "test/simple/StatsPrinter.h"
 
@@ -22,46 +20,43 @@ namespace {
 class ServerSubscription : public virtual IntrusiveDeleter,
                            public Subscription {
  public:
-  ~ServerSubscription() {}
+  explicit ServerSubscription(Subscriber<Payload>& response)
+      : response_(response) {}
+
+  ~ServerSubscription(){};
 
   // Subscription methods
   void request(size_t n) override {
-    // TODO delay sending responses until this is triggered
+    response_.onNext(folly::IOBuf::copyBuffer("from server"));
+    response_.onNext(folly::IOBuf::copyBuffer("from server2"));
+    response_.onComplete();
+    //    response_.onError(std::runtime_error("XXX"));
   }
 
   void cancel() override {}
+
+ private:
+  Subscriber<Payload>& response_;
 };
 
-class ServerRequestHandler : public RequestHandler {
+class ServerRequestHandler : public DefaultRequestHandler {
  public:
-  /// Handles a new Channel requested by the other end.
-  ///
-  /// Modelled after Producer::subscribe, hence must synchronously call
-  /// Subscriber::onSubscribe, and provide a valid Subscription.
-  Subscriber<Payload>& handleRequestChannel(
-      reactivesocket::Payload request,
-      Subscriber<Payload>& response) override {
-    LOG(ERROR) << "not expecting server call";
-    response.onError(std::runtime_error("incoming channel not supported"));
-
-    auto* subscription = new MemoryMixin<NullSubscription>();
-    response.onSubscribe(*subscription);
-
-    return *(new MemoryMixin<CancelSubscriber>());
-  }
-
   /// Handles a new inbound Subscription requested by the other end.
   void handleRequestSubscription(Payload request, Subscriber<Payload>& response)
       override {
-    auto* subscription = new MemoryMixin<ServerSubscription>();
-    response.onSubscribe(*subscription);
-
     LOG(INFO) << "ServerRequestHandler.handleRequestSubscription "
               << request->moveToFbString();
 
-    response.onNext(folly::IOBuf::copyBuffer("from server"));
-    response.onNext(folly::IOBuf::copyBuffer("from server2"));
-    response.onComplete();
+    response.onSubscribe(createManagedInstance<ServerSubscription>(response));
+  }
+
+  /// Handles a new inbound Stream requested by the other end.
+  void handleRequestStream(Payload request, Subscriber<Payload>& response)
+      override {
+    LOG(INFO) << "ServerRequestHandler.handleRequestStream "
+              << request->moveToFbString();
+
+    response.onSubscribe(createManagedInstance<ServerSubscription>(response));
   }
 
   void handleFireAndForgetRequest(Payload request) override {
@@ -98,8 +93,32 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     std::unique_ptr<RequestHandler> requestHandler =
         folly::make_unique<ServerRequestHandler>();
 
-    reactiveSocket_ = ReactiveSocket::fromServerConnection(
+    auto rs = ReactiveSocket::fromServerConnection(
         std::move(framedConnection), std::move(requestHandler), stats_);
+
+    //    rs->onClose([&reactiveSockets_](ReactiveSocket* socket) {
+    //      reactiveSockets_.erase(std::remove_if(
+    //          reactiveSockets_.begin(), reactiveSockets_.end(), [](auto
+    //          vecSocket) {
+    //            return vecSocket == socket;
+    //          }));
+    //    });
+
+    rs->onClose(
+        std::bind(&Callback::removeSocket, this, std::placeholders::_1));
+
+    reactiveSockets_.push_back(std::move(rs));
+
+    std::cout << reactiveSockets_.size() << " ADD \n";
+  }
+
+  void removeSocket(ReactiveSocket& socket) {
+    reactiveSockets_.erase(std::remove_if(
+        reactiveSockets_.begin(),
+        reactiveSockets_.end(),
+        [&socket](std::unique_ptr<ReactiveSocket>& vecSocket) {
+          return vecSocket.get() == &socket;
+        }));
   }
 
   virtual void acceptError(const std::exception& ex) noexcept override {
@@ -107,11 +126,11 @@ class Callback : public AsyncServerSocket::AcceptCallback {
   }
 
   void shutdown() {
-    reactiveSocket_.reset(nullptr);
+    reactiveSockets_.clear();
   }
 
  private:
-  std::unique_ptr<ReactiveSocket> reactiveSocket_;
+  std::vector<std::unique_ptr<ReactiveSocket>> reactiveSockets_;
   EventBase& eventBase_;
   Stats& stats_;
 };

@@ -27,9 +27,8 @@ Subscriber<Payload>& TcpDuplexConnection::getOutput() {
 void TcpDuplexConnection::setInput(Subscriber<Payload>& inputSubscriber) {
   inputSubscriber_.reset(&inputSubscriber);
 
-  auto* subscription = new MemoryMixin<TcpSubscriptionBase>(*this);
-
-  inputSubscriber.onSubscribe(*subscription);
+  auto& subscription = createManagedInstance<TcpSubscriptionBase>(*this);
+  inputSubscriber.onSubscribe(subscription);
 
   socket_->setReadCB(this);
 };

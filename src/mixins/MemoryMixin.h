@@ -11,10 +11,9 @@
 #include "src/ConnectionAutomaton.h"
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
+#include "src/mixins/IntrusiveDeleter.h"
 
 namespace reactivesocket {
-
-class IntrusiveDeleter;
 
 /// Handles automatic memory management for entire chain of mixins by
 /// piggy-backing on terminal signals of a Subscriber, Subscription and
@@ -27,6 +26,10 @@ class IntrusiveDeleter;
 /// the reference count has been decremented.
 ///
 /// Uses lazy method instantiantiation trick, see LoggingMixin.
+/// The request/cancel or onSubscribe/onNext/onComplete methods will be
+/// implicitly specified as virtual, depending on whether the Base class
+/// is implementing the (virtual) methods of the
+/// Subscription or the Subscriber interface.
 template <typename Base>
 class MemoryMixin : public Base {
   static_assert(
@@ -104,4 +107,30 @@ class MemoryMixin : public Base {
               << "): ";
   }
 };
+
+namespace details {
+
+template <typename Base>
+class WithIntrusiveDeleter {
+  class BaseWithIntrusiveDeleter : public IntrusiveDeleter, public Base {
+   public:
+    using Base::Base;
+  };
+
+ public:
+  using T = typename std::conditional<
+      std::is_base_of<IntrusiveDeleter, Base>::value,
+      Base,
+      BaseWithIntrusiveDeleter>::type;
+};
+
+} // namespace details
+
+template <typename Base, typename... TArgs>
+Base& createManagedInstance(TArgs&&... args) {
+  auto* instance =
+      new MemoryMixin<typename details::WithIntrusiveDeleter<Base>::T>(
+          std::forward<TArgs>(args)...);
+  return *instance;
+}
 }

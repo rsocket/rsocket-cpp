@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <iostream>
 
+#include <folly/ExceptionWrapper.h>
 #include <reactive-streams/utilities/AllowanceSemaphore.h>
 #include <reactive-streams/utilities/SmartPointers.h>
 #include "src/Payload.h"
@@ -56,6 +57,8 @@ class ConsumerMixin : public Base {
   using Base::onNextFrame;
 
   void onNextFrame(Frame&);
+
+  void onError(folly::exception_wrapper ex);
   /// @}
 
   std::ostream& logPrefix(std::ostream& os) {

@@ -15,6 +15,8 @@ std::ostream& operator<<(std::ostream& os, StreamCompletionSignal signal) {
   switch (signal) {
     case StreamCompletionSignal::GRACEFUL:
       return os << "GRACEFUL";
+    case StreamCompletionSignal::ERROR:
+      return os << "ERROR";
     case StreamCompletionSignal::INVALID_SETUP:
       return os << "INVALID_SETUP";
     case StreamCompletionSignal::UNSUPPORTED_SETUP:

@@ -8,8 +8,10 @@
 
 #include <reactive-streams/utilities/AllowanceSemaphore.h>
 #include <reactive-streams/utilities/SmartPointers.h>
+#include "ReactiveSocket.h"
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
+#include "src/Stats.h"
 
 namespace reactivesocket {
 
@@ -22,12 +24,14 @@ using StreamId = uint32_t;
 /// Creates, registers and spins up responder for provided new stream ID and
 /// serialised frame.
 ///
-/// It is a responsibility of this startegy to register the responder with the
+/// It is a responsibility of this strategy to register the responder with the
 /// connection automaton and provide it with the initial frame if needed.
 /// Returns true if the responder has been created successfully, false if the
 /// frame cannot start a new stream, in which case the frame (passed by a
 /// mutable referece) must not be modified.
 using StreamAutomatonFactory = std::function<bool(StreamId, Payload&)>;
+
+using ConnectionCloseListener = std::function<void()>;
 
 /// Handles connection-level frames and (de)multiplexes streams.
 ///
@@ -45,13 +49,16 @@ class ConnectionAutomaton :
   ConnectionAutomaton(
       std::unique_ptr<DuplexConnection> connection,
       // TODO(stupaq): for testing only, can devirtualise if necessary
-      StreamAutomatonFactory factory);
+      StreamAutomatonFactory factory,
+      Stats& stats,
+      bool client,
+      std::unique_ptr<KeepaliveTimer> keepaliveTimer);
 
   /// Kicks off connection procedure.
   ///
   /// May result, depending on the implementation of the DuplexConnection, in
   /// processing of one or more frames.
-  void connect(bool client);
+  void connect();
 
   /// Terminates underlying connection.
   ///
@@ -104,6 +111,10 @@ class ConnectionAutomaton :
   void endStream(StreamId streamId, StreamCompletionSignal signal);
   /// @}
 
+  void sendKeepalive();
+
+  void onClose(ConnectionCloseListener listener);
+
  private:
   /// Performs the same actions as ::endStream without propagating closure
   /// signal to the underlying connection.
@@ -146,5 +157,9 @@ class ConnectionAutomaton :
   std::unordered_map<StreamId, AbstractStreamAutomaton*> streams_;
   reactivestreams::AllowanceSemaphore writeAllowance_;
   std::deque<Payload> pendingWrites_; // TODO(stupaq): two vectors?
+  Stats& stats_;
+  bool isServer_;
+  std::unique_ptr<KeepaliveTimer> keepaliveTimer_;
+  std::vector<ConnectionCloseListener> closeListeners_;
 };
 }

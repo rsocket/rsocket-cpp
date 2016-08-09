@@ -1,29 +1,10 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "ChannelRequester.h"
-
-#include <algorithm>
-#include <iostream>
-
-#include <folly/ExceptionWrapper.h>
-#include <folly/io/IOBuf.h>
-#include <glog/logging.h>
-
-#include "src/ConnectionAutomaton.h"
-#include "src/Frame.h"
-#include "src/Payload.h"
-#include "src/ReactiveStreamsCompat.h"
+#include "StreamSubscriptionRequesterBase.h"
 
 namespace reactivesocket {
 
-void ChannelRequesterBase::onSubscribe(Subscription& subscription) {
-  CHECK(State::NEW == state_);
-  Base::onSubscribe(subscription);
-  // Request the first payload immediately.
-  subscription.request(1);
-}
-
-void ChannelRequesterBase::onNext(Payload request) {
+void StreamSubscriptionRequesterBase::onNext(Payload request) {
   switch (state_) {
     case State::NEW: {
       state_ = State::REQUESTED;
@@ -36,16 +17,11 @@ void ChannelRequesterBase::onNext(Payload request) {
       // Send as much as possible with the initial request.
       CHECK_GE(Frame_REQUEST_N::kMaxRequestN, initialN);
       auto flags = initialN > 0 ? FrameFlags_REQN_PRESENT : FrameFlags_EMPTY;
-      Frame_REQUEST_CHANNEL frame(
-          streamId_,
-          flags,
-          static_cast<uint32_t>(initialN),
-          FrameMetadata::empty(),
-          std::move(request));
+      
       // We must inform ConsumerMixin about an implicit allowance we have
       // requested from the remote end.
       addImplicitAllowance(initialN);
-      connection_->onNextFrame(frame);
+      sendRequestFrame(flags, initialN, std::move(request));
       // Pump the remaining allowance into the ConsumerMixin _after_ sending the
       // initial request.
       if (remainingN) {
@@ -53,49 +29,13 @@ void ChannelRequesterBase::onNext(Payload request) {
       }
     } break;
     case State::REQUESTED:
-      Base::onNext(std::move(request));
       break;
     case State::CLOSED:
       break;
   }
 }
 
-void ChannelRequesterBase::onComplete() {
-  switch (state_) {
-    case State::NEW:
-      state_ = State::CLOSED;
-      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
-      break;
-    case State::REQUESTED: {
-      state_ = State::CLOSED;
-      Frame_REQUEST_CHANNEL frame(
-          streamId_, FrameFlags_COMPLETE, 0, FrameMetadata::empty(), nullptr);
-      connection_->onNextFrame(frame);
-      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
-    } break;
-    case State::CLOSED:
-      break;
-  }
-}
-
-void ChannelRequesterBase::onError(folly::exception_wrapper ex) {
-  switch (state_) {
-    case State::NEW:
-      state_ = State::CLOSED;
-      connection_->endStream(streamId_, StreamCompletionSignal::ERROR);
-      break;
-    case State::REQUESTED: {
-      state_ = State::CLOSED;
-      Frame_CANCEL frame(streamId_);
-      connection_->onNextFrame(frame);
-      connection_->endStream(streamId_, StreamCompletionSignal::ERROR);
-    } break;
-    case State::CLOSED:
-      break;
-  }
-}
-
-void ChannelRequesterBase::request(size_t n) {
+void StreamSubscriptionRequesterBase::request(size_t n) {
   switch (state_) {
     case State::NEW:
       // The initial request has not been sent out yet, hence we must accumulate
@@ -112,7 +52,7 @@ void ChannelRequesterBase::request(size_t n) {
   }
 }
 
-void ChannelRequesterBase::cancel() {
+void StreamSubscriptionRequesterBase::cancel() {
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;
@@ -129,7 +69,7 @@ void ChannelRequesterBase::cancel() {
   }
 }
 
-void ChannelRequesterBase::endStream(StreamCompletionSignal signal) {
+void StreamSubscriptionRequesterBase::endStream(StreamCompletionSignal signal) {
   switch (state_) {
     case State::NEW:
     case State::REQUESTED:
@@ -143,7 +83,7 @@ void ChannelRequesterBase::endStream(StreamCompletionSignal signal) {
   Base::endStream(signal);
 }
 
-void ChannelRequesterBase::onNextFrame(Frame_RESPONSE& frame) {
+void StreamSubscriptionRequesterBase::onNextFrame(Frame_RESPONSE& frame) {
   bool end = false;
   switch (state_) {
     case State::NEW:
@@ -165,7 +105,7 @@ void ChannelRequesterBase::onNextFrame(Frame_RESPONSE& frame) {
   }
 }
 
-void ChannelRequesterBase::onNextFrame(Frame_ERROR& frame) {
+void StreamSubscriptionRequesterBase::onNextFrame(Frame_ERROR& frame) {
   switch (state_) {
     case State::NEW:
       // Cannot receive a frame before sending the initial request.
@@ -173,15 +113,12 @@ void ChannelRequesterBase::onNextFrame(Frame_ERROR& frame) {
       break;
     case State::REQUESTED:
       state_ = State::CLOSED;
-      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      Base::onError(
+          std::runtime_error(frame.data_->moveToFbString().toStdString()));
+      connection_->endStream(streamId_, StreamCompletionSignal::ERROR);
       break;
     case State::CLOSED:
       break;
   }
-}
-
-std::ostream& ChannelRequesterBase::logPrefix(std::ostream& os) {
-  return os << "ChannelRequester(" << &connection_ << ", " << streamId_
-            << "): ";
 }
 }

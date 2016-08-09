@@ -30,11 +30,11 @@ enum class FrameType : uint16_t {
   // TODO(stupaq): commented frame types indicate unimplemented frames
   RESERVED = 0x0000,
   SETUP = 0x0001,
-  // LEASE = 0x0002,
+  LEASE = 0x0002,
   KEEPALIVE = 0x0003,
   // REQUEST_RESPONSE = 0x0004,
   REQUEST_FNF = 0x0005,
-  // REQUEST_STREAM = 0x0006,
+  REQUEST_STREAM = 0x0006,
   REQUEST_SUB = 0x0007,
   REQUEST_CHANNEL = 0x0008,
   REQUEST_N = 0x0009,
@@ -48,10 +48,10 @@ std::ostream& operator<<(std::ostream&, FrameType);
 
 enum class ErrorCode : uint32_t {
   RESERVED = 0x00000000,
-  // INVALID_SETUP = 0x00000001,
-  // UNSUPPORTED_SETUP = 0x00000002,
-  // REJECTED_SETUP = 0x00000003,
-  // CONNECTION_ERROR = 0x00000101,
+  INVALID_SETUP = 0x00000001,
+  UNSUPPORTED_SETUP = 0x00000002,
+  REJECTED_SETUP = 0x00000003,
+  CONNECTION_ERROR = 0x00000101,
   APPLICATION_ERROR = 0x00000201,
   REJECTED = 0x00000202,
   CANCELED = 0x00000203,
@@ -67,7 +67,7 @@ const FrameFlags FrameFlags_EMPTY = 0x0000;
 const FrameFlags FrameFlags_METADATA = 0x4000;
 // const FrameFlags FrameFlags_FOLLOWS = 0x2000;
 const FrameFlags FrameFlags_KEEPALIVE_RESPOND = 0x2000;
-// const FrameFlags FrameFlags_LEASE = 0x2000;
+const FrameFlags FrameFlags_LEASE = 0x2000;
 const FrameFlags FrameFlags_COMPLETE = 0x1000;
 // const FrameFlags FrameFlags_STRICT = 0x1000;
 const FrameFlags FrameFlags_REQN_PRESENT = 0x0800;
@@ -136,6 +136,47 @@ std::ostream& operator<<(std::ostream&, const FrameMetadata&);
 /// Since frames are only meaningful for stream automata on both ends of a
 /// stream, intermediate layers that are frame-type-agnostic pass around
 /// serialized frame.
+class Frame_REQUEST_STREAM {
+ public:
+  static constexpr bool Trait_CarriesAllowance = true;
+
+  Frame_REQUEST_STREAM() {}
+  Frame_REQUEST_STREAM(
+      StreamId streamId,
+      FrameFlags flags,
+      uint32_t requestN,
+      FrameMetadata metadata,
+      Payload data)
+      : header_(FrameType::REQUEST_STREAM, flags, streamId),
+        requestN_(requestN),
+        metadata_(std::move(metadata)),
+        data_(std::move(data)) {
+    metadata_.checkFlags(flags);
+  }
+
+  /// For compatibility with other data-carrying frames.
+  Frame_REQUEST_STREAM(
+      StreamId streamId,
+      FrameFlags flags,
+      FrameMetadata metadata,
+      Payload data)
+      : Frame_REQUEST_STREAM(
+            streamId,
+            flags,
+            0,
+            std::move(metadata),
+            std::move(data)) {}
+
+  Payload serializeOut();
+  bool deserializeFrom(Payload in);
+
+  FrameHeader header_;
+  uint32_t requestN_;
+  FrameMetadata metadata_;
+  Payload data_;
+};
+std::ostream& operator<<(std::ostream&, const Frame_REQUEST_STREAM&);
+
 class Frame_REQUEST_SUB {
  public:
   static constexpr bool Trait_CarriesAllowance = true;
@@ -327,29 +368,37 @@ class Frame_ERROR {
   static constexpr bool Trait_CarriesAllowance = false;
 
   Frame_ERROR() {}
-  Frame_ERROR(StreamId streamId, ErrorCode errorCode)
+  Frame_ERROR(StreamId streamId, ErrorCode errorCode, Payload data)
       : Frame_ERROR(
             streamId,
             FrameFlags_EMPTY,
             errorCode,
-            FrameMetadata::empty()) {}
+            FrameMetadata::empty(),
+            std::move(data)) {}
   Frame_ERROR(
       StreamId streamId,
       FrameFlags flags,
       ErrorCode errorCode,
-      FrameMetadata metadata)
+      FrameMetadata metadata,
+      Payload data)
       : header_(FrameType::ERROR, flags, streamId),
         errorCode_(errorCode),
-        metadata_(std::move(metadata)) {
+        metadata_(std::move(metadata)),
+        data_(std::move(data)) {
     metadata_.checkFlags(flags);
   }
 
   Payload serializeOut();
   bool deserializeFrom(Payload in);
 
+  static Frame_ERROR unexpectedFrame();
+  static Frame_ERROR badSetupFrame(const std::string& message);
+  static Frame_ERROR invalid(const std::string& message);
+
   FrameHeader header_;
   ErrorCode errorCode_;
   FrameMetadata metadata_;
+  Payload data_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_ERROR&);
 
@@ -358,9 +407,8 @@ class Frame_KEEPALIVE {
   static constexpr bool Trait_CarriesAllowance = false;
 
   Frame_KEEPALIVE() {}
-  Frame_KEEPALIVE(StreamId streamId, FrameFlags flags, Payload data)
-      : header_(FrameType::KEEPALIVE, flags, streamId),
-        data_(std::move(data)) {}
+  Frame_KEEPALIVE(FrameFlags flags, Payload data)
+      : header_(FrameType::KEEPALIVE, flags, 0), data_(std::move(data)) {}
 
   Payload serializeOut();
   bool deserializeFrom(Payload in);
@@ -376,17 +424,20 @@ class Frame_SETUP {
 
   Frame_SETUP() {}
   Frame_SETUP(
-      StreamId streamId,
       FrameFlags flags,
       uint32_t version,
       uint32_t keepaliveTime,
       uint32_t maxLifetime,
+      std::string metadataMimeType,
+      std::string dataMimeType,
       FrameMetadata metadata,
       Payload data)
-      : header_(FrameType::SETUP, flags, streamId),
+      : header_(FrameType::SETUP, flags, 0),
         version_(version),
         keepaliveTime_(keepaliveTime),
         maxLifetime_(maxLifetime),
+        metadataMimeType_(metadataMimeType),
+        dataMimeType_(dataMimeType),
         metadata_(std::move(metadata)),
         data_(std::move(data)) {
     metadata_.checkFlags(flags);
@@ -399,8 +450,38 @@ class Frame_SETUP {
   uint32_t version_;
   uint32_t keepaliveTime_;
   uint32_t maxLifetime_;
+  std::string metadataMimeType_;
+  std::string dataMimeType_;
   FrameMetadata metadata_;
   Payload data_;
+};
+std::ostream& operator<<(std::ostream&, const Frame_SETUP&);
+/// @}
+
+class Frame_LEASE {
+ public:
+  static constexpr bool Trait_CarriesAllowance = false;
+
+  Frame_LEASE() {}
+  Frame_LEASE(
+      FrameFlags flags,
+      uint32_t ttl,
+      uint32_t numberOfRequests,
+      FrameMetadata metadata)
+      : header_(FrameType::LEASE, flags, 0),
+        ttl_(ttl),
+        numberOfRequests_(numberOfRequests),
+        metadata_(std::move(metadata)) {
+    metadata_.checkFlags(flags);
+  }
+
+  Payload serializeOut();
+  bool deserializeFrom(Payload in);
+
+  FrameHeader header_;
+  uint32_t ttl_;
+  uint32_t numberOfRequests_;
+  FrameMetadata metadata_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_SETUP&);
 /// @}
