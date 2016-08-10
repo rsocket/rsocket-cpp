@@ -54,8 +54,6 @@ std::ostream& operator<<(std::ostream& os, FrameType type) {
       return os << "KEEPALIVE";
     case FrameType::SETUP:
       return os << "SETUP";
-    case FrameType::METADATA_PUSH:
-      return os << "METADATA_PUSH";
     case FrameType::LEASE:
       return os << "LEASE";
     case FrameType::METADATA_PUSH:
@@ -426,8 +424,7 @@ std::ostream& operator<<(std::ostream& os, const Frame_REQUEST_FNF& frame) {
 /// @{
 Payload Frame_METADATA_PUSH::serializeOut() {
   folly::IOBufQueue queue(folly::IOBufQueue::cacheChainLength());
-  const auto bufSize =
-      FrameHeader::kSize + sizeof(uint32_t);
+  const auto bufSize = FrameHeader::kSize + sizeof(uint32_t);
   auto buf = FrameBufferAllocator::allocate(bufSize);
   queue.append(std::move(buf));
   folly::io::QueueAppender appender(&queue, /* do not grow */ 0);

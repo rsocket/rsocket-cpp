@@ -47,4 +47,6 @@ void NullRequestHandler::handleRequestSubscription(
 }
 
 void NullRequestHandler::handleFireAndForgetRequest(Payload /*request*/) {}
+
+void NullRequestHandler::handleMetadataPush(Payload /*request*/) {}
 }

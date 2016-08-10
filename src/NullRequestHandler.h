@@ -35,6 +35,8 @@ class NullRequestHandler : public RequestHandler {
       override;
 
   void handleFireAndForgetRequest(Payload request) override;
+
+  void handleMetadataPush(Payload request) override;
 };
 
 using DefaultRequestHandler = NullRequestHandler;

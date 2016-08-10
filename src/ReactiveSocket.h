@@ -13,23 +13,23 @@
 
 namespace reactivesocket {
 
-    class ConnectionAutomaton;
-    class DuplexConnection;
-    class RequestHandler;
-    class ReactiveSocket;
-    enum class FrameType : uint16_t;
-    using StreamId = uint32_t;
+class ConnectionAutomaton;
+class DuplexConnection;
+class RequestHandler;
+class ReactiveSocket;
+enum class FrameType : uint16_t;
+using StreamId = uint32_t;
 
-    class KeepaliveTimer {
-    public:
-        virtual ~KeepaliveTimer() = default;
+class KeepaliveTimer {
+ public:
+  virtual ~KeepaliveTimer() = default;
 
-        virtual std::chrono::milliseconds keepaliveTime() = 0;
-        virtual void stop() = 0;
-        virtual void start(ConnectionAutomaton* automaton) = 0;
-    };
+  virtual std::chrono::milliseconds keepaliveTime() = 0;
+  virtual void stop() = 0;
+  virtual void start(ConnectionAutomaton* automaton) = 0;
+};
 
-    using CloseListener = std::function<void(ReactiveSocket&)>;
+using CloseListener = std::function<void(ReactiveSocket&)>;
 
 // TODO(stupaq): consider using error codes in place of folly::exception_wrapper
 
@@ -42,51 +42,54 @@ namespace reactivesocket {
 // that (internally) holds a weak reference (conceptually, not std::weak_ptr)
 // and forbids any interactions with the socket after the shutdown procedure has
 // been initiated.
-    class ReactiveSocket {
-    public:
-        ReactiveSocket(ReactiveSocket&&) = delete;
-        ReactiveSocket& operator=(ReactiveSocket&&) = delete;
-        ReactiveSocket(const ReactiveSocket&) = delete;
-        ReactiveSocket& operator=(const ReactiveSocket&) = delete;
+class ReactiveSocket {
+ public:
+  ReactiveSocket(ReactiveSocket&&) = delete;
+  ReactiveSocket& operator=(ReactiveSocket&&) = delete;
+  ReactiveSocket(const ReactiveSocket&) = delete;
+  ReactiveSocket& operator=(const ReactiveSocket&) = delete;
 
-        ~ReactiveSocket();
+  ~ReactiveSocket();
 
-        static std::unique_ptr<ReactiveSocket> fromClientConnection(
-                std::unique_ptr<DuplexConnection> connection,
-                std::unique_ptr<RequestHandler> handler,
-                Stats& stats = Stats::noop(),
-                std::unique_ptr<KeepaliveTimer> keepaliveTimer =
-                std::unique_ptr<KeepaliveTimer>(nullptr));
+  static std::unique_ptr<ReactiveSocket> fromClientConnection(
+      std::unique_ptr<DuplexConnection> connection,
+      std::unique_ptr<RequestHandler> handler,
+      Stats& stats = Stats::noop(),
+      std::unique_ptr<KeepaliveTimer> keepaliveTimer =
+          std::unique_ptr<KeepaliveTimer>(nullptr));
 
-        static std::unique_ptr<ReactiveSocket> fromServerConnection(
-                std::unique_ptr<DuplexConnection> connection,
-                std::unique_ptr<RequestHandler> handler,
-                Stats& stats = Stats::noop());
+  static std::unique_ptr<ReactiveSocket> fromServerConnection(
+      std::unique_ptr<DuplexConnection> connection,
+      std::unique_ptr<RequestHandler> handler,
+      Stats& stats = Stats::noop());
 
-        Subscriber<Payload>& requestChannel(Subscriber<Payload>& responseSink);
+  Subscriber<Payload>& requestChannel(Subscriber<Payload>& responseSink);
 
-        void requestStream(Payload payload, Subscriber<Payload>& responseSink);
+  void requestStream(Payload payload, Subscriber<Payload>& responseSink);
 
-        void requestSubscription(Payload payload, Subscriber<Payload>& responseSink);
+  void requestSubscription(Payload payload, Subscriber<Payload>& responseSink);
 
-        void requestFireAndForget(Payload request);
+  void requestFireAndForget(Payload request);
 
-        void close();
+  void close();
 
-        void onClose(CloseListener listener);
+  void onClose(CloseListener listener);
 
-    private:
-        ReactiveSocket(
-                bool isServer,
-                std::unique_ptr<DuplexConnection> connection,
-                std::unique_ptr<RequestHandler> handler,
-                Stats& stats,
-                std::unique_ptr<KeepaliveTimer> keepaliveTimer);
+  void metadataPush(Payload metadata);
 
-        bool createResponder(StreamId streamId, Payload& frame);
+ private:
+  ReactiveSocket(
+      bool isServer,
+      std::unique_ptr<DuplexConnection> connection,
+      std::unique_ptr<RequestHandler> handler,
+      Stats& stats,
+      std::unique_ptr<KeepaliveTimer> keepaliveTimer);
 
-        const std::shared_ptr<ConnectionAutomaton> connection_;
-        std::unique_ptr<RequestHandler> handler_;
-        StreamId nextStreamId_;
-    };
+  bool createResponder(StreamId streamId, Payload& frame);
+
+  const std::shared_ptr<ConnectionAutomaton> connection_;
+  // std::unique_ptr<RequestHandler> handler_;
+  std::unique_ptr<RequestHandler> handler_;
+  StreamId nextStreamId_;
+};
 }
