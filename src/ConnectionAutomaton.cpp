@@ -247,11 +247,7 @@ void ConnectionAutomaton::onConnectionFrame(Payload payload) {
     }
       return;
     case FrameType::METADATA_PUSH: {
-      Frame_METADATA_PUSH frame;
-      if (frame.deserializeFrom(std::move(payload))) {
-        assert(frame.header_.flags_ & FrameFlags_METADATA);
-        connectionOutput_.onNext(frame.serializeOut());
-      } else {
+      if (!factory_(0, payload)) {
         assert(false);
       }
       return;

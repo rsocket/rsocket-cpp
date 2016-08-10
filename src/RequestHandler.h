@@ -32,7 +32,7 @@ class RequestHandler {
   /// Handles a new fire-and-forget request sent by the other end.
   virtual void handleFireAndForgetRequest(Payload request) = 0;
 
-  /// Handles a new metadata-push sent bu the other end.
+  /// Handles a new metadata-push sent by the other end.
   virtual void handleMetadataPush(Payload request) = 0;
 };
 }

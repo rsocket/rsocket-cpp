@@ -11,6 +11,7 @@
 #include "ReactiveSocket.h"
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
+#include "src/RequestHandler.h"
 #include "src/Stats.h"
 
 namespace reactivesocket {
@@ -161,5 +162,6 @@ class ConnectionAutomaton :
   bool isServer_;
   std::unique_ptr<KeepaliveTimer> keepaliveTimer_;
   std::vector<ConnectionCloseListener> closeListeners_;
+  std::unique_ptr<RequestHandler> handler_;
 };
 }

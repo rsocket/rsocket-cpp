@@ -418,8 +418,7 @@ TEST(ReactiveSocketTest, RequestMetadataPush) {
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
 
   // Client sends a fire-and-forget
-  EXPECT_CALL(
-      serverHandlerRef, handleMetadataPush_(Equals(&originalPayload)))
+  EXPECT_CALL(serverHandlerRef, handleMetadataPush_(Equals(&originalPayload)))
       .InSequence(s);
 
   clientSock->metadataPush(originalPayload->clone());
