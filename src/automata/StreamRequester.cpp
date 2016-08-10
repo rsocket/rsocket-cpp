@@ -1,17 +1,17 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "SubscriptionRequester.h"
+#include "StreamRequester.h"
 
 #include <algorithm>
 #include <iostream>
 
 namespace reactivesocket {
 
-void SubscriptionRequesterBase::sendRequestFrame(
+void StreamRequesterBase::sendRequestFrame(
     FrameFlags flags,
     size_t initialN,
     Payload&& request) {
-  Frame_REQUEST_SUB frame(
+  Frame_REQUEST_STREAM frame(
       streamId_,
       flags,
       static_cast<uint32_t>(initialN),
@@ -20,8 +20,7 @@ void SubscriptionRequesterBase::sendRequestFrame(
   connection_->onNextFrame(frame);
 }
 
-std::ostream& SubscriptionRequesterBase::logPrefix(std::ostream& os) {
-  return os << "SubscriptionRequester(" << &connection_ << ", " << streamId_
-            << "): ";
+std::ostream& StreamRequesterBase::logPrefix(std::ostream& os) {
+  return os << "StreamRequester(" << &connection_ << ", " << streamId_ << "): ";
 }
 }

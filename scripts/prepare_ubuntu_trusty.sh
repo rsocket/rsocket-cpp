@@ -20,16 +20,3 @@ sudo apt-get -y install \
     libjemalloc-dev \
     libssl-dev \
     libiberty-dev
-
-# install reactive-streams-cpp
-mkdir working
-cd working
-git clone https://github.com/ReactiveSocket/reactive-streams-cpp
-cd reactive-streams-cpp
-git submodule init
-git submodule update --recursive
-mkdir build
-cd build
-cmake ..
-make
-sudo make install

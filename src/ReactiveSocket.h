@@ -3,6 +3,7 @@
 #pragma once
 
 #include <atomic>
+#include <chrono>
 #include <functional>
 #include <memory>
 
@@ -15,8 +16,20 @@ namespace reactivesocket {
 class ConnectionAutomaton;
 class DuplexConnection;
 class RequestHandler;
+class ReactiveSocket;
 enum class FrameType : uint16_t;
 using StreamId = uint32_t;
+
+class KeepaliveTimer {
+ public:
+  virtual ~KeepaliveTimer() = default;
+
+  virtual std::chrono::milliseconds keepaliveTime() = 0;
+  virtual void stop() = 0;
+  virtual void start(ConnectionAutomaton* automaton) = 0;
+};
+
+using CloseListener = std::function<void(ReactiveSocket&)>;
 
 // TODO(stupaq): consider using error codes in place of folly::exception_wrapper
 
@@ -41,7 +54,9 @@ class ReactiveSocket {
   static std::unique_ptr<ReactiveSocket> fromClientConnection(
       std::unique_ptr<DuplexConnection> connection,
       std::unique_ptr<RequestHandler> handler,
-      Stats& stats = Stats::noop());
+      Stats& stats = Stats::noop(),
+      std::unique_ptr<KeepaliveTimer> keepaliveTimer =
+          std::unique_ptr<KeepaliveTimer>(nullptr));
 
   static std::unique_ptr<ReactiveSocket> fromServerConnection(
       std::unique_ptr<DuplexConnection> connection,
@@ -50,22 +65,28 @@ class ReactiveSocket {
 
   Subscriber<Payload>& requestChannel(Subscriber<Payload>& responseSink);
 
+  void requestStream(Payload payload, Subscriber<Payload>& responseSink);
+
   void requestSubscription(Payload payload, Subscriber<Payload>& responseSink);
 
   void requestFireAndForget(Payload request);
+
+  void close();
+
+  void onClose(CloseListener listener);
 
  private:
   ReactiveSocket(
       bool isServer,
       std::unique_ptr<DuplexConnection> connection,
       std::unique_ptr<RequestHandler> handler,
-      Stats& stats);
+      Stats& stats,
+      std::unique_ptr<KeepaliveTimer> keepaliveTimer);
 
   bool createResponder(StreamId streamId, Payload& frame);
 
   const std::shared_ptr<ConnectionAutomaton> connection_;
   std::unique_ptr<RequestHandler> handler_;
   StreamId nextStreamId_;
-  Stats& stats_;
 };
 }

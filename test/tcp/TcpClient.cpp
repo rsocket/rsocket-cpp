@@ -1,8 +1,13 @@
 #include <folly/Memory.h>
+#include <folly/io/async/EventBaseManager.h>
 #include <gmock/gmock.h>
 #include <thread>
 #include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"
+<<<<<<< HEAD
+=======
+#include "src/folly/FollyKeepaliveTimer.h"
+>>>>>>> 4343ba961d7a2b117f06b6816acd44c439f4f02e
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/mixins/MemoryMixin.h"
 #include "src/tcp/TcpDuplexConnection.h"
@@ -64,7 +69,11 @@ int main(int argc, char* argv[]) {
             folly::make_unique<DefaultRequestHandler>();
 
         reactiveSocket = ReactiveSocket::fromClientConnection(
-            std::move(framedConnection), std::move(requestHandler), stats);
+            std::move(framedConnection),
+            std::move(requestHandler),
+            stats,
+            folly::make_unique<FollyKeepaliveTimer>(
+                eventBase, std::chrono::milliseconds(5000)));
 
         reactiveSocket->requestSubscription(
             folly::IOBuf::copyBuffer("from client"),

@@ -17,25 +17,50 @@
 #include "src/RequestHandler.h"
 #include "src/automata/ChannelRequester.h"
 #include "src/automata/ChannelResponder.h"
+#include "src/automata/StreamRequester.h"
+#include "src/automata/StreamResponder.h"
 #include "src/automata/SubscriptionRequester.h"
 #include "src/automata/SubscriptionResponder.h"
 
 namespace reactivesocket {
 
 ReactiveSocket::~ReactiveSocket() {
-  stats_.socketClosed();
   // Force connection closure, this will trigger terminal signals to be
   // delivered to all stream automata.
   connection_->disconnect();
 }
 
+ReactiveSocket::ReactiveSocket(
+    bool isServer,
+    std::unique_ptr<DuplexConnection> connection,
+    std::unique_ptr<RequestHandler> handler,
+    Stats& stats,
+    std::unique_ptr<KeepaliveTimer> keepaliveTimer)
+    : connection_(new ConnectionAutomaton(
+          std::move(connection),
+          std::bind(
+              &ReactiveSocket::createResponder,
+              this,
+              std::placeholders::_1,
+              std::placeholders::_2),
+          stats,
+          isServer,
+          std::move(keepaliveTimer))),
+      handler_(std::move(handler)),
+      nextStreamId_(isServer ? 1 : 2) {}
+
 std::unique_ptr<ReactiveSocket> ReactiveSocket::fromClientConnection(
     std::unique_ptr<DuplexConnection> connection,
     std::unique_ptr<RequestHandler> handler,
-    Stats& stats) {
+    Stats& stats,
+    std::unique_ptr<KeepaliveTimer> keepaliveTimer) {
   std::unique_ptr<ReactiveSocket> socket(new ReactiveSocket(
-      false, std::move(connection), std::move(handler), stats));
-  socket->connection_->connect(true);
+      false,
+      std::move(connection),
+      std::move(handler),
+      stats,
+      std::move(keepaliveTimer)));
+  socket->connection_->connect();
   return socket;
 }
 
@@ -44,8 +69,12 @@ std::unique_ptr<ReactiveSocket> ReactiveSocket::fromServerConnection(
     std::unique_ptr<RequestHandler> handler,
     Stats& stats) {
   std::unique_ptr<ReactiveSocket> socket(new ReactiveSocket(
-      true, std::move(connection), std::move(handler), stats));
-  socket->connection_->connect(false);
+      true,
+      std::move(connection),
+      std::move(handler),
+      stats,
+      std::unique_ptr<KeepaliveTimer>(nullptr)));
+  socket->connection_->connect();
   return socket;
 }
 
@@ -61,6 +90,21 @@ Subscriber<Payload>& ReactiveSocket::requestChannel(
   responseSink.onSubscribe(*automaton);
   automaton->start();
   return *automaton;
+}
+
+void ReactiveSocket::requestStream(
+    Payload request,
+    Subscriber<Payload>& responseSink) {
+  // TODO(stupaq): handle any exceptions
+  StreamId streamId = nextStreamId_;
+  nextStreamId_ += 2;
+  StreamRequester::Parameters params = {connection_, streamId};
+  auto automaton = new StreamRequester(params);
+  connection_->addStream(streamId, *automaton);
+  automaton->subscribe(responseSink);
+  responseSink.onSubscribe(*automaton);
+  automaton->onNext(std::move(request));
+  automaton->start();
 }
 
 void ReactiveSocket::requestSubscription(
@@ -90,24 +134,6 @@ void ReactiveSocket::requestFireAndForget(Payload request) {
   connection_->onNextFrame(frame);
 }
 
-ReactiveSocket::ReactiveSocket(
-    bool isServer,
-    std::unique_ptr<DuplexConnection> connection,
-    std::unique_ptr<RequestHandler> handler,
-    Stats& stats)
-    : connection_(new ConnectionAutomaton(
-          std::move(connection),
-          std::bind(
-              &ReactiveSocket::createResponder,
-              this,
-              std::placeholders::_1,
-              std::placeholders::_2))),
-      handler_(std::move(handler)),
-      nextStreamId_(isServer ? 1 : 2),
-      stats_(stats) {
-  stats_.socketCreated();
-}
-
 bool ReactiveSocket::createResponder(
     StreamId streamId,
     Payload& serializedFrame) {
@@ -126,6 +152,19 @@ bool ReactiveSocket::createResponder(
       automaton->subscribe(requestSink);
       automaton->onNextFrame(frame);
       requestSink.onSubscribe(*automaton);
+      automaton->start();
+      break;
+    }
+    case FrameType::REQUEST_STREAM: {
+      Frame_REQUEST_STREAM frame;
+      if (!frame.deserializeFrom(std::move(serializedFrame))) {
+        return false;
+      }
+      StreamResponder::Parameters params = {connection_, streamId};
+      auto automaton = new StreamResponder(params);
+      connection_->addStream(streamId, *automaton);
+      handler_->handleRequestStream(std::move(frame.data_), *automaton);
+      automaton->onNextFrame(frame);
       automaton->start();
       break;
     }
@@ -156,5 +195,13 @@ bool ReactiveSocket::createResponder(
       return false;
   }
   return true;
+}
+
+void ReactiveSocket::close() {
+  connection_->disconnect();
+}
+
+void ReactiveSocket::onClose(CloseListener listener) {
+  connection_->onClose([listener, this]() { listener(*this); });
 }
 }
