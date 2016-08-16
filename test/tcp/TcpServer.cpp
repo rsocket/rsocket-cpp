@@ -1,3 +1,5 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
 #include <folly/Memory.h>
 #include <folly/io/async/AsyncServerSocket.h>
 #include <gmock/gmock.h>
@@ -107,8 +109,8 @@ class Callback : public AsyncServerSocket::AcceptCallback {
       reactiveSockets_.erase(std::remove_if(
           reactiveSockets_.begin(),
           reactiveSockets_.end(),
-          [&socket](std::unique_ptr <ReactiveSocket> &vecSocket) {
-              return vecSocket.get() == &socket;
+          [&socket](std::unique_ptr<ReactiveSocket>& vecSocket) {
+            return vecSocket.get() == &socket;
           }));
     }
   }
@@ -141,7 +143,7 @@ int main(int argc, char* argv[]) {
   reactivesocket::StatsPrinter statsPrinter;
 
   EventBase eventBase;
-  auto thread = std::thread([&]() { eventBase.loopForever(); });
+  auto thread = std::thread([&eventBase]() { eventBase.loopForever(); });
 
   Callback callback(eventBase, statsPrinter);
 
