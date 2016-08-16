@@ -18,6 +18,7 @@ TestSuite TestFileParser::parse() {
     ++currentLine_;
   }
 
+  addCurrentTest();
   return std::move(testSuite_);
 }
 
@@ -27,13 +28,9 @@ void TestFileParser::parseCommand(const std::string& command) {
     return;
   }
 
+  // test delimiter
   if (command == "!") {
-    // test delimiter
-    if (currentTest_.empty()) {
-      // no test defined
-    } else {
-      testSuite_.addTest(std::move(currentTest_));
-    }
+    addCurrentTest();
     return;
   }
 
@@ -51,6 +48,15 @@ void TestFileParser::parseCommand(const std::string& command) {
                << " (ignoring)";
   } else {
     currentTest_.addCommand(std::move(newCommand));
+  }
+}
+
+void TestFileParser::addCurrentTest() {
+  if (currentTest_.empty()) {
+    // no test defined
+  } else {
+    testSuite_.addTest(std::move(currentTest_));
+    DCHECK(currentTest_.empty());
   }
 }
 

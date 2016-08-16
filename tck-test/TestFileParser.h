@@ -16,6 +16,7 @@ class TestFileParser {
 
  private:
   void parseCommand(const std::string& command);
+  void addCurrentTest();
 
   std::ifstream input_;
   int currentLine_;

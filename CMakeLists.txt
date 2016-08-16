@@ -127,13 +127,9 @@ add_library(
   src/tcp/TcpDuplexConnection.cpp
   src/tcp/TcpDuplexConnection.h
   src/Stats.h
-<<<<<<< HEAD
-  src/Stats.cpp)
-=======
   src/Stats.cpp
   src/folly/FollyKeepaliveTimer.cpp
   src/folly/FollyKeepaliveTimer.h)
->>>>>>> 4343ba961d7a2b117f06b6816acd44c439f4f02e
 
 target_link_libraries(
   ReactiveSocket
@@ -223,6 +219,8 @@ add_executable(
         tck-test/client.cpp
         tck-test/TestFileParser.cpp
         tck-test/TestFileParser.h
+        tck-test/TestSubscriber.cpp
+        tck-test/TestSubscriber.h
         tck-test/TestSuite.cpp
         tck-test/TestSuite.h
         tck-test/TestInterpreter.cpp
@@ -231,6 +229,7 @@ add_executable(
 
 target_link_libraries(
         tckclient
+        ReactiveSocket
         ${FOLLY_LIBRARIES}
         gflags
         glog)
