@@ -112,6 +112,7 @@ template void ConnectionAutomaton::onNextFrame(Frame_REQUEST_SUB&);
 template void ConnectionAutomaton::onNextFrame(Frame_REQUEST_CHANNEL&);
 template void ConnectionAutomaton::onNextFrame(Frame_REQUEST_N&);
 template void ConnectionAutomaton::onNextFrame(Frame_REQUEST_FNF&);
+template void ConnectionAutomaton::onNextFrame(Frame_METADATA_PUSH&);
 template void ConnectionAutomaton::onNextFrame(Frame_CANCEL&);
 template void ConnectionAutomaton::onNextFrame(Frame_RESPONSE&);
 template void ConnectionAutomaton::onNextFrame(Frame_ERROR&);
@@ -245,6 +246,12 @@ void ConnectionAutomaton::onConnectionFrame(Payload payload) {
       }
     }
       return;
+    case FrameType::METADATA_PUSH: {
+      if (!factory_(0, payload)) {
+        assert(false);
+      }
+      return;
+    }
     default:
       connectionOutput_.onNext(Frame_ERROR::unexpectedFrame().serializeOut());
       disconnect();

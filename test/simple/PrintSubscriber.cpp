@@ -1,3 +1,5 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
 #include "PrintSubscriber.h"
 #include <folly/Memory.h>
 #include <folly/io/IOBufQueue.h>

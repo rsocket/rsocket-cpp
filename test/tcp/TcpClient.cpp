@@ -1,3 +1,5 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
 #include <folly/Memory.h>
 #include <folly/io/async/EventBaseManager.h>
 #include <gmock/gmock.h>

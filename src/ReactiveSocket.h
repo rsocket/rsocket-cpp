@@ -75,6 +75,8 @@ class ReactiveSocket {
 
   void onClose(CloseListener listener);
 
+  void metadataPush(Payload metadata);
+
  private:
   ReactiveSocket(
       bool isServer,
