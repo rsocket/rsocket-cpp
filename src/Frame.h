@@ -305,7 +305,7 @@ class Frame_METADATA_PUSH {
   static constexpr bool Trait_CarriesAllowance = false;
 
   Frame_METADATA_PUSH() {}
-  Frame_METADATA_PUSH(FrameMetadata metadata)
+  explicit Frame_METADATA_PUSH(FrameMetadata metadata)
       : header_(FrameType::METADATA_PUSH, FrameFlags_METADATA, 0),
         metadata_(std::move(metadata)) {}
 
