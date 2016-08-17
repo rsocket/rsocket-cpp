@@ -25,6 +25,7 @@ void InlineConnection::connectTo(InlineConnection& other) {
   ASSERT_FALSE(other.other_);
   other.other_ = this;
   other_ = &other;
+  client_ = true;
 }
 
 void InlineConnection::setInput(Subscriber<Payload>& inputSink) {
@@ -78,6 +79,18 @@ Subscriber<Payload>& InlineConnection::getOutput() {
           inputSink->onSubscribe(*outputSubscription_);
         }
       }));
+  // SETUP
+  if (client_) {
+    EXPECT_CALL(outputSink, onNext_(_))
+        .Times(1)
+        .InSequence(s)
+        .WillRepeatedly(Invoke([this](Payload &frame) {
+            ASSERT_TRUE(other_);
+            ASSERT_FALSE(other_->outputSubscription_);
+            auto inputSink = other_->inputSink_;
+            ASSERT_FALSE(inputSink);
+        }));
+  }
   EXPECT_CALL(outputSink, onNext_(_))
       .Times(AnyNumber())
       .InSequence(s)

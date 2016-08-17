@@ -52,5 +52,6 @@ class InlineConnection : public DuplexConnection {
   folly::exception_wrapper inputSinkError_;
   /// @}
   Subscription* outputSubscription_;
+  bool client_{false};
 };
 }
