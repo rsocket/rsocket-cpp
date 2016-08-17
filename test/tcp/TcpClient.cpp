@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
             folly::make_unique<FollyKeepaliveTimer>(
                 eventBase, std::chrono::milliseconds(5000)));
 
-        reactiveSocket->requestSubscription(
+        reactiveSocket->requestStream(
             folly::IOBuf::copyBuffer("from client"),
             createManagedInstance<PrintSubscriber>());
       });
