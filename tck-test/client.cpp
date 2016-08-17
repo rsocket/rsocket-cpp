@@ -1,17 +1,17 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include <gflags/gflags.h>
-#include <glog/logging.h>
+#include <folly/Memory.h>
 #include <folly/io/async/AsyncSocket.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
-#include <folly/Memory.h>
+#include <gflags/gflags.h>
+#include <glog/logging.h>
 #include "TestFileParser.h"
 #include "TestInterpreter.h"
 #include "TestSuite.h"
+#include "src/NullRequestHandler.h"
+#include "src/ReactiveSocket.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/tcp/TcpDuplexConnection.h"
-#include "src/ReactiveSocket.h"
-#include "src/NullRequestHandler.h"
 
 DEFINE_string(host, "localhost", "host to connect to");
 DEFINE_int32(port, 9898, "host:port to connect to");
@@ -40,7 +40,8 @@ class SocketConnectCallback : public folly::AsyncSocket::ConnectCallback {
 
   void waitToConnect() {
     std::unique_lock<std::mutex> lock(connectionMutex_);
-    if (!connectedCV_.wait_for(lock, std::chrono::seconds(5), [&] { return connected_.load(); })) {
+    if (!connectedCV_.wait_for(
+            lock, std::chrono::seconds(5), [&] { return connected_.load(); })) {
       throw new std::runtime_error("unable to connect to tcp server");
     }
   }
@@ -59,7 +60,7 @@ int main(int argc, char* argv[]) {
   google::InstallFailureSignalHandler();
 
   CHECK(!FLAGS_test_file.empty())
-  << "please provide test file (txt) via test_file parameter";
+      << "please provide test file (txt) via test_file parameter";
 
   LOG(INFO) << "Parsing test file " << FLAGS_test_file << " ...";
 
@@ -72,47 +73,46 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<SocketConnectCallback> callback;
   std::unique_ptr<ReactiveSocket> reactiveSocket;
 
-  evbt.getEventBase()->runInEventBaseThreadAndWait(
-          [&]() {
-            socket.reset(new folly::AsyncSocket(evbt.getEventBase()));
-            callback = folly::make_unique<SocketConnectCallback>();
-            folly::SocketAddress addr(FLAGS_host, FLAGS_port, true);
+  evbt.getEventBase()->runInEventBaseThreadAndWait([&]() {
+    socket.reset(new folly::AsyncSocket(evbt.getEventBase()));
+    callback = folly::make_unique<SocketConnectCallback>();
+    folly::SocketAddress addr(FLAGS_host, FLAGS_port, true);
 
-            LOG(INFO) << "attempting connection to " << addr.describe();
-            socket->connect(callback.get(), addr);
-          });
+    LOG(INFO) << "attempting connection to " << addr.describe();
+    socket->connect(callback.get(), addr);
+  });
 
   callback->waitToConnect();
 
-  evbt.getEventBase()->runInEventBaseThreadAndWait(
-          [&]() {
-            std::unique_ptr<DuplexConnection> connection =
-                    folly::make_unique<TcpDuplexConnection>(std::move(socket));
-            std::unique_ptr<DuplexConnection> framedConnection =
-                    folly::make_unique<FramedDuplexConnection>(
-                            std::move(connection));
-            std::unique_ptr<RequestHandler> requestHandler =
-                    folly::make_unique<DefaultRequestHandler>();
+  evbt.getEventBase()->runInEventBaseThreadAndWait([&]() {
+    std::unique_ptr<DuplexConnection> connection =
+        folly::make_unique<TcpDuplexConnection>(std::move(socket));
+    std::unique_ptr<DuplexConnection> framedConnection =
+        folly::make_unique<FramedDuplexConnection>(std::move(connection));
+    std::unique_ptr<RequestHandler> requestHandler =
+        folly::make_unique<DefaultRequestHandler>();
 
-            reactiveSocket = ReactiveSocket::fromClientConnection(
-                    std::move(framedConnection),
-                    std::move(requestHandler));
-          });
+    reactiveSocket = ReactiveSocket::fromClientConnection(
+        std::move(framedConnection), std::move(requestHandler));
+  });
 
   LOG(INFO) << "Test file parsed. Starting executing tests...";
 
+  int passed = 0;
   for (const auto& test : testSuite.tests()) {
     TestInterpreter interpreter(test, *reactiveSocket, *evbt.getEventBase());
-    interpreter.run();
+    bool passing = interpreter.run();
+    if(passing) {
+      ++passed;
+    }
   }
 
-  LOG(INFO) << "All tests executed.";
+  LOG(INFO) << "Tests execution DONE. " << passed << " out of " << testSuite.tests().size() << " tests passed.";
 
-  evbt.getEventBase()->runInEventBaseThreadAndWait(
-          [&]() {
-            reactiveSocket.reset();
-            callback.reset();
-            socket.reset();
-          });
+  evbt.getEventBase()->runInEventBaseThreadAndWait([&]() {
+    reactiveSocket.reset();
+    callback.reset();
+    socket.reset();
+  });
   return 0;
 }

@@ -55,7 +55,7 @@ void ConnectionAutomaton::connect() {
         "",
         FrameMetadata::empty(),
         folly::IOBuf::create(0));
-    onNext(frame.serializeOut());
+    connectionOutput_.onNext(frame.serializeOut());
   }
   stats_.socketCreated();
 

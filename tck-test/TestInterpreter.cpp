@@ -13,17 +13,23 @@ using namespace folly;
 namespace reactivesocket {
 namespace tck {
 
-TestInterpreter::TestInterpreter(const Test& test, ReactiveSocket& reactiveSocket, EventBase& rsEventBase) : reactiveSocket_(&reactiveSocket),
-                                                                                     test_(test),
-                                                                                                             rsEventBase_(&rsEventBase){
+TestInterpreter::TestInterpreter(
+    const Test& test,
+    ReactiveSocket& reactiveSocket,
+    EventBase& rsEventBase)
+    : reactiveSocket_(&reactiveSocket),
+      test_(test),
+      rsEventBase_(&rsEventBase) {
   DCHECK(!test.empty());
 }
 
-void TestInterpreter::run() {
-  LOG(INFO) << "executing test " << test_.name() << "...";
+bool TestInterpreter::run() {
+  LOG(INFO) << "executing test " << test_.name() << " (" << test_.commands().size() << " commands) ...";
 
+  int i = 0;
   try {
     for (const auto& command : test_.commands()) {
+      ++i;
       if (command.name() == "subscribe") {
         auto subscribe = command.as<SubscribeCommand>();
         handleSubscribe(subscribe);
@@ -44,14 +50,25 @@ void TestInterpreter::run() {
         throw std::runtime_error("unknown command");
       }
     }
-    LOG(INFO) << "test " << test_.name() << " done";
-  } catch(const std::exception& ex) {
-    LOG(ERROR) << "test " << test_.name() << " failed: " << ex.what();
+
+    if (!test_.shouldSucceed()) {
+      LOG(INFO) << "test " << test_.name() << " failed executing command #" << i;
+      return false;
+    }
+  } catch (const std::exception& ex) {
+    if (test_.shouldSucceed()) {
+      LOG(ERROR) << "test " << test_.name() << " failed executing command #" << i << ": " << ex.what();
+      return false;
+    }
   }
+  LOG(INFO) << "test " << test_.name() << " succeeded";
+  return true;
 }
 
-static Payload createPayload(const std::string& payloadData, const std::string& /*payloadMetadata*/) {
-  //TODO: use metadata
+static Payload createPayload(
+    const std::string& payloadData,
+    const std::string& /*payloadMetadata*/) {
+  // TODO: use metadata
   return folly::IOBuf::copyBuffer(payloadData);
 }
 
@@ -62,9 +79,10 @@ void TestInterpreter::handleSubscribe(const SubscribeCommand& command) {
     LOG(ERROR) << "request response not implemented";
   } else if (command.isRequestStreamType()) {
     auto& testSubscriber = createTestSubscriber(command.id());
-    rsEventBase_->runInEventBaseThreadAndWait([&](){
-      reactiveSocket_->requestStream(createPayload(command.payloadData(), command.payloadMetadata()),
-                                     testSubscriber);
+    rsEventBase_->runInEventBaseThreadAndWait([&]() {
+      reactiveSocket_->requestStream(
+          createPayload(command.payloadData(), command.payloadMetadata()),
+          testSubscriber);
     });
   } else {
     throw std::runtime_error("unsupported interaction type");
@@ -129,8 +147,6 @@ TestSubscriber& TestInterpreter::getSubscriber(const std::string& id) {
   if (found == testSubscribers_.end()) {
     throw std::runtime_error("unable to find test subscriber with provided id");
   }
-
-  found->second->waitForInitialization();
   return *found->second;
 }
 

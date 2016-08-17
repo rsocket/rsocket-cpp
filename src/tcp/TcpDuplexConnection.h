@@ -21,6 +21,7 @@ class exception_wrapper;
 namespace reactivesocket {
 class TcpDuplexConnection;
 
+//TODO: this is an internal class, so it should go to its separate file .h file or to the .cpp file
 class TcpSubscriptionBase : public virtual ::reactivesocket::IntrusiveDeleter,
                             public ::reactivesocket::Subscription {
  public:
@@ -40,6 +41,7 @@ class TcpSubscriptionBase : public virtual ::reactivesocket::IntrusiveDeleter,
 
 class TcpDuplexConnection;
 
+//TODO: this is an internal class, so it should go to its separate file .h file or to the .cpp file
 class TcpOutputSubscriber : public Subscriber<Payload> {
  public:
   explicit TcpOutputSubscriber(TcpDuplexConnection& connection)

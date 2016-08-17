@@ -2,13 +2,13 @@
 
 #pragma once
 
-#include <condition_variable>
 #include <folly/ExceptionWrapper.h>
-#include <mutex>
 #include <reactive-streams/utilities/SmartPointers.h>
+#include <condition_variable>
+#include <mutex>
 #include <vector>
-#include "src/ReactiveStreamsCompat.h"
 #include "src/Payload.h"
+#include "src/ReactiveStreamsCompat.h"
 
 namespace folly {
 class EventBase;
@@ -19,7 +19,9 @@ namespace tck {
 
 class TestSubscriber : public reactivesocket::Subscriber<Payload> {
  public:
-  explicit TestSubscriber(folly::EventBase& rsEventBase, int initialRequestN = 0);
+  explicit TestSubscriber(
+      folly::EventBase& rsEventBase,
+      int initialRequestN = 0);
 
   void request(int n);
   void cancel();
@@ -29,14 +31,13 @@ class TestSubscriber : public reactivesocket::Subscriber<Payload> {
   void awaitNoEvents(int numelements);
   void assertNoErrors();
   void assertError();
-  void assertValues(const std::vector<std::pair<std::string, std::string>>& values);
+  void assertValues(
+      const std::vector<std::pair<std::string, std::string>>& values);
   void assertValueCount(int valueCount);
   void assertReceivedAtLeast(int valueCount);
   void assertCompleted();
   void assertNotCompleted();
   void assertCanceled();
-
-  void waitForInitialization();
 
  protected:
   void onSubscribe(Subscription& subscription) override;
@@ -50,14 +51,12 @@ class TestSubscriber : public reactivesocket::Subscriber<Payload> {
   SubscriptionPtr<Subscription> subscription_;
   int initialRequestN_{0};
 
+  folly::EventBase* rsEventBase_;
+
   std::atomic<bool> canceled_{false};
 
-
+  ////////////////////////////////////////////////////////////////////////////
   std::mutex mutex_; // all variables below has to be protected with the mutex
-
-  std::condition_variable initializedCV_;
-  std::atomic<bool> initialized_{false};
-
 
   std::vector<std::string> onNextValues_;
   std::condition_variable onNextValuesCV_;
@@ -65,7 +64,10 @@ class TestSubscriber : public reactivesocket::Subscriber<Payload> {
 
   std::vector<folly::exception_wrapper> errors_;
 
-  folly::EventBase* rsEventBase_;
+  std::condition_variable terminatedCV_;
+  std::atomic<bool> completed_{false}; // by onComplete
+  std::atomic<bool> errored_{false}; // by onError
+  ////////////////////////////////////////////////////////////////////////////
 };
 
 } // tck

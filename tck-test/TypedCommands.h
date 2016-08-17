@@ -141,7 +141,7 @@ class AssertCommand : public TypedTestCommand {
     for (const auto& item : items) {
       components.clear();
       folly::split(",", item, components);
-      if(components.size() == 2) {
+      if (components.size() == 2) {
         values.emplace_back(std::make_pair(components[0], components[1]));
       } else {
         LOG(ERROR) << "wrong item in values string: " << item;
@@ -153,7 +153,6 @@ class AssertCommand : public TypedTestCommand {
   int valueCount() const {
     return folly::to<int>(command_.params().at(3));
   }
-
 };
 
 } // tck

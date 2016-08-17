@@ -3,12 +3,11 @@
 #pragma once
 
 #include <map>
+#include "TestSubscriber.h"
 #include "TestSuite.h"
 #include "src/Payload.h"
-#include "src/ReactiveStreamsCompat.h"
 #include "src/ReactiveSocket.h"
-#include "TestSubscriber.h"
-
+#include "src/ReactiveStreamsCompat.h"
 
 namespace folly {
 class EventBase;
@@ -28,9 +27,12 @@ class AssertCommand;
 
 class TestInterpreter {
  public:
-  TestInterpreter(const Test& test, ReactiveSocket& reactiveSocket, folly::EventBase& rsEventBase);
+  TestInterpreter(
+      const Test& test,
+      ReactiveSocket& reactiveSocket,
+      folly::EventBase& rsEventBase);
 
-  void run();
+  bool run();
 
  private:
   void handleSubscribe(const SubscribeCommand& command);
