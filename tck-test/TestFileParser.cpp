@@ -49,16 +49,14 @@ void TestFileParser::parseCommand(const std::string& command) {
   TestCommand newCommand(std::move(parameters));
   if (!newCommand.valid()) {
     LOG(ERROR) << "invalid command on line " << currentLine_ << ": " << command;
-    throw std::runtime_error("unknown commad in the test");
+    throw std::runtime_error("unknown command in the test");
   } else {
     currentTest_.addCommand(std::move(newCommand));
   }
 }
 
 void TestFileParser::addCurrentTest() {
-  if (currentTest_.empty()) {
-    // no test defined
-  } else {
+  if (!currentTest_.empty()) {
     testSuite_.addTest(std::move(currentTest_));
     DCHECK(currentTest_.empty());
   }
