@@ -20,12 +20,14 @@ InlineConnection::InlineConnection()
 
 InlineConnection::~InlineConnection() {}
 
-void InlineConnection::connectTo(InlineConnection& other) {
+void InlineConnection::connectTo(InlineConnection& other, bool expectSetupFrame) {
   ASSERT_FALSE(other_);
   ASSERT_FALSE(other.other_);
   other.other_ = this;
   other_ = &other;
-  client_ = true;
+  // this could just be true for the client, false for the server.  However InlineConnection is below the
+  // ReactiveSocket layer so any tests that just use DuplexConnection may break this
+  expectSetupFrame_ = expectSetupFrame;
 }
 
 void InlineConnection::setInput(Subscriber<Payload>& inputSink) {
@@ -80,7 +82,7 @@ Subscriber<Payload>& InlineConnection::getOutput() {
         }
       }));
   // SETUP
-  if (client_) {
+  if (expectSetupFrame_) {
     EXPECT_CALL(outputSink, onNext_(_))
         .Times(1)
         .InSequence(s)

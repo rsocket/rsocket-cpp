@@ -35,7 +35,7 @@ class InlineConnection : public DuplexConnection {
   /// This method may be invoked at most once per lifetime of the object and
   /// implicitly connects the `other` to this instance. Must be invoked before
   /// accessing input or output of the connection.
-  void connectTo(InlineConnection& other);
+  void connectTo(InlineConnection& other, bool expectSetupFrame);
 
   void setInput(Subscriber<Payload>& inputSink) override;
 
@@ -52,6 +52,6 @@ class InlineConnection : public DuplexConnection {
   folly::exception_wrapper inputSinkError_;
   /// @}
   Subscription* outputSubscription_;
-  bool client_{false};
+  bool expectSetupFrame_{false};
 };
 }
