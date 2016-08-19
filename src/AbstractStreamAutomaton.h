@@ -71,7 +71,7 @@ class AbstractStreamAutomaton {
   /// A signal carrying serialized frame on the stream.
   ///
   /// This signal corresponds to Subscriber::onNext.
-  void onNextFrame(Payload frame);
+  void onNextFrame(std::unique_ptr<folly::IOBuf> frame);
 
   /// Indicates a terminal signal from the connection.
   ///
@@ -109,6 +109,6 @@ class AbstractStreamAutomaton {
   /// Deserializes and dispatches frame according to template frame type
   /// parameter.
   template <typename Frame>
-  void deserializeAndDispatch(Payload& paylaod);
+  void deserializeAndDispatch(std::unique_ptr<folly::IOBuf> paylaod);
 };
 }

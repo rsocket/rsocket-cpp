@@ -48,7 +48,7 @@ set(GMOCK_LIBS
 # ReactiveStreams C++
 ExternalProject_Add(
   ReactiveStreams
-  GIT_REPOSITORY ${REACTIVE_STREAMS_GIT_URL}
+#  GIT_REPOSITORY ${REACTIVE_STREAMS_GIT_URL}
   CMAKE_ARGS "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/reactivestreams"
 )
 
@@ -119,6 +119,7 @@ add_library(
   src/mixins/StreamIfMixin.h
   src/NullRequestHandler.cpp
   src/NullRequestHandler.h
+  src/Payload.cpp
   src/Payload.h
   src/ReactiveSocket.cpp
   src/ReactiveSocket.h
@@ -127,13 +128,9 @@ add_library(
   src/tcp/TcpDuplexConnection.cpp
   src/tcp/TcpDuplexConnection.h
   src/Stats.h
-<<<<<<< HEAD
-  src/Stats.cpp)
-=======
   src/Stats.cpp
   src/folly/FollyKeepaliveTimer.cpp
   src/folly/FollyKeepaliveTimer.h)
->>>>>>> 4343ba961d7a2b117f06b6816acd44c439f4f02e
 
 target_link_libraries(
   ReactiveSocket

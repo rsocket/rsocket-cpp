@@ -53,8 +53,7 @@ void ConnectionAutomaton::connect() {
         std::numeric_limits<uint32_t>::max(),
         "",
         "",
-        FrameMetadata::empty(),
-        folly::IOBuf::create(0));
+        Payload());
     onNext(frame.serializeOut());
   }
   stats_.socketCreated();
@@ -103,20 +102,39 @@ void ConnectionAutomaton::addStream(
   assert(result.second);
 }
 
-template <typename Frame>
-void ConnectionAutomaton::onNextFrame(Frame& frame) {
+void ConnectionAutomaton::onNextFrame(Frame_REQUEST_STREAM&& frame) {
   onNextFrame(frame.serializeOut());
 }
-template void ConnectionAutomaton::onNextFrame(Frame_REQUEST_STREAM&);
-template void ConnectionAutomaton::onNextFrame(Frame_REQUEST_SUB&);
-template void ConnectionAutomaton::onNextFrame(Frame_REQUEST_CHANNEL&);
-template void ConnectionAutomaton::onNextFrame(Frame_REQUEST_N&);
-template void ConnectionAutomaton::onNextFrame(Frame_REQUEST_FNF&);
-template void ConnectionAutomaton::onNextFrame(Frame_CANCEL&);
-template void ConnectionAutomaton::onNextFrame(Frame_RESPONSE&);
-template void ConnectionAutomaton::onNextFrame(Frame_ERROR&);
 
-void ConnectionAutomaton::onNextFrame(Payload frame) {
+void ConnectionAutomaton::onNextFrame(Frame_REQUEST_SUB&& frame) {
+  onNextFrame(frame.serializeOut());
+}
+
+void ConnectionAutomaton::onNextFrame(Frame_REQUEST_CHANNEL&& frame) {
+  onNextFrame(frame.serializeOut());
+}
+
+void ConnectionAutomaton::onNextFrame(Frame_REQUEST_N&& frame) {
+  onNextFrame(frame.serializeOut());
+}
+
+void ConnectionAutomaton::onNextFrame(Frame_REQUEST_FNF&& frame) {
+  onNextFrame(frame.serializeOut());
+}
+
+void ConnectionAutomaton::onNextFrame(Frame_CANCEL&& frame) {
+  onNextFrame(frame.serializeOut());
+}
+
+void ConnectionAutomaton::onNextFrame(Frame_RESPONSE&& frame) {
+  onNextFrame(frame.serializeOut());
+}
+
+void ConnectionAutomaton::onNextFrame(Frame_ERROR&& frame) {
+  onNextFrame(frame.serializeOut());
+}
+
+void ConnectionAutomaton::onNextFrame(std::unique_ptr<folly::IOBuf> frame) {
   if (!connectionOutput_) {
     return;
   }
@@ -168,7 +186,7 @@ void ConnectionAutomaton::onSubscribe(Subscription& subscription) {
   connectionInputSub_.request(std::numeric_limits<size_t>::max());
 }
 
-void ConnectionAutomaton::onNext(Payload frame) {
+void ConnectionAutomaton::onNext(std::unique_ptr<folly::IOBuf> frame) {
   auto streamIdPtr = FrameHeader::peekStreamId(*frame);
   if (!streamIdPtr) {
     // Failed to deserialize the frame.
@@ -199,7 +217,8 @@ void ConnectionAutomaton::onError(folly::exception_wrapper ex) {
   onTerminal(std::move(ex));
 }
 
-void ConnectionAutomaton::onConnectionFrame(Payload payload) {
+void ConnectionAutomaton::onConnectionFrame(
+    std::unique_ptr<folly::IOBuf> payload) {
   auto type = FrameHeader::peekType(*payload);
 
   switch (type) {
@@ -300,10 +319,10 @@ void ConnectionAutomaton::cancel() {
 /// @{
 void ConnectionAutomaton::handleUnknownStream(
     StreamId streamId,
-    Payload payload) {
+    std::unique_ptr<folly::IOBuf> payload) {
   // TODO(stupaq): there are some rules about monotonically increasing stream
   // IDs -- let's forget about them for a moment
-  if (!factory_(streamId, payload)) {
+  if (!factory_(streamId, std::move(payload))) {
     connectionOutput_.onNext(
         Frame_ERROR::invalid("unknown stream " + std::to_string(streamId))
             .serializeOut());

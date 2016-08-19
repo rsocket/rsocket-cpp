@@ -127,16 +127,13 @@ void ReactiveSocket::requestFireAndForget(Payload request) {
   StreamId streamId = nextStreamId_;
   nextStreamId_ += 2;
   Frame_REQUEST_FNF frame(
-      streamId,
-      FrameFlags_EMPTY,
-      FrameMetadata::empty(),
-      std::move(std::move(request)));
-  connection_->onNextFrame(frame);
+      streamId, FrameFlags_EMPTY, std::move(std::move(request)));
+  connection_->onNextFrame(std::move(frame));
 }
 
 bool ReactiveSocket::createResponder(
     StreamId streamId,
-    Payload& serializedFrame) {
+    std::unique_ptr<folly::IOBuf> serializedFrame) {
   auto type = FrameHeader::peekType(*serializedFrame);
   switch (type) {
     case FrameType::REQUEST_CHANNEL: {
@@ -148,7 +145,7 @@ bool ReactiveSocket::createResponder(
       auto automaton = new ChannelResponder(params);
       connection_->addStream(streamId, *automaton);
       auto& requestSink =
-          handler_->handleRequestChannel(std::move(frame.data_), *automaton);
+          handler_->handleRequestChannel(std::move(frame.payload_), *automaton);
       automaton->subscribe(requestSink);
       automaton->onNextFrame(frame);
       requestSink.onSubscribe(*automaton);
@@ -163,7 +160,7 @@ bool ReactiveSocket::createResponder(
       StreamResponder::Parameters params = {connection_, streamId};
       auto automaton = new StreamResponder(params);
       connection_->addStream(streamId, *automaton);
-      handler_->handleRequestStream(std::move(frame.data_), *automaton);
+      handler_->handleRequestStream(std::move(frame.payload_), *automaton);
       automaton->onNextFrame(frame);
       automaton->start();
       break;
@@ -176,7 +173,8 @@ bool ReactiveSocket::createResponder(
       SubscriptionResponder::Parameters params = {connection_, streamId};
       auto automaton = new SubscriptionResponder(params);
       connection_->addStream(streamId, *automaton);
-      handler_->handleRequestSubscription(std::move(frame.data_), *automaton);
+      handler_->handleRequestSubscription(
+          std::move(frame.payload_), *automaton);
       automaton->onNextFrame(frame);
       automaton->start();
       break;
@@ -187,7 +185,7 @@ bool ReactiveSocket::createResponder(
         return false;
       }
       // no stream tracking is necessary
-      handler_->handleFireAndForgetRequest(std::move(frame.data_));
+      handler_->handleFireAndForgetRequest(std::move(frame.payload_));
       break;
     }
     // Other frames cannot start a stream.

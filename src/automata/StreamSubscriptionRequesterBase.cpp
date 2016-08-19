@@ -17,7 +17,7 @@ void StreamSubscriptionRequesterBase::onNext(Payload request) {
       // Send as much as possible with the initial request.
       CHECK_GE(Frame_REQUEST_N::kMaxRequestN, initialN);
       auto flags = initialN > 0 ? FrameFlags_REQN_PRESENT : FrameFlags_EMPTY;
-      
+
       // We must inform ConsumerMixin about an implicit allowance we have
       // requested from the remote end.
       addImplicitAllowance(initialN);
@@ -60,8 +60,7 @@ void StreamSubscriptionRequesterBase::cancel() {
       break;
     case State::REQUESTED: {
       state_ = State::CLOSED;
-      Frame_CANCEL frame(streamId_);
-      connection_->onNextFrame(frame);
+      connection_->onNextFrame(Frame_CANCEL(streamId_));
       connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
     } break;
     case State::CLOSED:
@@ -105,6 +104,7 @@ void StreamSubscriptionRequesterBase::onNextFrame(Frame_RESPONSE& frame) {
   }
 }
 
+// TODO: should we send Frames by (r-)value?
 void StreamSubscriptionRequesterBase::onNextFrame(Frame_ERROR& frame) {
   switch (state_) {
     case State::NEW:
@@ -113,8 +113,8 @@ void StreamSubscriptionRequesterBase::onNextFrame(Frame_ERROR& frame) {
       break;
     case State::REQUESTED:
       state_ = State::CLOSED;
-      Base::onError(
-          std::runtime_error(frame.data_->moveToFbString().toStdString()));
+      Base::onError(std::runtime_error(
+          frame.payload_.data->moveToFbString().toStdString()));
       connection_->endStream(streamId_, StreamCompletionSignal::ERROR);
       break;
     case State::CLOSED:

@@ -4,10 +4,7 @@
 #include <thread>
 #include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"
-<<<<<<< HEAD
-=======
 #include "src/folly/FollyKeepaliveTimer.h"
->>>>>>> 4343ba961d7a2b117f06b6816acd44c439f4f02e
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/mixins/MemoryMixin.h"
 #include "src/tcp/TcpDuplexConnection.h"
@@ -76,8 +73,7 @@ int main(int argc, char* argv[]) {
                 eventBase, std::chrono::milliseconds(5000)));
 
         reactiveSocket->requestSubscription(
-            folly::IOBuf::copyBuffer("from client"),
-            createManagedInstance<PrintSubscriber>());
+            Payload("from client"), createManagedInstance<PrintSubscriber>());
       });
 
   std::string name;

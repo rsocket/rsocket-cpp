@@ -24,7 +24,8 @@ FramedDuplexConnection::~FramedDuplexConnection() {
   }
 }
 
-Subscriber<Payload>& FramedDuplexConnection::getOutput() noexcept {
+Subscriber<std::unique_ptr<folly::IOBuf>>&
+FramedDuplexConnection::getOutput() noexcept {
   if (!outputWriter_) {
     outputWriter_ =
         folly::make_unique<FramedWriter>(connection_->getOutput(), stats_);
@@ -32,7 +33,8 @@ Subscriber<Payload>& FramedDuplexConnection::getOutput() noexcept {
   return *outputWriter_;
 }
 
-void FramedDuplexConnection::setInput(Subscriber<Payload>& framesSink) {
+void FramedDuplexConnection::setInput(
+    Subscriber<std::unique_ptr<folly::IOBuf>>& framesSink) {
   CHECK(!inputReader_);
   inputReader_ = folly::make_unique<FramedReader>(framesSink, stats_);
   connection_->setInput(*inputReader_);

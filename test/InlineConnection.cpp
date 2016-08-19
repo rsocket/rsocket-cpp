@@ -27,7 +27,8 @@ void InlineConnection::connectTo(InlineConnection& other) {
   other_ = &other;
 }
 
-void InlineConnection::setInput(Subscriber<Payload>& inputSink) {
+void InlineConnection::setInput(
+    Subscriber<std::unique_ptr<folly::IOBuf>>& inputSink) {
   using namespace ::testing;
 
   ASSERT_TRUE(other_);
@@ -56,10 +57,10 @@ void InlineConnection::setInput(Subscriber<Payload>& inputSink) {
   }
 }
 
-Subscriber<Payload>& InlineConnection::getOutput() {
+Subscriber<std::unique_ptr<folly::IOBuf>>& InlineConnection::getOutput() {
   using namespace ::testing;
 
-  auto& outputSink = makeMockSubscriber<Payload>();
+  auto& outputSink = makeMockSubscriber<std::unique_ptr<folly::IOBuf>>();
   // A check point for either of the terminal signals.
   auto checkpoint = new MockFunction<void()>();
 
@@ -81,7 +82,7 @@ Subscriber<Payload>& InlineConnection::getOutput() {
   EXPECT_CALL(outputSink, onNext_(_))
       .Times(AnyNumber())
       .InSequence(s)
-      .WillRepeatedly(Invoke([this](Payload& frame) {
+      .WillRepeatedly(Invoke([this](std::unique_ptr<folly::IOBuf>& frame) {
         ASSERT_TRUE(other_);
         ASSERT_TRUE(other_->outputSubscription_);
         auto inputSink = other_->inputSink_;
