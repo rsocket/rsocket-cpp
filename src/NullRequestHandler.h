@@ -36,7 +36,7 @@ class NullRequestHandler : public RequestHandler {
 
   void handleFireAndForgetRequest(Payload request) override;
 
-  void handleMetadataPush(Payload request) override;
+  void handleMetadataPush(std::unique_ptr<folly::IOBuf> request) override;
 };
 
 using DefaultRequestHandler = NullRequestHandler;

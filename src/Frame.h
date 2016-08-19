@@ -129,7 +129,7 @@ class Frame_REQUEST_Base {
         requestN_(requestN),
         payload_(std::move(payload)) {
     payload_.checkFlags(header_.flags_); // to verify the client didn't set
-                                         // METADATA and provided none
+    // METADATA and provided none
   }
 
   /// For compatibility with other data-carrying frames.
@@ -218,7 +218,7 @@ class Frame_REQUEST_FNF {
       : header_(FrameType::REQUEST_FNF, flags | payload.getFlags(), streamId),
         payload_(std::move(payload)) {
     payload_.checkFlags(header_.flags_); // to verify the client didn't set
-                                         // METADATA and provided none
+    // METADATA and provided none
   }
 
   std::unique_ptr<folly::IOBuf> serializeOut();
@@ -255,8 +255,8 @@ class Frame_METADATA_PUSH {
   explicit Frame_METADATA_PUSH(std::unique_ptr<folly::IOBuf> metadata)
       : header_(FrameType::METADATA_PUSH, FrameFlags_METADATA, 0),
         metadata_(std::move(metadata)) {
-          CHECK(metadata_);
-        }
+    CHECK(metadata_);
+  }
 
   std::unique_ptr<folly::IOBuf> serializeOut();
   bool deserializeFrom(std::unique_ptr<folly::IOBuf> in);
@@ -297,7 +297,7 @@ class Frame_RESPONSE {
       : header_(FrameType::RESPONSE, flags | payload.getFlags(), streamId),
         payload_(std::move(payload)) {
     payload_.checkFlags(header_.flags_); // to verify the client didn't set
-                                         // METADATA and provided none
+    // METADATA and provided none
   }
 
   std::unique_ptr<folly::IOBuf> serializeOut();
@@ -375,7 +375,7 @@ class Frame_SETUP {
         dataMimeType_(dataMimeType),
         payload_(std::move(payload)) {
     payload_.checkFlags(header_.flags_); // to verify the client didn't set
-                                         // METADATA and provided none
+    // METADATA and provided none
   }
 
   std::unique_ptr<folly::IOBuf> serializeOut();

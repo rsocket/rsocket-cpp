@@ -269,7 +269,7 @@ void ConnectionAutomaton::onConnectionFrame(
     }
       return;
     case FrameType::METADATA_PUSH: {
-      if (!factory_(0, payload)) {
+      if (!factory_(0, std::move(payload))) {
         assert(false);
       }
       return;

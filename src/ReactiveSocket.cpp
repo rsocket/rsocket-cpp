@@ -131,10 +131,8 @@ void ReactiveSocket::requestFireAndForget(Payload request) {
   connection_->onNextFrame(std::move(frame));
 }
 
-void ReactiveSocket::metadataPush(Payload metadata) {
-  FrameMetadata framemetadata = FrameMetadata(std::move(metadata));
-  Frame_METADATA_PUSH frame(std::move(framemetadata));
-  connection_->onNextFrame(frame);
+void ReactiveSocket::metadataPush(std::unique_ptr<folly::IOBuf> metadata) {
+  connection_->onNextFrame(Frame_METADATA_PUSH(std::move(metadata)));
 }
 
 bool ReactiveSocket::createResponder(
@@ -199,7 +197,7 @@ bool ReactiveSocket::createResponder(
       if (!frame.deserializeFrom(std::move(serializedFrame))) {
         return false;
       }
-      handler_->handleMetadataPush(std::move(frame.metadata_.metadataPayload_));
+      handler_->handleMetadataPush(std::move(frame.metadata_));
       break;
     }
     // Other frames cannot start a stream.

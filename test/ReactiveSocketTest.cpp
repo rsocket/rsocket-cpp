@@ -26,6 +26,13 @@ MATCHER_P(
   return folly::IOBufEqual()(*payload, arg.data);
 };
 
+MATCHER_P(
+    Equals2,
+    payload,
+    "Payloads " + std::string(negation ? "don't" : "") + "match") {
+  return folly::IOBufEqual()(*payload, arg);
+};
+
 TEST(ReactiveSocketTest, RequestChannel) {
   // InlineConnection forwards appropriate calls in-line, hence the order of
   // mock calls will be deterministic.
@@ -423,7 +430,7 @@ TEST(ReactiveSocketTest, RequestMetadataPush) {
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
 
   // Client sends a fire-and-forget
-  EXPECT_CALL(serverHandlerRef, handleMetadataPush_(Equals(&originalPayload)))
+  EXPECT_CALL(serverHandlerRef, handleMetadataPush_(Equals2(&originalPayload)))
       .InSequence(s);
 
   clientSock->metadataPush(originalPayload->clone());

@@ -63,7 +63,7 @@ class ServerRequestHandler : public DefaultRequestHandler {
               << "\n";
   }
 
-  void handleMetadataPush(Payload request) override {
+  void handleMetadataPush(std::unique_ptr<folly::IOBuf> request) override {
     LOG(INFO) << "ServerRequestHandler.handleMetadataPush "
               << request->moveToFbString() << "\n";
   }

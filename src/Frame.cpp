@@ -217,7 +217,7 @@ std::ostream& operator<<(std::ostream& os, const Frame_REQUEST_FNF& frame) {
 /// @}
 
 /// @{
-Payload Frame_METADATA_PUSH::serializeOut() {
+std::unique_ptr<folly::IOBuf> Frame_METADATA_PUSH::serializeOut() {
   auto queue = createBufferQueue(FrameHeader::kSize + sizeof(uint32_t));
   folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
 
@@ -226,7 +226,7 @@ Payload Frame_METADATA_PUSH::serializeOut() {
   return queue.move();
 }
 
-bool Frame_METADATA_PUSH::deserializeFrom(Payload in) {
+bool Frame_METADATA_PUSH::deserializeFrom(std::unique_ptr<folly::IOBuf> in) {
   folly::io::Cursor cur(in.get());
   try {
     header_.deserializeFrom(cur);

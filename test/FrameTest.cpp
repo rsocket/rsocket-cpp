@@ -217,10 +217,8 @@ TEST_F(FrameTest, Frame_REQUEST_FNF) {
 TEST_F(FrameTest, Frame_METADATA_PUSH) {
   FrameFlags flags = FrameFlags_METADATA;
   auto metadata = folly::IOBuf::copyBuffer("i'm so meta even this acronym");
-  auto frame =
-      reserialize<Frame_METADATA_PUSH>(FrameMetadata(metadata->clone()));
+  auto frame = reserialize<Frame_METADATA_PUSH>(metadata->clone());
 
   expectHeader(FrameType::METADATA_PUSH, flags, 0, frame);
-  EXPECT_TRUE(
-      folly::IOBufEqual()(*metadata, *frame.metadata_.metadataPayload_));
+  EXPECT_TRUE(folly::IOBufEqual()(*metadata, *frame.metadata_));
 }
