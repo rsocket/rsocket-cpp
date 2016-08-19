@@ -59,8 +59,7 @@ std::ostream& operator<<(std::ostream& os, FrameType type) {
     case FrameType::METADATA_PUSH:
       return os << "METADATA_PUSH";
   }
-  // this should be never hit because the switch is over all cases
-  std::abort();
+  return os << "FrameType(" << static_cast<uint16_t>(type) << ")";
 }
 
 std::ostream& operator<<(std::ostream& os, ErrorCode errorCode) {
@@ -84,8 +83,7 @@ std::ostream& operator<<(std::ostream& os, ErrorCode errorCode) {
     case ErrorCode::CONNECTION_ERROR:
       return os << "CONNECTION_ERROR";
   }
-  // this should be never hit because the switch is over all cases
-  std::abort();
+  return os << "ErrorCode(" << static_cast<uint32_t>(errorCode) << ")";
 }
 
 /// @{

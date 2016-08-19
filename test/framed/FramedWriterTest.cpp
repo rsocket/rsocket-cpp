@@ -22,7 +22,7 @@ TEST(FramedWriterTest, Subscribe) {
   EXPECT_CALL(subscriber, onSubscribe_(_)).Times(1);
   EXPECT_CALL(subscription, cancel_()).Times(1);
 
-  FramedWriter writer(subscriber, Stats::noop());
+  FramedWriter writer(subscriber);
   writer.onSubscribe(subscription);
 
   // to delete objects
@@ -34,7 +34,7 @@ TEST(FramedWriterTest, Error) {
   auto& subscriber = makeMockSubscriber<Payload>();
   auto& subscription = makeMockSubscription();
 
-  FramedWriter writer(subscriber, Stats::noop());
+  FramedWriter writer(subscriber);
 
   EXPECT_CALL(subscription, cancel_()).Times(1);
   writer.onSubscribe(subscription);
@@ -50,7 +50,7 @@ TEST(FramedWriterTest, Complete) {
   auto& subscriber = makeMockSubscriber<Payload>();
   auto& subscription = makeMockSubscription();
 
-  FramedWriter writer(subscriber, Stats::noop());
+  FramedWriter writer(subscriber);
 
   EXPECT_CALL(subscription, cancel_()).Times(1);
   writer.onSubscribe(subscription);
@@ -79,7 +79,7 @@ static void nextSingleFrameTest(int headroom) {
         p->moveToFbString().toStdString());
   }));
 
-  FramedWriter writer(subscriber, Stats::noop());
+  FramedWriter writer(subscriber);
   writer.onSubscribe(subscription);
   writer.onNext(folly::IOBuf::copyBuffer(msg, headroom));
 
@@ -132,7 +132,7 @@ static void nextTwoFramesTest(int headroom) {
             payloadChain.moveToFbString().toStdString());
       }));
 
-  FramedWriter writer(subscriber, Stats::noop());
+  FramedWriter writer(subscriber);
   writer.onSubscribe(subscription);
   writer.onNext(folly::IOBuf::copyBuffer(msg1, headroom));
   writer.onNext(folly::IOBuf::copyBuffer(msg2, headroom));

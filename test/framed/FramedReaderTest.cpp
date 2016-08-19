@@ -27,7 +27,7 @@ TEST(FramedReaderTest, Read1Frame) {
   a1.writeBE<int32_t>(msg1.size() + sizeof(int32_t));
   folly::format("{}", msg1.c_str())(a1);
 
-  FramedReader framedReader(frameSubscriber, Stats::noop());
+  FramedReader framedReader(frameSubscriber);
 
   EXPECT_CALL(frameSubscriber, onSubscribe_(_)).Times(1);
 
@@ -79,7 +79,7 @@ TEST(FramedReaderTest, Read3Frames) {
   bufQueue.append(std::move(payload1));
   bufQueue.append(std::move(payload2));
 
-  FramedReader framedReader(frameSubscriber, Stats::noop());
+  FramedReader framedReader(frameSubscriber);
 
   EXPECT_CALL(frameSubscriber, onSubscribe_(_)).Times(1);
 
@@ -120,7 +120,7 @@ TEST(FramedReaderTest, Read1FrameIncomplete) {
   std::string part2("ueXXX");
   std::string msg1 = part1 + part2;
 
-  FramedReader framedReader(frameSubscriber, Stats::noop());
+  FramedReader framedReader(frameSubscriber);
   framedReader.onSubscribe(wireSubscription);
 
   EXPECT_CALL(frameSubscriber, onNext_(_)).Times(0);

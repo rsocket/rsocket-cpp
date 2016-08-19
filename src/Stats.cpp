@@ -17,8 +17,8 @@ class NoopStats : public Stats {
       reactivesocket::DuplexConnection* connection) override{};
   void bytesWritten(size_t bytes) override{};
   void bytesRead(size_t bytes) override{};
-  void frameWritten(FrameType type) override{};
-  void frameRead(FrameType type) override{};
+  void frameWritten(const std::string& type) override{};
+  void frameRead(const std::string& type) override{};
 };
 
 Stats& Stats::noop() {
