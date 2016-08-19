@@ -213,3 +213,14 @@ TEST_F(FrameTest, Frame_REQUEST_FNF) {
   EXPECT_TRUE(folly::IOBufEqual()(*metadata, *frame.payload_.metadata));
   EXPECT_TRUE(folly::IOBufEqual()(*data, *frame.payload_.data));
 }
+
+TEST_F(FrameTest, Frame_METADATA_PUSH) {
+  FrameFlags flags = FrameFlags_METADATA;
+  auto metadata = folly::IOBuf::copyBuffer("i'm so meta even this acronym");
+  auto frame =
+      reserialize<Frame_METADATA_PUSH>(FrameMetadata(metadata->clone()));
+
+  expectHeader(FrameType::METADATA_PUSH, flags, 0, frame);
+  EXPECT_TRUE(
+      folly::IOBufEqual()(*metadata, *frame.metadata_.metadataPayload_));
+}

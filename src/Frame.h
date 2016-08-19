@@ -41,7 +41,7 @@ enum class FrameType : uint16_t {
   CANCEL = 0x000A,
   RESPONSE = 0x000B,
   ERROR = 0x000C,
-  // METADATA_PUSH = 0x000D,
+  METADATA_PUSH = 0x000D,
   // EXT = 0xFFFF,
 };
 std::ostream& operator<<(std::ostream&, FrameType);
@@ -246,6 +246,25 @@ class Frame_REQUEST_N {
   uint32_t requestN_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_REQUEST_N&);
+
+class Frame_METADATA_PUSH {
+ public:
+  static constexpr bool Trait_CarriesAllowance = false;
+
+  Frame_METADATA_PUSH() {}
+  explicit Frame_METADATA_PUSH(std::unique_ptr<folly::IOBuf> metadata)
+      : header_(FrameType::METADATA_PUSH, FrameFlags_METADATA, 0),
+        metadata_(std::move(metadata)) {
+          CHECK(metadata_);
+        }
+
+  std::unique_ptr<folly::IOBuf> serializeOut();
+  bool deserializeFrom(std::unique_ptr<folly::IOBuf> in);
+
+  FrameHeader header_;
+  std::unique_ptr<folly::IOBuf> metadata_;
+};
+std::ostream& operator<<(std::ostream&, const Frame_METADATA_PUSH&);
 
 class Frame_CANCEL {
  public:

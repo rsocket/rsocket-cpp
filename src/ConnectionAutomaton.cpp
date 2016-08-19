@@ -54,7 +54,7 @@ void ConnectionAutomaton::connect() {
         "",
         "",
         Payload());
-    onNext(frame.serializeOut());
+    connectionOutput_.onNext(frame.serializeOut());
   }
   stats_.socketCreated();
 
@@ -119,6 +119,10 @@ void ConnectionAutomaton::onNextFrame(Frame_REQUEST_N&& frame) {
 }
 
 void ConnectionAutomaton::onNextFrame(Frame_REQUEST_FNF&& frame) {
+  onNextFrame(frame.serializeOut());
+}
+
+void ConnectionAutomaton::onNextFrame(Frame_METADATA_PUSH&& frame) {
   onNextFrame(frame.serializeOut());
 }
 
@@ -264,6 +268,12 @@ void ConnectionAutomaton::onConnectionFrame(
       }
     }
       return;
+    case FrameType::METADATA_PUSH: {
+      if (!factory_(0, payload)) {
+        assert(false);
+      }
+      return;
+    }
     default:
       connectionOutput_.onNext(Frame_ERROR::unexpectedFrame().serializeOut());
       disconnect();

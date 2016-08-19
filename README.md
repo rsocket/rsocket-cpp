@@ -1,12 +1,11 @@
 # reactivesocket-cpp
 
-C++ implementation of ReactiveSocket
+C++ implementation of [ReactiveSocket](https://reactivesocket.io)
 
-NOTE: This is a work in progress. It is not feature complete, and does not yet comply with the protocol, so can not yet interop with any other implementation. 
+NOTE: This is a work in progress. It is not feature complete.
 
- - Supports Channels, Subscription and Stream
- - Works C++ <-> C++ but there are some TODO items that will stop Java interop
- - supports HTTP/2 DuplexConnection 
+ - Supports all operations except requestResponse
+ - Supports interop with Java (TCP sockets only intersecting transport)
 
 # Build Status
 

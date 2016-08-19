@@ -63,6 +63,8 @@ std::ostream& operator<<(std::ostream& os, FrameType type) {
       return os << "SETUP";
     case FrameType::LEASE:
       return os << "LEASE";
+    case FrameType::METADATA_PUSH:
+      return os << "METADATA_PUSH";
   }
   // this should be never hit because the switch is over all cases
   std::abort();
@@ -211,6 +213,34 @@ bool Frame_REQUEST_FNF::deserializeFrom(std::unique_ptr<folly::IOBuf> in) {
 
 std::ostream& operator<<(std::ostream& os, const Frame_REQUEST_FNF& frame) {
   return os << frame.header_ << ", " << frame.payload_;
+}
+/// @}
+
+/// @{
+Payload Frame_METADATA_PUSH::serializeOut() {
+  auto queue = createBufferQueue(FrameHeader::kSize + sizeof(uint32_t));
+  folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
+
+  header_.serializeInto(appender);
+  Payload::serializeMetadataInto(appender, std::move(metadata_));
+  return queue.move();
+}
+
+bool Frame_METADATA_PUSH::deserializeFrom(Payload in) {
+  folly::io::Cursor cur(in.get());
+  try {
+    header_.deserializeFrom(cur);
+    metadata_ = Payload::deserializeMetadataFrom(cur, header_.flags_);
+  } catch (...) {
+    return false;
+  }
+  return true;
+}
+
+std::ostream& operator<<(std::ostream& os, const Frame_METADATA_PUSH& frame) {
+  return os << frame.header_ << ", "
+            << (frame.metadata_ ? frame.metadata_->computeChainDataLength()
+                                : 0);
 }
 /// @}
 

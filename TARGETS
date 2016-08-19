@@ -9,11 +9,13 @@ cpp_library(
         'src/framed/FramedReader.h',
         'src/framed/FramedWriter.h',
         'src/framed/FramedDuplexConnection.h',
+        'src/folly/FollyKeepaliveTimer.h',
     ],
     srcs = [
         'src/framed/FramedReader.cpp',
         'src/framed/FramedWriter.cpp',
         'src/framed/FramedDuplexConnection.cpp',
+        'src/folly/FollyKeepaliveTimer.cpp',
     ],
     deps = [
         ':reactivesocket-streams',
@@ -41,7 +43,6 @@ cxx_library(
         'src/automata/StreamResponder.cpp',
         'src/automata/SubscriptionRequester.cpp',
         'src/automata/SubscriptionResponder.cpp',
-        'src/folly/FollyKeepaliveTimer.cpp',
         'src/ConnectionAutomaton.cpp',
         'src/Frame.cpp',
         'src/NullRequestHandler.cpp',
