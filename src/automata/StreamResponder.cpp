@@ -13,7 +13,7 @@
 
 namespace reactivesocket {
 
-void StreamResponderBase::onNextFrame(Frame_REQUEST_STREAM& frame) {
+void StreamResponderBase::onNextFrame(Frame_REQUEST_STREAM&& frame) {
   bool end = false;
   switch (state_) {
     case State::RESPONDING:
@@ -25,7 +25,7 @@ void StreamResponderBase::onNextFrame(Frame_REQUEST_STREAM& frame) {
     case State::CLOSED:
       break;
   }
-  Base::onNextFrame(frame);
+  Base::onNextFrame(std::move(frame));
   if (end) {
     connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
   }

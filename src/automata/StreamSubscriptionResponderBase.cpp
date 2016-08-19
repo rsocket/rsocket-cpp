@@ -61,7 +61,7 @@ void StreamSubscriptionResponderBase::endStream(StreamCompletionSignal signal) {
   Base::endStream(signal);
 }
 
-void StreamSubscriptionResponderBase::onNextFrame(Frame_CANCEL& frame) {
+void StreamSubscriptionResponderBase::onNextFrame(Frame_CANCEL&& frame) {
   switch (state_) {
     case State::RESPONDING:
       state_ = State::CLOSED;

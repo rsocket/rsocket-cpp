@@ -82,7 +82,7 @@ void StreamSubscriptionRequesterBase::endStream(StreamCompletionSignal signal) {
   Base::endStream(signal);
 }
 
-void StreamSubscriptionRequesterBase::onNextFrame(Frame_RESPONSE& frame) {
+void StreamSubscriptionRequesterBase::onNextFrame(Frame_RESPONSE&& frame) {
   bool end = false;
   switch (state_) {
     case State::NEW:
@@ -98,14 +98,13 @@ void StreamSubscriptionRequesterBase::onNextFrame(Frame_RESPONSE& frame) {
     case State::CLOSED:
       break;
   }
-  Base::onNextFrame(frame);
+  Base::onNextFrame(std::move(frame));
   if (end) {
     connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
   }
 }
 
-// TODO: should we send Frames by (r-)value?
-void StreamSubscriptionRequesterBase::onNextFrame(Frame_ERROR& frame) {
+void StreamSubscriptionRequesterBase::onNextFrame(Frame_ERROR&& frame) {
   switch (state_) {
     case State::NEW:
       // Cannot receive a frame before sending the initial request.

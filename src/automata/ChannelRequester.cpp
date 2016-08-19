@@ -139,7 +139,7 @@ void ChannelRequesterBase::endStream(StreamCompletionSignal signal) {
   Base::endStream(signal);
 }
 
-void ChannelRequesterBase::onNextFrame(Frame_RESPONSE& frame) {
+void ChannelRequesterBase::onNextFrame(Frame_RESPONSE&& frame) {
   bool end = false;
   switch (state_) {
     case State::NEW:
@@ -155,13 +155,13 @@ void ChannelRequesterBase::onNextFrame(Frame_RESPONSE& frame) {
     case State::CLOSED:
       break;
   }
-  Base::onNextFrame(frame);
+  Base::onNextFrame(std::move(frame));
   if (end) {
     connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
   }
 }
 
-void ChannelRequesterBase::onNextFrame(Frame_ERROR& frame) {
+void ChannelRequesterBase::onNextFrame(Frame_ERROR&& frame) {
   switch (state_) {
     case State::NEW:
       // Cannot receive a frame before sending the initial request.

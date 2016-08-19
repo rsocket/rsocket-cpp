@@ -19,7 +19,7 @@ void ConsumerMixin<Frame, Base>::onError(folly::exception_wrapper ex) {
 };
 
 template <typename Frame, typename Base>
-void ConsumerMixin<Frame, Base>::onNextFrame(Frame& frame) {
+void ConsumerMixin<Frame, Base>::onNextFrame(Frame&& frame) {
   if (frame.payload_.data) {
     // Frames carry application-level payloads are taken into account when
     // figuring out flow control allowance.
@@ -33,7 +33,7 @@ void ConsumerMixin<Frame, Base>::onNextFrame(Frame& frame) {
   }
   // After the application-level payload is delivered we inspect the frame's
   // metadata, as it could carry information important for other mixins.
-  Base::onNextFrame(frame);
+  Base::onNextFrame(std::move(frame));
 }
 
 template <typename Frame, typename Base>

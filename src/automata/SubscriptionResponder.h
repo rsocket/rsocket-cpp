@@ -37,7 +37,7 @@ class SubscriptionResponderBase : public StreamSubscriptionResponderBase {
   /// Not all frames are intercepted, some just pass through.
   using Base::onNextFrame;
 
-  void onNextFrame(Frame_REQUEST_SUB&);
+  void onNextFrame(Frame_REQUEST_SUB&&);
 
   std::ostream& logPrefix(std::ostream& os);
   /// @}

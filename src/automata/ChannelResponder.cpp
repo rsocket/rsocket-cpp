@@ -82,7 +82,7 @@ void ChannelResponderBase::endStream(StreamCompletionSignal signal) {
   Base::endStream(signal);
 }
 
-void ChannelResponderBase::onNextFrame(Frame_REQUEST_CHANNEL& frame) {
+void ChannelResponderBase::onNextFrame(Frame_REQUEST_CHANNEL&& frame) {
   bool end = false;
   switch (state_) {
     case State::RESPONDING:
@@ -94,13 +94,13 @@ void ChannelResponderBase::onNextFrame(Frame_REQUEST_CHANNEL& frame) {
     case State::CLOSED:
       break;
   }
-  Base::onNextFrame(frame);
+  Base::onNextFrame(std::move(frame));
   if (end) {
     connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
   }
 }
 
-void ChannelResponderBase::onNextFrame(Frame_CANCEL& frame) {
+void ChannelResponderBase::onNextFrame(Frame_CANCEL&& frame) {
   switch (state_) {
     case State::RESPONDING:
       state_ = State::CLOSED;
