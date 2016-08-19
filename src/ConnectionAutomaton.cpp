@@ -171,10 +171,10 @@ void ConnectionAutomaton::onSubscribe(Subscription& subscription) {
 }
 
 void ConnectionAutomaton::onNext(Payload frame) {
-  auto type = FrameHeader::peekType(*frame);
+  auto frameType = FrameHeader::peekType(*frame);
 
   std::stringstream ss;
-  ss << type;
+  ss << frameType;
 
   stats_.frameRead(ss.str());
 
@@ -337,12 +337,12 @@ void ConnectionAutomaton::onClose(ConnectionCloseListener listener) {
   closeListeners_.push_back(listener);
 }
 
-void ConnectionAutomaton::writeFrame(Payload frame) {
+void ConnectionAutomaton::writeFrame(Payload outputFrame) {
   std::stringstream ss;
-  ss << FrameHeader::peekType(*frame);
+  ss << FrameHeader::peekType(*outputFrame);
 
   stats_.frameWritten(ss.str());
 
-  connectionOutput_.onNext(std::move(frame));
+  connectionOutput_.onNext(std::move(outputFrame));
 }
 }
