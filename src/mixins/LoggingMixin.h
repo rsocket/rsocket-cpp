@@ -65,11 +65,7 @@ class LoggingMixin : public Base {
   }
 
   void onNext(Payload payload) {
-    Base::logPrefix(LOG(INFO))
-        << "onNext(<d:"
-        << (payload.data ? payload.data->computeChainDataLength() : 0) << ", m:"
-        << (payload.metadata ? payload.metadata->computeChainDataLength() : 0)
-        << ">)";
+    Base::logPrefix(LOG(INFO)) << "onNext(" << payload << ")";
     Base::onNext(std::move(payload));
   }
 

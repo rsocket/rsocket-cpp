@@ -365,9 +365,9 @@ std::unique_ptr<folly::IOBuf> Frame_KEEPALIVE::serializeOut() {
 
 bool Frame_KEEPALIVE::deserializeFrom(std::unique_ptr<folly::IOBuf> in) {
   folly::io::Cursor cur(in.get());
-  assert((header_.flags_ & FrameFlags_METADATA) == 0);
   try {
     header_.deserializeFrom(cur);
+    assert((header_.flags_ & FrameFlags_METADATA) == 0);
     data_ = Payload::deserializeDataFrom(cur);
   } catch (...) {
     return false;

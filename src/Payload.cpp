@@ -79,16 +79,23 @@ void Payload::deserializeFrom(folly::io::Cursor& cur, FrameFlags flags) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Payload& payload) {
-  return os << "[metadata: \""
+  return os << "[metadata: "
             << (payload.metadata
                     ? folly::to<std::string>(
                           payload.metadata->computeChainDataLength())
                     : "<null>")
-            << "\" data:\""
-            << (payload.data ? folly::to<std::string>(
-                                   payload.data->computeChainDataLength())
-                             : "<null>")
-            << "\"]";
+            << " data: " << (payload.data
+                                 ? folly::to<std::string>(
+                                       payload.data->computeChainDataLength())
+                                 : "<null>")
+            << "]";
+}
+
+std::string Payload::moveDataToString() {
+  if (!data) {
+    return "";
+  }
+  return data->moveToFbString().toStdString();
 }
 
 } // reactivesocket
