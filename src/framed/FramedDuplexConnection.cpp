@@ -10,9 +10,8 @@
 namespace reactivesocket {
 
 FramedDuplexConnection::FramedDuplexConnection(
-    std::unique_ptr<DuplexConnection> connection,
-    Stats& stats)
-    : connection_(std::move(connection)), stats_(stats) {}
+    std::unique_ptr<DuplexConnection> connection)
+    : connection_(std::move(connection)) {}
 
 FramedDuplexConnection::~FramedDuplexConnection() {
   // to make sure we close the parties when the connection dies
@@ -27,8 +26,7 @@ FramedDuplexConnection::~FramedDuplexConnection() {
 Subscriber<std::unique_ptr<folly::IOBuf>>&
 FramedDuplexConnection::getOutput() noexcept {
   if (!outputWriter_) {
-    outputWriter_ =
-        folly::make_unique<FramedWriter>(connection_->getOutput(), stats_);
+    outputWriter_ = folly::make_unique<FramedWriter>(connection_->getOutput());
   }
   return *outputWriter_;
 }
@@ -36,7 +34,7 @@ FramedDuplexConnection::getOutput() noexcept {
 void FramedDuplexConnection::setInput(
     Subscriber<std::unique_ptr<folly::IOBuf>>& framesSink) {
   CHECK(!inputReader_);
-  inputReader_ = folly::make_unique<FramedReader>(framesSink, stats_);
+  inputReader_ = folly::make_unique<FramedReader>(framesSink);
   connection_->setInput(*inputReader_);
 }
 

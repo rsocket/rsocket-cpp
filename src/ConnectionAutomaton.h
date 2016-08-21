@@ -136,6 +136,8 @@ class ConnectionAutomaton :
 
   void onNext(std::unique_ptr<folly::IOBuf>) override;
 
+  void writeFrame(Payload);
+
   void onComplete() override;
 
   void onError(folly::exception_wrapper) override;

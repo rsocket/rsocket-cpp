@@ -6,7 +6,6 @@
 #include <folly/io/IOBufQueue.h>
 #include <reactive-streams/utilities/AllowanceSemaphore.h>
 #include <reactive-streams/utilities/SmartPointers.h>
-#include <src/Stats.h>
 #include "src/ReactiveStreamsCompat.h"
 
 namespace reactivesocket {
@@ -16,11 +15,9 @@ class FramedReader
       public reactivesocket::Subscription {
  public:
   FramedReader(
-      reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>& frames,
-      Stats& stats)
+      reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>& frames)
       : frames_(&frames),
-        payloadQueue_(folly::IOBufQueue::cacheChainLength()),
-        stats_(stats) {}
+        payloadQueue_(folly::IOBufQueue::cacheChainLength()) {}
 
   // Subscriber methods
   void onSubscribe(Subscription& subscription) override;
@@ -46,7 +43,6 @@ class FramedReader
   bool dispatchingFrames_{false};
 
   folly::IOBufQueue payloadQueue_;
-  Stats& stats_;
 };
 
 } // reactive socket
