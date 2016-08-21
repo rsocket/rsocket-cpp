@@ -6,6 +6,10 @@
 #include <reactive-streams/utilities/SmartPointers.h>
 #include "src/ReactiveStreamsCompat.h"
 
+namespace folly {
+class IOBuf;
+}
+
 namespace reactivesocket {
 
 class FramedWriter

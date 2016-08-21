@@ -359,7 +359,8 @@ void ConnectionAutomaton::onClose(ConnectionCloseListener listener) {
   closeListeners_.push_back(listener);
 }
 
-void ConnectionAutomaton::writeFrame(Payload outputFrame) {
+void ConnectionAutomaton::writeFrame(
+    std::unique_ptr<folly::IOBuf> outputFrame) {
   std::stringstream ss;
   ss << FrameHeader::peekType(*outputFrame);
 
