@@ -9,6 +9,7 @@
 #include <folly/io/IOBuf.h>
 #include <glog/logging.h>
 #include <iostream>
+#include <sstream>
 
 #include "src/AbstractStreamAutomaton.h"
 #include "src/DuplexConnection.h"
@@ -122,7 +123,7 @@ void ConnectionAutomaton::onNextFrame(Payload frame) {
     return;
   }
   if (pendingWrites_.empty() && writeAllowance_.tryAcquire()) {
-    connectionOutput_.onNext(std::move(frame));
+    writeFrame(std::move(frame));
   } else {
     // We either have no allowance to perform the operation, or the queue has
     // not been drained (e.g. we're looping in ::request).
@@ -170,6 +171,13 @@ void ConnectionAutomaton::onSubscribe(Subscription& subscription) {
 }
 
 void ConnectionAutomaton::onNext(Payload frame) {
+  auto frameType = FrameHeader::peekType(*frame);
+
+  std::stringstream ss;
+  ss << frameType;
+
+  stats_.frameRead(ss.str());
+
   auto streamIdPtr = FrameHeader::peekStreamId(*frame);
   if (!streamIdPtr) {
     // Failed to deserialize the frame.
@@ -210,16 +218,16 @@ void ConnectionAutomaton::onConnectionFrame(Payload payload) {
         if (isServer_) {
           if (frame.header_.flags_ & FrameFlags_KEEPALIVE_RESPOND) {
             frame.header_.flags_ &= ~(FrameFlags_KEEPALIVE_RESPOND);
-            connectionOutput_.onNext(frame.serializeOut());
+            writeFrame(frame.serializeOut());
           } else {
-            connectionOutput_.onNext(
+            writeFrame(
                 Frame_ERROR::invalid("keepalive without flag").serializeOut());
             disconnect();
           }
         }
         // TODO(yschimke) client *should* check the respond flag
       } else {
-        connectionOutput_.onNext(Frame_ERROR::unexpectedFrame().serializeOut());
+        writeFrame(Frame_ERROR::unexpectedFrame().serializeOut());
         disconnect();
       }
     }
@@ -253,7 +261,7 @@ void ConnectionAutomaton::onConnectionFrame(Payload payload) {
       return;
     }
     default:
-      connectionOutput_.onNext(Frame_ERROR::unexpectedFrame().serializeOut());
+      writeFrame(Frame_ERROR::unexpectedFrame().serializeOut());
       disconnect();
       return;
   }
@@ -291,7 +299,7 @@ void ConnectionAutomaton::request(size_t n) {
   while (!pendingWrites_.empty() && writeAllowance_.tryAcquire()) {
     auto frame = std::move(pendingWrites_.front());
     pendingWrites_.pop_front();
-    connectionOutput_.onNext(std::move(frame));
+    writeFrame(std::move(frame));
   }
 }
 
@@ -311,7 +319,7 @@ void ConnectionAutomaton::handleUnknownStream(
   // TODO(stupaq): there are some rules about monotonically increasing stream
   // IDs -- let's forget about them for a moment
   if (!factory_(streamId, payload)) {
-    connectionOutput_.onNext(
+    writeFrame(
         Frame_ERROR::invalid("unknown stream " + std::to_string(streamId))
             .serializeOut());
     disconnect();
@@ -322,10 +330,19 @@ void ConnectionAutomaton::handleUnknownStream(
 void ConnectionAutomaton::sendKeepalive() {
   Frame_KEEPALIVE pingFrame(
       FrameFlags_KEEPALIVE_RESPOND, folly::IOBuf::create(0));
-  connectionOutput_.onNext(pingFrame.serializeOut());
+  writeFrame(pingFrame.serializeOut());
 }
 
 void ConnectionAutomaton::onClose(ConnectionCloseListener listener) {
   closeListeners_.push_back(listener);
+}
+
+void ConnectionAutomaton::writeFrame(Payload outputFrame) {
+  std::stringstream ss;
+  ss << FrameHeader::peekType(*outputFrame);
+
+  stats_.frameWritten(ss.str());
+
+  connectionOutput_.onNext(std::move(outputFrame));
 }
 }

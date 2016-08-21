@@ -4,7 +4,6 @@
 
 #include <folly/ExceptionWrapper.h>
 #include <reactive-streams/utilities/SmartPointers.h>
-#include <src/Stats.h>
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
 
@@ -13,10 +12,8 @@ namespace reactivesocket {
 class FramedWriter : public reactivesocket::Subscriber<Payload>,
                      public reactivesocket::Subscription {
  public:
-  explicit FramedWriter(
-      reactivesocket::Subscriber<Payload>& stream,
-      Stats& stats)
-      : stream_(&stream), stats_(stats) {}
+  explicit FramedWriter(reactivesocket::Subscriber<Payload>& stream)
+      : stream_(&stream) {}
 
   // Subscriber methods
   void onSubscribe(reactivesocket::Subscription& subscription) override;
@@ -31,7 +28,6 @@ class FramedWriter : public reactivesocket::Subscriber<Payload>,
  private:
   SubscriberPtr<reactivesocket::Subscriber<Payload>> stream_;
   SubscriptionPtr<::reactivestreams::Subscription> writerSubscription_;
-  Stats& stats_;
 };
 
 } // reactive socket

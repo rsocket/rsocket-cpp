@@ -127,6 +127,8 @@ class ConnectionAutomaton :
 
   void onNext(Payload) override;
 
+  void writeFrame(Payload);
+
   void onComplete() override;
 
   void onError(folly::exception_wrapper) override;
