@@ -233,7 +233,8 @@ target_link_libraries(
         ReactiveSocket
         ${FOLLY_LIBRARIES}
         gflags
-        glog)
+        glog
+        ${CMAKE_THREAD_LIBS_INIT})
 
 add_dependencies(tckclient gmock)
 
