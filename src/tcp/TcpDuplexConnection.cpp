@@ -17,14 +17,15 @@ void TcpSubscriptionBase::cancel() {
   connection_.closeFromReader();
 }
 
-Subscriber<Payload>& TcpDuplexConnection::getOutput() {
+Subscriber<std::unique_ptr<folly::IOBuf>>& TcpDuplexConnection::getOutput() {
   if (!outputSubscriber_) {
     outputSubscriber_ = folly::make_unique<TcpOutputSubscriber>(*this);
   }
   return *outputSubscriber_;
 };
 
-void TcpDuplexConnection::setInput(Subscriber<Payload>& inputSubscriber) {
+void TcpDuplexConnection::setInput(
+    Subscriber<std::unique_ptr<folly::IOBuf>>& inputSubscriber) {
   inputSubscriber_.reset(&inputSubscriber);
 
   auto& subscription = createManagedInstance<TcpSubscriptionBase>(*this);
@@ -33,7 +34,7 @@ void TcpDuplexConnection::setInput(Subscriber<Payload>& inputSubscriber) {
   socket_->setReadCB(this);
 };
 
-void TcpDuplexConnection::send(Payload element) {
+void TcpDuplexConnection::send(std::unique_ptr<folly::IOBuf> element) {
   stats_.bytesWritten(element->computeChainDataLength());
   socket_->writeChain(this, std::move(element));
 }
@@ -93,7 +94,7 @@ void TcpOutputSubscriber::onSubscribe(Subscription& subscription) {
   subscription.request(std::numeric_limits<size_t>::max());
 };
 
-void TcpOutputSubscriber::onNext(Payload element) {
+void TcpOutputSubscriber::onNext(std::unique_ptr<folly::IOBuf> element) {
   connection_.send(std::move(element));
 };
 

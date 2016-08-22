@@ -54,19 +54,19 @@ class MixinTerminator
   /// Each mixin in the stack implements a subset of this API.
   void endStream(StreamCompletionSignal) {}
 
-  void onNextFrame(Frame_REQUEST_STREAM&) {}
+  void onNextFrame(Frame_REQUEST_STREAM&&) {}
 
-  void onNextFrame(Frame_REQUEST_SUB&) {}
+  void onNextFrame(Frame_REQUEST_SUB&&) {}
 
-  void onNextFrame(Frame_REQUEST_CHANNEL&) {}
+  void onNextFrame(Frame_REQUEST_CHANNEL&&) {}
 
-  void onNextFrame(Frame_REQUEST_N&) {}
+  void onNextFrame(Frame_REQUEST_N&&) {}
 
-  void onNextFrame(Frame_CANCEL&) {}
+  void onNextFrame(Frame_CANCEL&&) {}
 
-  void onNextFrame(Frame_RESPONSE&) {}
+  void onNextFrame(Frame_RESPONSE&&) {}
 
-  void onNextFrame(Frame_ERROR&) {}
+  void onNextFrame(Frame_ERROR&&) {}
 
   void onBadFrame() {}
 

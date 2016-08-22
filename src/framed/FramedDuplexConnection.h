@@ -12,19 +12,16 @@ class FramedWriter;
 
 class FramedDuplexConnection : public DuplexConnection {
  public:
-  explicit FramedDuplexConnection(
-      std::unique_ptr<DuplexConnection> connection,
-      Stats& stats = Stats::noop());
+  explicit FramedDuplexConnection(std::unique_ptr<DuplexConnection> connection);
   ~FramedDuplexConnection();
 
-  Subscriber<Payload>& getOutput() noexcept override;
-  void setInput(Subscriber<Payload>& framesSink) override;
+  Subscriber<std::unique_ptr<folly::IOBuf>>& getOutput() noexcept override;
+  void setInput(Subscriber<std::unique_ptr<folly::IOBuf>>& framesSink) override;
 
  private:
   std::unique_ptr<DuplexConnection> connection_;
   std::unique_ptr<FramedReader> inputReader_;
   std::unique_ptr<FramedWriter> outputWriter_;
-  Stats& stats_;
 };
 
 } // reactive socket

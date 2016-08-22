@@ -10,7 +10,6 @@
 #include <reactive-streams/utilities/SmartPointers.h>
 #include <src/Stats.h>
 #include "src/DuplexConnection.h"
-#include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
 #include "src/mixins/IntrusiveDeleter.h"
 
@@ -42,14 +41,14 @@ class TcpSubscriptionBase : public virtual ::reactivesocket::IntrusiveDeleter,
 class TcpDuplexConnection;
 
 //TODO: this is an internal class, so it should go to its separate file .h file or to the .cpp file
-class TcpOutputSubscriber : public Subscriber<Payload> {
+class TcpOutputSubscriber : public Subscriber<std::unique_ptr<folly::IOBuf>> {
  public:
   explicit TcpOutputSubscriber(TcpDuplexConnection& connection)
       : connection_(connection){};
 
   void onSubscribe(Subscription& subscription) override;
 
-  void onNext(Payload element) override;
+  void onNext(std::unique_ptr<folly::IOBuf> element) override;
 
   void onComplete() override;
 
@@ -76,11 +75,11 @@ class TcpDuplexConnection
     stats_.connectionClosed("tcp", this);
   };
 
-  Subscriber<Payload>& getOutput() override;
+  Subscriber<std::unique_ptr<folly::IOBuf>>& getOutput() override;
 
-  void setInput(Subscriber<Payload>& framesSink) override;
+  void setInput(Subscriber<std::unique_ptr<folly::IOBuf>>& framesSink) override;
 
-  void send(Payload element);
+  void send(std::unique_ptr<folly::IOBuf> element);
 
   void writeSuccess() noexcept override;
 
@@ -108,7 +107,7 @@ class TcpDuplexConnection
  private:
   folly::IOBufQueue readBuffer_{folly::IOBufQueue::cacheChainLength()};
   std::unique_ptr<TcpOutputSubscriber> outputSubscriber_;
-  SubscriberPtr<Subscriber<Payload>> inputSubscriber_;
+  SubscriberPtr<Subscriber<std::unique_ptr<folly::IOBuf>>> inputSubscriber_;
   folly::AsyncSocket::UniquePtr socket_;
   Stats& stats_;
 };

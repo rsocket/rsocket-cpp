@@ -7,7 +7,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/Payload.h"
 #include "test/InlineConnection.h"
 #include "test/ReactiveStreamsMocksCompat.h"
 
@@ -19,9 +18,9 @@ TEST(InlineConnectionTest, PingPong) {
   // calls will be deterministic.
   Sequence s;
   std::array<InlineConnection, 2> end;
-  end[0].connectTo(end[1]);
+  end[0].connectTo(end[1], false);
 
-  std::array<UnmanagedMockSubscriber<Payload>, 2> input;
+  std::array<UnmanagedMockSubscriber<std::unique_ptr<folly::IOBuf>>, 2> input;
   std::array<UnmanagedMockSubscription, 2> outputSub;
 
   std::array<Subscription*, 2> inputSub;
@@ -31,7 +30,7 @@ TEST(InlineConnectionTest, PingPong) {
         .WillRepeatedly(
             Invoke([&inputSub, i](Subscription* sub) { inputSub[i] = sub; }));
   }
-  std::array<Subscriber<Payload>*, 2> output;
+  std::array<Subscriber<std::unique_ptr<folly::IOBuf>>*, 2> output;
 
   // Register inputs and outputs in two different orders for two different
   // "directions" of the connection.
@@ -46,7 +45,7 @@ TEST(InlineConnectionTest, PingPong) {
   EXPECT_EQ(&outputSub[1], inputSub[0]);
   EXPECT_EQ(&outputSub[0], inputSub[1]);
 
-  auto originalPayload = folly::IOBuf::copyBuffer("foo");
+  auto originalPayload = folly::IOBuf::copyBuffer("request1");
   EXPECT_CALL(outputSub[1], request_(1)).InSequence(s);
   EXPECT_CALL(outputSub[0], request_(1))
       .InSequence(s)
@@ -54,7 +53,7 @@ TEST(InlineConnectionTest, PingPong) {
           Invoke([&](size_t) { output[0]->onNext(originalPayload->clone()); }));
   EXPECT_CALL(input[1], onNext_(_))
       .InSequence(s)
-      .WillOnce(Invoke([&](Payload& payload) {
+      .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& payload) {
         ASSERT_TRUE(folly::IOBufEqual()(originalPayload, payload));
         // We know Subscription::request(1) has been called on the corresponding
         // subscription.
@@ -62,7 +61,7 @@ TEST(InlineConnectionTest, PingPong) {
       }));
   EXPECT_CALL(input[0], onNext_(_))
       .InSequence(s)
-      .WillOnce(Invoke([&](Payload& payload) {
+      .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& payload) {
         // We know Subscription::request(1) has been called on the corresponding
         // subscription.
         ASSERT_TRUE(folly::IOBufEqual()(originalPayload, payload));

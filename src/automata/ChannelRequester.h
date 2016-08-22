@@ -65,9 +65,9 @@ class ChannelRequesterBase
   /// Not all frames are intercepted, some just pass through.
   using Base::onNextFrame;
 
-  void onNextFrame(Frame_RESPONSE&);
+  void onNextFrame(Frame_RESPONSE&&);
 
-  void onNextFrame(Frame_ERROR&);
+  void onNextFrame(Frame_ERROR&&);
 
   std::ostream& logPrefix(std::ostream& os);
   /// @}

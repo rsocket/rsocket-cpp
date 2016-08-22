@@ -62,8 +62,7 @@ int main(int argc, char* argv[]) {
         std::unique_ptr<DuplexConnection> connection =
             folly::make_unique<TcpDuplexConnection>(std::move(socket), stats);
         std::unique_ptr<DuplexConnection> framedConnection =
-            folly::make_unique<FramedDuplexConnection>(
-                std::move(connection), stats);
+            folly::make_unique<FramedDuplexConnection>(std::move(connection));
         std::unique_ptr<RequestHandler> requestHandler =
             folly::make_unique<DefaultRequestHandler>();
 
@@ -75,8 +74,7 @@ int main(int argc, char* argv[]) {
                 eventBase, std::chrono::milliseconds(5000)));
 
         reactiveSocket->requestSubscription(
-            folly::IOBuf::copyBuffer("from client"),
-            createManagedInstance<PrintSubscriber>());
+            Payload("from client"), createManagedInstance<PrintSubscriber>());
       });
 
   std::string name;

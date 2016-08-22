@@ -48,5 +48,6 @@ void NullRequestHandler::handleRequestSubscription(
 
 void NullRequestHandler::handleFireAndForgetRequest(Payload /*request*/) {}
 
-void NullRequestHandler::handleMetadataPush(Payload /*request*/) {}
+void NullRequestHandler::handleMetadataPush(
+    std::unique_ptr<folly::IOBuf> /*request*/) {}
 }

@@ -12,12 +12,8 @@ void StreamRequesterBase::sendRequestFrame(
     size_t initialN,
     Payload&& request) {
   Frame_REQUEST_STREAM frame(
-      streamId_,
-      flags,
-      static_cast<uint32_t>(initialN),
-      FrameMetadata::empty(),
-      std::move(request));
-  connection_->onNextFrame(frame);
+      streamId_, flags, static_cast<uint32_t>(initialN), std::move(request));
+  connection_->onNextFrame(std::move(frame));
 }
 
 std::ostream& StreamRequesterBase::logPrefix(std::ostream& os) {

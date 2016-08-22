@@ -35,15 +35,15 @@ class InlineConnection : public DuplexConnection {
   /// This method may be invoked at most once per lifetime of the object and
   /// implicitly connects the `other` to this instance. Must be invoked before
   /// accessing input or output of the connection.
-  void connectTo(InlineConnection& other);
+  void connectTo(InlineConnection& other, bool expectSetupFrame);
 
-  void setInput(Subscriber<Payload>& inputSink) override;
+  void setInput(Subscriber<std::unique_ptr<folly::IOBuf>>& inputSink) override;
 
-  Subscriber<Payload>& getOutput() override;
+  Subscriber<std::unique_ptr<folly::IOBuf>>& getOutput() override;
 
  private:
   InlineConnection* other_;
-  Subscriber<Payload>* inputSink_;
+  Subscriber<std::unique_ptr<folly::IOBuf>>* inputSink_;
   /// @{
   /// Store pending terminal signal that would be sent to the input, if it was
   /// set at the time the signal was issued. Both fields being false indicate a
@@ -52,5 +52,6 @@ class InlineConnection : public DuplexConnection {
   folly::exception_wrapper inputSinkError_;
   /// @}
   Subscription* outputSubscription_;
+  bool expectSetupFrame_{false};
 };
 }

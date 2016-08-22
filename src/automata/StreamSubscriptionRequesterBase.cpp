@@ -60,8 +60,7 @@ void StreamSubscriptionRequesterBase::cancel() {
       break;
     case State::REQUESTED: {
       state_ = State::CLOSED;
-      Frame_CANCEL frame(streamId_);
-      connection_->onNextFrame(frame);
+      connection_->onNextFrame(Frame_CANCEL(streamId_));
       connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
     } break;
     case State::CLOSED:
@@ -83,7 +82,7 @@ void StreamSubscriptionRequesterBase::endStream(StreamCompletionSignal signal) {
   Base::endStream(signal);
 }
 
-void StreamSubscriptionRequesterBase::onNextFrame(Frame_RESPONSE& frame) {
+void StreamSubscriptionRequesterBase::onNextFrame(Frame_RESPONSE&& frame) {
   bool end = false;
   switch (state_) {
     case State::NEW:
@@ -99,13 +98,13 @@ void StreamSubscriptionRequesterBase::onNextFrame(Frame_RESPONSE& frame) {
     case State::CLOSED:
       break;
   }
-  Base::onNextFrame(frame);
+  Base::onNextFrame(std::move(frame));
   if (end) {
     connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
   }
 }
 
-void StreamSubscriptionRequesterBase::onNextFrame(Frame_ERROR& frame) {
+void StreamSubscriptionRequesterBase::onNextFrame(Frame_ERROR&& frame) {
   switch (state_) {
     case State::NEW:
       // Cannot receive a frame before sending the initial request.
@@ -113,8 +112,7 @@ void StreamSubscriptionRequesterBase::onNextFrame(Frame_ERROR& frame) {
       break;
     case State::REQUESTED:
       state_ = State::CLOSED;
-      Base::onError(
-          std::runtime_error(frame.data_->moveToFbString().toStdString()));
+      Base::onError(std::runtime_error(frame.payload_.moveDataToString()));
       connection_->endStream(streamId_, StreamCompletionSignal::ERROR);
       break;
     case State::CLOSED:

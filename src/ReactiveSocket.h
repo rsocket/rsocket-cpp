@@ -75,7 +75,7 @@ class ReactiveSocket {
 
   void onClose(CloseListener listener);
 
-  void metadataPush(Payload metadata);
+  void metadataPush(std::unique_ptr<folly::IOBuf> metadata);
 
  private:
   ReactiveSocket(
@@ -85,7 +85,7 @@ class ReactiveSocket {
       Stats& stats,
       std::unique_ptr<KeepaliveTimer> keepaliveTimer);
 
-  bool createResponder(StreamId streamId, Payload& frame);
+  bool createResponder(StreamId streamId, std::unique_ptr<folly::IOBuf> frame);
 
   const std::shared_ptr<ConnectionAutomaton> connection_;
   std::unique_ptr<RequestHandler> handler_;

@@ -18,7 +18,7 @@ class StatsPrinter : public Stats {
       reactivesocket::DuplexConnection* connection) override;
   virtual void bytesWritten(size_t bytes) override;
   virtual void bytesRead(size_t bytes) override;
-  virtual void frameWritten(FrameType type) override;
-  virtual void frameRead(FrameType type) override;
+  virtual void frameWritten(const std::string& frameType) override;
+  virtual void frameRead(const std::string& frameType) override;
 };
 }

@@ -65,8 +65,7 @@ class LoggingMixin : public Base {
   }
 
   void onNext(Payload payload) {
-    Base::logPrefix(LOG(INFO)) << "onNext(<"
-                               << payload->computeChainDataLength() << ">)";
+    Base::logPrefix(LOG(INFO)) << "onNext(" << payload << ")";
     Base::onNext(std::move(payload));
   }
 
@@ -91,9 +90,9 @@ class LoggingMixin : public Base {
  protected:
   /// @{
   template <typename Frame>
-  void onNextFrame(Frame& frame) {
+  void onNextFrame(Frame&& frame) {
     Base::logPrefix(LOG(INFO)) << frame;
-    Base::onNextFrame(frame);
+    Base::onNextFrame(std::move(frame));
   }
 
   void onBadFrame() {

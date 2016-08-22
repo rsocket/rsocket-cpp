@@ -16,6 +16,7 @@ cpp_library(
         'src/framed/FramedWriter.cpp',
         'src/framed/FramedDuplexConnection.cpp',
         'src/folly/FollyKeepaliveTimer.cpp',
+        'src/Payload.cpp',
     ],
     deps = [
         ':reactivesocket-streams',
@@ -46,6 +47,7 @@ cxx_library(
         'src/ConnectionAutomaton.cpp',
         'src/Frame.cpp',
         'src/NullRequestHandler.cpp',
+        'src/Payload.cpp',
         'src/ReactiveSocket.cpp',
         'src/Stats.cpp',
     ],

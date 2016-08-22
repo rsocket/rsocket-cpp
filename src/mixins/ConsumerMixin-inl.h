@@ -19,13 +19,13 @@ void ConsumerMixin<Frame, Base>::onError(folly::exception_wrapper ex) {
 };
 
 template <typename Frame, typename Base>
-void ConsumerMixin<Frame, Base>::onNextFrame(Frame& frame) {
-  if (frame.data_) {
+void ConsumerMixin<Frame, Base>::onNextFrame(Frame&& frame) {
+  if (frame.payload_.data) {
     // Frames carry application-level payloads are taken into account when
     // figuring out flow control allowance.
     if (allowance_.tryAcquire()) {
       sendRequests();
-      consumingSubscriber_.onNext(std::move(frame.data_));
+      consumingSubscriber_.onNext(std::move(frame.payload_));
     } else {
       handleFlowControlError();
       return;
@@ -33,7 +33,7 @@ void ConsumerMixin<Frame, Base>::onNextFrame(Frame& frame) {
   }
   // After the application-level payload is delivered we inspect the frame's
   // metadata, as it could carry information important for other mixins.
-  Base::onNextFrame(frame);
+  Base::onNextFrame(std::move(frame));
 }
 
 template <typename Frame, typename Base>
@@ -43,8 +43,8 @@ void ConsumerMixin<Frame, Base>::sendRequests() {
   size_t toSync = Frame_REQUEST_N::kMaxRequestN;
   toSync = pendingAllowance_.drainWithLimit(toSync);
   if (toSync > 0) {
-    Frame_REQUEST_N frame(Base::streamId_, static_cast<uint32_t>(toSync));
-    Base::connection_->onNextFrame(frame);
+    Base::connection_->onNextFrame(
+        Frame_REQUEST_N(Base::streamId_, static_cast<uint32_t>(toSync)));
   }
 }
 

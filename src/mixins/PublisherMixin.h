@@ -30,12 +30,8 @@ class PublisherMixin : public Base {
   }
 
   void onNext(Payload payload) {
-    ProducedFrame frame(
-        Base::streamId_,
-        FrameFlags_EMPTY,
-        FrameMetadata::empty(),
-        std::move(payload));
-    Base::connection_->onNextFrame(frame);
+    ProducedFrame frame(Base::streamId_, FrameFlags_EMPTY, std::move(payload));
+    Base::connection_->onNextFrame(std::move(frame));
   }
   /// @}
 
@@ -50,18 +46,18 @@ class PublisherMixin : public Base {
   /// Intercept frames that carry allowance.
   template <typename Frame>
   typename std::enable_if<Frame::Trait_CarriesAllowance>::type onNextFrame(
-      Frame& frame) {
+      Frame&& frame) {
     if (size_t n = frame.requestN_) {
       producingSubscription_.request(n);
     }
-    Base::onNextFrame(frame);
+    Base::onNextFrame(std::move(frame));
   }
 
   /// Remaining frames just pass through.
   template <typename Frame>
   typename std::enable_if<!Frame::Trait_CarriesAllowance>::type onNextFrame(
-      Frame& frame) {
-    Base::onNextFrame(frame);
+      Frame&& frame) {
+    Base::onNextFrame(std::move(frame));
   }
   /// @}
 
