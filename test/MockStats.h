@@ -24,8 +24,8 @@ class MockStats : public Stats {
       void(const std::string&, reactivesocket::DuplexConnection*));
   MOCK_METHOD1(bytesWritten_, void(size_t));
   MOCK_METHOD1(bytesRead_, void(size_t));
-  MOCK_METHOD1(frameWritten_, void(FrameType));
-  MOCK_METHOD1(frameRead_, void(FrameType));
+  MOCK_METHOD1(frameWritten_, void(const std::string&));
+  MOCK_METHOD1(frameRead_, void(const std::string&));
 
   void socketCreated() override {
     socketCreated_();
@@ -55,11 +55,11 @@ class MockStats : public Stats {
     bytesRead_(bytes);
   }
 
-  virtual void frameWritten(FrameType frameType) override {
+  virtual void frameWritten(const std::string& frameType) override {
     frameWritten_(frameType);
   }
 
-  virtual void frameRead(FrameType frameType) override {
+  virtual void frameRead(const std::string& frameType) override {
     frameRead_(frameType);
   }
 };

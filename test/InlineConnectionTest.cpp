@@ -18,7 +18,7 @@ TEST(InlineConnectionTest, PingPong) {
   // calls will be deterministic.
   Sequence s;
   std::array<InlineConnection, 2> end;
-  end[0].connectTo(end[1]);
+  end[0].connectTo(end[1], false);
 
   std::array<UnmanagedMockSubscriber<std::unique_ptr<folly::IOBuf>>, 2> input;
   std::array<UnmanagedMockSubscription, 2> outputSub;
@@ -45,7 +45,7 @@ TEST(InlineConnectionTest, PingPong) {
   EXPECT_EQ(&outputSub[1], inputSub[0]);
   EXPECT_EQ(&outputSub[0], inputSub[1]);
 
-  auto originalPayload = folly::IOBuf::copyBuffer("foo");
+  auto originalPayload = folly::IOBuf::copyBuffer("request1");
   EXPECT_CALL(outputSub[1], request_(1)).InSequence(s);
   EXPECT_CALL(outputSub[0], request_(1))
       .InSequence(s)

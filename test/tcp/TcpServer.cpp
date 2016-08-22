@@ -1,3 +1,5 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
 #include <folly/Memory.h>
 #include <folly/io/async/AsyncServerSocket.h>
 #include <gmock/gmock.h>
@@ -60,6 +62,11 @@ class ServerRequestHandler : public DefaultRequestHandler {
     LOG(INFO) << "ServerRequestHandler.handleFireAndForgetRequest " << request
               << "\n";
   }
+
+  void handleMetadataPush(std::unique_ptr<folly::IOBuf> request) override {
+    LOG(INFO) << "ServerRequestHandler.handleMetadataPush "
+              << request->moveToFbString() << "\n";
+  }
 };
 
 class Callback : public AsyncServerSocket::AcceptCallback {
@@ -80,37 +87,28 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     std::unique_ptr<DuplexConnection> connection =
         folly::make_unique<TcpDuplexConnection>(std::move(socket), stats_);
     std::unique_ptr<DuplexConnection> framedConnection =
-        folly::make_unique<FramedDuplexConnection>(
-            std::move(connection), stats_);
+        folly::make_unique<FramedDuplexConnection>(std::move(connection));
     std::unique_ptr<RequestHandler> requestHandler =
         folly::make_unique<ServerRequestHandler>();
 
     auto rs = ReactiveSocket::fromServerConnection(
         std::move(framedConnection), std::move(requestHandler), stats_);
 
-    //    rs->onClose([&reactiveSockets_](ReactiveSocket* socket) {
-    //      reactiveSockets_.erase(std::remove_if(
-    //          reactiveSockets_.begin(), reactiveSockets_.end(), [](auto
-    //          vecSocket) {
-    //            return vecSocket == socket;
-    //          }));
-    //    });
-
     rs->onClose(
         std::bind(&Callback::removeSocket, this, std::placeholders::_1));
 
     reactiveSockets_.push_back(std::move(rs));
-
-    std::cout << reactiveSockets_.size() << " ADD \n";
   }
 
   void removeSocket(ReactiveSocket& socket) {
-    reactiveSockets_.erase(std::remove_if(
-        reactiveSockets_.begin(),
-        reactiveSockets_.end(),
-        [&socket](std::unique_ptr<ReactiveSocket>& vecSocket) {
-          return vecSocket.get() == &socket;
-        }));
+    if (!shuttingDown) {
+      reactiveSockets_.erase(std::remove_if(
+          reactiveSockets_.begin(),
+          reactiveSockets_.end(),
+          [&socket](std::unique_ptr<ReactiveSocket>& vecSocket) {
+            return vecSocket.get() == &socket;
+          }));
+    }
   }
 
   virtual void acceptError(const std::exception& ex) noexcept override {
@@ -118,6 +116,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
   }
 
   void shutdown() {
+    shuttingDown = true;
     reactiveSockets_.clear();
   }
 
@@ -125,6 +124,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
   std::vector<std::unique_ptr<ReactiveSocket>> reactiveSockets_;
   EventBase& eventBase_;
   Stats& stats_;
+  bool shuttingDown{false};
 };
 }
 
@@ -139,7 +139,7 @@ int main(int argc, char* argv[]) {
   reactivesocket::StatsPrinter statsPrinter;
 
   EventBase eventBase;
-  auto thread = std::thread([&]() { eventBase.loopForever(); });
+  auto thread = std::thread([&eventBase]() { eventBase.loopForever(); });
 
   Callback callback(eventBase, statsPrinter);
 

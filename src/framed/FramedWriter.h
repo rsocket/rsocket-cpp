@@ -4,8 +4,15 @@
 
 #include <folly/ExceptionWrapper.h>
 #include <reactive-streams/utilities/SmartPointers.h>
+<<<<<<< HEAD
 #include <src/Stats.h>
+=======
+>>>>>>> master
 #include "src/ReactiveStreamsCompat.h"
+
+namespace folly {
+class IOBuf;
+}
 
 namespace reactivesocket {
 
@@ -14,9 +21,8 @@ class FramedWriter
       public reactivesocket::Subscription {
  public:
   explicit FramedWriter(
-      reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>& stream,
-      Stats& stats)
-      : stream_(&stream), stats_(stats) {}
+      reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>& stream)
+      : stream_(&stream) {}
 
   // Subscriber methods
   void onSubscribe(reactivesocket::Subscription& subscription) override;
@@ -32,7 +38,6 @@ class FramedWriter
   SubscriberPtr<reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
       stream_;
   SubscriptionPtr<::reactivestreams::Subscription> writerSubscription_;
-  Stats& stats_;
 };
 
 } // reactive socket

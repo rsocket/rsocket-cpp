@@ -1,3 +1,5 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
 #include "PrintSubscriber.h"
 #include <folly/Memory.h>
 #include <folly/io/IOBufQueue.h>
@@ -5,7 +7,7 @@
 
 namespace reactivesocket {
 void PrintSubscriber::onSubscribe(Subscription& subscription) {
-  subscription.request(std::numeric_limits<uint32_t>::max());
+  subscription.request(std::numeric_limits<int32_t>::max());
 }
 
 void PrintSubscriber::onNext(Payload element) {

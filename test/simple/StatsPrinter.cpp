@@ -34,11 +34,11 @@ void StatsPrinter::bytesRead(size_t bytes) {
   LOG(INFO) << "bytesRead " << bytes;
 }
 
-void StatsPrinter::frameWritten(FrameType type) {
-  LOG(INFO) << "frameWritten " << type;
+void StatsPrinter::frameWritten(const std::string& frameType) {
+  LOG(INFO) << "frameWritten " << frameType;
 }
 
-void StatsPrinter::frameRead(FrameType type) {
-  LOG(INFO) << "frameRead " << type;
+void StatsPrinter::frameRead(const std::string& frameType) {
+  LOG(INFO) << "frameRead " << frameType;
 }
 }

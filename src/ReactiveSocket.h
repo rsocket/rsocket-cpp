@@ -75,6 +75,8 @@ class ReactiveSocket {
 
   void onClose(CloseListener listener);
 
+  void metadataPush(std::unique_ptr<folly::IOBuf> metadata);
+
  private:
   ReactiveSocket(
       bool isServer,

@@ -91,6 +91,7 @@ class ConnectionAutomaton :
   void onNextFrame(Frame_REQUEST_CHANNEL&&);
   void onNextFrame(Frame_REQUEST_N&&);
   void onNextFrame(Frame_REQUEST_FNF&&);
+  void onNextFrame(Frame_METADATA_PUSH&&);
   void onNextFrame(Frame_CANCEL&&);
   void onNextFrame(Frame_RESPONSE&&);
   void onNextFrame(Frame_ERROR&&);
@@ -134,6 +135,8 @@ class ConnectionAutomaton :
   void onSubscribe(Subscription&) override;
 
   void onNext(std::unique_ptr<folly::IOBuf>) override;
+
+  void writeFrame(std::unique_ptr<folly::IOBuf>);
 
   void onComplete() override;
 

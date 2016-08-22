@@ -58,6 +58,8 @@ struct Payload {
   static std::unique_ptr<folly::IOBuf> deserializeDataFrom(
       folly::io::Cursor& cur);
 
+  std::string moveDataToString();
+
   std::unique_ptr<folly::IOBuf> data;
   std::unique_ptr<folly::IOBuf> metadata;
 };

@@ -21,8 +21,8 @@ class Stats {
       reactivesocket::DuplexConnection* connection) = 0;
   virtual void bytesWritten(size_t bytes) = 0;
   virtual void bytesRead(size_t bytes) = 0;
-  virtual void frameWritten(FrameType type) = 0;
-  virtual void frameRead(FrameType type) = 0;
+  virtual void frameWritten(const std::string& frameType) = 0;
+  virtual void frameRead(const std::string& frameType) = 0;
 
   virtual ~Stats() = default;
 };

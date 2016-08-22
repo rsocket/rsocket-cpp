@@ -112,8 +112,7 @@ void StreamSubscriptionRequesterBase::onNextFrame(Frame_ERROR&& frame) {
       break;
     case State::REQUESTED:
       state_ = State::CLOSED;
-      Base::onError(std::runtime_error(
-          frame.payload_.data->moveToFbString().toStdString()));
+      Base::onError(std::runtime_error(frame.payload_.moveDataToString()));
       connection_->endStream(streamId_, StreamCompletionSignal::ERROR);
       break;
     case State::CLOSED:
