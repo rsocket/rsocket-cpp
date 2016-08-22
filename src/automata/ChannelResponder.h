@@ -64,9 +64,9 @@ class ChannelResponderBase
   /// Not all frames are intercepted, some just pass through.
   using Base::onNextFrame;
 
-  void onNextFrame(Frame_REQUEST_CHANNEL&);
+  void onNextFrame(Frame_REQUEST_CHANNEL&&);
 
-  void onNextFrame(Frame_CANCEL&);
+  void onNextFrame(Frame_CANCEL&&);
 
   std::ostream& logPrefix(std::ostream& os);
   /// @}

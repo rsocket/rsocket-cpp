@@ -151,7 +151,7 @@ bool ReactiveSocket::createResponder(
       auto& requestSink =
           handler_->handleRequestChannel(std::move(frame.payload_), *automaton);
       automaton->subscribe(requestSink);
-      automaton->onNextFrame(frame);
+      automaton->onNextFrame(std::move(frame));
       requestSink.onSubscribe(*automaton);
       automaton->start();
       break;
@@ -165,7 +165,7 @@ bool ReactiveSocket::createResponder(
       auto automaton = new StreamResponder(params);
       connection_->addStream(streamId, *automaton);
       handler_->handleRequestStream(std::move(frame.payload_), *automaton);
-      automaton->onNextFrame(frame);
+      automaton->onNextFrame(std::move(frame));
       automaton->start();
       break;
     }
@@ -179,7 +179,7 @@ bool ReactiveSocket::createResponder(
       connection_->addStream(streamId, *automaton);
       handler_->handleRequestSubscription(
           std::move(frame.payload_), *automaton);
-      automaton->onNextFrame(frame);
+      automaton->onNextFrame(std::move(frame));
       automaton->start();
       break;
     }

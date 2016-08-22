@@ -56,7 +56,7 @@ class ConsumerMixin : public Base {
   /// Not all frames are intercepted, some just pass through.
   using Base::onNextFrame;
 
-  void onNextFrame(Frame&);
+  void onNextFrame(Frame&&);
 
   void onError(folly::exception_wrapper ex);
   /// @}

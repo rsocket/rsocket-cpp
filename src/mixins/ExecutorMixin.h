@@ -100,8 +100,8 @@ class ExecutorMixin : public Base {
  protected:
   /// @{
   template <typename Frame>
-  void onNextFrame(Frame& frame) {
-    Base::onNextFrame(frame);
+  void onNextFrame(Frame&& frame) {
+    Base::onNextFrame(std::move(frame));
   }
 
   void onBadFrame() {

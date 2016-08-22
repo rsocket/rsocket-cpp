@@ -92,13 +92,13 @@ class AbstractStreamAutomaton {
   /// actual frame type. It is guaranteed that ::onNextFrame(Payload) does not
   /// access `this` after calling into one of the handlers below. This
   /// assumption is important for memory management.
-  virtual void onNextFrame(Frame_REQUEST_STREAM& frame) = 0;
-  virtual void onNextFrame(Frame_REQUEST_SUB& frame) = 0;
-  virtual void onNextFrame(Frame_REQUEST_CHANNEL& frame) = 0;
-  virtual void onNextFrame(Frame_REQUEST_N& frame) = 0;
-  virtual void onNextFrame(Frame_CANCEL& frame) = 0;
-  virtual void onNextFrame(Frame_RESPONSE& frame) = 0;
-  virtual void onNextFrame(Frame_ERROR& frame) = 0;
+  virtual void onNextFrame(Frame_REQUEST_STREAM&& frame) = 0;
+  virtual void onNextFrame(Frame_REQUEST_SUB&& frame) = 0;
+  virtual void onNextFrame(Frame_REQUEST_CHANNEL&& frame) = 0;
+  virtual void onNextFrame(Frame_REQUEST_N&& frame) = 0;
+  virtual void onNextFrame(Frame_CANCEL&& frame) = 0;
+  virtual void onNextFrame(Frame_RESPONSE&& frame) = 0;
+  virtual void onNextFrame(Frame_ERROR&& frame) = 0;
 
   /// Invoked when ::onNextFrame(Payload) failed to deserialize or was
   /// malformed.

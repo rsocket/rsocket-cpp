@@ -68,7 +68,7 @@ void AbstractStreamAutomaton::deserializeAndDispatch(
     std::unique_ptr<folly::IOBuf> payload) {
   Frame frame;
   if (frame.deserializeFrom(std::move(payload))) {
-    onNextFrame(frame);
+    onNextFrame(std::move(frame));
   } else {
     onBadFrame();
   }

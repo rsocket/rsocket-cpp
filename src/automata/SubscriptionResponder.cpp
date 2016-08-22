@@ -13,7 +13,7 @@
 
 namespace reactivesocket {
 
-void SubscriptionResponderBase::onNextFrame(Frame_REQUEST_SUB& frame) {
+void SubscriptionResponderBase::onNextFrame(Frame_REQUEST_SUB&& frame) {
   bool end = false;
   switch (state_) {
     case State::RESPONDING:
