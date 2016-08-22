@@ -65,13 +65,6 @@ bool TestInterpreter::run() {
   return true;
 }
 
-static Payload createPayload(
-    const std::string& payloadData,
-    const std::string& /*payloadMetadata*/) {
-  // TODO: use metadata
-  return folly::IOBuf::copyBuffer(payloadData);
-}
-
 void TestInterpreter::handleSubscribe(const SubscribeCommand& command) {
   interactionIdToType_[command.id()] = command.type();
   if (command.isRequestResponseType()) {
@@ -81,7 +74,7 @@ void TestInterpreter::handleSubscribe(const SubscribeCommand& command) {
     auto& testSubscriber = createTestSubscriber(command.id());
     rsEventBase_->runInEventBaseThreadAndWait([&]() {
       reactiveSocket_->requestStream(
-          createPayload(command.payloadData(), command.payloadMetadata()),
+          Payload(command.payloadData(), command.payloadMetadata()),
           testSubscriber);
     });
   } else {

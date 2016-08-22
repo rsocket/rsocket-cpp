@@ -96,8 +96,14 @@ void TestSubscriber::assertValues(
 }
 
 void TestSubscriber::assertValueCount(int valueCount) {
-  // TODO
-  throw std::runtime_error("not implemented");
+  std::unique_lock<std::mutex> lock(mutex_);
+  if (onNextValues_.size() == valueCount) {
+    LOG(INFO) << "received expected " << valueCount << " values.";
+  } else {
+    LOG(INFO) << "didn't receive expected number of values! expected="
+              << valueCount << " actual=" << onNextValues_.size();
+    throw std::runtime_error("didn't receive expected number of values!");
+  }
 }
 
 void TestSubscriber::assertReceivedAtLeast(int valueCount) {
@@ -156,10 +162,7 @@ void TestSubscriber::onSubscribe(Subscription& subscription) {
 }
 
 void TestSubscriber::onNext(Payload element) {
-  // TODO: add metadata
-  auto data = element->moveToFbString();
-
-  LOG(INFO) << "ON NEXT: " << data;
+  LOG(INFO) << "ON NEXT: " << element;
 
   //  if (isEcho) {
   //    echosub.add(tup);
@@ -176,7 +179,7 @@ void TestSubscriber::onNext(Payload element) {
 
   {
     std::unique_lock<std::mutex> lock(mutex_);
-    onNextValues_.push_back(data.toStdString());
+    onNextValues_.push_back(std::move(element));
     ++onNextItemsCount_;
   }
   onNextValuesCV_.notify_one();

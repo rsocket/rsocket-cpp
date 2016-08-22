@@ -58,7 +58,7 @@ class TestSubscriber : public reactivesocket::Subscriber<Payload> {
   ////////////////////////////////////////////////////////////////////////////
   std::mutex mutex_; // all variables below has to be protected with the mutex
 
-  std::vector<std::string> onNextValues_;
+  std::vector<Payload> onNextValues_;
   std::condition_variable onNextValuesCV_;
   std::atomic<int> onNextItemsCount_{0};
 
