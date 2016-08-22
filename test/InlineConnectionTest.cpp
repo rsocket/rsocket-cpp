@@ -18,7 +18,7 @@ TEST(InlineConnectionTest, PingPong) {
   // calls will be deterministic.
   Sequence s;
   std::array<InlineConnection, 2> end;
-  end[0].connectTo(end[1], false);
+  end[0].connectTo(end[1]);
 
   std::array<UnmanagedMockSubscriber<std::unique_ptr<folly::IOBuf>>, 2> input;
   std::array<UnmanagedMockSubscription, 2> outputSub;

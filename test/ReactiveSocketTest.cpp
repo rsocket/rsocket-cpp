@@ -40,7 +40,7 @@ TEST(ReactiveSocketTest, RequestChannel) {
 
   auto clientConn = folly::make_unique<InlineConnection>();
   auto serverConn = folly::make_unique<InlineConnection>();
-  clientConn->connectTo(*serverConn, true);
+  clientConn->connectTo(*serverConn);
 
   StrictMock<UnmanagedMockSubscriber<Payload>> clientInput, serverInput;
   StrictMock<UnmanagedMockSubscription> clientOutputSub, serverOutputSub;
@@ -148,7 +148,7 @@ TEST(ReactiveSocketTest, RequestStreamComplete) {
 
   auto clientConn = folly::make_unique<InlineConnection>();
   auto serverConn = folly::make_unique<InlineConnection>();
-  clientConn->connectTo(*serverConn, true);
+  clientConn->connectTo(*serverConn);
 
   StrictMock<UnmanagedMockSubscriber<Payload>> clientInput;
   StrictMock<UnmanagedMockSubscription> serverOutputSub;
@@ -227,7 +227,7 @@ TEST(ReactiveSocketTest, RequestStreamCancel) {
 
   auto clientConn = folly::make_unique<InlineConnection>();
   auto serverConn = folly::make_unique<InlineConnection>();
-  clientConn->connectTo(*serverConn, true);
+  clientConn->connectTo(*serverConn);
 
   StrictMock<UnmanagedMockSubscriber<Payload>> clientInput;
   StrictMock<UnmanagedMockSubscription> serverOutputSub;
@@ -303,7 +303,7 @@ TEST(ReactiveSocketTest, RequestSubscription) {
 
   auto clientConn = folly::make_unique<InlineConnection>();
   auto serverConn = folly::make_unique<InlineConnection>();
-  clientConn->connectTo(*serverConn, true);
+  clientConn->connectTo(*serverConn);
 
   StrictMock<UnmanagedMockSubscriber<Payload>> clientInput;
   StrictMock<UnmanagedMockSubscription> serverOutputSub;
@@ -380,7 +380,7 @@ TEST(ReactiveSocketTest, RequestFireAndForget) {
 
   auto clientConn = folly::make_unique<InlineConnection>();
   auto serverConn = folly::make_unique<InlineConnection>();
-  clientConn->connectTo(*serverConn, true);
+  clientConn->connectTo(*serverConn);
 
   StrictMock<UnmanagedMockSubscriber<Payload>> clientInput;
   StrictMock<UnmanagedMockSubscription> serverOutputSub;
@@ -412,7 +412,7 @@ TEST(ReactiveSocketTest, RequestMetadataPush) {
 
   auto clientConn = folly::make_unique<InlineConnection>();
   auto serverConn = folly::make_unique<InlineConnection>();
-  clientConn->connectTo(*serverConn, true);
+  clientConn->connectTo(*serverConn);
 
   StrictMock<UnmanagedMockSubscriber<Payload>> clientInput;
   StrictMock<UnmanagedMockSubscription> serverOutputSub;
@@ -443,7 +443,7 @@ TEST(ReactiveSocketTest, Destructor) {
 
   auto clientConn = folly::make_unique<InlineConnection>();
   auto serverConn = folly::make_unique<InlineConnection>();
-  clientConn->connectTo(*serverConn, true);
+  clientConn->connectTo(*serverConn);
 
   // TODO: since we don't assert anything, should we just use the StatsPrinter
   // instead?

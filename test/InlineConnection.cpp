@@ -21,17 +21,11 @@ InlineConnection::InlineConnection()
 InlineConnection::~InlineConnection() {}
 
 void InlineConnection::connectTo(
-    InlineConnection& other,
-    bool expectSetupFrame) {
+    InlineConnection& other) {
   ASSERT_FALSE(other_);
   ASSERT_FALSE(other.other_);
   other.other_ = this;
   other_ = &other;
-  // this could just be true for the client, false for the server.  However
-  // InlineConnection is below the
-  // ReactiveSocket layer so any tests that just use DuplexConnection may break
-  // this
-  expectSetupFrame_ = expectSetupFrame;
 }
 
 void InlineConnection::setInput(
@@ -86,18 +80,6 @@ Subscriber<std::unique_ptr<folly::IOBuf>>& InlineConnection::getOutput() {
           inputSink->onSubscribe(*outputSubscription_);
         }
       }));
-  // SETUP
-  if (expectSetupFrame_) {
-    EXPECT_CALL(outputSink, onNext_(_))
-        .Times(1)
-        .InSequence(s)
-        .WillRepeatedly(Invoke([this](std::unique_ptr<folly::IOBuf>& frame) {
-          ASSERT_TRUE(other_);
-          ASSERT_FALSE(other_->outputSubscription_);
-          auto inputSink = other_->inputSink_;
-          ASSERT_FALSE(inputSink);
-        }));
-  }
   EXPECT_CALL(outputSink, onNext_(_))
       .Times(AnyNumber())
       .InSequence(s)
