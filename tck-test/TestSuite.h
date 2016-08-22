@@ -52,8 +52,17 @@ class Test {
     return commands_.empty();
   }
 
+  bool shouldSucceed() const {
+    return succeedingTest_;
+  }
+
+  void setSucceeding(bool value) {
+    succeedingTest_ = value;
+  }
+
  private:
   std::string name_;
+  bool succeedingTest_{true};
   std::vector<TestCommand> commands_;
 };
 

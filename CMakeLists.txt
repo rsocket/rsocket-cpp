@@ -224,6 +224,8 @@ add_executable(
         tck-test/client.cpp
         tck-test/TestFileParser.cpp
         tck-test/TestFileParser.h
+        tck-test/TestSubscriber.cpp
+        tck-test/TestSubscriber.h
         tck-test/TestSuite.cpp
         tck-test/TestSuite.h
         tck-test/TestInterpreter.cpp
@@ -232,9 +234,11 @@ add_executable(
 
 target_link_libraries(
         tckclient
+        ReactiveSocket
         ${FOLLY_LIBRARIES}
         gflags
-        glog)
+        glog
+        ${CMAKE_THREAD_LIBS_INIT})
 
 add_dependencies(tckclient gmock)
 

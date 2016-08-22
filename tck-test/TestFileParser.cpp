@@ -18,6 +18,7 @@ TestSuite TestFileParser::parse() {
     ++currentLine_;
   }
 
+  addCurrentTest();
   return std::move(testSuite_);
 }
 
@@ -27,13 +28,9 @@ void TestFileParser::parseCommand(const std::string& command) {
     return;
   }
 
+  // test delimiter
   if (command == "!") {
-    // test delimiter
-    if (currentTest_.empty()) {
-      // no test defined
-    } else {
-      testSuite_.addTest(std::move(currentTest_));
-    }
+    addCurrentTest();
     return;
   }
 
@@ -44,13 +41,24 @@ void TestFileParser::parseCommand(const std::string& command) {
     currentTest_.setName(parameters[1]);
     return;
   }
+  if (parameters.size() == 1 && (parameters[0] == "pass" || parameters[0] == "fail")) {
+    currentTest_.setSucceeding(parameters[0] == "pass");
+    return;
+  }
 
   TestCommand newCommand(std::move(parameters));
   if (!newCommand.valid()) {
-    LOG(ERROR) << "invalid command on line " << currentLine_ << ": " << command
-               << " (ignoring)";
+    LOG(ERROR) << "invalid command on line " << currentLine_ << ": " << command;
+    throw std::runtime_error("unknown command in the test");
   } else {
     currentTest_.addCommand(std::move(newCommand));
+  }
+}
+
+void TestFileParser::addCurrentTest() {
+  if (!currentTest_.empty()) {
+    testSuite_.addTest(std::move(currentTest_));
+    DCHECK(currentTest_.empty());
   }
 }
 

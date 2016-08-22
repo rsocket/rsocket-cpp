@@ -8,7 +8,7 @@ namespace tck {
 
 bool TestCommand::valid() const {
   // there has to be a name to the test and at least 1 param
-  return params_.size() >= 2;
+  return params_.size() >= 1;
 }
 
 void Test::addCommand(TestCommand command) {
