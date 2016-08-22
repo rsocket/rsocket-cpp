@@ -95,7 +95,7 @@ void TestSubscriber::assertValues(
   throw std::runtime_error("not implemented");
 }
 
-void TestSubscriber::assertValueCount(int valueCount) {
+void TestSubscriber::assertValueCount(size_t valueCount) {
   std::unique_lock<std::mutex> lock(mutex_);
   if (onNextValues_.size() == valueCount) {
     LOG(INFO) << "received expected " << valueCount << " values.";

@@ -150,8 +150,8 @@ class AssertCommand : public TypedTestCommand {
     return values;
   }
 
-  int valueCount() const {
-    return folly::to<int>(command_.params().at(3));
+  size_t valueCount() const {
+    return folly::to<size_t>(command_.params().at(3));
   }
 };
 

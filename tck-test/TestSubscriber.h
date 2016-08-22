@@ -33,7 +33,7 @@ class TestSubscriber : public reactivesocket::Subscriber<Payload> {
   void assertError();
   void assertValues(
       const std::vector<std::pair<std::string, std::string>>& values);
-  void assertValueCount(int valueCount);
+  void assertValueCount(size_t valueCount);
   void assertReceivedAtLeast(int valueCount);
   void assertCompleted();
   void assertNotCompleted();
