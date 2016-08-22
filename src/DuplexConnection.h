@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <memory>
 #include "src/ReactiveStreamsCompat.h"
 
 namespace folly {
