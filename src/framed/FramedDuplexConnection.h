@@ -15,8 +15,8 @@ class FramedDuplexConnection : public DuplexConnection {
   explicit FramedDuplexConnection(std::unique_ptr<DuplexConnection> connection);
   ~FramedDuplexConnection();
 
-  Subscriber<Payload>& getOutput() noexcept override;
-  void setInput(Subscriber<Payload>& framesSink) override;
+  Subscriber<std::unique_ptr<folly::IOBuf>>& getOutput() noexcept override;
+  void setInput(Subscriber<std::unique_ptr<folly::IOBuf>>& framesSink) override;
 
  private:
   std::unique_ptr<DuplexConnection> connection_;

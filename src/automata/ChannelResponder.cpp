@@ -27,9 +27,7 @@ void ChannelResponderBase::onComplete() {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
-      Frame_RESPONSE frame(
-          streamId_, FrameFlags_COMPLETE, FrameMetadata::empty(), nullptr);
-      connection_->onNextFrame(frame);
+      connection_->onNextFrame(Frame_RESPONSE::complete(streamId_));
       connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
     } break;
     case State::CLOSED:
@@ -41,13 +39,8 @@ void ChannelResponderBase::onError(folly::exception_wrapper ex) {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
-      Frame_ERROR frame(
-          streamId_,
-          FrameFlags_EMPTY,
-          ErrorCode::APPLICATION_ERROR,
-          FrameMetadata::empty(),
-          folly::IOBuf::copyBuffer(ex.what().toStdString()));
-      connection_->onNextFrame(frame);
+      auto msg = ex.what().toStdString();
+      connection_->onNextFrame(Frame_ERROR::applicationError(streamId_, msg));
       connection_->endStream(streamId_, StreamCompletionSignal::ERROR);
     } break;
     case State::CLOSED:
@@ -68,9 +61,7 @@ void ChannelResponderBase::cancel() {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
-      Frame_RESPONSE frame(
-          streamId_, FrameFlags_COMPLETE, FrameMetadata::empty(), nullptr);
-      connection_->onNextFrame(frame);
+      connection_->onNextFrame(Frame_RESPONSE::complete(streamId_));
       connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
     } break;
     case State::CLOSED:

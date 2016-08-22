@@ -11,7 +11,6 @@
 #include <gtest/gtest.h>
 
 #include "MockStats.h"
-#include "src/Payload.h"
 #include "src/ReactiveSocket.h"
 #include "test/InlineConnection.h"
 #include "test/MockRequestHandler.h"
@@ -22,6 +21,13 @@ using namespace ::reactivesocket;
 
 MATCHER_P(
     Equals,
+    payload,
+    "Payloads " + std::string(negation ? "don't" : "") + "match") {
+  return folly::IOBufEqual()(*payload, arg.data);
+};
+
+MATCHER_P(
+    Equals2,
     payload,
     "Payloads " + std::string(negation ? "don't" : "") + "match") {
   return folly::IOBufEqual()(*payload, arg);
@@ -61,8 +67,9 @@ TEST(ReactiveSocketTest, RequestChannel) {
   EXPECT_CALL(clientOutputSub, request_(1))
       .InSequence(s)
       // Client sends the initial request.
-      .WillOnce(Invoke(
-          [&](size_t) { clientOutput->onNext(originalPayload->clone()); }));
+      .WillOnce(Invoke([&](size_t) {
+        clientOutput->onNext(Payload(originalPayload->clone()));
+      }));
   // The request reaches the other end and triggers new responder to be set up.
   EXPECT_CALL(
       serverHandlerRef, handleRequestChannel_(Equals(&originalPayload), _))
@@ -83,8 +90,8 @@ TEST(ReactiveSocketTest, RequestChannel) {
       .InSequence(s)
       // The server delivers them immediately.
       .WillOnce(Invoke([&](size_t) {
-        serverOutput->onNext(originalPayload->clone());
-        serverOutput->onNext(originalPayload->clone());
+        serverOutput->onNext(Payload(originalPayload->clone()));
+        serverOutput->onNext(Payload(originalPayload->clone()));
       }));
   EXPECT_CALL(clientInput, onNext_(Equals(&originalPayload)))
       .InSequence(s)
@@ -99,8 +106,9 @@ TEST(ReactiveSocketTest, RequestChannel) {
   EXPECT_CALL(clientOutputSub, request_(2))
       .InSequence(s)
       // Client responds with the first one.
-      .WillOnce(Invoke(
-          [&](size_t) { clientOutput->onNext(originalPayload->clone()); }));
+      .WillOnce(Invoke([&](size_t) {
+        clientOutput->onNext(Payload(originalPayload->clone()));
+      }));
   EXPECT_CALL(serverInput, onNext_(Equals(&originalPayload)))
       .InSequence(s)
       // Server sends one in return.
@@ -121,12 +129,12 @@ TEST(ReactiveSocketTest, RequestChannel) {
       }));
   EXPECT_CALL(serverOutputSub, cancel_()).InSequence(s0);
   EXPECT_CALL(serverInput, onComplete_()).InSequence(s1);
-  EXPECT_CALL(clientInput, onComplete_()).InSequence(s2).WillOnce(Invoke([&]() {
-    clientInputSub->cancel();
-  }));
-  EXPECT_CALL(clientOutputSub, cancel_()).InSequence(s3).WillOnce(Invoke([&]() {
-    clientOutput->onComplete();
-  }));
+  EXPECT_CALL(clientInput, onComplete_())
+      .InSequence(s2)
+      .WillOnce(Invoke([&]() { clientInputSub->cancel(); }));
+  EXPECT_CALL(clientOutputSub, cancel_())
+      .InSequence(s3)
+      .WillOnce(Invoke([&]() { clientOutput->onComplete(); }));
 
   // Kick off the magic.
   clientOutput = &clientSock->requestChannel(clientInput);
@@ -179,8 +187,8 @@ TEST(ReactiveSocketTest, RequestStreamComplete) {
       .InSequence(s)
       // The server delivers them immediately.
       .WillOnce(Invoke([&](size_t) {
-        serverOutput->onNext(originalPayload->clone());
-        serverOutput->onNext(originalPayload->clone());
+        serverOutput->onNext(Payload(originalPayload->clone()));
+        serverOutput->onNext(Payload(originalPayload->clone()));
       }));
   // Client receives the first payload.
   EXPECT_CALL(clientInput, onNext_(Equals(&originalPayload))).InSequence(s);
@@ -191,8 +199,9 @@ TEST(ReactiveSocketTest, RequestStreamComplete) {
   // Server now sends one more payload with the complete bit set.
   EXPECT_CALL(serverOutputSub, request_(1))
       .InSequence(s)
-      .WillOnce(Invoke(
-          [&](size_t) { serverOutput->onNext(originalPayload->clone()); }));
+      .WillOnce(Invoke([&](size_t) {
+        serverOutput->onNext(Payload(originalPayload->clone()));
+      }));
   // Client receives the third (and last) payload
   Sequence s0, s1;
   EXPECT_CALL(clientInput, onNext_(Equals(&originalPayload)))
@@ -203,12 +212,12 @@ TEST(ReactiveSocketTest, RequestStreamComplete) {
         EXPECT_CALL(serverOutputSub, cancel_()).InSequence(s0);
         serverOutput->onComplete();
       }));
-  EXPECT_CALL(clientInput, onComplete_()).InSequence(s1).WillOnce(Invoke([&]() {
-    clientInputSub->cancel();
-  }));
+  EXPECT_CALL(clientInput, onComplete_())
+      .InSequence(s1)
+      .WillOnce(Invoke([&]() { clientInputSub->cancel(); }));
 
   // Kick off the magic.
-  clientSock->requestStream(originalPayload->clone(), clientInput);
+  clientSock->requestStream(Payload(originalPayload->clone()), clientInput);
 }
 
 TEST(ReactiveSocketTest, RequestStreamCancel) {
@@ -257,8 +266,8 @@ TEST(ReactiveSocketTest, RequestStreamCancel) {
       .InSequence(s)
       // The server delivers them immediately.
       .WillOnce(Invoke([&](size_t) {
-        serverOutput->onNext(originalPayload->clone());
-        serverOutput->onNext(originalPayload->clone());
+        serverOutput->onNext(Payload(originalPayload->clone()));
+        serverOutput->onNext(Payload(originalPayload->clone()));
       }));
   // Client receives the first payload.
   EXPECT_CALL(clientInput, onNext_(Equals(&originalPayload))).InSequence(s);
@@ -269,21 +278,22 @@ TEST(ReactiveSocketTest, RequestStreamCancel) {
   // Server now sends one more payload.
   EXPECT_CALL(serverOutputSub, request_(1))
       .InSequence(s)
-      .WillOnce(Invoke(
-          [&](size_t) { serverOutput->onNext(originalPayload->clone()); }));
+      .WillOnce(Invoke([&](size_t) {
+        serverOutput->onNext(Payload(originalPayload->clone()));
+      }));
   // Client receives the third (and last) payload
   Sequence s0, s1;
   EXPECT_CALL(clientInput, onNext_(Equals(&originalPayload)))
       .InSequence(s, s0, s1)
       // Client closes the subscription in response.
       .WillOnce(Invoke([&](Payload&) { clientInputSub->cancel(); }));
-  EXPECT_CALL(serverOutputSub, cancel_()).InSequence(s0).WillOnce(Invoke([&]() {
-    serverOutput->onComplete();
-  }));
+  EXPECT_CALL(serverOutputSub, cancel_())
+      .InSequence(s0)
+      .WillOnce(Invoke([&]() { serverOutput->onComplete(); }));
   EXPECT_CALL(clientInput, onComplete_()).InSequence(s1);
 
   // Kick off the magic.
-  clientSock->requestStream(originalPayload->clone(), clientInput);
+  clientSock->requestStream(Payload(originalPayload->clone()), clientInput);
 }
 
 TEST(ReactiveSocketTest, RequestSubscription) {
@@ -332,8 +342,8 @@ TEST(ReactiveSocketTest, RequestSubscription) {
       .InSequence(s)
       // The server delivers them immediately.
       .WillOnce(Invoke([&](size_t) {
-        serverOutput->onNext(originalPayload->clone());
-        serverOutput->onNext(originalPayload->clone());
+        serverOutput->onNext(Payload(originalPayload->clone()));
+        serverOutput->onNext(Payload(originalPayload->clone()));
       }));
   // Client receives the first payload.
   EXPECT_CALL(clientInput, onNext_(Equals(&originalPayload))).InSequence(s);
@@ -344,21 +354,23 @@ TEST(ReactiveSocketTest, RequestSubscription) {
   // Server now sends one more payload.
   EXPECT_CALL(serverOutputSub, request_(1))
       .InSequence(s)
-      .WillOnce(Invoke(
-          [&](size_t) { serverOutput->onNext(originalPayload->clone()); }));
+      .WillOnce(Invoke([&](size_t) {
+        serverOutput->onNext(Payload(originalPayload->clone()));
+      }));
   // Client receives the third (and last) payload.
   Sequence s0, s1;
   EXPECT_CALL(clientInput, onNext_(Equals(&originalPayload)))
       .InSequence(s, s0, s1)
       // Client closes the subscription in response.
       .WillOnce(Invoke([&](Payload&) { clientInputSub->cancel(); }));
-  EXPECT_CALL(serverOutputSub, cancel_()).InSequence(s0).WillOnce(Invoke([&]() {
-    serverOutput->onComplete();
-  }));
+  EXPECT_CALL(serverOutputSub, cancel_())
+      .InSequence(s0)
+      .WillOnce(Invoke([&]() { serverOutput->onComplete(); }));
   EXPECT_CALL(clientInput, onComplete_()).InSequence(s1);
 
   // Kick off the magic.
-  clientSock->requestSubscription(originalPayload->clone(), clientInput);
+  clientSock->requestSubscription(
+      Payload(originalPayload->clone()), clientInput);
 }
 
 TEST(ReactiveSocketTest, RequestFireAndForget) {
@@ -390,7 +402,7 @@ TEST(ReactiveSocketTest, RequestFireAndForget) {
       serverHandlerRef, handleFireAndForgetRequest_(Equals(&originalPayload)))
       .InSequence(s);
 
-  clientSock->requestFireAndForget(originalPayload->clone());
+  clientSock->requestFireAndForget(Payload(originalPayload->clone()));
 }
 
 TEST(ReactiveSocketTest, RequestMetadataPush) {
@@ -418,7 +430,7 @@ TEST(ReactiveSocketTest, RequestMetadataPush) {
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
 
   // Client sends a fire-and-forget
-  EXPECT_CALL(serverHandlerRef, handleMetadataPush_(Equals(&originalPayload)))
+  EXPECT_CALL(serverHandlerRef, handleMetadataPush_(Equals2(&originalPayload)))
       .InSequence(s);
 
   clientSock->metadataPush(originalPayload->clone());
@@ -504,7 +516,8 @@ TEST(ReactiveSocketTest, Destructor) {
 
   // Kick off the magic.
   for (size_t i = 0; i < 2; ++i) {
-    clientSock->requestSubscription(originalPayload->clone(), clientInputs[i]);
+    clientSock->requestSubscription(
+        Payload(originalPayload->clone()), clientInputs[i]);
   }
 
   //  clientSock.reset(nullptr);

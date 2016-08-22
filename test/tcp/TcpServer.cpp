@@ -19,8 +19,7 @@ using namespace ::folly;
 DEFINE_string(address, "9898", "host:port to listen to");
 
 namespace {
-class ServerSubscription : public virtual IntrusiveDeleter,
-                           public Subscription {
+class ServerSubscription : public Subscription {
  public:
   explicit ServerSubscription(Subscriber<Payload>& response)
       : response_(response) {}
@@ -29,8 +28,8 @@ class ServerSubscription : public virtual IntrusiveDeleter,
 
   // Subscription methods
   void request(size_t n) override {
-    response_.onNext(folly::IOBuf::copyBuffer("from server"));
-    response_.onNext(folly::IOBuf::copyBuffer("from server2"));
+    response_.onNext(Payload("from server"));
+    response_.onNext(Payload("from server2"));
     response_.onComplete();
     //    response_.onError(std::runtime_error("XXX"));
   }
@@ -46,8 +45,7 @@ class ServerRequestHandler : public DefaultRequestHandler {
   /// Handles a new inbound Subscription requested by the other end.
   void handleRequestSubscription(Payload request, Subscriber<Payload>& response)
       override {
-    LOG(INFO) << "ServerRequestHandler.handleRequestSubscription "
-              << request->moveToFbString();
+    LOG(INFO) << "ServerRequestHandler.handleRequestSubscription " << request;
 
     response.onSubscribe(createManagedInstance<ServerSubscription>(response));
   }
@@ -55,18 +53,17 @@ class ServerRequestHandler : public DefaultRequestHandler {
   /// Handles a new inbound Stream requested by the other end.
   void handleRequestStream(Payload request, Subscriber<Payload>& response)
       override {
-    LOG(INFO) << "ServerRequestHandler.handleRequestStream "
-              << request->moveToFbString();
+    LOG(INFO) << "ServerRequestHandler.handleRequestStream " << request;
 
     response.onSubscribe(createManagedInstance<ServerSubscription>(response));
   }
 
   void handleFireAndForgetRequest(Payload request) override {
-    LOG(INFO) << "ServerRequestHandler.handleFireAndForgetRequest "
-              << request->moveToFbString() << "\n";
+    LOG(INFO) << "ServerRequestHandler.handleFireAndForgetRequest " << request
+              << "\n";
   }
 
-  void handleMetadataPush(Payload request) override {
+  void handleMetadataPush(std::unique_ptr<folly::IOBuf> request) override {
     LOG(INFO) << "ServerRequestHandler.handleMetadataPush "
               << request->moveToFbString() << "\n";
   }

@@ -6,21 +6,22 @@
 #include <folly/io/IOBufQueue.h>
 #include <reactive-streams/utilities/AllowanceSemaphore.h>
 #include <reactive-streams/utilities/SmartPointers.h>
-#include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
 
 namespace reactivesocket {
 
-class FramedReader : public reactivesocket::Subscriber<Payload>,
-                     public reactivesocket::Subscription {
+class FramedReader
+    : public reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>,
+      public reactivesocket::Subscription {
  public:
-  FramedReader(reactivesocket::Subscriber<Payload>& frames)
+  FramedReader(
+      reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>& frames)
       : frames_(&frames),
         payloadQueue_(folly::IOBufQueue::cacheChainLength()) {}
 
   // Subscriber methods
-  void onSubscribe(reactivesocket::Subscription& subscription) override;
-  void onNext(reactivesocket::Payload element) override;
+  void onSubscribe(Subscription& subscription) override;
+  void onNext(std::unique_ptr<folly::IOBuf> element) override;
   void onComplete() override;
   void onError(folly::exception_wrapper ex) override;
 
@@ -32,8 +33,9 @@ class FramedReader : public reactivesocket::Subscriber<Payload>,
   void parseFrames();
   void requestStream();
 
-  SubscriberPtr<reactivesocket::Subscriber<Payload>> frames_;
-  SubscriptionPtr<::reactivestreams::Subscription> streamSubscription_;
+  SubscriberPtr<reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
+      frames_;
+  SubscriptionPtr<Subscription> streamSubscription_;
 
   ::reactivestreams::AllowanceSemaphore allowance_{0};
 

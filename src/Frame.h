@@ -23,7 +23,7 @@ class QueueAppender;
 namespace reactivesocket {
 
 /// A unique identifier of a stream.
-// TODO(stupaq): string typedef and forward declarations all around
+// TODO(stupaq): strong typedef and forward declarations all around
 using StreamId = uint32_t;
 
 enum class FrameType : uint16_t {
@@ -64,7 +64,7 @@ std::ostream& operator<<(std::ostream&, FrameType);
 using FrameFlags = uint16_t;
 const FrameFlags FrameFlags_EMPTY = 0x0000;
 // const FrameFlags FrameFlags_IGNORE = 0x8000;
-const FrameFlags FrameFlags_METADATA = 0x4000;
+// const FrameFlags FrameFlags_METADATA = 0x4000;
 // const FrameFlags FrameFlags_FOLLOWS = 0x2000;
 const FrameFlags FrameFlags_KEEPALIVE_RESPOND = 0x2000;
 const FrameFlags FrameFlags_LEASE = 0x2000;
@@ -76,9 +76,8 @@ class FrameHeader {
  public:
   static constexpr size_t kSize = 8;
 
-  static FrameType peekType(const folly::IOBuf& in);
-
-  static folly::Optional<StreamId> peekStreamId(const folly::IOBuf& in);
+  static FrameType peekType(const folly::IOBuf& p);
+  static folly::Optional<StreamId> peekStreamId(const folly::IOBuf& p);
 
   FrameHeader() {
 #ifndef NDEBUG
@@ -89,7 +88,7 @@ class FrameHeader {
       : type_(type), flags_(flags), streamId_(streamId) {}
 
   void serializeInto(folly::io::QueueAppender& appender);
-  bool deserializeFrom(folly::io::Cursor& cur);
+  void deserializeFrom(folly::io::Cursor& cur);
 
   FrameType type_;
   FrameFlags flags_;
@@ -107,213 +106,163 @@ class FrameBufferAllocator {
   virtual std::unique_ptr<folly::IOBuf> allocateBuffer(size_t size);
 };
 
-class FrameMetadata {
- public:
-  explicit FrameMetadata(std::unique_ptr<folly::IOBuf> metadataPayload)
-      : metadataPayload_(std::move(metadataPayload)) {}
-  /// Empty metadata
-  explicit FrameMetadata() : metadataPayload_(nullptr) {}
-
-  static FrameMetadata empty();
-  void checkFlags(FrameFlags flags);
-
-  void serializeInto(folly::io::QueueAppender& appender);
-
-  /// if metadata is present, deserializes it into metadata
-  static bool deserializeFrom(
-      folly::io::Cursor& cur,
-      const FrameFlags& flags,
-      FrameMetadata& metadata);
-  bool deserializeFrom(folly::io::Cursor& cur);
-
-  std::unique_ptr<folly::IOBuf> metadataPayload_;
-};
-std::ostream& operator<<(std::ostream&, const FrameMetadata&);
-
 /// @{
 /// Frames do not form hierarchy, as we never perform type erasure on a frame.
+/// We use inheritance only to save code duplication.
 ///
 /// Since frames are only meaningful for stream automata on both ends of a
 /// stream, intermediate layers that are frame-type-agnostic pass around
 /// serialized frame.
-class Frame_REQUEST_STREAM {
+
+class Frame_REQUEST_Base {
  public:
   static constexpr bool Trait_CarriesAllowance = true;
 
-  Frame_REQUEST_STREAM() {}
+  Frame_REQUEST_Base() = default;
+  Frame_REQUEST_Base(
+      FrameType frameType,
+      StreamId streamId,
+      FrameFlags flags,
+      uint32_t requestN,
+      Payload payload)
+      : header_(frameType, flags | payload.getFlags(), streamId),
+        requestN_(requestN),
+        payload_(std::move(payload)) {
+    payload_.checkFlags(header_.flags_); // to verify the client didn't set
+    // METADATA and provided none
+  }
+
+  /// For compatibility with other data-carrying frames.
+  Frame_REQUEST_Base(
+      FrameType frameType,
+      StreamId streamId,
+      FrameFlags flags,
+      Payload payload)
+      : Frame_REQUEST_Base(frameType, streamId, flags, 0, std::move(payload)) {}
+
+  std::unique_ptr<folly::IOBuf> serializeOut();
+  bool deserializeFrom(std::unique_ptr<folly::IOBuf> in);
+
+  FrameHeader header_;
+  uint32_t requestN_;
+  Payload payload_;
+};
+std::ostream& operator<<(std::ostream&, const Frame_REQUEST_Base&);
+
+class Frame_REQUEST_STREAM : public Frame_REQUEST_Base {
+ public:
+  Frame_REQUEST_STREAM() = default;
   Frame_REQUEST_STREAM(
       StreamId streamId,
       FrameFlags flags,
       uint32_t requestN,
-      FrameMetadata metadata,
-      Payload data)
-      : header_(FrameType::REQUEST_STREAM, flags, streamId),
-        requestN_(requestN),
-        metadata_(std::move(metadata)),
-        data_(std::move(data)) {
-    metadata_.checkFlags(flags);
-  }
-
-  /// For compatibility with other data-carrying frames.
-  Frame_REQUEST_STREAM(
-      StreamId streamId,
-      FrameFlags flags,
-      FrameMetadata metadata,
-      Payload data)
-      : Frame_REQUEST_STREAM(
+      Payload payload)
+      : Frame_REQUEST_Base(
+            FrameType::REQUEST_STREAM,
             streamId,
             flags,
-            0,
-            std::move(metadata),
-            std::move(data)) {}
+            requestN,
+            std::move(payload)) {}
 
-  Payload serializeOut();
-  bool deserializeFrom(Payload in);
-
-  FrameHeader header_;
-  uint32_t requestN_;
-  FrameMetadata metadata_;
-  Payload data_;
+  /// For compatibility with other data-carrying frames.
+  Frame_REQUEST_STREAM(StreamId streamId, FrameFlags flags, Payload payload)
+      : Frame_REQUEST_STREAM(streamId, flags, 0, std::move(payload)) {}
 };
-std::ostream& operator<<(std::ostream&, const Frame_REQUEST_STREAM&);
 
-class Frame_REQUEST_SUB {
+class Frame_REQUEST_SUB : public Frame_REQUEST_Base {
  public:
-  static constexpr bool Trait_CarriesAllowance = true;
-
-  Frame_REQUEST_SUB() {}
+  Frame_REQUEST_SUB() = default;
   Frame_REQUEST_SUB(
       StreamId streamId,
       FrameFlags flags,
       uint32_t requestN,
-      FrameMetadata metadata,
-      Payload data)
-      : header_(FrameType::REQUEST_SUB, flags, streamId),
-        requestN_(requestN),
-        metadata_(std::move(metadata)),
-        data_(std::move(data)) {
-    metadata_.checkFlags(flags);
-  }
-
-  /// For compatibility with other data-carrying frames.
-  Frame_REQUEST_SUB(
-      StreamId streamId,
-      FrameFlags flags,
-      FrameMetadata metadata,
-      Payload data)
-      : Frame_REQUEST_SUB(
+      Payload payload)
+      : Frame_REQUEST_Base(
+            FrameType::REQUEST_SUB,
             streamId,
             flags,
-            0,
-            std::move(metadata),
-            std::move(data)) {}
+            requestN,
+            std::move(payload)) {}
 
-  Payload serializeOut();
-  bool deserializeFrom(Payload in);
-
-  FrameHeader header_;
-  uint32_t requestN_;
-  FrameMetadata metadata_;
-  Payload data_;
+  /// For compatibility with other data-carrying frames.
+  Frame_REQUEST_SUB(StreamId streamId, FrameFlags flags, Payload payload)
+      : Frame_REQUEST_SUB(streamId, flags, 0, std::move(payload)) {}
 };
-std::ostream& operator<<(std::ostream&, const Frame_REQUEST_SUB&);
 
-class Frame_REQUEST_CHANNEL {
+class Frame_REQUEST_CHANNEL : public Frame_REQUEST_Base {
  public:
-  static constexpr bool Trait_CarriesAllowance = true;
-
-  Frame_REQUEST_CHANNEL() {}
+  Frame_REQUEST_CHANNEL() = default;
   Frame_REQUEST_CHANNEL(
       StreamId streamId,
       FrameFlags flags,
       uint32_t requestN,
-      FrameMetadata metadata,
-      Payload data)
-      : header_(FrameType::REQUEST_CHANNEL, flags, streamId),
-        requestN_(requestN),
-        metadata_(std::move(metadata)),
-        data_(std::move(data)) {
-    metadata_.checkFlags(flags);
-  }
-
-  /// For compatibility with other data-carrying frames.
-  Frame_REQUEST_CHANNEL(
-      StreamId streamId,
-      FrameFlags flags,
-      FrameMetadata metadata,
-      Payload data)
-      : Frame_REQUEST_CHANNEL(
+      Payload payload)
+      : Frame_REQUEST_Base(
+            FrameType::REQUEST_CHANNEL,
             streamId,
             flags,
-            0,
-            std::move(metadata),
-            std::move(data)) {}
+            requestN,
+            std::move(payload)) {}
 
-  Payload serializeOut();
-  bool deserializeFrom(Payload in);
+  /// For compatibility with other data-carrying frames.
+  Frame_REQUEST_CHANNEL(StreamId streamId, FrameFlags flags, Payload payload)
+      : Frame_REQUEST_CHANNEL(streamId, flags, 0, std::move(payload)) {}
+};
+
+class Frame_REQUEST_FNF {
+ public:
+  static constexpr bool Trait_CarriesAllowance = false;
+
+  Frame_REQUEST_FNF() = default;
+  Frame_REQUEST_FNF(StreamId streamId, FrameFlags flags, Payload payload)
+      : header_(FrameType::REQUEST_FNF, flags | payload.getFlags(), streamId),
+        payload_(std::move(payload)) {
+    payload_.checkFlags(header_.flags_); // to verify the client didn't set
+    // METADATA and provided none
+  }
+
+  std::unique_ptr<folly::IOBuf> serializeOut();
+  bool deserializeFrom(std::unique_ptr<folly::IOBuf> in);
 
   FrameHeader header_;
-  uint32_t requestN_;
-  FrameMetadata metadata_;
-  Payload data_;
+  Payload payload_;
 };
-std::ostream& operator<<(std::ostream&, const Frame_REQUEST_CHANNEL&);
+std::ostream& operator<<(std::ostream&, const Frame_REQUEST_FNF&);
 
 class Frame_REQUEST_N {
  public:
   static constexpr bool Trait_CarriesAllowance = true;
   static constexpr size_t kMaxRequestN = std::numeric_limits<uint32_t>::max();
 
-  Frame_REQUEST_N() {}
+  Frame_REQUEST_N() = default;
   Frame_REQUEST_N(StreamId streamId, uint32_t requestN)
       : header_(FrameType::REQUEST_N, FrameFlags_EMPTY, streamId),
         requestN_(requestN) {}
 
-  Payload serializeOut();
-  bool deserializeFrom(Payload in);
+  std::unique_ptr<folly::IOBuf> serializeOut();
+  bool deserializeFrom(std::unique_ptr<folly::IOBuf> in);
 
   FrameHeader header_;
   uint32_t requestN_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_REQUEST_N&);
 
-class Frame_REQUEST_FNF {
- public:
-  static constexpr bool Trait_CarriesAllowance = false;
-
-  Frame_REQUEST_FNF() {}
-  Frame_REQUEST_FNF(
-      StreamId streamId,
-      FrameFlags flags,
-      FrameMetadata metadata,
-      Payload data)
-      : header_(FrameType::REQUEST_FNF, flags, streamId),
-        metadata_(std::move(metadata)),
-        data_(std::move(data)) {}
-
-  Payload serializeOut();
-  bool deserializeFrom(Payload in);
-
-  FrameHeader header_;
-  FrameMetadata metadata_;
-  Payload data_;
-};
-std::ostream& operator<<(std::ostream&, const Frame_REQUEST_FNF&);
-
 class Frame_METADATA_PUSH {
  public:
   static constexpr bool Trait_CarriesAllowance = false;
 
   Frame_METADATA_PUSH() {}
-  explicit Frame_METADATA_PUSH(FrameMetadata metadata)
+  explicit Frame_METADATA_PUSH(std::unique_ptr<folly::IOBuf> metadata)
       : header_(FrameType::METADATA_PUSH, FrameFlags_METADATA, 0),
-        metadata_(std::move(metadata)) {}
+        metadata_(std::move(metadata)) {
+    CHECK(metadata_);
+  }
 
-  Payload serializeOut();
-  bool deserializeFrom(Payload in);
+  std::unique_ptr<folly::IOBuf> serializeOut();
+  bool deserializeFrom(std::unique_ptr<folly::IOBuf> in);
 
   FrameHeader header_;
-  FrameMetadata metadata_;
+  std::unique_ptr<folly::IOBuf> metadata_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_METADATA_PUSH&);
 
@@ -321,20 +270,21 @@ class Frame_CANCEL {
  public:
   static constexpr bool Trait_CarriesAllowance = false;
 
-  Frame_CANCEL() {}
-  explicit Frame_CANCEL(StreamId streamId)
-      : Frame_CANCEL(streamId, FrameFlags_EMPTY, FrameMetadata::empty()) {}
-  Frame_CANCEL(StreamId streamId, FrameFlags flags, FrameMetadata metadata)
-      : header_(FrameType::CANCEL, flags, streamId),
-        metadata_(std::move(metadata)) {
-    metadata_.checkFlags(flags);
-  }
+  Frame_CANCEL() = default;
+  Frame_CANCEL(
+      StreamId streamId,
+      std::unique_ptr<folly::IOBuf> metadata = std::unique_ptr<folly::IOBuf>())
+      : header_(
+            FrameType::CANCEL,
+            metadata ? FrameFlags_METADATA : 0,
+            streamId),
+        metadata_(std::move(metadata)) {}
 
-  Payload serializeOut();
-  bool deserializeFrom(Payload in);
+  std::unique_ptr<folly::IOBuf> serializeOut();
+  bool deserializeFrom(std::unique_ptr<folly::IOBuf> in);
 
   FrameHeader header_;
-  FrameMetadata metadata_;
+  std::unique_ptr<folly::IOBuf> metadata_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_CANCEL&);
 
@@ -342,24 +292,21 @@ class Frame_RESPONSE {
  public:
   static constexpr bool Trait_CarriesAllowance = false;
 
-  Frame_RESPONSE() {}
-  Frame_RESPONSE(
-      StreamId streamId,
-      FrameFlags flags,
-      FrameMetadata metadata,
-      Payload data)
-      : header_(FrameType::RESPONSE, flags, streamId),
-        metadata_(std::move(metadata)),
-        data_(std::move(data)) {
-    metadata_.checkFlags(flags);
+  Frame_RESPONSE() = default;
+  Frame_RESPONSE(StreamId streamId, FrameFlags flags, Payload payload)
+      : header_(FrameType::RESPONSE, flags | payload.getFlags(), streamId),
+        payload_(std::move(payload)) {
+    payload_.checkFlags(header_.flags_); // to verify the client didn't set
+    // METADATA and provided none
   }
 
-  Payload serializeOut();
-  bool deserializeFrom(Payload in);
+  std::unique_ptr<folly::IOBuf> serializeOut();
+  bool deserializeFrom(std::unique_ptr<folly::IOBuf> in);
+
+  static Frame_RESPONSE complete(StreamId streamId);
 
   FrameHeader header_;
-  FrameMetadata metadata_;
-  Payload data_;
+  Payload payload_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_RESPONSE&);
 
@@ -367,38 +314,25 @@ class Frame_ERROR {
  public:
   static constexpr bool Trait_CarriesAllowance = false;
 
-  Frame_ERROR() {}
-  Frame_ERROR(StreamId streamId, ErrorCode errorCode, Payload data)
-      : Frame_ERROR(
-            streamId,
-            FrameFlags_EMPTY,
-            errorCode,
-            FrameMetadata::empty(),
-            std::move(data)) {}
-  Frame_ERROR(
-      StreamId streamId,
-      FrameFlags flags,
-      ErrorCode errorCode,
-      FrameMetadata metadata,
-      Payload data)
-      : header_(FrameType::ERROR, flags, streamId),
+  Frame_ERROR() = default;
+  Frame_ERROR(StreamId streamId, ErrorCode errorCode, Payload payload)
+      : header_(FrameType::ERROR, payload.getFlags(), streamId),
         errorCode_(errorCode),
-        metadata_(std::move(metadata)),
-        data_(std::move(data)) {
-    metadata_.checkFlags(flags);
-  }
+        payload_(std::move(payload)) {}
 
-  Payload serializeOut();
-  bool deserializeFrom(Payload in);
+  std::unique_ptr<folly::IOBuf> serializeOut();
+  bool deserializeFrom(std::unique_ptr<folly::IOBuf> in);
 
   static Frame_ERROR unexpectedFrame();
   static Frame_ERROR badSetupFrame(const std::string& message);
   static Frame_ERROR invalid(const std::string& message);
+  static Frame_ERROR applicationError(
+      StreamId streamId,
+      const std::string& message);
 
   FrameHeader header_;
   ErrorCode errorCode_;
-  FrameMetadata metadata_;
-  Payload data_;
+  Payload payload_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_ERROR&);
 
@@ -406,15 +340,17 @@ class Frame_KEEPALIVE {
  public:
   static constexpr bool Trait_CarriesAllowance = false;
 
-  Frame_KEEPALIVE() {}
-  Frame_KEEPALIVE(FrameFlags flags, Payload data)
-      : header_(FrameType::KEEPALIVE, flags, 0), data_(std::move(data)) {}
+  Frame_KEEPALIVE() = default;
+  Frame_KEEPALIVE(FrameFlags flags, std::unique_ptr<folly::IOBuf> data)
+      : header_(FrameType::KEEPALIVE, flags, 0), data_(std::move(data)) {
+    assert(!(flags & FrameFlags_METADATA));
+  }
 
-  Payload serializeOut();
-  bool deserializeFrom(Payload in);
+  std::unique_ptr<folly::IOBuf> serializeOut();
+  bool deserializeFrom(std::unique_ptr<folly::IOBuf> in);
 
   FrameHeader header_;
-  Payload data_;
+  std::unique_ptr<folly::IOBuf> data_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_KEEPALIVE&);
 
@@ -422,7 +358,7 @@ class Frame_SETUP {
  public:
   static constexpr bool Trait_CarriesAllowance = false;
 
-  Frame_SETUP() {}
+  Frame_SETUP() = default;
   Frame_SETUP(
       FrameFlags flags,
       uint32_t version,
@@ -430,21 +366,20 @@ class Frame_SETUP {
       uint32_t maxLifetime,
       std::string metadataMimeType,
       std::string dataMimeType,
-      FrameMetadata metadata,
-      Payload data)
-      : header_(FrameType::SETUP, flags, 0),
+      Payload payload)
+      : header_(FrameType::SETUP, flags | payload.getFlags(), 0),
         version_(version),
         keepaliveTime_(keepaliveTime),
         maxLifetime_(maxLifetime),
         metadataMimeType_(metadataMimeType),
         dataMimeType_(dataMimeType),
-        metadata_(std::move(metadata)),
-        data_(std::move(data)) {
-    metadata_.checkFlags(flags);
+        payload_(std::move(payload)) {
+    payload_.checkFlags(header_.flags_); // to verify the client didn't set
+    // METADATA and provided none
   }
 
-  Payload serializeOut();
-  bool deserializeFrom(Payload in);
+  std::unique_ptr<folly::IOBuf> serializeOut();
+  bool deserializeFrom(std::unique_ptr<folly::IOBuf> in);
 
   FrameHeader header_;
   uint32_t version_;
@@ -452,8 +387,7 @@ class Frame_SETUP {
   uint32_t maxLifetime_;
   std::string metadataMimeType_;
   std::string dataMimeType_;
-  FrameMetadata metadata_;
-  Payload data_;
+  Payload payload_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_SETUP&);
 /// @}
@@ -462,26 +396,23 @@ class Frame_LEASE {
  public:
   static constexpr bool Trait_CarriesAllowance = false;
 
-  Frame_LEASE() {}
+  Frame_LEASE() = default;
   Frame_LEASE(
-      FrameFlags flags,
       uint32_t ttl,
       uint32_t numberOfRequests,
-      FrameMetadata metadata)
-      : header_(FrameType::LEASE, flags, 0),
+      std::unique_ptr<folly::IOBuf> metadata = std::unique_ptr<folly::IOBuf>())
+      : header_(FrameType::LEASE, metadata ? FrameFlags_METADATA : 0, 0),
         ttl_(ttl),
         numberOfRequests_(numberOfRequests),
-        metadata_(std::move(metadata)) {
-    metadata_.checkFlags(flags);
-  }
+        metadata_(std::move(metadata)) {}
 
-  Payload serializeOut();
-  bool deserializeFrom(Payload in);
+  std::unique_ptr<folly::IOBuf> serializeOut();
+  bool deserializeFrom(std::unique_ptr<folly::IOBuf> in);
 
   FrameHeader header_;
   uint32_t ttl_;
   uint32_t numberOfRequests_;
-  FrameMetadata metadata_;
+  std::unique_ptr<folly::IOBuf> metadata_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_SETUP&);
 /// @}

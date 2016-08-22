@@ -8,7 +8,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/Payload.h"
 #include "src/framed/FramedWriter.h"
 #include "test/ReactiveStreamsMocksCompat.h"
 
@@ -16,7 +15,7 @@ using namespace ::testing;
 using namespace ::reactivesocket;
 
 TEST(FramedWriterTest, Subscribe) {
-  auto& subscriber = makeMockSubscriber<Payload>();
+  auto& subscriber = makeMockSubscriber<std::unique_ptr<folly::IOBuf>>();
   auto& subscription = makeMockSubscription();
 
   EXPECT_CALL(subscriber, onSubscribe_(_)).Times(1);
@@ -31,7 +30,7 @@ TEST(FramedWriterTest, Subscribe) {
 }
 
 TEST(FramedWriterTest, Error) {
-  auto& subscriber = makeMockSubscriber<Payload>();
+  auto& subscriber = makeMockSubscriber<std::unique_ptr<folly::IOBuf>>();
   auto& subscription = makeMockSubscription();
 
   FramedWriter writer(subscriber);
@@ -47,7 +46,7 @@ TEST(FramedWriterTest, Error) {
 }
 
 TEST(FramedWriterTest, Complete) {
-  auto& subscriber = makeMockSubscriber<Payload>();
+  auto& subscriber = makeMockSubscriber<std::unique_ptr<folly::IOBuf>>();
   auto& subscription = makeMockSubscription();
 
   FramedWriter writer(subscriber);
@@ -63,7 +62,7 @@ TEST(FramedWriterTest, Complete) {
 }
 
 static void nextSingleFrameTest(int headroom) {
-  auto& subscriber = makeMockSubscriber<Payload>();
+  auto& subscriber = makeMockSubscriber<std::unique_ptr<folly::IOBuf>>();
   auto& subscription = makeMockSubscription();
 
   EXPECT_CALL(subscriber, onError_(_)).Times(0);
@@ -72,12 +71,13 @@ static void nextSingleFrameTest(int headroom) {
 
   std::string msg("hello");
 
-  EXPECT_CALL(subscriber, onNext_(_)).WillOnce(Invoke([&](Payload& p) {
-    ASSERT_EQ(
-        folly::to<std::string>(
-            '\0', '\0', '\0', char(msg.size() + sizeof(int32_t)), msg),
-        p->moveToFbString().toStdString());
-  }));
+  EXPECT_CALL(subscriber, onNext_(_))
+      .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& p) {
+        ASSERT_EQ(
+            folly::to<std::string>(
+                '\0', '\0', '\0', char(msg.size() + sizeof(int32_t)), msg),
+            p->moveToFbString().toStdString());
+      }));
 
   FramedWriter writer(subscriber);
   writer.onSubscribe(subscription);
@@ -100,7 +100,7 @@ TEST(FramedWriterTest, NextSingleFrameWithHeadroom) {
 }
 
 static void nextTwoFramesTest(int headroom) {
-  auto& subscriber = makeMockSubscriber<Payload>();
+  auto& subscriber = makeMockSubscriber<std::unique_ptr<folly::IOBuf>>();
   auto& subscription = makeMockSubscription();
 
   EXPECT_CALL(subscriber, onError_(_)).Times(0);
@@ -113,9 +113,10 @@ static void nextTwoFramesTest(int headroom) {
   folly::IOBuf payloadChain;
 
   EXPECT_CALL(subscriber, onNext_(_))
-      .WillOnce(
-          Invoke([&](Payload& p) { payloadChain.prependChain(std::move(p)); }))
-      .WillOnce(Invoke([&](Payload& p) {
+      .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& p) {
+        payloadChain.prependChain(std::move(p));
+      }))
+      .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& p) {
         payloadChain.prependChain(std::move(p));
         ASSERT_EQ(
             folly::to<std::string>(

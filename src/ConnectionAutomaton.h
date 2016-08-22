@@ -29,7 +29,8 @@ using StreamId = uint32_t;
 /// Returns true if the responder has been created successfully, false if the
 /// frame cannot start a new stream, in which case the frame (passed by a
 /// mutable referece) must not be modified.
-using StreamAutomatonFactory = std::function<bool(StreamId, Payload&)>;
+using StreamAutomatonFactory =
+    std::function<bool(StreamId, std::unique_ptr<folly::IOBuf>)>;
 
 using ConnectionCloseListener = std::function<void()>;
 
@@ -42,7 +43,7 @@ using ConnectionCloseListener = std::function<void()>;
 /// automata and ConnectionAutomaton.
 class ConnectionAutomaton :
     /// Registered as an input in the DuplexConnection.
-    public Subscriber<Payload>,
+    public Subscriber<std::unique_ptr<folly::IOBuf>>,
     /// Receives signals about connection writability.
     public Subscription {
  public:
@@ -85,9 +86,17 @@ class ConnectionAutomaton :
   /// Enqueuing a terminal frame does not end the stream.
   ///
   /// This signal corresponds to Subscriber::onNext.
-  template <typename Frame>
-  void onNextFrame(Frame& frame);
-  void onNextFrame(Payload frame);
+  void onNextFrame(Frame_REQUEST_STREAM&&);
+  void onNextFrame(Frame_REQUEST_SUB&&);
+  void onNextFrame(Frame_REQUEST_CHANNEL&&);
+  void onNextFrame(Frame_REQUEST_N&&);
+  void onNextFrame(Frame_REQUEST_FNF&&);
+  void onNextFrame(Frame_METADATA_PUSH&&);
+  void onNextFrame(Frame_CANCEL&&);
+  void onNextFrame(Frame_RESPONSE&&);
+  void onNextFrame(Frame_ERROR&&);
+
+  void onNextFrame(std::unique_ptr<folly::IOBuf> frame);
 
   /// Indicates that the stream should be removed from the connection.
   ///
@@ -125,9 +134,9 @@ class ConnectionAutomaton :
   /// @{
   void onSubscribe(Subscription&) override;
 
-  void onNext(Payload) override;
+  void onNext(std::unique_ptr<folly::IOBuf>) override;
 
-  void writeFrame(Payload);
+  void writeFrame(std::unique_ptr<folly::IOBuf>);
 
   void onComplete() override;
 
@@ -135,7 +144,7 @@ class ConnectionAutomaton :
 
   void onTerminal(folly::exception_wrapper ex);
 
-  void onConnectionFrame(Payload);
+  void onConnectionFrame(std::unique_ptr<folly::IOBuf>);
   /// @}
 
   /// @{
@@ -146,19 +155,23 @@ class ConnectionAutomaton :
 
   /// @{
   /// State management at the connection level.
-  void handleUnknownStream(StreamId streamId, Payload frame);
+  void handleUnknownStream(
+      StreamId streamId,
+      std::unique_ptr<folly::IOBuf> frame);
   /// @}
 
   std::unique_ptr<DuplexConnection> connection_;
   StreamAutomatonFactory factory_;
   // TODO(stupaq): looks like a bug that I have to qualify this
-  reactivestreams::SubscriberPtr<reactivesocket::Subscriber<Payload>>
+  reactivestreams::SubscriberPtr<
+      reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
       connectionOutput_;
   reactivestreams::SubscriptionPtr<Subscription> connectionInputSub_;
 
   std::unordered_map<StreamId, AbstractStreamAutomaton*> streams_;
   reactivestreams::AllowanceSemaphore writeAllowance_;
-  std::deque<Payload> pendingWrites_; // TODO(stupaq): two vectors?
+  std::deque<std::unique_ptr<folly::IOBuf>>
+      pendingWrites_; // TODO(stupaq): two vectors?
   Stats& stats_;
   bool isServer_;
   std::unique_ptr<KeepaliveTimer> keepaliveTimer_;

@@ -33,6 +33,6 @@ class RequestHandler {
   virtual void handleFireAndForgetRequest(Payload request) = 0;
 
   /// Handles a new metadata-push sent by the other end.
-  virtual void handleMetadataPush(Payload request) = 0;
+  virtual void handleMetadataPush(std::unique_ptr<folly::IOBuf> request) = 0;
 };
 }

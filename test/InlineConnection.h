@@ -37,13 +37,13 @@ class InlineConnection : public DuplexConnection {
   /// accessing input or output of the connection.
   void connectTo(InlineConnection& other, bool expectSetupFrame);
 
-  void setInput(Subscriber<Payload>& inputSink) override;
+  void setInput(Subscriber<std::unique_ptr<folly::IOBuf>>& inputSink) override;
 
-  Subscriber<Payload>& getOutput() override;
+  Subscriber<std::unique_ptr<folly::IOBuf>>& getOutput() override;
 
  private:
   InlineConnection* other_;
-  Subscriber<Payload>* inputSink_;
+  Subscriber<std::unique_ptr<folly::IOBuf>>* inputSink_;
   /// @{
   /// Store pending terminal signal that would be sent to the input, if it was
   /// set at the time the signal was issued. Both fields being false indicate a

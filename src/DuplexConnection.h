@@ -2,8 +2,12 @@
 
 #pragma once
 
-#include "src/Payload.h"
+#include <memory>
 #include "src/ReactiveStreamsCompat.h"
+
+namespace folly {
+class IOBuf;
+}
 
 namespace reactivesocket {
 
@@ -31,13 +35,14 @@ class DuplexConnection {
   /// This method is invoked by ReactiveSocket implementation once in an entire
   /// lifetime of the connection. The connection MUST NOT assume an ownership of
   /// provided Subscriber.
-  virtual void setInput(Subscriber<Payload>& framesSink) = 0;
+  virtual void setInput(
+      Subscriber<std::unique_ptr<folly::IOBuf>>& framesSink) = 0;
 
   /// Obtains a Subscriber that should be fed with frames to send (a writer).
   ///
   /// This method is invoked by ReactiveSocket
   /// implementation once in an entire lifetime of the connection. The
   /// connection MUST manage the lifetime of provided Subscriber.
-  virtual Subscriber<Payload>& getOutput() = 0;
+  virtual Subscriber<std::unique_ptr<folly::IOBuf>>& getOutput() = 0;
 };
 }

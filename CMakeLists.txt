@@ -119,6 +119,7 @@ add_library(
   src/mixins/StreamIfMixin.h
   src/NullRequestHandler.cpp
   src/NullRequestHandler.h
+  src/Payload.cpp
   src/Payload.h
   src/ReactiveSocket.cpp
   src/ReactiveSocket.h

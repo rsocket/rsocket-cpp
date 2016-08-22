@@ -40,12 +40,11 @@ void ChannelRequesterBase::onNext(Payload request) {
           streamId_,
           flags,
           static_cast<uint32_t>(initialN),
-          FrameMetadata::empty(),
           std::move(request));
       // We must inform ConsumerMixin about an implicit allowance we have
       // requested from the remote end.
       addImplicitAllowance(initialN);
-      connection_->onNextFrame(frame);
+      connection_->onNextFrame(std::move(frame));
       // Pump the remaining allowance into the ConsumerMixin _after_ sending the
       // initial request.
       if (remainingN) {
@@ -68,9 +67,8 @@ void ChannelRequesterBase::onComplete() {
       break;
     case State::REQUESTED: {
       state_ = State::CLOSED;
-      Frame_REQUEST_CHANNEL frame(
-          streamId_, FrameFlags_COMPLETE, 0, FrameMetadata::empty(), nullptr);
-      connection_->onNextFrame(frame);
+      connection_->onNextFrame(
+          Frame_REQUEST_CHANNEL(streamId_, FrameFlags_COMPLETE, 0, Payload()));
       connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
     } break;
     case State::CLOSED:
@@ -86,8 +84,7 @@ void ChannelRequesterBase::onError(folly::exception_wrapper ex) {
       break;
     case State::REQUESTED: {
       state_ = State::CLOSED;
-      Frame_CANCEL frame(streamId_);
-      connection_->onNextFrame(frame);
+      connection_->onNextFrame(Frame_CANCEL(streamId_));
       connection_->endStream(streamId_, StreamCompletionSignal::ERROR);
     } break;
     case State::CLOSED:
@@ -120,8 +117,7 @@ void ChannelRequesterBase::cancel() {
       break;
     case State::REQUESTED: {
       state_ = State::CLOSED;
-      Frame_CANCEL frame(streamId_);
-      connection_->onNextFrame(frame);
+      connection_->onNextFrame(Frame_CANCEL(streamId_));
       connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
     } break;
     case State::CLOSED:

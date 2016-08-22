@@ -5,21 +5,23 @@
 #include <gmock/gmock.h>
 
 #include "src/DuplexConnection.h"
-#include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
 
 namespace reactivesocket {
 
 class MockDuplexConnection : public DuplexConnection {
  public:
-  MOCK_METHOD1(setInput_, void(Subscriber<Payload>* framesSink));
-  MOCK_METHOD0(getOutput_, Subscriber<Payload>*());
+  MOCK_METHOD1(
+      setInput_,
+      void(Subscriber<std::unique_ptr<folly::IOBuf>>* framesSink));
+  MOCK_METHOD0(getOutput_, Subscriber<std::unique_ptr<folly::IOBuf>>*());
 
-  void setInput(Subscriber<Payload>& framesSink) override {
+  void setInput(
+      Subscriber<std::unique_ptr<folly::IOBuf>>& framesSink) override {
     setInput_(&framesSink);
   }
 
-  Subscriber<Payload>& getOutput() override {
+  Subscriber<std::unique_ptr<folly::IOBuf>>& getOutput() override {
     return *getOutput_();
   }
 };

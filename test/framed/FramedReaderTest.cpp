@@ -9,7 +9,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/Payload.h"
 #include "src/framed/FramedReader.h"
 #include "test/ReactiveStreamsMocksCompat.h"
 
@@ -17,7 +16,7 @@ using namespace ::testing;
 using namespace ::reactivesocket;
 
 TEST(FramedReaderTest, Read1Frame) {
-  auto& frameSubscriber = makeMockSubscriber<Payload>();
+  auto& frameSubscriber = makeMockSubscriber<std::unique_ptr<folly::IOBuf>>();
   auto& wireSubscription = makeMockSubscription();
 
   std::string msg1("value1");
@@ -39,9 +38,10 @@ TEST(FramedReaderTest, Read1Frame) {
 
   framedReader.onNext(std::move(payload1));
 
-  EXPECT_CALL(frameSubscriber, onNext_(_)).WillOnce(Invoke([&](Payload& p) {
-    ASSERT_EQ(msg1, p->moveToFbString().toStdString());
-  }));
+  EXPECT_CALL(frameSubscriber, onNext_(_))
+      .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& p) {
+        ASSERT_EQ(msg1, p->moveToFbString().toStdString());
+      }));
 
   EXPECT_CALL(wireSubscription, request_(_)).Times(1);
 
@@ -56,7 +56,7 @@ TEST(FramedReaderTest, Read1Frame) {
 }
 
 TEST(FramedReaderTest, Read3Frames) {
-  auto& frameSubscriber = makeMockSubscriber<Payload>();
+  auto& frameSubscriber = makeMockSubscriber<std::unique_ptr<folly::IOBuf>>();
   auto& wireSubscription = makeMockSubscription();
 
   std::string msg1("value1");
@@ -92,13 +92,13 @@ TEST(FramedReaderTest, Read3Frames) {
   framedReader.onNext(bufQueue.move());
 
   EXPECT_CALL(frameSubscriber, onNext_(_))
-      .WillOnce(Invoke([&](Payload& p) {
+      .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& p) {
         ASSERT_EQ(msg1, p->moveToFbString().toStdString());
       }))
-      .WillOnce(Invoke([&](Payload& p) {
+      .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& p) {
         ASSERT_EQ(msg2, p->moveToFbString().toStdString());
       }))
-      .WillOnce(Invoke([&](Payload& p) {
+      .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& p) {
         ASSERT_EQ(msg3, p->moveToFbString().toStdString());
       }));
 
@@ -113,7 +113,7 @@ TEST(FramedReaderTest, Read3Frames) {
 }
 
 TEST(FramedReaderTest, Read1FrameIncomplete) {
-  auto& frameSubscriber = makeMockSubscriber<Payload>();
+  auto& frameSubscriber = makeMockSubscriber<std::unique_ptr<folly::IOBuf>>();
   auto& wireSubscription = makeMockSubscription();
 
   std::string part1("val");
@@ -151,9 +151,10 @@ TEST(FramedReaderTest, Read1FrameIncomplete) {
     folly::format("{}", part2.c_str())(appender);
   }
 
-  EXPECT_CALL(frameSubscriber, onNext_(_)).WillOnce(Invoke([&](Payload& p) {
-    ASSERT_EQ(msg1, p->moveToFbString().toStdString());
-  }));
+  EXPECT_CALL(frameSubscriber, onNext_(_))
+      .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& p) {
+        ASSERT_EQ(msg1, p->moveToFbString().toStdString());
+      }));
 
   framedReader.onNext(std::move(payload));
   // to delete objects

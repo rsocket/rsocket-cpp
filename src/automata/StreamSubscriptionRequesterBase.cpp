@@ -60,8 +60,7 @@ void StreamSubscriptionRequesterBase::cancel() {
       break;
     case State::REQUESTED: {
       state_ = State::CLOSED;
-      Frame_CANCEL frame(streamId_);
-      connection_->onNextFrame(frame);
+      connection_->onNextFrame(Frame_CANCEL(streamId_));
       connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
     } break;
     case State::CLOSED:
@@ -105,6 +104,7 @@ void StreamSubscriptionRequesterBase::onNextFrame(Frame_RESPONSE& frame) {
   }
 }
 
+// TODO: should we send Frames by (r-)value?
 void StreamSubscriptionRequesterBase::onNextFrame(Frame_ERROR& frame) {
   switch (state_) {
     case State::NEW:
@@ -113,8 +113,7 @@ void StreamSubscriptionRequesterBase::onNextFrame(Frame_ERROR& frame) {
       break;
     case State::REQUESTED:
       state_ = State::CLOSED;
-      Base::onError(
-          std::runtime_error(frame.data_->moveToFbString().toStdString()));
+      Base::onError(std::runtime_error(frame.payload_.moveDataToString()));
       connection_->endStream(streamId_, StreamCompletionSignal::ERROR);
       break;
     case State::CLOSED:
