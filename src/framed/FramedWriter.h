@@ -4,10 +4,6 @@
 
 #include <folly/ExceptionWrapper.h>
 #include <reactive-streams/utilities/SmartPointers.h>
-<<<<<<< HEAD
-#include <src/Stats.h>
-=======
->>>>>>> master
 #include "src/ReactiveStreamsCompat.h"
 
 namespace folly {
