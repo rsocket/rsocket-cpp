@@ -32,6 +32,8 @@ class NoopStats : public Stats {
  private:
   NoopStats(const NoopStats& other) = delete; // non construction-copyable
   NoopStats& operator=(const NoopStats&) = delete; // non copyable
+  NoopStats& operator=(const NoopStats&&) = delete; // non movable
+  NoopStats(const NoopStats&&) = delete; // non construction-movable
 };
 
 Stats& Stats::noop() {
