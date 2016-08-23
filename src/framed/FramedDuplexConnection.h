@@ -10,7 +10,7 @@ namespace reactivesocket {
 class FramedReader;
 class FramedWriter;
 
-class FramedDuplexConnection : public DuplexConnection {
+class FramedDuplexConnection : public virtual DuplexConnection {
  public:
   explicit FramedDuplexConnection(std::unique_ptr<DuplexConnection> connection);
   ~FramedDuplexConnection();
