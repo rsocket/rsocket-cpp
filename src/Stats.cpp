@@ -19,10 +19,22 @@ class NoopStats : public Stats {
   void bytesRead(size_t bytes) override{};
   void frameWritten(const std::string& frameType) override{};
   void frameRead(const std::string& frameType) override{};
+
+  static NoopStats& instance(void) {
+    static NoopStats singleton;
+    return singleton;
+  }
+
+ protected:
+  NoopStats() = default;
+  ~NoopStats() = default;
+
+ private:
+  NoopStats(const NoopStats& other) = delete; // non construction-copyable
+  NoopStats& operator=(const NoopStats&) = delete; // non copyable
 };
 
 Stats& Stats::noop() {
-  static NoopStats noop_;
-  return noop_;
+  return NoopStats::instance();
 };
 }
