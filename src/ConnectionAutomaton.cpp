@@ -55,7 +55,7 @@ void ConnectionAutomaton::connect() {
         "",
         "",
         Payload());
-    onNextFrame(frame.serializeOut());
+    outputFrameOrEnqueue(frame.serializeOut());
   }
   stats_.socketCreated();
 
@@ -74,6 +74,8 @@ void ConnectionAutomaton::disconnect() {
   if (!connectionOutput_) {
     return;
   }
+
+  LOG_IF(WARNING, !pendingWrites_.empty()) << "disconnecting with pending writes (" << pendingWrites_.size() << ")";
 
   // Send terminal signals to the DuplexConnection's input and output before
   // tearing it down. We must do this per DuplexConnection specification (see
@@ -101,55 +103,6 @@ void ConnectionAutomaton::addStream(
   auto result = streams_.emplace(streamId, &automaton);
   (void)result;
   assert(result.second);
-}
-
-void ConnectionAutomaton::onNextFrame(Frame_REQUEST_STREAM&& frame) {
-  onNextFrame(frame.serializeOut());
-}
-
-void ConnectionAutomaton::onNextFrame(Frame_REQUEST_SUB&& frame) {
-  onNextFrame(frame.serializeOut());
-}
-
-void ConnectionAutomaton::onNextFrame(Frame_REQUEST_CHANNEL&& frame) {
-  onNextFrame(frame.serializeOut());
-}
-
-void ConnectionAutomaton::onNextFrame(Frame_REQUEST_N&& frame) {
-  onNextFrame(frame.serializeOut());
-}
-
-void ConnectionAutomaton::onNextFrame(Frame_REQUEST_FNF&& frame) {
-  onNextFrame(frame.serializeOut());
-}
-
-void ConnectionAutomaton::onNextFrame(Frame_METADATA_PUSH&& frame) {
-  onNextFrame(frame.serializeOut());
-}
-
-void ConnectionAutomaton::onNextFrame(Frame_CANCEL&& frame) {
-  onNextFrame(frame.serializeOut());
-}
-
-void ConnectionAutomaton::onNextFrame(Frame_RESPONSE&& frame) {
-  onNextFrame(frame.serializeOut());
-}
-
-void ConnectionAutomaton::onNextFrame(Frame_ERROR&& frame) {
-  onNextFrame(frame.serializeOut());
-}
-
-void ConnectionAutomaton::onNextFrame(std::unique_ptr<folly::IOBuf> frame) {
-  if (!connectionOutput_) {
-    return;
-  }
-  if (pendingWrites_.empty() && writeAllowance_.tryAcquire()) {
-    writeFrame(std::move(frame));
-  } else {
-    // We either have no allowance to perform the operation, or the queue has
-    // not been drained (e.g. we're looping in ::request).
-    pendingWrites_.emplace_back(std::move(frame));
-  }
 }
 
 void ConnectionAutomaton::endStream(
@@ -240,16 +193,16 @@ void ConnectionAutomaton::onConnectionFrame(
         if (isServer_) {
           if (frame.header_.flags_ & FrameFlags_KEEPALIVE_RESPOND) {
             frame.header_.flags_ &= ~(FrameFlags_KEEPALIVE_RESPOND);
-            writeFrame(frame.serializeOut());
+            outputFrameOrEnqueue(frame.serializeOut());
           } else {
-            writeFrame(
+            outputFrameOrEnqueue(
                 Frame_ERROR::invalid("keepalive without flag").serializeOut());
             disconnect();
           }
         }
         // TODO(yschimke) client *should* check the respond flag
       } else {
-        writeFrame(Frame_ERROR::unexpectedFrame().serializeOut());
+        outputFrameOrEnqueue(Frame_ERROR::unexpectedFrame().serializeOut());
         disconnect();
       }
     }
@@ -283,7 +236,7 @@ void ConnectionAutomaton::onConnectionFrame(
       return;
     }
     default:
-      writeFrame(Frame_ERROR::unexpectedFrame().serializeOut());
+      outputFrameOrEnqueue(Frame_ERROR::unexpectedFrame().serializeOut());
       disconnect();
       return;
   }
@@ -317,12 +270,7 @@ void ConnectionAutomaton::request(size_t n) {
     // stack.
     return;
   }
-  // Drain the queue or the allowance.
-  while (!pendingWrites_.empty() && writeAllowance_.tryAcquire()) {
-    auto frame = std::move(pendingWrites_.front());
-    pendingWrites_.pop_front();
-    writeFrame(std::move(frame));
-  }
+  drainOutputFramesQueue();
 }
 
 void ConnectionAutomaton::cancel() {
@@ -341,7 +289,7 @@ void ConnectionAutomaton::handleUnknownStream(
   // TODO(stupaq): there are some rules about monotonically increasing stream
   // IDs -- let's forget about them for a moment
   if (!factory_(streamId, std::move(payload))) {
-    writeFrame(
+    outputFrameOrEnqueue(
         Frame_ERROR::invalid("unknown stream " + std::to_string(streamId))
             .serializeOut());
     disconnect();
@@ -352,15 +300,39 @@ void ConnectionAutomaton::handleUnknownStream(
 void ConnectionAutomaton::sendKeepalive() {
   Frame_KEEPALIVE pingFrame(
       FrameFlags_KEEPALIVE_RESPOND, folly::IOBuf::create(0));
-  writeFrame(pingFrame.serializeOut());
+  outputFrameOrEnqueue(pingFrame.serializeOut());
 }
 
 void ConnectionAutomaton::onClose(ConnectionCloseListener listener) {
   closeListeners_.push_back(listener);
 }
 
-void ConnectionAutomaton::writeFrame(
-    std::unique_ptr<folly::IOBuf> outputFrame) {
+void ConnectionAutomaton::outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf> frame) {
+  if (!connectionOutput_) {
+    return; // RS destructor has disconnected us from the DuplexConnection
+  }
+
+  drainOutputFramesQueue();
+  if (pendingWrites_.empty() && writeAllowance_.tryAcquire()) {
+    outputFrame(std::move(frame));
+  } else {
+    // We either have no allowance to perform the operation, or the queue has
+    // not been drained (e.g. we're looping in ::request).
+    pendingWrites_.emplace_back(std::move(frame));
+  }
+}
+
+void ConnectionAutomaton::drainOutputFramesQueue() {
+// Drain the queue or the allowance.
+  while (!pendingWrites_.empty() && writeAllowance_.tryAcquire()) {
+    auto frame = std::move(pendingWrites_.front());
+    pendingWrites_.pop_front();
+    outputFrame(std::move(frame));
+  }
+}
+
+void ConnectionAutomaton::outputFrame(
+        std::unique_ptr<folly::IOBuf> outputFrame) {
   std::stringstream ss;
   ss << FrameHeader::peekType(*outputFrame);
 
@@ -368,4 +340,5 @@ void ConnectionAutomaton::writeFrame(
 
   connectionOutput_.onNext(std::move(outputFrame));
 }
+
 }

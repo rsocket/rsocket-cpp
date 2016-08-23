@@ -20,8 +20,7 @@ InlineConnection::InlineConnection()
 
 InlineConnection::~InlineConnection() {}
 
-void InlineConnection::connectTo(
-    InlineConnection& other) {
+void InlineConnection::connectTo(InlineConnection& other) {
   ASSERT_FALSE(other_);
   ASSERT_FALSE(other.other_);
   other.other_ = this;

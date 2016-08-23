@@ -31,7 +31,7 @@ class PublisherMixin : public Base {
 
   void onNext(Payload payload) {
     ProducedFrame frame(Base::streamId_, FrameFlags_EMPTY, std::move(payload));
-    Base::connection_->onNextFrame(std::move(frame));
+    Base::connection_->outputFrameOrEnqueue(frame.serializeOut());
   }
   /// @}
 

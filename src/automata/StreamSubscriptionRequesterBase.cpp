@@ -60,7 +60,7 @@ void StreamSubscriptionRequesterBase::cancel() {
       break;
     case State::REQUESTED: {
       state_ = State::CLOSED;
-      connection_->onNextFrame(Frame_CANCEL(streamId_));
+      connection_->outputFrameOrEnqueue(Frame_CANCEL(streamId_).serializeOut());
       connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
     } break;
     case State::CLOSED:

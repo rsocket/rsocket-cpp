@@ -86,17 +86,7 @@ class ConnectionAutomaton :
   /// Enqueuing a terminal frame does not end the stream.
   ///
   /// This signal corresponds to Subscriber::onNext.
-  void onNextFrame(Frame_REQUEST_STREAM&&);
-  void onNextFrame(Frame_REQUEST_SUB&&);
-  void onNextFrame(Frame_REQUEST_CHANNEL&&);
-  void onNextFrame(Frame_REQUEST_N&&);
-  void onNextFrame(Frame_REQUEST_FNF&&);
-  void onNextFrame(Frame_METADATA_PUSH&&);
-  void onNextFrame(Frame_CANCEL&&);
-  void onNextFrame(Frame_RESPONSE&&);
-  void onNextFrame(Frame_ERROR&&);
-
-  void onNextFrame(std::unique_ptr<folly::IOBuf> frame);
+  void outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf> frame);
 
   /// Indicates that the stream should be removed from the connection.
   ///
@@ -136,8 +126,6 @@ class ConnectionAutomaton :
 
   void onNext(std::unique_ptr<folly::IOBuf>) override;
 
-  void writeFrame(std::unique_ptr<folly::IOBuf>);
-
   void onComplete() override;
 
   void onError(folly::exception_wrapper) override;
@@ -159,6 +147,9 @@ class ConnectionAutomaton :
       StreamId streamId,
       std::unique_ptr<folly::IOBuf> frame);
   /// @}
+
+  void drainOutputFramesQueue();
+  void outputFrame(std::unique_ptr<folly::IOBuf>);
 
   std::unique_ptr<DuplexConnection> connection_;
   StreamAutomatonFactory factory_;

@@ -13,7 +13,7 @@ void StreamRequesterBase::sendRequestFrame(
     Payload&& request) {
   Frame_REQUEST_STREAM frame(
       streamId_, flags, static_cast<uint32_t>(initialN), std::move(request));
-  connection_->onNextFrame(std::move(frame));
+  connection_->outputFrameOrEnqueue(frame.serializeOut());
 }
 
 std::ostream& StreamRequesterBase::logPrefix(std::ostream& os) {
