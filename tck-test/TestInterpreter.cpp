@@ -24,7 +24,8 @@ TestInterpreter::TestInterpreter(
 }
 
 bool TestInterpreter::run() {
-  LOG(INFO) << "executing test " << test_.name() << " (" << test_.commands().size() << " commands) ...";
+  LOG(INFO) << "executing test " << test_.name() << " ("
+            << test_.commands().size() << " commands) ...";
 
   int i = 0;
   try {
@@ -52,12 +53,14 @@ bool TestInterpreter::run() {
     }
 
     if (!test_.shouldSucceed()) {
-      LOG(INFO) << "test " << test_.name() << " failed executing command #" << i;
+      LOG(INFO) << "test " << test_.name() << " failed executing command #"
+                << i;
       return false;
     }
   } catch (const std::exception& ex) {
     if (test_.shouldSucceed()) {
-      LOG(ERROR) << "test " << test_.name() << " failed executing command #" << i << ": " << ex.what();
+      LOG(ERROR) << "test " << test_.name() << " failed executing command #"
+                 << i << ": " << ex.what();
       return false;
     }
   }

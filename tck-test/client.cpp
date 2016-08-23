@@ -102,12 +102,13 @@ int main(int argc, char* argv[]) {
   for (const auto& test : testSuite.tests()) {
     TestInterpreter interpreter(test, *reactiveSocket, *evbt.getEventBase());
     bool passing = interpreter.run();
-    if(passing) {
+    if (passing) {
       ++passed;
     }
   }
 
-  LOG(INFO) << "Tests execution DONE. " << passed << " out of " << testSuite.tests().size() << " tests passed.";
+  LOG(INFO) << "Tests execution DONE. " << passed << " out of "
+            << testSuite.tests().size() << " tests passed.";
 
   evbt.getEventBase()->runInEventBaseThreadAndWait([&]() {
     reactiveSocket.reset();

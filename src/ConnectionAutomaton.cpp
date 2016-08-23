@@ -46,7 +46,7 @@ void ConnectionAutomaton::connect() {
         ? keepaliveTimer_->keepaliveTime().count()
         : std::numeric_limits<uint32_t>::max();
 
-    // TODO set correct version
+    // TODO set correct version and allow clients to configure
     Frame_SETUP frame(
         FrameFlags_EMPTY,
         0,
@@ -55,7 +55,7 @@ void ConnectionAutomaton::connect() {
         "",
         "",
         Payload());
-    connectionOutput_.onNext(frame.serializeOut());
+    onNextFrame(frame.serializeOut());
   }
   stats_.socketCreated();
 

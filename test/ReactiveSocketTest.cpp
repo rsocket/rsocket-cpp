@@ -40,7 +40,7 @@ TEST(ReactiveSocketTest, RequestChannel) {
 
   auto clientConn = folly::make_unique<InlineConnection>();
   auto serverConn = folly::make_unique<InlineConnection>();
-  clientConn->connectTo(*serverConn, true);
+  clientConn->connectTo(*serverConn);
 
   StrictMock<UnmanagedMockSubscriber<Payload>> clientInput, serverInput;
   StrictMock<UnmanagedMockSubscription> clientOutputSub, serverOutputSub;
@@ -129,12 +129,12 @@ TEST(ReactiveSocketTest, RequestChannel) {
       }));
   EXPECT_CALL(serverOutputSub, cancel_()).InSequence(s0);
   EXPECT_CALL(serverInput, onComplete_()).InSequence(s1);
-  EXPECT_CALL(clientInput, onComplete_())
-      .InSequence(s2)
-      .WillOnce(Invoke([&]() { clientInputSub->cancel(); }));
-  EXPECT_CALL(clientOutputSub, cancel_())
-      .InSequence(s3)
-      .WillOnce(Invoke([&]() { clientOutput->onComplete(); }));
+  EXPECT_CALL(clientInput, onComplete_()).InSequence(s2).WillOnce(Invoke([&]() {
+    clientInputSub->cancel();
+  }));
+  EXPECT_CALL(clientOutputSub, cancel_()).InSequence(s3).WillOnce(Invoke([&]() {
+    clientOutput->onComplete();
+  }));
 
   // Kick off the magic.
   clientOutput = &clientSock->requestChannel(clientInput);
@@ -148,7 +148,7 @@ TEST(ReactiveSocketTest, RequestStreamComplete) {
 
   auto clientConn = folly::make_unique<InlineConnection>();
   auto serverConn = folly::make_unique<InlineConnection>();
-  clientConn->connectTo(*serverConn, true);
+  clientConn->connectTo(*serverConn);
 
   StrictMock<UnmanagedMockSubscriber<Payload>> clientInput;
   StrictMock<UnmanagedMockSubscription> serverOutputSub;
@@ -212,9 +212,9 @@ TEST(ReactiveSocketTest, RequestStreamComplete) {
         EXPECT_CALL(serverOutputSub, cancel_()).InSequence(s0);
         serverOutput->onComplete();
       }));
-  EXPECT_CALL(clientInput, onComplete_())
-      .InSequence(s1)
-      .WillOnce(Invoke([&]() { clientInputSub->cancel(); }));
+  EXPECT_CALL(clientInput, onComplete_()).InSequence(s1).WillOnce(Invoke([&]() {
+    clientInputSub->cancel();
+  }));
 
   // Kick off the magic.
   clientSock->requestStream(Payload(originalPayload->clone()), clientInput);
@@ -227,7 +227,7 @@ TEST(ReactiveSocketTest, RequestStreamCancel) {
 
   auto clientConn = folly::make_unique<InlineConnection>();
   auto serverConn = folly::make_unique<InlineConnection>();
-  clientConn->connectTo(*serverConn, true);
+  clientConn->connectTo(*serverConn);
 
   StrictMock<UnmanagedMockSubscriber<Payload>> clientInput;
   StrictMock<UnmanagedMockSubscription> serverOutputSub;
@@ -287,9 +287,9 @@ TEST(ReactiveSocketTest, RequestStreamCancel) {
       .InSequence(s, s0, s1)
       // Client closes the subscription in response.
       .WillOnce(Invoke([&](Payload&) { clientInputSub->cancel(); }));
-  EXPECT_CALL(serverOutputSub, cancel_())
-      .InSequence(s0)
-      .WillOnce(Invoke([&]() { serverOutput->onComplete(); }));
+  EXPECT_CALL(serverOutputSub, cancel_()).InSequence(s0).WillOnce(Invoke([&]() {
+    serverOutput->onComplete();
+  }));
   EXPECT_CALL(clientInput, onComplete_()).InSequence(s1);
 
   // Kick off the magic.
@@ -303,7 +303,7 @@ TEST(ReactiveSocketTest, RequestSubscription) {
 
   auto clientConn = folly::make_unique<InlineConnection>();
   auto serverConn = folly::make_unique<InlineConnection>();
-  clientConn->connectTo(*serverConn, true);
+  clientConn->connectTo(*serverConn);
 
   StrictMock<UnmanagedMockSubscriber<Payload>> clientInput;
   StrictMock<UnmanagedMockSubscription> serverOutputSub;
@@ -363,9 +363,9 @@ TEST(ReactiveSocketTest, RequestSubscription) {
       .InSequence(s, s0, s1)
       // Client closes the subscription in response.
       .WillOnce(Invoke([&](Payload&) { clientInputSub->cancel(); }));
-  EXPECT_CALL(serverOutputSub, cancel_())
-      .InSequence(s0)
-      .WillOnce(Invoke([&]() { serverOutput->onComplete(); }));
+  EXPECT_CALL(serverOutputSub, cancel_()).InSequence(s0).WillOnce(Invoke([&]() {
+    serverOutput->onComplete();
+  }));
   EXPECT_CALL(clientInput, onComplete_()).InSequence(s1);
 
   // Kick off the magic.
@@ -380,7 +380,7 @@ TEST(ReactiveSocketTest, RequestFireAndForget) {
 
   auto clientConn = folly::make_unique<InlineConnection>();
   auto serverConn = folly::make_unique<InlineConnection>();
-  clientConn->connectTo(*serverConn, true);
+  clientConn->connectTo(*serverConn);
 
   StrictMock<UnmanagedMockSubscriber<Payload>> clientInput;
   StrictMock<UnmanagedMockSubscription> serverOutputSub;
@@ -412,7 +412,7 @@ TEST(ReactiveSocketTest, RequestMetadataPush) {
 
   auto clientConn = folly::make_unique<InlineConnection>();
   auto serverConn = folly::make_unique<InlineConnection>();
-  clientConn->connectTo(*serverConn, true);
+  clientConn->connectTo(*serverConn);
 
   StrictMock<UnmanagedMockSubscriber<Payload>> clientInput;
   StrictMock<UnmanagedMockSubscription> serverOutputSub;
@@ -443,7 +443,7 @@ TEST(ReactiveSocketTest, Destructor) {
 
   auto clientConn = folly::make_unique<InlineConnection>();
   auto serverConn = folly::make_unique<InlineConnection>();
-  clientConn->connectTo(*serverConn, true);
+  clientConn->connectTo(*serverConn);
 
   // TODO: since we don't assert anything, should we just use the StatsPrinter
   // instead?

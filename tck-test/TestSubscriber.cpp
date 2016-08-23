@@ -47,8 +47,8 @@ void TestSubscriber::cancel() {
 void TestSubscriber::awaitTerminalEvent() {
   std::unique_lock<std::mutex> lock(mutex_);
   if (!terminatedCV_.wait_for(lock, std::chrono::seconds(5), [&] {
-    return completed_ || errored_;
-  })) {
+        return completed_ || errored_;
+      })) {
     throw std::runtime_error("timed out while waiting for terminating event");
   }
 }
@@ -136,8 +136,9 @@ void TestSubscriber::assertCanceled() {
 }
 
 void TestSubscriber::assertTerminated() {
-  if (!completed_ && ! errored_) {
-    throw std::runtime_error("subscription is not terminated yet. This is most likely a bug in the test.");
+  if (!completed_ && !errored_) {
+    throw std::runtime_error(
+        "subscription is not terminated yet. This is most likely a bug in the test.");
   }
 }
 

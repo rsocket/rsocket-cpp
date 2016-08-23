@@ -18,7 +18,7 @@ TEST(InlineConnectionTest, PingPong) {
   // calls will be deterministic.
   Sequence s;
   std::array<InlineConnection, 2> end;
-  end[0].connectTo(end[1], false);
+  end[0].connectTo(end[1]);
 
   std::array<UnmanagedMockSubscriber<std::unique_ptr<folly::IOBuf>>, 2> input;
   std::array<UnmanagedMockSubscription, 2> outputSub;
@@ -67,19 +67,15 @@ TEST(InlineConnectionTest, PingPong) {
         ASSERT_TRUE(folly::IOBufEqual()(originalPayload, payload));
       }));
 
-  EXPECT_CALL(outputSub[1], cancel_())
-      .InSequence(s)
-      .WillOnce(Invoke([&]() {
-        output[1]->onComplete(); // "Unsubscribe handshake".
-        inputSub[1]->cancel(); // Close the other direction.
-      }));
+  EXPECT_CALL(outputSub[1], cancel_()).InSequence(s).WillOnce(Invoke([&]() {
+    output[1]->onComplete(); // "Unsubscribe handshake".
+    inputSub[1]->cancel(); // Close the other direction.
+  }));
   EXPECT_CALL(input[0], onComplete_())
       .InSequence(s); // This finishes the handshake.
-  EXPECT_CALL(outputSub[0], cancel_())
-      .InSequence(s)
-      .WillOnce(Invoke([&]() {
-        output[0]->onComplete(); // "Unsubscribe handshake".
-      }));
+  EXPECT_CALL(outputSub[0], cancel_()).InSequence(s).WillOnce(Invoke([&]() {
+    output[0]->onComplete(); // "Unsubscribe handshake".
+  }));
   EXPECT_CALL(input[1], onComplete_())
       .InSequence(s); // This finishes the handshake.
 
