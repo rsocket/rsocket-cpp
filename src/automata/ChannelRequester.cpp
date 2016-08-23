@@ -44,7 +44,7 @@ void ChannelRequesterBase::onNext(Payload request) {
       // We must inform ConsumerMixin about an implicit allowance we have
       // requested from the remote end.
       addImplicitAllowance(initialN);
-      connection_->onNextFrame(std::move(frame));
+      connection_->outputFrameOrEnqueue(frame.serializeOut());
       // Pump the remaining allowance into the ConsumerMixin _after_ sending the
       // initial request.
       if (remainingN) {
@@ -67,8 +67,8 @@ void ChannelRequesterBase::onComplete() {
       break;
     case State::REQUESTED: {
       state_ = State::CLOSED;
-      connection_->onNextFrame(
-          Frame_REQUEST_CHANNEL(streamId_, FrameFlags_COMPLETE, 0, Payload()));
+      connection_->outputFrameOrEnqueue(
+          Frame_REQUEST_CHANNEL(streamId_, FrameFlags_COMPLETE, 0, Payload()).serializeOut());
       connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
     } break;
     case State::CLOSED:
@@ -84,7 +84,7 @@ void ChannelRequesterBase::onError(folly::exception_wrapper ex) {
       break;
     case State::REQUESTED: {
       state_ = State::CLOSED;
-      connection_->onNextFrame(Frame_CANCEL(streamId_));
+      connection_->outputFrameOrEnqueue(Frame_CANCEL(streamId_).serializeOut());
       connection_->endStream(streamId_, StreamCompletionSignal::ERROR);
     } break;
     case State::CLOSED:
@@ -117,7 +117,7 @@ void ChannelRequesterBase::cancel() {
       break;
     case State::REQUESTED: {
       state_ = State::CLOSED;
-      connection_->onNextFrame(Frame_CANCEL(streamId_));
+      connection_->outputFrameOrEnqueue(Frame_CANCEL(streamId_).serializeOut());
       connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
     } break;
     case State::CLOSED:

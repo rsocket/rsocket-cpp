@@ -43,8 +43,8 @@ void ConsumerMixin<Frame, Base>::sendRequests() {
   size_t toSync = Frame_REQUEST_N::kMaxRequestN;
   toSync = pendingAllowance_.drainWithLimit(toSync);
   if (toSync > 0) {
-    Base::connection_->onNextFrame(
-        Frame_REQUEST_N(Base::streamId_, static_cast<uint32_t>(toSync)));
+    Base::connection_->outputFrameOrEnqueue(
+        Frame_REQUEST_N(Base::streamId_, static_cast<uint32_t>(toSync)).serializeOut());
   }
 }
 

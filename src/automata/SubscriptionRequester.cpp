@@ -13,7 +13,7 @@ void SubscriptionRequesterBase::sendRequestFrame(
     Payload&& request) {
   Frame_REQUEST_SUB frame(
       streamId_, flags, static_cast<uint32_t>(initialN), std::move(request));
-  connection_->onNextFrame(std::move(frame));
+  connection_->outputFrameOrEnqueue(frame.serializeOut());
 }
 
 std::ostream& SubscriptionRequesterBase::logPrefix(std::ostream& os) {

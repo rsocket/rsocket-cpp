@@ -128,11 +128,11 @@ void ReactiveSocket::requestFireAndForget(Payload request) {
   nextStreamId_ += 2;
   Frame_REQUEST_FNF frame(
       streamId, FrameFlags_EMPTY, std::move(std::move(request)));
-  connection_->onNextFrame(std::move(frame));
+  connection_->outputFrameOrEnqueue(frame.serializeOut());
 }
 
 void ReactiveSocket::metadataPush(std::unique_ptr<folly::IOBuf> metadata) {
-  connection_->onNextFrame(Frame_METADATA_PUSH(std::move(metadata)));
+  connection_->outputFrameOrEnqueue(Frame_METADATA_PUSH(std::move(metadata)).serializeOut());
 }
 
 bool ReactiveSocket::createResponder(
