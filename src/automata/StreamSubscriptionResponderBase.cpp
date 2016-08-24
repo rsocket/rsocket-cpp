@@ -27,7 +27,8 @@ void StreamSubscriptionResponderBase::onComplete() {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
-      connection_->outputFrameOrEnqueue(Frame_RESPONSE::complete(streamId_).serializeOut());
+      connection_->outputFrameOrEnqueue(
+          Frame_RESPONSE::complete(streamId_).serializeOut());
       connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
     } break;
     case State::CLOSED:
@@ -40,7 +41,8 @@ void StreamSubscriptionResponderBase::onError(folly::exception_wrapper ex) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
       auto msg = ex.what().toStdString();
-      connection_->outputFrameOrEnqueue(Frame_ERROR::applicationError(streamId_, msg).serializeOut());
+      connection_->outputFrameOrEnqueue(
+          Frame_ERROR::applicationError(streamId_, msg).serializeOut());
       connection_->endStream(streamId_, StreamCompletionSignal::ERROR);
     } break;
     case State::CLOSED:

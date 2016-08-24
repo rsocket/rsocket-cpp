@@ -22,13 +22,11 @@ ConnectionAutomaton::ConnectionAutomaton(
     std::unique_ptr<DuplexConnection> connection,
     StreamAutomatonFactory factory,
     Stats& stats,
-    bool isServer,
-    std::unique_ptr<KeepaliveTimer> keepAliveTimer)
+    bool isServer)
     : connection_(std::move(connection)),
       factory_(std::move(factory)),
       stats_(stats),
-      isServer_(isServer),
-      keepaliveTimer_(std::move(keepAliveTimer)) {
+      isServer_(isServer) {
   // We deliberately do not "open" input or output to avoid having c'tor on the
   // stack when processing any signals from the connection. See ::connect and
   // ::onSubscribe.
@@ -41,41 +39,18 @@ void ConnectionAutomaton::connect() {
   // subscription, which might deliver frames in-line.
   connection_->setInput(*this);
 
-  if (!isServer_) {
-    uint32_t keepaliveTime = keepaliveTimer_
-        ? keepaliveTimer_->keepaliveTime().count()
-        : std::numeric_limits<uint32_t>::max();
-
-    // TODO set correct version and allow clients to configure
-    Frame_SETUP frame(
-        FrameFlags_EMPTY,
-        0,
-        keepaliveTime,
-        std::numeric_limits<uint32_t>::max(),
-        "",
-        "",
-        Payload());
-    outputFrameOrEnqueue(frame.serializeOut());
-  }
   stats_.socketCreated();
-
-  if (keepaliveTimer_) {
-    keepaliveTimer_->start(this);
-  }
 }
 
 void ConnectionAutomaton::disconnect() {
   VLOG(6) << "disconnect";
 
-  if (keepaliveTimer_) {
-    keepaliveTimer_->stop();
-  }
-
   if (!connectionOutput_) {
     return;
   }
 
-  LOG_IF(WARNING, !pendingWrites_.empty()) << "disconnecting with pending writes (" << pendingWrites_.size() << ")";
+  LOG_IF(WARNING, !pendingWrites_.empty())
+      << "disconnecting with pending writes (" << pendingWrites_.size() << ")";
 
   // Send terminal signals to the DuplexConnection's input and output before
   // tearing it down. We must do this per DuplexConnection specification (see
@@ -205,30 +180,14 @@ void ConnectionAutomaton::onConnectionFrame(
         outputFrameOrEnqueue(Frame_ERROR::unexpectedFrame().serializeOut());
         disconnect();
       }
-    }
       return;
+    }
     case FrameType::SETUP: {
-      Frame_SETUP frame;
-      if (frame.deserializeFrom(std::move(payload))) {
-        if (frame.header_.flags_ & FrameFlags_LEASE) {
-          // TODO(yschimke) We don't have the correct lease and wait logic above
-          // yet
-          LOG(WARNING) << "ignoring setup frame with lease";
-          //          connectionOutput_.onNext(
-          //              Frame_ERROR::badSetupFrame("leases not supported")
-          //                  .serializeOut());
-          //          disconnect();
-        }
-      } else {
-        // TODO(yschimke) enable this later after clients upgraded
-        LOG(WARNING) << "ignoring bad setup frame";
-        //        connectionOutput_.onNext(
-        //            Frame_ERROR::badSetupFrame("bad setup
-        //            frame").serializeOut());
-        //        disconnect();
+      if (!factory_(0, std::move(payload))) {
+        assert(false);
       }
-    }
       return;
+    }
     case FrameType::METADATA_PUSH: {
       if (!factory_(0, std::move(payload))) {
         assert(false);
@@ -255,7 +214,8 @@ void ConnectionAutomaton::onTerminal(folly::exception_wrapper ex) {
     auto result = endStreamInternal(streams_.begin()->first, signal);
     (void)oldSize;
     (void)result;
-    // TODO(stupaq): what kind of a user action could violate these assertions?
+    // TODO(stupaq): what kind of a user action could violate these
+    // assertions?
     assert(result);
     assert(streams_.size() == oldSize - 1);
   }
@@ -307,7 +267,8 @@ void ConnectionAutomaton::onClose(ConnectionCloseListener listener) {
   closeListeners_.push_back(listener);
 }
 
-void ConnectionAutomaton::outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf> frame) {
+void ConnectionAutomaton::outputFrameOrEnqueue(
+    std::unique_ptr<folly::IOBuf> frame) {
   if (!connectionOutput_) {
     return; // RS destructor has disconnected us from the DuplexConnection
   }
@@ -323,7 +284,7 @@ void ConnectionAutomaton::outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf> fra
 }
 
 void ConnectionAutomaton::drainOutputFramesQueue() {
-// Drain the queue or the allowance.
+  // Drain the queue or the allowance.
   while (!pendingWrites_.empty() && writeAllowance_.tryAcquire()) {
     auto frame = std::move(pendingWrites_.front());
     pendingWrites_.pop_front();
@@ -332,7 +293,7 @@ void ConnectionAutomaton::drainOutputFramesQueue() {
 }
 
 void ConnectionAutomaton::outputFrame(
-        std::unique_ptr<folly::IOBuf> outputFrame) {
+    std::unique_ptr<folly::IOBuf> outputFrame) {
   std::stringstream ss;
   ss << FrameHeader::peekType(*outputFrame);
 
@@ -340,5 +301,4 @@ void ConnectionAutomaton::outputFrame(
 
   connectionOutput_.onNext(std::move(outputFrame));
 }
-
 }
