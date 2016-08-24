@@ -11,6 +11,7 @@
 #include <folly/MoveWrapper.h>
 
 #include "src/ConnectionAutomaton.h"
+#include "src/ConnectionSetupPayload.h"
 #include "src/DuplexConnection.h"
 #include "src/Frame.h"
 #include "src/Payload.h"
@@ -44,14 +45,15 @@ ReactiveSocket::ReactiveSocket(
               std::placeholders::_1,
               std::placeholders::_2),
           stats,
-          isServer,
-          std::move(keepaliveTimer))),
+          isServer)),
       handler_(std::move(handler)),
-      nextStreamId_(isServer ? 1 : 2) {}
+      nextStreamId_(isServer ? 1 : 2),
+      keepaliveTimer_(std::move(keepaliveTimer)) {}
 
 std::unique_ptr<ReactiveSocket> ReactiveSocket::fromClientConnection(
     std::unique_ptr<DuplexConnection> connection,
     std::unique_ptr<RequestHandler> handler,
+    std::unique_ptr<ConnectionSetupPayload> setupPayload,
     Stats& stats,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer) {
   std::unique_ptr<ReactiveSocket> socket(new ReactiveSocket(
@@ -61,6 +63,27 @@ std::unique_ptr<ReactiveSocket> ReactiveSocket::fromClientConnection(
       stats,
       std::move(keepaliveTimer)));
   socket->connection_->connect();
+
+  uint32_t keepaliveTime = socket->keepaliveTimer_
+      ? socket->keepaliveTimer_->keepaliveTime().count()
+      : std::numeric_limits<uint32_t>::max();
+
+  // TODO set correct version
+  Frame_SETUP frame(
+      FrameFlags_EMPTY,
+      0,
+      keepaliveTime,
+      std::numeric_limits<uint32_t>::max(),
+      setupPayload->metadataMimeType,
+      setupPayload->dataMimeType,
+      std::move(setupPayload->payload));
+
+  socket->connection_->outputFrameOrEnqueue(frame.serializeOut());
+
+  if (socket->keepaliveTimer_) {
+    socket->keepaliveTimer_->start(socket->connection_.get());
+  }
+
   return socket;
 }
 
@@ -132,7 +155,8 @@ void ReactiveSocket::requestFireAndForget(Payload request) {
 }
 
 void ReactiveSocket::metadataPush(std::unique_ptr<folly::IOBuf> metadata) {
-  connection_->outputFrameOrEnqueue(Frame_METADATA_PUSH(std::move(metadata)).serializeOut());
+  connection_->outputFrameOrEnqueue(
+      Frame_METADATA_PUSH(std::move(metadata)).serializeOut());
 }
 
 bool ReactiveSocket::createResponder(

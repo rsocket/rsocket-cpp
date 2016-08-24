@@ -130,7 +130,8 @@ add_library(
   src/Stats.h
   src/Stats.cpp
   src/folly/FollyKeepaliveTimer.cpp
-  src/folly/FollyKeepaliveTimer.h)
+  src/folly/FollyKeepaliveTimer.h
+  src/ConnectionSetupPayload.h)
 
 target_link_libraries(
   ReactiveSocket

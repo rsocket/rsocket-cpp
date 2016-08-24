@@ -52,8 +52,7 @@ class ConnectionAutomaton :
       // TODO(stupaq): for testing only, can devirtualise if necessary
       StreamAutomatonFactory factory,
       Stats& stats,
-      bool client,
-      std::unique_ptr<KeepaliveTimer> keepaliveTimer);
+      bool client);
 
   /// Kicks off connection procedure.
   ///
@@ -165,7 +164,6 @@ class ConnectionAutomaton :
       pendingWrites_; // TODO(stupaq): two vectors?
   Stats& stats_;
   bool isServer_;
-  std::unique_ptr<KeepaliveTimer> keepaliveTimer_;
   std::vector<ConnectionCloseListener> closeListeners_;
 };
 }

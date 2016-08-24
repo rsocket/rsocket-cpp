@@ -7,6 +7,7 @@
 #include <functional>
 #include <memory>
 
+#include "src/ConnectionSetupPayload.h"
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
 #include "src/Stats.h"
@@ -54,6 +55,7 @@ class ReactiveSocket {
   static std::unique_ptr<ReactiveSocket> fromClientConnection(
       std::unique_ptr<DuplexConnection> connection,
       std::unique_ptr<RequestHandler> handler,
+      std::unique_ptr<ConnectionSetupPayload> setupPayload,
       Stats& stats = Stats::noop(),
       std::unique_ptr<KeepaliveTimer> keepaliveTimer =
           std::unique_ptr<KeepaliveTimer>(nullptr));
@@ -90,5 +92,6 @@ class ReactiveSocket {
   const std::shared_ptr<ConnectionAutomaton> connection_;
   std::unique_ptr<RequestHandler> handler_;
   StreamId nextStreamId_;
+  std::unique_ptr<KeepaliveTimer> keepaliveTimer_;
 };
 }

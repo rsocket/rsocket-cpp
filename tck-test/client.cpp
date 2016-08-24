@@ -93,7 +93,9 @@ int main(int argc, char* argv[]) {
         folly::make_unique<DefaultRequestHandler>();
 
     reactiveSocket = ReactiveSocket::fromClientConnection(
-        std::move(framedConnection), std::move(requestHandler));
+        std::move(framedConnection),
+        std::move(requestHandler),
+        folly::make_unique<ConnectionSetupPayload>("", "", Payload()));
   });
 
   LOG(INFO) << "Test file parsed. Starting executing tests...";

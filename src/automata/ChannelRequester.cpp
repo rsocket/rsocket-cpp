@@ -68,7 +68,8 @@ void ChannelRequesterBase::onComplete() {
     case State::REQUESTED: {
       state_ = State::CLOSED;
       connection_->outputFrameOrEnqueue(
-          Frame_REQUEST_CHANNEL(streamId_, FrameFlags_COMPLETE, 0, Payload()).serializeOut());
+          Frame_REQUEST_CHANNEL(streamId_, FrameFlags_COMPLETE, 0, Payload())
+              .serializeOut());
       connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
     } break;
     case State::CLOSED:

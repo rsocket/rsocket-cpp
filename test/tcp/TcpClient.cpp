@@ -69,6 +69,7 @@ int main(int argc, char* argv[]) {
         reactiveSocket = ReactiveSocket::fromClientConnection(
             std::move(framedConnection),
             std::move(requestHandler),
+            folly::make_unique<ConnectionSetupPayload>("", "", Payload()),
             stats,
             folly::make_unique<FollyKeepaliveTimer>(
                 eventBase, std::chrono::milliseconds(5000)));
