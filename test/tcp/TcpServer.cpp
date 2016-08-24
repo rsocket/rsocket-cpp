@@ -67,6 +67,11 @@ class ServerRequestHandler : public DefaultRequestHandler {
     LOG(INFO) << "ServerRequestHandler.handleMetadataPush "
               << request->moveToFbString() << "\n";
   }
+
+  void handleSetupPayload(
+      std::unique_ptr<ConnectionSetupPayload> request) override {
+    LOG(INFO) << "ServerRequestHandler.handleSetupPayload " << *request << "\n";
+  }
 };
 
 class Callback : public AsyncServerSocket::AcceptCallback {

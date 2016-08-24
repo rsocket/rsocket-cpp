@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <folly/io/IOBuf.h>
 #include <string>
 #include "Payload.h"
 
@@ -20,4 +21,6 @@ class ConnectionSetupPayload {
   std::string dataMimeType;
   Payload payload;
 };
+
+std::ostream& operator<<(std::ostream&, const ConnectionSetupPayload&);
 }

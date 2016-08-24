@@ -164,6 +164,34 @@ bool ReactiveSocket::createResponder(
     std::unique_ptr<folly::IOBuf> serializedFrame) {
   auto type = FrameHeader::peekType(*serializedFrame);
   switch (type) {
+    case FrameType::SETUP: {
+      Frame_SETUP frame;
+      if (frame.deserializeFrom(std::move(serializedFrame))) {
+        if (frame.header_.flags_ & FrameFlags_LEASE) {
+          // TODO(yschimke) We don't have the correct lease and wait logic above
+          // yet
+          LOG(WARNING) << "ignoring setup frame with lease";
+          //          connectionOutput_.onNext(
+          //              Frame_ERROR::badSetupFrame("leases not supported")
+          //                  .serializeOut());
+          //          disconnect();
+        }
+
+        handler_->handleSetupPayload(folly::make_unique<ConnectionSetupPayload>(
+            frame.metadataMimeType_,
+            frame.dataMimeType_,
+            std::move(frame.payload_)));
+      } else {
+        // TODO(yschimke) enable this later after clients upgraded
+        LOG(WARNING) << "ignoring bad setup frame";
+        //        connectionOutput_.onNext(
+        //            Frame_ERROR::badSetupFrame("bad setup
+        //            frame").serializeOut());
+        //        disconnect();
+      }
+
+      break;
+    }
     case FrameType::REQUEST_CHANNEL: {
       Frame_REQUEST_CHANNEL frame;
       if (!frame.deserializeFrom(std::move(serializedFrame))) {
