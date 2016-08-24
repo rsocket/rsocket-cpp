@@ -442,6 +442,32 @@ TEST(ReactiveSocketTest, RequestMetadataPush) {
   clientSock->metadataPush(originalPayload->clone());
 }
 
+TEST(ReactiveSocketTest, SetupData) {
+  // InlineConnection forwards appropriate calls in-line, hence the order of
+  // mock calls will be deterministic.
+  Sequence s;
+
+  auto clientConn = folly::make_unique<InlineConnection>();
+  auto serverConn = folly::make_unique<InlineConnection>();
+  clientConn->connectTo(*serverConn);
+
+  StrictMock<UnmanagedMockSubscriber<Payload>> clientInput;
+  StrictMock<UnmanagedMockSubscription> serverOutputSub;
+
+  auto clientSock = ReactiveSocket::fromClientConnection(
+      std::move(clientConn),
+      // No interactions on this mock, the client will not accept any requests.
+      folly::make_unique<StrictMock<MockRequestHandler>>(),
+      folly::make_unique<ConnectionSetupPayload>(
+          "text/plain", "tex/plain", Payload("meta", "data")));
+
+  auto serverHandler = folly::make_unique<StrictMock<MockRequestHandler>>();
+  auto serverSock = ReactiveSocket::fromServerConnection(
+      std::move(serverConn), std::move(serverHandler));
+
+  // TODO test setup received
+}
+
 TEST(ReactiveSocketTest, Destructor) {
   // InlineConnection forwards appropriate calls in-line, hence the order of
   // mock calls will be deterministic.
