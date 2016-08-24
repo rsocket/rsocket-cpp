@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "ConnectionSetupPayload.h"
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
 
@@ -34,5 +35,11 @@ class RequestHandler {
 
   /// Handles a new metadata-push sent by the other end.
   virtual void handleMetadataPush(std::unique_ptr<folly::IOBuf> request) = 0;
+
+  /// Temporary home - this should eventually be an input to asking for a
+  /// RequestHandler
+  /// so negotiation is possible
+  virtual void handleSetupPayload(
+      std::unique_ptr<ConnectionSetupPayload> request) = 0;
 };
 }

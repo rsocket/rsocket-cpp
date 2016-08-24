@@ -180,30 +180,14 @@ void ConnectionAutomaton::onConnectionFrame(
         outputFrameOrEnqueue(Frame_ERROR::unexpectedFrame().serializeOut());
         disconnect();
       }
-    }
       return;
+    }
     case FrameType::SETUP: {
-      Frame_SETUP frame;
-      if (frame.deserializeFrom(std::move(payload))) {
-        if (frame.header_.flags_ & FrameFlags_LEASE) {
-          // TODO(yschimke) We don't have the correct lease and wait logic above
-          // yet
-          LOG(WARNING) << "ignoring setup frame with lease";
-          //          connectionOutput_.onNext(
-          //              Frame_ERROR::badSetupFrame("leases not supported")
-          //                  .serializeOut());
-          //          disconnect();
-        }
-      } else {
-        // TODO(yschimke) enable this later after clients upgraded
-        LOG(WARNING) << "ignoring bad setup frame";
-        //        connectionOutput_.onNext(
-        //            Frame_ERROR::badSetupFrame("bad setup
-        //            frame").serializeOut());
-        //        disconnect();
+      if (!factory_(0, std::move(payload))) {
+        assert(false);
       }
-    }
       return;
+    }
     case FrameType::METADATA_PUSH: {
       if (!factory_(0, std::move(payload))) {
         assert(false);
@@ -230,7 +214,8 @@ void ConnectionAutomaton::onTerminal(folly::exception_wrapper ex) {
     auto result = endStreamInternal(streams_.begin()->first, signal);
     (void)oldSize;
     (void)result;
-    // TODO(stupaq): what kind of a user action could violate these assertions?
+    // TODO(stupaq): what kind of a user action could violate these
+    // assertions?
     assert(result);
     assert(streams_.size() == oldSize - 1);
   }
