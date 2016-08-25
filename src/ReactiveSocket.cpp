@@ -53,7 +53,7 @@ ReactiveSocket::ReactiveSocket(
 std::unique_ptr<ReactiveSocket> ReactiveSocket::fromClientConnection(
     std::unique_ptr<DuplexConnection> connection,
     std::unique_ptr<RequestHandler> handler,
-    std::unique_ptr<ConnectionSetupPayload> setupPayload,
+    ConnectionSetupPayload setupPayload,
     Stats& stats,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer) {
   std::unique_ptr<ReactiveSocket> socket(new ReactiveSocket(
@@ -74,9 +74,9 @@ std::unique_ptr<ReactiveSocket> ReactiveSocket::fromClientConnection(
       0,
       keepaliveTime,
       std::numeric_limits<uint32_t>::max(),
-      setupPayload->metadataMimeType,
-      setupPayload->dataMimeType,
-      std::move(setupPayload->payload));
+      std::move(setupPayload.metadataMimeType),
+      std::move(setupPayload.dataMimeType),
+      std::move(setupPayload.payload));
 
   socket->connection_->outputFrameOrEnqueue(frame.serializeOut());
 

@@ -9,11 +9,11 @@ namespace reactivesocket {
 class ConnectionSetupPayload {
  public:
   ConnectionSetupPayload(
-      std::string _metadataMimeType,
-      std::string _dataMimeType,
-      Payload _payload)
-      : metadataMimeType(_metadataMimeType),
-        dataMimeType(_dataMimeType),
+      std::string _metadataMimeType = "",
+      std::string _dataMimeType = "",
+      Payload _payload = Payload())
+      : metadataMimeType(std::move(_metadataMimeType)),
+        dataMimeType(std::move(_dataMimeType)),
         payload(std::move(_payload)){};
 
   std::string metadataMimeType;

@@ -51,7 +51,7 @@ TEST(ReactiveSocketTest, RequestChannel) {
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
       folly::make_unique<StrictMock<MockRequestHandler>>(),
-      folly::make_unique<ConnectionSetupPayload>("", "", Payload()));
+      ConnectionSetupPayload("", "", Payload()));
 
   auto serverHandler = folly::make_unique<StrictMock<MockRequestHandler>>();
   auto& serverHandlerRef = *serverHandler;
@@ -160,7 +160,7 @@ TEST(ReactiveSocketTest, RequestStreamComplete) {
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
       folly::make_unique<StrictMock<MockRequestHandler>>(),
-      folly::make_unique<ConnectionSetupPayload>("", "", Payload()));
+      ConnectionSetupPayload("", "", Payload()));
 
   auto serverHandler = folly::make_unique<StrictMock<MockRequestHandler>>();
   auto& serverHandlerRef = *serverHandler;
@@ -240,7 +240,7 @@ TEST(ReactiveSocketTest, RequestStreamCancel) {
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
       folly::make_unique<StrictMock<MockRequestHandler>>(),
-      folly::make_unique<ConnectionSetupPayload>("", "", Payload()));
+      ConnectionSetupPayload("", "", Payload()));
 
   auto serverHandler = folly::make_unique<StrictMock<MockRequestHandler>>();
   auto& serverHandlerRef = *serverHandler;
@@ -317,7 +317,7 @@ TEST(ReactiveSocketTest, RequestSubscription) {
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
       folly::make_unique<StrictMock<MockRequestHandler>>(),
-      folly::make_unique<ConnectionSetupPayload>("", "", Payload()));
+      ConnectionSetupPayload("", "", Payload()));
 
   auto serverHandler = folly::make_unique<StrictMock<MockRequestHandler>>();
   auto& serverHandlerRef = *serverHandler;
@@ -393,7 +393,7 @@ TEST(ReactiveSocketTest, RequestFireAndForget) {
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
       folly::make_unique<StrictMock<MockRequestHandler>>(),
-      folly::make_unique<ConnectionSetupPayload>("", "", Payload()));
+      ConnectionSetupPayload("", "", Payload()));
 
   auto serverHandler = folly::make_unique<StrictMock<MockRequestHandler>>();
   auto& serverHandlerRef = *serverHandler;
@@ -426,7 +426,7 @@ TEST(ReactiveSocketTest, RequestMetadataPush) {
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
       folly::make_unique<StrictMock<MockRequestHandler>>(),
-      folly::make_unique<ConnectionSetupPayload>("", "", Payload()));
+      ConnectionSetupPayload("", "", Payload()));
 
   auto serverHandler = folly::make_unique<StrictMock<MockRequestHandler>>();
   auto& serverHandlerRef = *serverHandler;
@@ -458,7 +458,7 @@ TEST(ReactiveSocketTest, SetupData) {
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
       folly::make_unique<StrictMock<MockRequestHandler>>(),
-      folly::make_unique<ConnectionSetupPayload>(
+      ConnectionSetupPayload(
           "text/plain", "tex/plain", Payload("meta", "data")));
 
   auto serverHandler = folly::make_unique<StrictMock<MockRequestHandler>>();
@@ -495,7 +495,7 @@ TEST(ReactiveSocketTest, Destructor) {
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
       folly::make_unique<StrictMock<MockRequestHandler>>(),
-      folly::make_unique<ConnectionSetupPayload>("", "", Payload()),
+      ConnectionSetupPayload("", "", Payload()),
       clientStats);
 
   auto serverHandler = folly::make_unique<StrictMock<MockRequestHandler>>();
