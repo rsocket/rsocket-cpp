@@ -68,9 +68,8 @@ class ServerRequestHandler : public DefaultRequestHandler {
               << request->moveToFbString() << "\n";
   }
 
-  void handleSetupPayload(
-      std::unique_ptr<ConnectionSetupPayload> request) override {
-    LOG(INFO) << "ServerRequestHandler.handleSetupPayload " << *request << "\n";
+  void handleSetupPayload(ConnectionSetupPayload request) override {
+    LOG(INFO) << "ServerRequestHandler.handleSetupPayload " << request << "\n";
   }
 };
 

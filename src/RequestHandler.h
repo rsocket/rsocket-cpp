@@ -37,9 +37,7 @@ class RequestHandler {
   virtual void handleMetadataPush(std::unique_ptr<folly::IOBuf> request) = 0;
 
   /// Temporary home - this should eventually be an input to asking for a
-  /// RequestHandler
-  /// so negotiation is possible
-  virtual void handleSetupPayload(
-      std::unique_ptr<ConnectionSetupPayload> request) = 0;
+  /// RequestHandler so negotiation is possible
+  virtual void handleSetupPayload(ConnectionSetupPayload request) = 0;
 };
 }

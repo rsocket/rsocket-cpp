@@ -177,9 +177,9 @@ bool ReactiveSocket::createResponder(
           //          disconnect();
         }
 
-        handler_->handleSetupPayload(folly::make_unique<ConnectionSetupPayload>(
-            frame.metadataMimeType_,
-            frame.dataMimeType_,
+        handler_->handleSetupPayload(ConnectionSetupPayload(
+            std::move(frame.metadataMimeType_),
+            std::move(frame.dataMimeType_),
             std::move(frame.payload_)));
       } else {
         // TODO(yschimke) enable this later after clients upgraded

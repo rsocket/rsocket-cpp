@@ -39,8 +39,7 @@ class NullRequestHandler : public RequestHandler {
 
   void handleMetadataPush(std::unique_ptr<folly::IOBuf> request) override;
 
-  void handleSetupPayload(
-      std::unique_ptr<ConnectionSetupPayload> request) override;
+  void handleSetupPayload(ConnectionSetupPayload request) override;
 };
 
 using DefaultRequestHandler = NullRequestHandler;

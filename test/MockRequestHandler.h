@@ -26,9 +26,7 @@ class MockRequestHandler : public RequestHandler {
   MOCK_METHOD1(
       handleMetadataPush_,
       void(std::unique_ptr<folly::IOBuf>& request));
-  MOCK_METHOD1(
-      handleSetupPayload_,
-      void(std::unique_ptr<ConnectionSetupPayload>& request));
+  MOCK_METHOD1(handleSetupPayload_, void(ConnectionSetupPayload& request));
 
   Subscriber<Payload>& handleRequestChannel(
       Payload request,
@@ -54,8 +52,7 @@ class MockRequestHandler : public RequestHandler {
     handleMetadataPush_(request);
   }
 
-  void handleSetupPayload(
-      std::unique_ptr<ConnectionSetupPayload> request) override {
+  void handleSetupPayload(ConnectionSetupPayload request) override {
     handleSetupPayload_(request);
   }
 };
