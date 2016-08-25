@@ -94,8 +94,7 @@ int main(int argc, char* argv[]) {
 
     reactiveSocket = ReactiveSocket::fromClientConnection(
         std::move(framedConnection),
-        std::move(requestHandler),
-        folly::make_unique<ConnectionSetupPayload>("", "", Payload()));
+        std::move(requestHandler));
   });
 
   LOG(INFO) << "Test file parsed. Starting executing tests...";
