@@ -26,7 +26,8 @@ ConnectionAutomaton::ConnectionAutomaton(
     : connection_(std::move(connection)),
       factory_(std::move(factory)),
       stats_(stats),
-      isServer_(isServer) {
+      isServer_(isServer),
+      isResumable_(false) {
   // We deliberately do not "open" input or output to avoid having c'tor on the
   // stack when processing any signals from the connection. See ::connect and
   // ::onSubscribe.
@@ -161,6 +162,10 @@ void ConnectionAutomaton::onConnectionFrame(
     std::unique_ptr<folly::IOBuf> payload) {
   auto type = FrameHeader::peekType(*payload);
 
+  // TODO(tmont): If a frame is invalid, it will still be tracked. However, we actually want that. We want to keep
+  // each side in sync, even if a frame is invalid.
+  resumeTracker_.trackReceivedFrame(*payload);
+
   switch (type) {
     case FrameType::KEEPALIVE: {
       Frame_KEEPALIVE frame;
@@ -183,6 +188,9 @@ void ConnectionAutomaton::onConnectionFrame(
       return;
     }
     case FrameType::SETUP: {
+      // TODO(tmont): check for ENABLE_RESUME and make sure isResumable_ is true
+      // TODO(tmont): figure out how best to pass in ResumeIdentificationToken
+
       if (!factory_(0, std::move(payload))) {
         assert(false);
       }
@@ -191,6 +199,36 @@ void ConnectionAutomaton::onConnectionFrame(
     case FrameType::METADATA_PUSH: {
       if (!factory_(0, std::move(payload))) {
         assert(false);
+      }
+      return;
+    }
+    case FrameType::RESUME: {
+      Frame_RESUME frame;
+      if (frame.deserializeFrom(std::move(payload))) {
+        if (isServer_ && isResumable_ && resumeCache_.isPositionAvailable(frame.position_)) {
+          outputFrameOrEnqueue(
+              Frame_RESUME_OK(resumeTracker_.impliedPosition()).serializeOut());
+          // TODO(tmont): start retransmission from resumeCache_ from frame.position_
+        } else {
+          // TODO(tmont): ERROR?
+        }
+      } else {
+        outputFrameOrEnqueue(Frame_ERROR::unexpectedFrame().serializeOut());
+        disconnect();
+      }
+      return;
+    }
+    case FrameType::RESUME_OK: {
+      Frame_RESUME_OK frame;
+      if (frame.deserializeFrom(std::move(payload))) {
+        if (!isServer_ && isResumable_ && resumeCache_.isPositionAvailable(frame.position_)) {
+          // TODO(tmont): start retransmission from resumeCache_ from frame.position_
+        } else {
+          // TODO(tmont): ERROR?
+        }
+      } else {
+        outputFrameOrEnqueue(Frame_ERROR::unexpectedFrame().serializeOut());
+        disconnect();
       }
       return;
     }
@@ -263,6 +301,11 @@ void ConnectionAutomaton::sendKeepalive() {
   outputFrameOrEnqueue(pingFrame.serializeOut());
 }
 
+void ConnectionAutomaton::sendResume(const ResumeIdentificationToken token) {
+  Frame_RESUME resumeFrame(token, resumeTracker_.impliedPosition());
+  outputFrameOrEnqueue(resumeFrame.serializeOut());
+}
+
 void ConnectionAutomaton::onClose(ConnectionCloseListener listener) {
   closeListeners_.push_back(listener);
 }
@@ -299,6 +342,7 @@ void ConnectionAutomaton::outputFrame(
 
   stats_.frameWritten(ss.str());
 
+  resumeCache_.trackAndCacheSentFrame(*outputFrame);
   connectionOutput_.onNext(std::move(outputFrame));
 }
 }

@@ -65,6 +65,10 @@ std::ostream& operator<<(std::ostream& os, FrameType type) {
       return os << "LEASE";
     case FrameType::METADATA_PUSH:
       return os << "METADATA_PUSH";
+    case FrameType::RESUME:
+      return os << "RESUME";
+    case FrameType::RESUME_OK:
+      return os << "RESUME_OK";
   }
   return os << "FrameType(" << static_cast<uint16_t>(type) << ")";
 }
@@ -465,4 +469,64 @@ std::ostream& operator<<(std::ostream& os, const Frame_LEASE& frame) {
             << ")";
 }
 /// @}
+
+/// @{
+std::unique_ptr<folly::IOBuf> Frame_RESUME::serializeOut() {
+  auto queue = createBufferQueue(
+      FrameHeader::kSize + sizeof(ResumeIdentificationToken) + sizeof(ResumePosition));
+  folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
+
+  header_.serializeInto(appender);
+  appender.push(token_, sizeof(token_));
+  appender.writeBE(position_);
+
+  return queue.move();
+}
+
+bool Frame_RESUME::deserializeFrom(std::unique_ptr<folly::IOBuf> in) {
+  folly::io::Cursor cur(in.get());
+  try {
+    header_.deserializeFrom(cur);
+    cur.pull(token_, sizeof(token_));
+    position_ = cur.readBE<ResumePosition>();
+  } catch (...) {
+    return false;
+  }
+  return true;
+}
+
+std::ostream& operator<<(std::ostream& os, const Frame_RESUME& frame) {
+  return os << frame.header_ << ", ("
+            << "token" << ", @" << frame.position_ << ")";
+}
+/// @}
+
+/// @{
+std::unique_ptr<folly::IOBuf> Frame_RESUME_OK::serializeOut() {
+  auto queue = createBufferQueue(
+      FrameHeader::kSize + sizeof(ResumePosition));
+  folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
+
+  header_.serializeInto(appender);
+  appender.writeBE(position_);
+
+  return queue.move();
+}
+
+bool Frame_RESUME_OK::deserializeFrom(std::unique_ptr<folly::IOBuf> in) {
+  folly::io::Cursor cur(in.get());
+  try {
+    header_.deserializeFrom(cur);
+    position_ = cur.readBE<ResumePosition>();
+  } catch (...) {
+    return false;
+  }
+  return true;
+}
+
+std::ostream& operator<<(std::ostream& os, const Frame_RESUME_OK& frame) {
+  return os << frame.header_ << ", (@" << frame.position_ << ")";
+}
+/// @}
+
 }

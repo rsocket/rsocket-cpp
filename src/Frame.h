@@ -26,6 +26,11 @@ namespace reactivesocket {
 // TODO(stupaq): strong typedef and forward declarations all around
 using StreamId = uint32_t;
 
+/// unique identification token for resumption identification purposes
+using ResumeIdentificationToken = uint8_t[16];
+/// position for resumption
+using ResumePosition = int64_t;
+
 enum class FrameType : uint16_t {
   // TODO(stupaq): commented frame types indicate unimplemented frames
   RESERVED = 0x0000,
@@ -42,6 +47,8 @@ enum class FrameType : uint16_t {
   RESPONSE = 0x000B,
   ERROR = 0x000C,
   METADATA_PUSH = 0x000D,
+  RESUME = 0x000E,
+  RESUME_OK = 0x000F
   // EXT = 0xFFFF,
 };
 std::ostream& operator<<(std::ostream&, FrameType);
@@ -71,6 +78,7 @@ const FrameFlags FrameFlags_LEASE = 0x2000;
 const FrameFlags FrameFlags_COMPLETE = 0x1000;
 // const FrameFlags FrameFlags_STRICT = 0x1000;
 const FrameFlags FrameFlags_REQN_PRESENT = 0x0800;
+const FrameFlags FrameFlags_RESUME_ENABLE = 0x0800;
 
 class FrameHeader {
  public:
@@ -416,4 +424,47 @@ class Frame_LEASE {
 };
 std::ostream& operator<<(std::ostream&, const Frame_SETUP&);
 /// @}
+
+class Frame_RESUME {
+public:
+    static constexpr bool Trait_CarriesAllowance = false;
+
+    Frame_RESUME() = default;
+    Frame_RESUME(
+        const ResumeIdentificationToken token,
+        ResumePosition position)
+        : header_(FrameType::RESUME, 0, 0),
+        position_(position) {
+        ::memcpy(token_, token, sizeof(token_));
+    }
+
+    std::unique_ptr<folly::IOBuf> serializeOut();
+    bool deserializeFrom(std::unique_ptr<folly::IOBuf> in);
+
+    FrameHeader header_;
+    ResumeIdentificationToken token_;
+    ResumePosition position_;
+};
+std::ostream& operator<<(std::ostream&, const Frame_RESUME&);
+/// @}
+
+class Frame_RESUME_OK {
+public:
+    static constexpr bool Trait_CarriesAllowance = false;
+
+    Frame_RESUME_OK() = default;
+    Frame_RESUME_OK(
+        ResumePosition position)
+        : header_(FrameType::RESUME_OK, 0, 0),
+        position_(position) {}
+
+    std::unique_ptr<folly::IOBuf> serializeOut();
+    bool deserializeFrom(std::unique_ptr<folly::IOBuf> in);
+
+    FrameHeader header_;
+    ResumePosition position_;
+};
+std::ostream& operator<<(std::ostream&, const Frame_RESUME_OK&);
+/// @}
+
 }

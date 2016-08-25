@@ -12,6 +12,8 @@
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
 #include "src/Stats.h"
+#include "src/ResumeTracker.h"
+#include "src/ResumeCache.h"
 
 namespace reactivesocket {
 
@@ -110,6 +112,7 @@ class ConnectionAutomaton :
   /// @}
 
   void sendKeepalive();
+  void sendResume(const ResumeIdentificationToken token);
 
   void onClose(ConnectionCloseListener listener);
 
@@ -164,6 +167,9 @@ class ConnectionAutomaton :
       pendingWrites_; // TODO(stupaq): two vectors?
   Stats& stats_;
   bool isServer_;
+  bool isResumable_;
   std::vector<ConnectionCloseListener> closeListeners_;
+  ResumeTracker resumeTracker_;
+  ResumeCache resumeCache_;
 };
 }
