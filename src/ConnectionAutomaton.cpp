@@ -21,6 +21,7 @@ namespace reactivesocket {
 ConnectionAutomaton::ConnectionAutomaton(
     std::unique_ptr<DuplexConnection> connection,
     StreamAutomatonFactory factory,
+    ResumeListener resumeListener,
     Stats& stats,
     bool isServer)
     : connection_(std::move(connection)),
@@ -29,7 +30,8 @@ ConnectionAutomaton::ConnectionAutomaton(
       isServer_(isServer),
       isResumable_(false),
       resumeTracker_(new ResumeTracker()),
-      resumeCache_(new ResumeCache()) {
+      resumeCache_(new ResumeCache()),
+      resumeListener_(resumeListener) {
   // We deliberately do not "open" input or output to avoid having c'tor on the
   // stack when processing any signals from the connection. See ::connect and
   // ::onSubscribe.
@@ -207,7 +209,17 @@ void ConnectionAutomaton::onConnectionFrame(
     case FrameType::RESUME: {
       Frame_RESUME frame;
       if (frame.deserializeFrom(std::move(payload))) {
-        if (isServer_ && isResumable_ && resumeCache_->isPositionAvailable(frame.position_)) {
+        bool canResume = false;
+
+        if (isServer_ && isResumable_) {
+            // find old ConnectionAutmaton via calling listener.
+            // Application will call resumeFromAutomaton to setup streams and resume information
+            if (resumeListener_(frame.token_)) {
+                canResume = resumeCache_->isPositionAvailable(frame.position_);
+            }
+        }
+
+        if (canResume) {
           outputFrameOrEnqueue(
               Frame_RESUME_OK(resumeTracker_->impliedPosition()).serializeOut());
           resumeCache_->retransmitFromPosition(frame.position_, *this);
@@ -347,4 +359,17 @@ void ConnectionAutomaton::outputFrame(
   resumeCache_->trackAndCacheSentFrame(*outputFrame);
   connectionOutput_.onNext(std::move(outputFrame));
 }
+
+void ConnectionAutomaton::resumeFromAutomaton(ConnectionAutomaton& oldAutomaton)
+{
+  if (isServer_ && isResumable_)
+  {
+    streams_ = std::move(oldAutomaton.streams_);
+    factory_ = oldAutomaton.factory_;
+
+    resumeTracker_ = std::move(oldAutomaton.resumeTracker_);
+    resumeCache_ = std::move(oldAutomaton.resumeCache_);
+  }
+}
+
 }

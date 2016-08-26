@@ -34,6 +34,9 @@ using StreamId = uint32_t;
 using StreamAutomatonFactory =
     std::function<bool(StreamId, std::unique_ptr<folly::IOBuf>)>;
 
+using ResumeListener =
+    std::function<bool(const ResumeIdentificationToken &token)>;
+
 using ConnectionCloseListener = std::function<void()>;
 
 /// Handles connection-level frames and (de)multiplexes streams.
@@ -53,6 +56,7 @@ class ConnectionAutomaton :
       std::unique_ptr<DuplexConnection> connection,
       // TODO(stupaq): for testing only, can devirtualise if necessary
       StreamAutomatonFactory factory,
+      ResumeListener resumeListener,
       Stats& stats,
       bool client);
 
@@ -109,6 +113,9 @@ class ConnectionAutomaton :
   ///   delivered multiple times as long as the caller holds shared_ptr to
   ///   ConnectionAutomaton.
   void endStream(StreamId streamId, StreamCompletionSignal signal);
+
+  /// Copy the streams and resumption information from a previous ConnectionAutomaton
+  void resumeFromAutomaton(ConnectionAutomaton& oldAutomaton);
   /// @}
 
   void sendKeepalive();
@@ -171,5 +178,6 @@ class ConnectionAutomaton :
   std::vector<ConnectionCloseListener> closeListeners_;
   std::unique_ptr<ResumeTracker> resumeTracker_;
   std::unique_ptr<ResumeCache> resumeCache_;
+  ResumeListener resumeListener_;
 };
 }

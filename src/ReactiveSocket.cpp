@@ -35,6 +35,7 @@ ReactiveSocket::ReactiveSocket(
     bool isServer,
     std::unique_ptr<DuplexConnection> connection,
     std::unique_ptr<RequestHandler> handler,
+    ResumeSocketListener resumeListener,
     Stats& stats,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer)
     : connection_(new ConnectionAutomaton(
@@ -44,6 +45,9 @@ ReactiveSocket::ReactiveSocket(
               this,
               std::placeholders::_1,
               std::placeholders::_2),
+          [&](const ResumeIdentificationToken& token) {
+             return resumeListener(*this, token);
+          },
           stats,
           isServer)),
       handler_(std::move(handler)),
@@ -60,6 +64,7 @@ std::unique_ptr<ReactiveSocket> ReactiveSocket::fromClientConnection(
       false,
       std::move(connection),
       std::move(handler),
+      [](ReactiveSocket&, const ResumeIdentificationToken&) { return false; },
       stats,
       std::move(keepaliveTimer)));
   socket->connection_->connect();
@@ -90,11 +95,13 @@ std::unique_ptr<ReactiveSocket> ReactiveSocket::fromClientConnection(
 std::unique_ptr<ReactiveSocket> ReactiveSocket::fromServerConnection(
     std::unique_ptr<DuplexConnection> connection,
     std::unique_ptr<RequestHandler> handler,
-    Stats& stats) {
+    Stats& stats,
+    ResumeSocketListener resumeListener) {
   std::unique_ptr<ReactiveSocket> socket(new ReactiveSocket(
       true,
       std::move(connection),
       std::move(handler),
+      resumeListener,
       stats,
       std::unique_ptr<KeepaliveTimer>(nullptr)));
   socket->connection_->connect();
@@ -266,4 +273,9 @@ void ReactiveSocket::close() {
 void ReactiveSocket::onClose(CloseListener listener) {
   connection_->onClose([listener, this]() { listener(*this); });
 }
+
+void ReactiveSocket::resumeFromSocket(ReactiveSocket &socket) {
+  connection_->resumeFromAutomaton(*socket.connection_);
+}
+
 }

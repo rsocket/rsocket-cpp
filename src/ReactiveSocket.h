@@ -32,6 +32,8 @@ class KeepaliveTimer {
 
 using CloseListener = std::function<void(ReactiveSocket&)>;
 
+using ResumeSocketListener = std::function<bool(ReactiveSocket& newSocket, const ResumeIdentificationToken& token)>;
+
 // TODO(stupaq): consider using error codes in place of folly::exception_wrapper
 
 // TODO(stupaq): Here is some heavy problem with the recursion on shutdown.
@@ -63,7 +65,8 @@ class ReactiveSocket {
   static std::unique_ptr<ReactiveSocket> fromServerConnection(
       std::unique_ptr<DuplexConnection> connection,
       std::unique_ptr<RequestHandler> handler,
-      Stats& stats = Stats::noop());
+      Stats& stats = Stats::noop(),
+      ResumeSocketListener resumeListener = [](ReactiveSocket&, const ResumeIdentificationToken&) { return false; });
 
   Subscriber<Payload>& requestChannel(Subscriber<Payload>& responseSink);
 
@@ -79,11 +82,14 @@ class ReactiveSocket {
 
   void metadataPush(std::unique_ptr<folly::IOBuf> metadata);
 
+  void resumeFromSocket(ReactiveSocket& socket);
+
  private:
   ReactiveSocket(
       bool isServer,
       std::unique_ptr<DuplexConnection> connection,
       std::unique_ptr<RequestHandler> handler,
+      ResumeSocketListener resumeListener,
       Stats& stats,
       std::unique_ptr<KeepaliveTimer> keepaliveTimer);
 
