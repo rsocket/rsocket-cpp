@@ -135,6 +135,7 @@ add_library(
   src/ConnectionSetupPayload.cpp
   src/ResumeTracker.h
   src/ResumeCache.h
+  src/ResumeCache.cpp
 )
 
 target_link_libraries(

@@ -9,9 +9,12 @@
 
 namespace reactivesocket {
 
+class ConnectionAutomaton;
+
 class ResumeCache {
 public:
     using position_t = ResumePosition;
+    using RetransmitFilter = std::function<bool()>;
 
     ResumeCache(const std::int64_t length = 0) :
         position_(0)
@@ -51,6 +54,9 @@ public:
     {
         return position_;
     }
+
+    bool retransmitFromPosition(
+        position_t initialPosition, ConnectionAutomaton &connection, const RetransmitFilter &filter = [](){ return false; });
 
 private:
     position_t position_;

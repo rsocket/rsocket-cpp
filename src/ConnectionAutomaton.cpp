@@ -208,7 +208,7 @@ void ConnectionAutomaton::onConnectionFrame(
         if (isServer_ && isResumable_ && resumeCache_.isPositionAvailable(frame.position_)) {
           outputFrameOrEnqueue(
               Frame_RESUME_OK(resumeTracker_.impliedPosition()).serializeOut());
-          // TODO(tmont): start retransmission from resumeCache_ from frame.position_
+          resumeCache_.retransmitFromPosition(frame.position_, *this);
         } else {
           // TODO(tmont): ERROR?
         }
@@ -222,7 +222,7 @@ void ConnectionAutomaton::onConnectionFrame(
       Frame_RESUME_OK frame;
       if (frame.deserializeFrom(std::move(payload))) {
         if (!isServer_ && isResumable_ && resumeCache_.isPositionAvailable(frame.position_)) {
-          // TODO(tmont): start retransmission from resumeCache_ from frame.position_
+          resumeCache_.retransmitFromPosition(frame.position_, *this);
         } else {
           // TODO(tmont): ERROR?
         }
