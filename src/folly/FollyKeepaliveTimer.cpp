@@ -2,6 +2,7 @@
 
 #include "FollyKeepaliveTimer.h"
 #include <folly/io/async/EventBase.h>
+#include <folly/io/IOBuf.h>
 #include <src/ConnectionAutomaton.h>
 #include <src/ReactiveSocket.h>
 
