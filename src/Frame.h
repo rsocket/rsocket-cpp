@@ -4,6 +4,7 @@
 
 #include <iosfwd>
 #include <limits>
+#include <array>
 
 /// Needed for inline d'tors of frames.
 #include <folly/io/IOBuf.h>
@@ -27,7 +28,7 @@ namespace reactivesocket {
 using StreamId = uint32_t;
 
 /// unique identification token for resumption identification purposes
-using ResumeIdentificationToken = uint8_t[16];
+using ResumeIdentificationToken = std::array<uint8_t, 16>;
 /// position for resumption
 using ResumePosition = int64_t;
 
@@ -431,12 +432,11 @@ public:
 
     Frame_RESUME() = default;
     Frame_RESUME(
-        const ResumeIdentificationToken token,
+        const ResumeIdentificationToken &token,
         ResumePosition position)
         : header_(FrameType::RESUME, 0, 0),
-        position_(position) {
-        ::memcpy(token_, token, sizeof(token_));
-    }
+        token_(token),
+        position_(position) {}
 
     std::unique_ptr<folly::IOBuf> serializeOut();
     bool deserializeFrom(std::unique_ptr<folly::IOBuf> in);

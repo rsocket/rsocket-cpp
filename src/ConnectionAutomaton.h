@@ -112,7 +112,7 @@ class ConnectionAutomaton :
   /// @}
 
   void sendKeepalive();
-  void sendResume(const ResumeIdentificationToken token);
+  void sendResume(const ResumeIdentificationToken &token);
 
   void onClose(ConnectionCloseListener listener);
 

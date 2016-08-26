@@ -477,7 +477,7 @@ std::unique_ptr<folly::IOBuf> Frame_RESUME::serializeOut() {
   folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
 
   header_.serializeInto(appender);
-  appender.push(token_, sizeof(token_));
+  appender.push(token_.data(), sizeof(token_));
   appender.writeBE(position_);
 
   return queue.move();
@@ -487,7 +487,7 @@ bool Frame_RESUME::deserializeFrom(std::unique_ptr<folly::IOBuf> in) {
   folly::io::Cursor cur(in.get());
   try {
     header_.deserializeFrom(cur);
-    cur.pull(token_, sizeof(token_));
+    cur.pull(token_.data(), sizeof(token_));
     position_ = cur.readBE<ResumePosition>();
   } catch (...) {
     return false;

@@ -301,7 +301,7 @@ void ConnectionAutomaton::sendKeepalive() {
   outputFrameOrEnqueue(pingFrame.serializeOut());
 }
 
-void ConnectionAutomaton::sendResume(const ResumeIdentificationToken token) {
+void ConnectionAutomaton::sendResume(const ResumeIdentificationToken &token) {
   Frame_RESUME resumeFrame(token, resumeTracker_.impliedPosition());
   outputFrameOrEnqueue(resumeFrame.serializeOut());
 }
