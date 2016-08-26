@@ -169,7 +169,7 @@ class ConnectionAutomaton :
   bool isServer_;
   bool isResumable_;
   std::vector<ConnectionCloseListener> closeListeners_;
-  ResumeTracker resumeTracker_;
-  ResumeCache resumeCache_;
+  std::unique_ptr<ResumeTracker> resumeTracker_;
+  std::unique_ptr<ResumeCache> resumeCache_;
 };
 }

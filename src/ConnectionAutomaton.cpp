@@ -27,7 +27,9 @@ ConnectionAutomaton::ConnectionAutomaton(
       factory_(std::move(factory)),
       stats_(stats),
       isServer_(isServer),
-      isResumable_(false) {
+      isResumable_(false),
+      resumeTracker_(new ResumeTracker()),
+      resumeCache_(new ResumeCache()) {
   // We deliberately do not "open" input or output to avoid having c'tor on the
   // stack when processing any signals from the connection. See ::connect and
   // ::onSubscribe.
@@ -164,7 +166,7 @@ void ConnectionAutomaton::onConnectionFrame(
 
   // TODO(tmont): If a frame is invalid, it will still be tracked. However, we actually want that. We want to keep
   // each side in sync, even if a frame is invalid.
-  resumeTracker_.trackReceivedFrame(*payload);
+  resumeTracker_->trackReceivedFrame(*payload);
 
   switch (type) {
     case FrameType::KEEPALIVE: {
@@ -205,10 +207,10 @@ void ConnectionAutomaton::onConnectionFrame(
     case FrameType::RESUME: {
       Frame_RESUME frame;
       if (frame.deserializeFrom(std::move(payload))) {
-        if (isServer_ && isResumable_ && resumeCache_.isPositionAvailable(frame.position_)) {
+        if (isServer_ && isResumable_ && resumeCache_->isPositionAvailable(frame.position_)) {
           outputFrameOrEnqueue(
-              Frame_RESUME_OK(resumeTracker_.impliedPosition()).serializeOut());
-          resumeCache_.retransmitFromPosition(frame.position_, *this);
+              Frame_RESUME_OK(resumeTracker_->impliedPosition()).serializeOut());
+          resumeCache_->retransmitFromPosition(frame.position_, *this);
         } else {
           // TODO(tmont): ERROR?
         }
@@ -221,8 +223,8 @@ void ConnectionAutomaton::onConnectionFrame(
     case FrameType::RESUME_OK: {
       Frame_RESUME_OK frame;
       if (frame.deserializeFrom(std::move(payload))) {
-        if (!isServer_ && isResumable_ && resumeCache_.isPositionAvailable(frame.position_)) {
-          resumeCache_.retransmitFromPosition(frame.position_, *this);
+        if (!isServer_ && isResumable_ && resumeCache_->isPositionAvailable(frame.position_)) {
+          resumeCache_->retransmitFromPosition(frame.position_, *this);
         } else {
           // TODO(tmont): ERROR?
         }
@@ -302,7 +304,7 @@ void ConnectionAutomaton::sendKeepalive() {
 }
 
 void ConnectionAutomaton::sendResume(const ResumeIdentificationToken &token) {
-  Frame_RESUME resumeFrame(token, resumeTracker_.impliedPosition());
+  Frame_RESUME resumeFrame(token, resumeTracker_->impliedPosition());
   outputFrameOrEnqueue(resumeFrame.serializeOut());
 }
 
@@ -342,7 +344,7 @@ void ConnectionAutomaton::outputFrame(
 
   stats_.frameWritten(ss.str());
 
-  resumeCache_.trackAndCacheSentFrame(*outputFrame);
+  resumeCache_->trackAndCacheSentFrame(*outputFrame);
   connectionOutput_.onNext(std::move(outputFrame));
 }
 }
