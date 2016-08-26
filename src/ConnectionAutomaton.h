@@ -72,6 +72,9 @@ class ConnectionAutomaton :
   /// AbstractStreamAutomaton attached to this ConnectionAutomaton.
   void disconnect();
 
+  /// Terminate underlying connection and connect new connection
+  void reconnect(std::unique_ptr<DuplexConnection> newConnection);
+
   ~ConnectionAutomaton();
 
   /// @{

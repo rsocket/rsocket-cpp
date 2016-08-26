@@ -278,4 +278,10 @@ void ReactiveSocket::resumeFromSocket(ReactiveSocket &socket) {
   connection_->resumeFromAutomaton(*socket.connection_);
 }
 
+void ReactiveSocket::tryClientResume(
+    std::unique_ptr<DuplexConnection> newConnection, const ResumeIdentificationToken& token) {
+  connection_->reconnect(std::move(newConnection));
+  connection_->sendResume(token);
+}
+
 }

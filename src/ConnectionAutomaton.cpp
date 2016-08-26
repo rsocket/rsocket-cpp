@@ -28,7 +28,7 @@ ConnectionAutomaton::ConnectionAutomaton(
       factory_(std::move(factory)),
       stats_(stats),
       isServer_(isServer),
-      isResumable_(false),
+      isResumable_(true),
       resumeTracker_(new ResumeTracker()),
       resumeCache_(new ResumeCache()),
       resumeListener_(resumeListener) {
@@ -69,6 +69,12 @@ void ConnectionAutomaton::disconnect() {
   for (auto closeListener : closeListeners_) {
     closeListener();
   }
+}
+
+void ConnectionAutomaton::reconnect(std::unique_ptr<DuplexConnection> newConnection) {
+    disconnect();
+    connection_ = std::move(newConnection);
+    connect();
 }
 
 ConnectionAutomaton::~ConnectionAutomaton() {

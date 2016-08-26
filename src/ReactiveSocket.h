@@ -84,6 +84,8 @@ class ReactiveSocket {
 
   void resumeFromSocket(ReactiveSocket& socket);
 
+  void tryClientResume(std::unique_ptr<DuplexConnection> newConnection, const ResumeIdentificationToken& token);
+
  private:
   ReactiveSocket(
       bool isServer,
