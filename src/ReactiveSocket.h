@@ -96,10 +96,12 @@ class ReactiveSocket {
       std::unique_ptr<KeepaliveTimer> keepaliveTimer);
 
   bool createResponder(StreamId streamId, std::unique_ptr<folly::IOBuf> frame);
+  bool resumeListener(const ResumeIdentificationToken& token);
 
   const std::shared_ptr<ConnectionAutomaton> connection_;
   std::unique_ptr<RequestHandler> handler_;
   StreamId nextStreamId_;
   std::unique_ptr<KeepaliveTimer> keepaliveTimer_;
+  ResumeSocketListener resumeSocketListener_;
 };
 }

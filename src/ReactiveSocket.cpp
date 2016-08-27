@@ -45,14 +45,16 @@ ReactiveSocket::ReactiveSocket(
               this,
               std::placeholders::_1,
               std::placeholders::_2),
-          [&](const ResumeIdentificationToken& token) {
-             return resumeListener(*this, token);
-          },
+          std::bind(
+              &ReactiveSocket::resumeListener,
+              this,
+              std::placeholders::_1),
           stats,
           isServer)),
       handler_(std::move(handler)),
       nextStreamId_(isServer ? 1 : 2),
-      keepaliveTimer_(std::move(keepaliveTimer)) {}
+      keepaliveTimer_(std::move(keepaliveTimer)),
+      resumeSocketListener_(resumeListener) {}
 
 std::unique_ptr<ReactiveSocket> ReactiveSocket::fromClientConnection(
     std::unique_ptr<DuplexConnection> connection,
@@ -264,6 +266,10 @@ bool ReactiveSocket::createResponder(
       return false;
   }
   return true;
+}
+
+bool ReactiveSocket::resumeListener(const ResumeIdentificationToken& token) {
+    return resumeSocketListener_(*this, token);
 }
 
 void ReactiveSocket::close() {
