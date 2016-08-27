@@ -166,7 +166,8 @@ add_executable(
   test/ReactiveSocketTest.cpp
   test/ReactiveStreamsMocksCompat.h
   test/Test.cpp
-  test/MockStats.h)
+  test/MockStats.h
+)
 
 target_link_libraries(
   tests
@@ -243,5 +244,45 @@ target_link_libraries(
         ${CMAKE_THREAD_LIBS_INIT})
 
 add_dependencies(tckclient gmock)
+
+add_executable(
+        tcpresumeclient
+        test/resume/TcpResumeClient.cpp
+        test/simple/PrintSubscriber.cpp
+        test/simple/PrintSubscriber.h
+        src/ReactiveSocket.cpp
+        src/ReactiveSocket.h
+        test/simple/StatsPrinter.cpp
+        test/simple/StatsPrinter.h)
+
+target_link_libraries(
+        tcpresumeclient
+        ReactiveSocket
+        ${FOLLY_LIBRARIES}
+        gflags
+        ${GMOCK_LIBS}
+        glog
+        ${CMAKE_THREAD_LIBS_INIT})
+
+add_dependencies(tcpresumeclient gmock)
+
+add_executable(
+        tcpresumeserver
+        test/resume/TcpResumeServer.cpp
+        test/simple/PrintSubscriber.cpp
+        test/simple/PrintSubscriber.h
+        test/simple/StatsPrinter.cpp
+        test/simple/StatsPrinter.h)
+
+target_link_libraries(
+        tcpresumeserver
+        ReactiveSocket
+        ${FOLLY_LIBRARIES}
+        gflags
+        ${GMOCK_LIBS}
+        glog
+        ${CMAKE_THREAD_LIBS_INIT})
+
+add_dependencies(tcpresumeserver gmock)
 
 # EOF
