@@ -48,7 +48,8 @@ ReactiveSocket::ReactiveSocket(
           std::bind(
               &ReactiveSocket::resumeListener,
               this,
-              std::placeholders::_1),
+              std::placeholders::_1,
+              std::placeholders::_2),
           stats,
           isServer)),
       handler_(std::move(handler)),
@@ -61,12 +62,13 @@ std::unique_ptr<ReactiveSocket> ReactiveSocket::fromClientConnection(
     std::unique_ptr<RequestHandler> handler,
     ConnectionSetupPayload setupPayload,
     Stats& stats,
-    std::unique_ptr<KeepaliveTimer> keepaliveTimer) {
+    std::unique_ptr<KeepaliveTimer> keepaliveTimer,
+    const ResumeIdentificationToken &token) {
   std::unique_ptr<ReactiveSocket> socket(new ReactiveSocket(
       false,
       std::move(connection),
       std::move(handler),
-      [](ReactiveSocket&, const ResumeIdentificationToken&) { return false; },
+      [](ReactiveSocket&, const ResumeIdentificationToken&, ResumePosition) { return false; },
       stats,
       std::move(keepaliveTimer)));
   socket->connection_->connect();
@@ -74,10 +76,6 @@ std::unique_ptr<ReactiveSocket> ReactiveSocket::fromClientConnection(
   uint32_t keepaliveTime = socket->keepaliveTimer_
       ? socket->keepaliveTimer_->keepaliveTime().count()
       : std::numeric_limits<uint32_t>::max();
-
-  // TODO(tmont): temporary 0ed token until API is set
-  ResumeIdentificationToken token;
-  token.fill(0);
 
   // TODO set correct version
   Frame_SETUP frame(
@@ -273,8 +271,8 @@ bool ReactiveSocket::createResponder(
   return true;
 }
 
-bool ReactiveSocket::resumeListener(const ResumeIdentificationToken& token) {
-    return resumeSocketListener_(*this, token);
+bool ReactiveSocket::resumeListener(const ResumeIdentificationToken& token, ResumePosition position) {
+    return resumeSocketListener_(*this, token, position);
 }
 
 void ReactiveSocket::close() {
@@ -293,6 +291,14 @@ void ReactiveSocket::tryClientResume(
     std::unique_ptr<DuplexConnection> newConnection, const ResumeIdentificationToken& token) {
   connection_->reconnect(std::move(newConnection));
   connection_->sendResume(token);
+}
+
+bool ReactiveSocket::isPositionAvailable(ResumePosition position) {
+  return connection_->isPositionAvailable(position);
+}
+
+ResumePosition ReactiveSocket::positionDifference(ResumePosition position) {
+  return connection_->positionDifference(position);
 }
 
 }

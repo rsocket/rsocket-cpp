@@ -220,9 +220,7 @@ void ConnectionAutomaton::onConnectionFrame(
         if (isServer_ && isResumable_) {
             // find old ConnectionAutmaton via calling listener.
             // Application will call resumeFromAutomaton to setup streams and resume information
-            if (resumeListener_(frame.token_)) {
-                canResume = resumeCache_->isPositionAvailable(frame.position_);
-            }
+            canResume = resumeListener_(frame.token_, frame.position_);
         }
 
         if (canResume) {
@@ -326,6 +324,14 @@ void ConnectionAutomaton::sendKeepalive() {
 void ConnectionAutomaton::sendResume(const ResumeIdentificationToken &token) {
   Frame_RESUME resumeFrame(token, resumeTracker_->impliedPosition());
   outputFrameOrEnqueue(resumeFrame.serializeOut());
+}
+
+bool ConnectionAutomaton::isPositionAvailable(ResumePosition position) {
+    return resumeCache_->isPositionAvailable(position);
+}
+
+ResumePosition ConnectionAutomaton::positionDifference(ResumePosition position) {
+    return resumeCache_->position() - position;
 }
 
 void ConnectionAutomaton::onClose(ConnectionCloseListener listener) {

@@ -99,9 +99,17 @@ class Callback : public AsyncServerSocket::AcceptCallback {
         std::move(framedConnection),
         std::move(requestHandler),
         stats_,
-        [&](ReactiveSocket& socket, const ResumeIdentificationToken& token)
+        [&](ReactiveSocket& socket, const ResumeIdentificationToken& token, ResumePosition position)
         {
-            std::cout << "resume callback " << &socket << " " << reactiveSockets_[0].get() << std::endl;
+            std::cout << "resume callback token <";
+            for (uint8_t byte : token)
+            {
+                std::cout << (int)byte;
+            }
+
+            std::cout << "> RS " << &socket << " " << reactiveSockets_[0].get();
+            std::cout << " position difference " << reactiveSockets_[0]->positionDifference(position);
+            std::cout << " isAvailable " << reactiveSockets_[0]->isPositionAvailable(position) << std::endl;
             socket.resumeFromSocket(*reactiveSockets_[0]);
             return true;
         }

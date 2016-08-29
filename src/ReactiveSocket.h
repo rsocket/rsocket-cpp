@@ -32,7 +32,8 @@ class KeepaliveTimer {
 
 using CloseListener = std::function<void(ReactiveSocket&)>;
 
-using ResumeSocketListener = std::function<bool(ReactiveSocket& newSocket, const ResumeIdentificationToken& token)>;
+using ResumeSocketListener =
+  std::function<bool(ReactiveSocket& newSocket, const ResumeIdentificationToken& token, ResumePosition position)>;
 
 // TODO(stupaq): consider using error codes in place of folly::exception_wrapper
 
@@ -60,13 +61,14 @@ class ReactiveSocket {
       ConnectionSetupPayload setupPayload = ConnectionSetupPayload(),
       Stats& stats = Stats::noop(),
       std::unique_ptr<KeepaliveTimer> keepaliveTimer =
-          std::unique_ptr<KeepaliveTimer>(nullptr));
+          std::unique_ptr<KeepaliveTimer>(nullptr),
+      const ResumeIdentificationToken &token = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
   static std::unique_ptr<ReactiveSocket> fromServerConnection(
       std::unique_ptr<DuplexConnection> connection,
       std::unique_ptr<RequestHandler> handler,
       Stats& stats = Stats::noop(),
-      ResumeSocketListener resumeListener = [](ReactiveSocket&, const ResumeIdentificationToken&) { return false; });
+      ResumeSocketListener resumeListener = [](ReactiveSocket&, const ResumeIdentificationToken&, ResumePosition) { return false; });
 
   Subscriber<Payload>& requestChannel(Subscriber<Payload>& responseSink);
 
@@ -86,6 +88,9 @@ class ReactiveSocket {
 
   void tryClientResume(std::unique_ptr<DuplexConnection> newConnection, const ResumeIdentificationToken& token);
 
+  bool isPositionAvailable(ResumePosition position);
+  ResumePosition positionDifference(ResumePosition position);
+
  private:
   ReactiveSocket(
       bool isServer,
@@ -96,7 +101,7 @@ class ReactiveSocket {
       std::unique_ptr<KeepaliveTimer> keepaliveTimer);
 
   bool createResponder(StreamId streamId, std::unique_ptr<folly::IOBuf> frame);
-  bool resumeListener(const ResumeIdentificationToken& token);
+  bool resumeListener(const ResumeIdentificationToken& token, ResumePosition position);
 
   const std::shared_ptr<ConnectionAutomaton> connection_;
   std::unique_ptr<RequestHandler> handler_;

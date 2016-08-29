@@ -47,13 +47,15 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<ReactiveSocket> reactiveSocket;
   Callback callback;
   StatsPrinter stats;
-  std::array<uint8_t, 16> token = {{ 0 }};
 
     folly::AsyncSocket::UniquePtr socket(
         new folly::AsyncSocket(&eventBase));
 
     folly::AsyncSocket::UniquePtr socketResume(
         new folly::AsyncSocket(&eventBase));
+
+    ResumeIdentificationToken token;
+    token.fill(1);
 
     eventBase.runInEventBaseThreadAndWait(
       [&]()
@@ -78,7 +80,8 @@ int main(int argc, char* argv[]) {
                   "text/plain", "text/plain", Payload("meta", "data")),
               stats,
               folly::make_unique<FollyKeepaliveTimer>(
-                  eventBase, std::chrono::milliseconds(5000)));
+                  eventBase, std::chrono::milliseconds(5000)),
+              token);
 
           reactiveSocket->requestSubscription(
               Payload("from client"), createManagedInstance<PrintSubscriber>());

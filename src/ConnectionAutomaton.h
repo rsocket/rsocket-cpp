@@ -35,7 +35,7 @@ using StreamAutomatonFactory =
     std::function<bool(StreamId, std::unique_ptr<folly::IOBuf>)>;
 
 using ResumeListener =
-    std::function<bool(const ResumeIdentificationToken &token)>;
+    std::function<bool(const ResumeIdentificationToken &token, ResumePosition position)>;
 
 using ConnectionCloseListener = std::function<void()>;
 
@@ -123,6 +123,9 @@ class ConnectionAutomaton :
 
   void sendKeepalive();
   void sendResume(const ResumeIdentificationToken &token);
+
+  bool isPositionAvailable(ResumePosition position);
+  ResumePosition positionDifference(ResumePosition position);
 
   void onClose(ConnectionCloseListener listener);
 
