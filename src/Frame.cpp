@@ -325,6 +325,10 @@ Frame_ERROR Frame_ERROR::applicationError(
   return Frame_ERROR(streamId, ErrorCode::APPLICATION_ERROR, Payload(message));
 }
 
+Frame_ERROR Frame_ERROR::canNotResume(const std::string& message) {
+    return Frame_ERROR(0, ErrorCode::CONNECTION_ERROR, Payload(message));
+}
+
 std::unique_ptr<folly::IOBuf> Frame_ERROR::serializeOut() {
   auto queue = createBufferQueue(
       FrameHeader::kSize + sizeof(uint32_t) + payload_.framingSize());

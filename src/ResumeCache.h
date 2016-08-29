@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <iostream>
 
 #include "Frame.h"
 
@@ -20,6 +21,28 @@ public:
         position_(0)
     {
         // TODO(tmont): create cache of specified length
+    }
+
+    ResumeCache(const ResumeCache& cache) :
+        position_(cache.position_)
+    {
+    }
+
+    ResumeCache(ResumeCache&& cache) :
+        position_(cache.position_)
+    {
+    }
+
+    ResumeCache& operator=(const ResumeCache& cache)
+    {
+        position_ = cache.position_;
+        return *this;
+    }
+
+    ResumeCache& operator=(ResumeCache&& cache)
+    {
+        position_ = cache.position_;
+        return *this;
     }
 
     void trackAndCacheSentFrame(const folly::IOBuf &serializedFrame)

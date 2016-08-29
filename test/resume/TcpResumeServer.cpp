@@ -101,14 +101,17 @@ class Callback : public AsyncServerSocket::AcceptCallback {
         stats_,
         [&](ReactiveSocket& socket, const ResumeIdentificationToken& token)
         {
-            std::cout << "resume callback" << std::endl;
+            std::cout << "resume callback " << &socket << " " << reactiveSockets_[0].get() << std::endl;
             socket.resumeFromSocket(*reactiveSockets_[0]);
             return true;
         }
     );
 
-    rs->onClose(
-        std::bind(&Callback::removeSocket, this, std::placeholders::_1));
+      std::cout << "RS " << rs.get() << std::endl;
+
+      // keep the ReactiveSocket around so it can be resumed
+//    rs->onClose(
+//        std::bind(&Callback::removeSocket, this, std::placeholders::_1));
 
     reactiveSockets_.push_back(std::move(rs));
   }

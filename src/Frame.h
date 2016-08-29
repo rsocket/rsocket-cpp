@@ -338,6 +338,7 @@ class Frame_ERROR {
   static Frame_ERROR applicationError(
       StreamId streamId,
       const std::string& message);
+  static Frame_ERROR canNotResume(const std::string& message);
 
   FrameHeader header_;
   ErrorCode errorCode_;

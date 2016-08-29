@@ -138,6 +138,10 @@ void ConnectionAutomaton::onNext(std::unique_ptr<folly::IOBuf> frame) {
 
   stats_.frameRead(ss.str());
 
+  // TODO(tmont): If a frame is invalid, it will still be tracked. However, we actually want that. We want to keep
+  // each side in sync, even if a frame is invalid.
+  resumeTracker_->trackReceivedFrame(*frame);
+
   auto streamIdPtr = FrameHeader::peekStreamId(*frame);
   if (!streamIdPtr) {
     // Failed to deserialize the frame.
@@ -171,10 +175,6 @@ void ConnectionAutomaton::onError(folly::exception_wrapper ex) {
 void ConnectionAutomaton::onConnectionFrame(
     std::unique_ptr<folly::IOBuf> payload) {
   auto type = FrameHeader::peekType(*payload);
-
-  // TODO(tmont): If a frame is invalid, it will still be tracked. However, we actually want that. We want to keep
-  // each side in sync, even if a frame is invalid.
-  resumeTracker_->trackReceivedFrame(*payload);
 
   switch (type) {
     case FrameType::KEEPALIVE: {
@@ -230,7 +230,8 @@ void ConnectionAutomaton::onConnectionFrame(
               Frame_RESUME_OK(resumeTracker_->impliedPosition()).serializeOut());
           resumeCache_->retransmitFromPosition(frame.position_, *this);
         } else {
-          // TODO(tmont): ERROR?
+          outputFrameOrEnqueue(Frame_ERROR::canNotResume("can not resume").serializeOut());
+          disconnect();
         }
       } else {
         outputFrameOrEnqueue(Frame_ERROR::unexpectedFrame().serializeOut());
@@ -244,7 +245,8 @@ void ConnectionAutomaton::onConnectionFrame(
         if (!isServer_ && isResumable_ && resumeCache_->isPositionAvailable(frame.position_)) {
           resumeCache_->retransmitFromPosition(frame.position_, *this);
         } else {
-          // TODO(tmont): ERROR?
+            outputFrameOrEnqueue(Frame_ERROR::canNotResume("can not resume").serializeOut());
+            disconnect();
         }
       } else {
         outputFrameOrEnqueue(Frame_ERROR::unexpectedFrame().serializeOut());
