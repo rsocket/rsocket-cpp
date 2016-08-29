@@ -387,7 +387,7 @@ std::ostream& operator<<(std::ostream& os, const Frame_KEEPALIVE& frame) {
 /// @{
 std::unique_ptr<folly::IOBuf> Frame_SETUP::serializeOut() {
   auto queue = createBufferQueue(
-      FrameHeader::kSize + 3 * sizeof(uint32_t) + 2 +
+      FrameHeader::kSize + 3 * sizeof(uint32_t) + token_.size() + 2 +
       metadataMimeType_.length() + dataMimeType_.length() +
       payload_.framingSize());
   folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
@@ -396,8 +396,9 @@ std::unique_ptr<folly::IOBuf> Frame_SETUP::serializeOut() {
   appender.writeBE(static_cast<uint32_t>(version_));
   appender.writeBE(static_cast<uint32_t>(keepaliveTime_));
   appender.writeBE(static_cast<uint32_t>(maxLifetime_));
+  appender.push((const uint8_t*)token_.data(), token_.size());
 
-  CHECK(metadataMimeType_.length() <= std::numeric_limits<uint8_t>::max());
+    CHECK(metadataMimeType_.length() <= std::numeric_limits<uint8_t>::max());
   appender.writeBE(static_cast<uint8_t>(metadataMimeType_.length()));
   appender.push(
       (const uint8_t*)metadataMimeType_.data(), metadataMimeType_.length());
@@ -417,6 +418,7 @@ bool Frame_SETUP::deserializeFrom(std::unique_ptr<folly::IOBuf> in) {
     version_ = cur.readBE<uint32_t>();
     keepaliveTime_ = cur.readBE<uint32_t>();
     maxLifetime_ = cur.readBE<uint32_t>();
+    cur.pull(token_.data(), token_.size());
 
     int mdmtLen = cur.readBE<uint8_t>();
     metadataMimeType_ = cur.readFixedString(mdmtLen);

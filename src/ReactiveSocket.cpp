@@ -75,12 +75,17 @@ std::unique_ptr<ReactiveSocket> ReactiveSocket::fromClientConnection(
       ? socket->keepaliveTimer_->keepaliveTime().count()
       : std::numeric_limits<uint32_t>::max();
 
+  // TODO(tmont): temporary 0ed token until API is set
+  ResumeIdentificationToken token;
+  token.fill(0);
+
   // TODO set correct version
   Frame_SETUP frame(
       FrameFlags_EMPTY,
       0,
       keepaliveTime,
       std::numeric_limits<uint32_t>::max(),
+      token,
       std::move(setupPayload.metadataMimeType),
       std::move(setupPayload.dataMimeType),
       std::move(setupPayload.payload));

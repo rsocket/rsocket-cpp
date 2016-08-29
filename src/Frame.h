@@ -373,6 +373,7 @@ class Frame_SETUP {
       uint32_t version,
       uint32_t keepaliveTime,
       uint32_t maxLifetime,
+      const ResumeIdentificationToken &token,
       std::string metadataMimeType,
       std::string dataMimeType,
       Payload payload)
@@ -380,6 +381,7 @@ class Frame_SETUP {
         version_(version),
         keepaliveTime_(keepaliveTime),
         maxLifetime_(maxLifetime),
+        token_(token),
         metadataMimeType_(metadataMimeType),
         dataMimeType_(dataMimeType),
         payload_(std::move(payload)) {
@@ -394,6 +396,7 @@ class Frame_SETUP {
   uint32_t version_;
   uint32_t keepaliveTime_;
   uint32_t maxLifetime_;
+  ResumeIdentificationToken token_;
   std::string metadataMimeType_;
   std::string dataMimeType_;
   Payload payload_;

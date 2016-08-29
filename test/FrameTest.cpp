@@ -171,12 +171,15 @@ TEST_F(FrameTest, Frame_SETUP) {
   uint32_t version = 0;
   uint32_t keepaliveTime = std::numeric_limits<uint32_t>::max();
   uint32_t maxLifetime = std::numeric_limits<uint32_t>::max();
+  ResumeIdentificationToken token;
+  token.fill(1);
   auto data = folly::IOBuf::copyBuffer("424242");
   auto frame = reserialize<Frame_SETUP>(
       flags,
       version,
       keepaliveTime,
       maxLifetime,
+      token,
       "md",
       "d",
       Payload(data->clone()));
@@ -185,6 +188,7 @@ TEST_F(FrameTest, Frame_SETUP) {
   EXPECT_EQ(version, frame.version_);
   EXPECT_EQ(keepaliveTime, frame.keepaliveTime_);
   EXPECT_EQ(maxLifetime, frame.maxLifetime_);
+  EXPECT_EQ(token, frame.token_);
   EXPECT_EQ("md", frame.metadataMimeType_);
   EXPECT_EQ("d", frame.dataMimeType_);
   EXPECT_TRUE(folly::IOBufEqual()(*data, *frame.payload_.data));
