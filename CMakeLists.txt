@@ -136,6 +136,9 @@ add_library(
   src/ResumeTracker.h
   src/ResumeCache.h
   src/ResumeCache.cpp
+  src/concurrent/atomic64.h
+  src/concurrent/atomic64_gcc_x86_64.h
+  src/concurrent/OneToOneRingBuffer.h
 )
 
 target_link_libraries(
@@ -167,6 +170,7 @@ add_executable(
   test/ReactiveStreamsMocksCompat.h
   test/Test.cpp
   test/MockStats.h
+  test/concurrent/OneToOneRingBufferTest.cpp
 )
 
 target_link_libraries(
