@@ -99,27 +99,29 @@ class Callback : public AsyncServerSocket::AcceptCallback {
         std::move(framedConnection),
         std::move(requestHandler),
         stats_,
-        [&](ReactiveSocket& socket, const ResumeIdentificationToken& token, ResumePosition position)
-        {
-            std::cout << "resume callback token <";
-            for (uint8_t byte : token)
-            {
-                std::cout << (int)byte;
-            }
+        [&](ReactiveSocket& socket,
+            const ResumeIdentificationToken& token,
+            ResumePosition position) {
+          std::cout << "resume callback token <";
+          for (uint8_t byte : token) {
+            std::cout << (int)byte;
+          }
 
-            std::cout << "> RS " << &socket << " " << reactiveSockets_[0].get();
-            std::cout << " position difference " << reactiveSockets_[0]->positionDifference(position);
-            std::cout << " isAvailable " << reactiveSockets_[0]->isPositionAvailable(position) << std::endl;
-            socket.resumeFromSocket(*reactiveSockets_[0]);
-            return true;
-        }
-    );
+          std::cout << "> RS " << &socket << " " << reactiveSockets_[0].get();
+          std::cout << " position difference "
+                    << reactiveSockets_[0]->positionDifference(position);
+          std::cout << " isAvailable "
+                    << reactiveSockets_[0]->isPositionAvailable(position)
+                    << std::endl;
+          socket.resumeFromSocket(*reactiveSockets_[0]);
+          return true;
+        });
 
-      std::cout << "RS " << rs.get() << std::endl;
+    std::cout << "RS " << rs.get() << std::endl;
 
-      // keep the ReactiveSocket around so it can be resumed
-//    rs->onClose(
-//        std::bind(&Callback::removeSocket, this, std::placeholders::_1));
+    // keep the ReactiveSocket around so it can be resumed
+    //    rs->onClose(
+    //        std::bind(&Callback::removeSocket, this, std::placeholders::_1));
 
     reactiveSockets_.push_back(std::move(rs));
   }
