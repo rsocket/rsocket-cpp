@@ -10,22 +10,22 @@ namespace reactivesocket {
 
 namespace RingBufferDescriptor {
 
-constexpr static const size_t CACHE_LINE_LENGTH = 64;
+constexpr static const size_t kCACHE_LINE_LENGTH = 64;
 
 #pragma pack(push)
 #pragma pack(4)
 struct RingBufferDescriptorDefn {
-  std::uint8_t prePad[(2 * CACHE_LINE_LENGTH)];
+  std::uint8_t prePad[(2 * kCACHE_LINE_LENGTH)];
   std::uint64_t tailPosition;
-  std::int8_t tailPositionPad[(2 * CACHE_LINE_LENGTH) - sizeof(std::uint64_t)];
+  std::int8_t tailPositionPad[(2 * kCACHE_LINE_LENGTH) - sizeof(std::uint64_t)];
   std::uint64_t headCachePosition;
   std::int8_t
-      headCachePositionPad[(2 * CACHE_LINE_LENGTH) - sizeof(std::uint64_t)];
+      headCachePositionPad[(2 * kCACHE_LINE_LENGTH) - sizeof(std::uint64_t)];
   std::uint64_t headPosition;
-  std::int8_t headPositionPad[(2 * CACHE_LINE_LENGTH) - sizeof(std::uint64_t)];
+  std::int8_t headPositionPad[(2 * kCACHE_LINE_LENGTH) - sizeof(std::uint64_t)];
   std::uint64_t correlationCounter;
   std::int8_t
-      correlationCounterPad[(2 * CACHE_LINE_LENGTH) - sizeof(std::uint64_t)];
+      correlationCounterPad[(2 * kCACHE_LINE_LENGTH) - sizeof(std::uint64_t)];
 };
 #pragma pack(pop)
 
