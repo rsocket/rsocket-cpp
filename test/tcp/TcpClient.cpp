@@ -28,7 +28,7 @@ class Callback : public AsyncSocket::ConnectCallback {
   void connectSuccess() noexcept override {}
 
   void connectErr(const AsyncSocketException& ex) noexcept override {
-    std::cout << "TODO error" << ex.what() << " " << ex.getType() << "\n";
+    std::cerr << "connectErr " << ex.what() << " " << ex.getType() << std::endl;
   }
 };
 }
@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
 
         socket->connect(&callback, addr);
 
-        std::cout << "attempting connection to " << addr.describe() << "\n";
+        std::cout << "attempting connection to " << addr.describe() << std::endl;
 
         std::unique_ptr<DuplexConnection> connection =
             folly::make_unique<TcpDuplexConnection>(std::move(socket), stats);
@@ -82,7 +82,6 @@ int main(int argc, char* argv[]) {
   std::string name;
   std::getline(std::cin, name);
 
-  // TODO why need to shutdown in eventbase?
   eventBase.runInEventBaseThreadAndWait(
       [&reactiveSocket]() { reactiveSocket.reset(nullptr); });
 

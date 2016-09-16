@@ -48,8 +48,14 @@ class ConsumerMixin : public Base {
  protected:
   /// @{
   void endStream(StreamCompletionSignal signal) {
-    // FIXME: switch on signal and verify that callsites propagate stream errors
-    consumingSubscriber_.onComplete();
+    switch (signal) {
+      case  StreamCompletionSignal::CONNECTION_ERROR:
+        consumingSubscriber_.onError(std::runtime_error("connection closed"));
+            break;
+      default:
+        consumingSubscriber_.onComplete();
+            break;
+    }
     Base::endStream(signal);
   }
 

@@ -273,6 +273,11 @@ void ConnectionAutomaton::onTerminal(folly::exception_wrapper ex) {
   // instead of exceptions we have no idea about
   auto signal = ex ? StreamCompletionSignal::CONNECTION_ERROR
                    : StreamCompletionSignal::CONNECTION_END;
+
+  if (ex) {
+    VLOG(1) << signal << " from " << ex.what();
+  }
+
   // Close all streams.
   while (!streams_.empty()) {
     auto oldSize = streams_.size();

@@ -72,16 +72,16 @@ class ServerRequestHandler : public DefaultRequestHandler {
 
   void handleFireAndForgetRequest(Payload request) override {
     LOG(INFO) << "ServerRequestHandler.handleFireAndForgetRequest " << request
-              << "\n";
+              << std::endl;
   }
 
   void handleMetadataPush(std::unique_ptr<folly::IOBuf> request) override {
     LOG(INFO) << "ServerRequestHandler.handleMetadataPush "
-              << request->moveToFbString() << "\n";
+              << request->moveToFbString() << std::endl;
   }
 
   void handleSetupPayload(ConnectionSetupPayload request) override {
-    LOG(INFO) << "ServerRequestHandler.handleSetupPayload " << request << "\n";
+    LOG(INFO) << "ServerRequestHandler.handleSetupPayload " << request << std::endl;
   }
 };
 
