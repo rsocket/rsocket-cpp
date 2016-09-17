@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include <iosfwd>
 #include <folly/Optional.h>
+#include <iosfwd>
 
 #include <reactive-streams/utilities/SmartPointers.h>
 #include "src/Frame.h"
@@ -27,7 +27,6 @@ enum class StreamCompletionSignal;
 /// Implementation of stream automaton that represents a RequestResponse
 /// requester
 class RequestResponseRequesterBase : public MixinTerminator {
-
  public:
   using MixinTerminator::MixinTerminator;
 
@@ -74,7 +73,7 @@ class RequestResponseRequesterBase : public MixinTerminator {
   reactivestreams::SubscriberPtr<Subscriber<Payload>> consumingSubscriber_;
 };
 
-using RequestResponseRequester = SourceIfMixin <
-    StreamIfMixin<LoggingMixin<ExecutorMixin<LoggingMixin<
+using RequestResponseRequester =
+    SourceIfMixin<StreamIfMixin<LoggingMixin<ExecutorMixin<LoggingMixin<
         MemoryMixin<LoggingMixin<RequestResponseRequesterBase>>>>>>>;
 }

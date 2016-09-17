@@ -48,62 +48,57 @@ int main(int argc, char* argv[]) {
   Callback callback;
   StatsPrinter stats;
 
-    folly::AsyncSocket::UniquePtr socket(
-        new folly::AsyncSocket(&eventBase));
+  folly::AsyncSocket::UniquePtr socket(new folly::AsyncSocket(&eventBase));
 
-    folly::AsyncSocket::UniquePtr socketResume(
-        new folly::AsyncSocket(&eventBase));
+  folly::AsyncSocket::UniquePtr socketResume(
+      new folly::AsyncSocket(&eventBase));
 
-    ResumeIdentificationToken token;
-    token.fill(1);
+  ResumeIdentificationToken token;
+  token.fill(1);
 
-    eventBase.runInEventBaseThreadAndWait(
-      [&]()
-      {
-          folly::SocketAddress addr(FLAGS_host, FLAGS_port, true);
+  eventBase.runInEventBaseThreadAndWait([&]() {
+    folly::SocketAddress addr(FLAGS_host, FLAGS_port, true);
 
-          socket->connect(&callback, addr);
+    socket->connect(&callback, addr);
 
-          std::cout << "attempting connection to " << addr.describe() << "\n";
+    std::cout << "attempting connection to " << addr.describe() << "\n";
 
-          std::unique_ptr<DuplexConnection> connection =
-              folly::make_unique<TcpDuplexConnection>(std::move(socket), stats);
-          std::unique_ptr<DuplexConnection> framedConnection =
-              folly::make_unique<FramedDuplexConnection>(std::move(connection));
-          std::unique_ptr<RequestHandler> requestHandler =
-              folly::make_unique<DefaultRequestHandler>();
+    std::unique_ptr<DuplexConnection> connection =
+        folly::make_unique<TcpDuplexConnection>(std::move(socket), stats);
+    std::unique_ptr<DuplexConnection> framedConnection =
+        folly::make_unique<FramedDuplexConnection>(std::move(connection));
+    std::unique_ptr<RequestHandler> requestHandler =
+        folly::make_unique<DefaultRequestHandler>();
 
-          reactiveSocket = ReactiveSocket::fromClientConnection(
-              std::move(framedConnection),
-              std::move(requestHandler),
-              ConnectionSetupPayload(
-                  "text/plain", "text/plain", Payload("meta", "data")),
-              stats,
-              folly::make_unique<FollyKeepaliveTimer>(
-                  eventBase, std::chrono::milliseconds(5000)),
-              token);
+    reactiveSocket = ReactiveSocket::fromClientConnection(
+        std::move(framedConnection),
+        std::move(requestHandler),
+        ConnectionSetupPayload(
+            "text/plain", "text/plain", Payload("meta", "data")),
+        stats,
+        folly::make_unique<FollyKeepaliveTimer>(
+            eventBase, std::chrono::milliseconds(5000)),
+        token);
 
-          reactiveSocket->requestSubscription(
-              Payload("from client"), createManagedInstance<PrintSubscriber>());
-      });
+    reactiveSocket->requestSubscription(
+        Payload("from client"), createManagedInstance<PrintSubscriber>());
+  });
 
-    std::string input;
-    std::getline(std::cin, input);
+  std::string input;
+  std::getline(std::cin, input);
 
-    eventBase.runInEventBaseThreadAndWait(
-        [&]()
-        {
-            folly::SocketAddress addr(FLAGS_host, FLAGS_port, true);
+  eventBase.runInEventBaseThreadAndWait([&]() {
+    folly::SocketAddress addr(FLAGS_host, FLAGS_port, true);
 
-            socketResume->connect(&callback, addr);
+    socketResume->connect(&callback, addr);
 
-            std::unique_ptr<DuplexConnection> connectionResume =
-                folly::make_unique<TcpDuplexConnection>(std::move(socketResume), stats);
-            std::unique_ptr<DuplexConnection> framedConnectionResume =
-                folly::make_unique<FramedDuplexConnection>(std::move(connectionResume));
+    std::unique_ptr<DuplexConnection> connectionResume =
+        folly::make_unique<TcpDuplexConnection>(std::move(socketResume), stats);
+    std::unique_ptr<DuplexConnection> framedConnectionResume =
+        folly::make_unique<FramedDuplexConnection>(std::move(connectionResume));
 
-            reactiveSocket->tryClientResume(std::move(framedConnectionResume), token);
-        });
+    reactiveSocket->tryClientResume(std::move(framedConnectionResume), token);
+  });
 
   std::getline(std::cin, input);
 

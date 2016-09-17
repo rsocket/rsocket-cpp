@@ -356,7 +356,7 @@ Frame_ERROR Frame_ERROR::applicationError(
 }
 
 Frame_ERROR Frame_ERROR::canNotResume(const std::string& message) {
-    return Frame_ERROR(0, ErrorCode::CONNECTION_ERROR, Payload(message));
+  return Frame_ERROR(0, ErrorCode::CONNECTION_ERROR, Payload(message));
 }
 
 std::unique_ptr<folly::IOBuf> Frame_ERROR::serializeOut() {
@@ -432,7 +432,7 @@ std::unique_ptr<folly::IOBuf> Frame_SETUP::serializeOut() {
   appender.writeBE(static_cast<uint32_t>(maxLifetime_));
   appender.push((const uint8_t*)token_.data(), token_.size());
 
-    CHECK(metadataMimeType_.length() <= std::numeric_limits<uint8_t>::max());
+  CHECK(metadataMimeType_.length() <= std::numeric_limits<uint8_t>::max());
   appender.writeBE(static_cast<uint8_t>(metadataMimeType_.length()));
   appender.push(
       (const uint8_t*)metadataMimeType_.data(), metadataMimeType_.length());
@@ -509,7 +509,8 @@ std::ostream& operator<<(std::ostream& os, const Frame_LEASE& frame) {
 /// @{
 std::unique_ptr<folly::IOBuf> Frame_RESUME::serializeOut() {
   auto queue = createBufferQueue(
-      FrameHeader::kSize + sizeof(ResumeIdentificationToken) + sizeof(ResumePosition));
+      FrameHeader::kSize + sizeof(ResumeIdentificationToken) +
+      sizeof(ResumePosition));
   folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
 
   header_.serializeInto(appender);
@@ -533,14 +534,14 @@ bool Frame_RESUME::deserializeFrom(std::unique_ptr<folly::IOBuf> in) {
 
 std::ostream& operator<<(std::ostream& os, const Frame_RESUME& frame) {
   return os << frame.header_ << ", ("
-            << "token" << ", @" << frame.position_ << ")";
+            << "token"
+            << ", @" << frame.position_ << ")";
 }
 /// @}
 
 /// @{
 std::unique_ptr<folly::IOBuf> Frame_RESUME_OK::serializeOut() {
-  auto queue = createBufferQueue(
-      FrameHeader::kSize + sizeof(ResumePosition));
+  auto queue = createBufferQueue(FrameHeader::kSize + sizeof(ResumePosition));
   folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
 
   header_.serializeInto(appender);
@@ -564,5 +565,4 @@ std::ostream& operator<<(std::ostream& os, const Frame_RESUME_OK& frame) {
   return os << frame.header_ << ", (@" << frame.position_ << ")";
 }
 /// @}
-
 }

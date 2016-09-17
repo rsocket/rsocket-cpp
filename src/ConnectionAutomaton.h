@@ -11,9 +11,9 @@
 #include "ReactiveSocket.h"
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
-#include "src/Stats.h"
-#include "src/ResumeTracker.h"
 #include "src/ResumeCache.h"
+#include "src/ResumeTracker.h"
+#include "src/Stats.h"
 
 namespace reactivesocket {
 
@@ -34,8 +34,8 @@ using StreamId = uint32_t;
 using StreamAutomatonFactory =
     std::function<bool(StreamId, std::unique_ptr<folly::IOBuf>)>;
 
-using ResumeListener =
-    std::function<bool(const ResumeIdentificationToken &token, ResumePosition position)>;
+using ResumeListener = std::function<
+    bool(const ResumeIdentificationToken& token, ResumePosition position)>;
 
 using ConnectionCloseListener = std::function<void()>;
 
@@ -117,12 +117,13 @@ class ConnectionAutomaton :
   ///   ConnectionAutomaton.
   void endStream(StreamId streamId, StreamCompletionSignal signal);
 
-  /// Copy the streams and resumption information from a previous ConnectionAutomaton
+  /// Copy the streams and resumption information from a previous
+  /// ConnectionAutomaton
   void resumeFromAutomaton(ConnectionAutomaton& oldAutomaton);
   /// @}
 
   void sendKeepalive();
-  void sendResume(const ResumeIdentificationToken &token);
+  void sendResume(const ResumeIdentificationToken& token);
 
   bool isPositionAvailable(ResumePosition position);
   ResumePosition positionDifference(ResumePosition position);

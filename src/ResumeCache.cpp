@@ -5,8 +5,9 @@
 namespace reactivesocket {
 
 bool ResumeCache::retransmitFromPosition(
-    position_t initialPosition, ConnectionAutomaton &connection, const RetransmitFilter &filter) {
-    return true;
+    position_t initialPosition,
+    ConnectionAutomaton& connection,
+    const RetransmitFilter& filter) {
+  return true;
 }
-
 }

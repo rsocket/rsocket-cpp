@@ -2,9 +2,9 @@
 
 #pragma once
 
+#include <array>
 #include <iosfwd>
 #include <limits>
-#include <array>
 
 /// Needed for inline d'tors of frames.
 #include <folly/io/IOBuf.h>
@@ -397,7 +397,7 @@ class Frame_SETUP {
       uint32_t version,
       uint32_t keepaliveTime,
       uint32_t maxLifetime,
-      const ResumeIdentificationToken &token,
+      const ResumeIdentificationToken& token,
       std::string metadataMimeType,
       std::string dataMimeType,
       Payload payload)
@@ -454,44 +454,37 @@ std::ostream& operator<<(std::ostream&, const Frame_SETUP&);
 /// @}
 
 class Frame_RESUME {
-public:
-    static constexpr bool Trait_CarriesAllowance = false;
+ public:
+  static constexpr bool Trait_CarriesAllowance = false;
 
-    Frame_RESUME() = default;
-    Frame_RESUME(
-        const ResumeIdentificationToken &token,
-        ResumePosition position)
-        : header_(FrameType::RESUME, 0, 0),
-        token_(token),
-        position_(position) {}
+  Frame_RESUME() = default;
+  Frame_RESUME(const ResumeIdentificationToken& token, ResumePosition position)
+      : header_(FrameType::RESUME, 0, 0), token_(token), position_(position) {}
 
-    std::unique_ptr<folly::IOBuf> serializeOut();
-    bool deserializeFrom(std::unique_ptr<folly::IOBuf> in);
+  std::unique_ptr<folly::IOBuf> serializeOut();
+  bool deserializeFrom(std::unique_ptr<folly::IOBuf> in);
 
-    FrameHeader header_;
-    ResumeIdentificationToken token_;
-    ResumePosition position_;
+  FrameHeader header_;
+  ResumeIdentificationToken token_;
+  ResumePosition position_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_RESUME&);
 /// @}
 
 class Frame_RESUME_OK {
-public:
-    static constexpr bool Trait_CarriesAllowance = false;
+ public:
+  static constexpr bool Trait_CarriesAllowance = false;
 
-    Frame_RESUME_OK() = default;
-    Frame_RESUME_OK(
-        ResumePosition position)
-        : header_(FrameType::RESUME_OK, 0, 0),
-        position_(position) {}
+  Frame_RESUME_OK() = default;
+  Frame_RESUME_OK(ResumePosition position)
+      : header_(FrameType::RESUME_OK, 0, 0), position_(position) {}
 
-    std::unique_ptr<folly::IOBuf> serializeOut();
-    bool deserializeFrom(std::unique_ptr<folly::IOBuf> in);
+  std::unique_ptr<folly::IOBuf> serializeOut();
+  bool deserializeFrom(std::unique_ptr<folly::IOBuf> in);
 
-    FrameHeader header_;
-    ResumePosition position_;
+  FrameHeader header_;
+  ResumePosition position_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_RESUME_OK&);
 /// @}
-
 }

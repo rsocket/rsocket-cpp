@@ -65,12 +65,14 @@ std::unique_ptr<ReactiveSocket> ReactiveSocket::fromClientConnection(
     ConnectionSetupPayload setupPayload,
     Stats& stats,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer,
-    const ResumeIdentificationToken &token) {
+    const ResumeIdentificationToken& token) {
   std::unique_ptr<ReactiveSocket> socket(new ReactiveSocket(
       false,
       std::move(connection),
       std::move(handler),
-      [](ReactiveSocket&, const ResumeIdentificationToken&, ResumePosition) { return false; },
+      [](ReactiveSocket&, const ResumeIdentificationToken&, ResumePosition) {
+        return false;
+      },
       stats,
       std::move(keepaliveTimer)));
   socket->connection_->connect();
@@ -301,8 +303,10 @@ bool ReactiveSocket::createResponder(
   return true;
 }
 
-bool ReactiveSocket::resumeListener(const ResumeIdentificationToken& token, ResumePosition position) {
-    return resumeSocketListener_(*this, token, position);
+bool ReactiveSocket::resumeListener(
+    const ResumeIdentificationToken& token,
+    ResumePosition position) {
+  return resumeSocketListener_(*this, token, position);
 }
 
 void ReactiveSocket::close() {
@@ -313,12 +317,13 @@ void ReactiveSocket::onClose(CloseListener listener) {
   connection_->onClose([listener, this]() { listener(*this); });
 }
 
-void ReactiveSocket::resumeFromSocket(ReactiveSocket &socket) {
+void ReactiveSocket::resumeFromSocket(ReactiveSocket& socket) {
   connection_->resumeFromAutomaton(*socket.connection_);
 }
 
 void ReactiveSocket::tryClientResume(
-    std::unique_ptr<DuplexConnection> newConnection, const ResumeIdentificationToken& token) {
+    std::unique_ptr<DuplexConnection> newConnection,
+    const ResumeIdentificationToken& token) {
   connection_->reconnect(std::move(newConnection));
   connection_->sendResume(token);
 }
@@ -330,5 +335,4 @@ bool ReactiveSocket::isPositionAvailable(ResumePosition position) {
 ResumePosition ReactiveSocket::positionDifference(ResumePosition position) {
   return connection_->positionDifference(position);
 }
-
 }

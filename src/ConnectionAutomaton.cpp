@@ -71,10 +71,11 @@ void ConnectionAutomaton::disconnect() {
   }
 }
 
-void ConnectionAutomaton::reconnect(std::unique_ptr<DuplexConnection> newConnection) {
-    disconnect();
-    connection_ = std::move(newConnection);
-    connect();
+void ConnectionAutomaton::reconnect(
+    std::unique_ptr<DuplexConnection> newConnection) {
+  disconnect();
+  connection_ = std::move(newConnection);
+  connect();
 }
 
 ConnectionAutomaton::~ConnectionAutomaton() {
@@ -138,7 +139,8 @@ void ConnectionAutomaton::onNext(std::unique_ptr<folly::IOBuf> frame) {
 
   stats_.frameRead(ss.str());
 
-  // TODO(tmont): If a frame is invalid, it will still be tracked. However, we actually want that. We want to keep
+  // TODO(tmont): If a frame is invalid, it will still be tracked. However, we
+  // actually want that. We want to keep
   // each side in sync, even if a frame is invalid.
   resumeTracker_->trackReceivedFrame(*frame);
 
@@ -218,17 +220,20 @@ void ConnectionAutomaton::onConnectionFrame(
         bool canResume = false;
 
         if (isServer_ && isResumable_) {
-            // find old ConnectionAutmaton via calling listener.
-            // Application will call resumeFromAutomaton to setup streams and resume information
-            canResume = resumeListener_(frame.token_, frame.position_);
+          // find old ConnectionAutmaton via calling listener.
+          // Application will call resumeFromAutomaton to setup streams and
+          // resume information
+          canResume = resumeListener_(frame.token_, frame.position_);
         }
 
         if (canResume) {
           outputFrameOrEnqueue(
-              Frame_RESUME_OK(resumeTracker_->impliedPosition()).serializeOut());
+              Frame_RESUME_OK(resumeTracker_->impliedPosition())
+                  .serializeOut());
           resumeCache_->retransmitFromPosition(frame.position_, *this);
         } else {
-          outputFrameOrEnqueue(Frame_ERROR::canNotResume("can not resume").serializeOut());
+          outputFrameOrEnqueue(
+              Frame_ERROR::canNotResume("can not resume").serializeOut());
           disconnect();
         }
       } else {
@@ -240,11 +245,13 @@ void ConnectionAutomaton::onConnectionFrame(
     case FrameType::RESUME_OK: {
       Frame_RESUME_OK frame;
       if (frame.deserializeFrom(std::move(payload))) {
-        if (!isServer_ && isResumable_ && resumeCache_->isPositionAvailable(frame.position_)) {
+        if (!isServer_ && isResumable_ &&
+            resumeCache_->isPositionAvailable(frame.position_)) {
           resumeCache_->retransmitFromPosition(frame.position_, *this);
         } else {
-            outputFrameOrEnqueue(Frame_ERROR::canNotResume("can not resume").serializeOut());
-            disconnect();
+          outputFrameOrEnqueue(
+              Frame_ERROR::canNotResume("can not resume").serializeOut());
+          disconnect();
         }
       } else {
         outputFrameOrEnqueue(Frame_ERROR::unexpectedFrame().serializeOut());
@@ -321,17 +328,18 @@ void ConnectionAutomaton::sendKeepalive() {
   outputFrameOrEnqueue(pingFrame.serializeOut());
 }
 
-void ConnectionAutomaton::sendResume(const ResumeIdentificationToken &token) {
+void ConnectionAutomaton::sendResume(const ResumeIdentificationToken& token) {
   Frame_RESUME resumeFrame(token, resumeTracker_->impliedPosition());
   outputFrameOrEnqueue(resumeFrame.serializeOut());
 }
 
 bool ConnectionAutomaton::isPositionAvailable(ResumePosition position) {
-    return resumeCache_->isPositionAvailable(position);
+  return resumeCache_->isPositionAvailable(position);
 }
 
-ResumePosition ConnectionAutomaton::positionDifference(ResumePosition position) {
-    return resumeCache_->position() - position;
+ResumePosition ConnectionAutomaton::positionDifference(
+    ResumePosition position) {
+  return resumeCache_->position() - position;
 }
 
 void ConnectionAutomaton::onClose(ConnectionCloseListener listener) {
@@ -374,10 +382,9 @@ void ConnectionAutomaton::outputFrame(
   connectionOutput_.onNext(std::move(outputFrame));
 }
 
-void ConnectionAutomaton::resumeFromAutomaton(ConnectionAutomaton& oldAutomaton)
-{
-  if (isServer_ && isResumable_)
-  {
+void ConnectionAutomaton::resumeFromAutomaton(
+    ConnectionAutomaton& oldAutomaton) {
+  if (isServer_ && isResumable_) {
     streams_ = std::move(oldAutomaton.streams_);
     factory_ = oldAutomaton.factory_;
 
@@ -385,5 +392,4 @@ void ConnectionAutomaton::resumeFromAutomaton(ConnectionAutomaton& oldAutomaton)
     resumeCache_ = std::move(oldAutomaton.resumeCache_);
   }
 }
-
 }
