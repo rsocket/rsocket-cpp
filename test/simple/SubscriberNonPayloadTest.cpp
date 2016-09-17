@@ -2,8 +2,8 @@
 
 #include <stddef.h>
 
-#include "src/ReactiveStreamsCompat.h"
 #include "src/Payload.h"
+#include "src/ReactiveStreamsCompat.h"
 #include "src/mixins/IntrusiveDeleter.h"
 #include "src/mixins/MemoryMixin.h"
 
@@ -12,7 +12,7 @@ using namespace reactivesocket;
 class Foo {
  public:
   explicit Foo(const std::string&) {}
- };
+};
 
 class FooSubscriber : public IntrusiveDeleter, public Subscriber<Foo> {
  public:

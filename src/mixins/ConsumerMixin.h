@@ -49,12 +49,12 @@ class ConsumerMixin : public Base {
   /// @{
   void endStream(StreamCompletionSignal signal) {
     switch (signal) {
-      case  StreamCompletionSignal::CONNECTION_ERROR:
+      case StreamCompletionSignal::CONNECTION_ERROR:
         consumingSubscriber_.onError(std::runtime_error("connection closed"));
-            break;
+        break;
       default:
         consumingSubscriber_.onComplete();
-            break;
+        break;
     }
     Base::endStream(signal);
   }

@@ -71,17 +71,16 @@ class ServerRequestHandler : public DefaultRequestHandler {
   }
 
   void handleFireAndForgetRequest(Payload request) override {
-    LOG(INFO) << "ServerRequestHandler.handleFireAndForgetRequest " << request
-              << std::endl;
+    LOG(INFO) << "ServerRequestHandler.handleFireAndForgetRequest " << request;
   }
 
   void handleMetadataPush(std::unique_ptr<folly::IOBuf> request) override {
     LOG(INFO) << "ServerRequestHandler.handleMetadataPush "
-              << request->moveToFbString() << std::endl;
+              << request->moveToFbString();
   }
 
   void handleSetupPayload(ConnectionSetupPayload request) override {
-    LOG(INFO) << "ServerRequestHandler.handleSetupPayload " << request << std::endl;
+    LOG(INFO) << "ServerRequestHandler.handleSetupPayload " << request;
   }
 };
 
@@ -95,7 +94,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
   virtual void connectionAccepted(
       int fd,
       const SocketAddress& clientAddr) noexcept override {
-    std::cout << "connectionAccepted" << clientAddr.describe() << "\n";
+    std::cout << "connectionAccepted" << clientAddr.describe() << std::endl;
 
     auto socket =
         folly::AsyncSocket::UniquePtr(new AsyncSocket(&eventBase_, fd));
@@ -128,7 +127,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
   }
 
   virtual void acceptError(const std::exception& ex) noexcept override {
-    std::cout << "acceptError" << ex.what() << "\n";
+    std::cout << "acceptError" << ex.what() << std::endl;
   }
 
   void shutdown() {

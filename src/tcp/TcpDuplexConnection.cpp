@@ -66,7 +66,9 @@ void TcpDuplexConnection::readDataAvailable(size_t len) noexcept {
 }
 
 void TcpDuplexConnection::readEOF() noexcept {
-  inputSubscriber_.onError(std::runtime_error("connection closed"));
+  if (inputSubscriber_) {
+    inputSubscriber_.onError(std::runtime_error("connection closed"));
+  }
 }
 
 void TcpDuplexConnection::readErr(

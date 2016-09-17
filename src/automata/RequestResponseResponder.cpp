@@ -35,7 +35,6 @@ void RequestResponseResponderBase::onComplete() {
   }
 }
 
-
 void RequestResponseResponderBase::onError(folly::exception_wrapper ex) {
   switch (state_) {
     case State::RESPONDING: {
@@ -75,8 +74,7 @@ void RequestResponseResponderBase::onNextFrame(Frame_CANCEL&& frame) {
 }
 
 std::ostream& RequestResponseResponderBase::logPrefix(std::ostream& os) {
-  return os << "RequestResponseResponder(" << &connection_ << ", "
-            << streamId_ << "): ";
+  return os << "RequestResponseResponder(" << &connection_ << ", " << streamId_
+            << "): ";
 }
-
 }

@@ -28,7 +28,7 @@ enum class StreamCompletionSignal;
 /// responder
 class RequestResponseResponderBase
     : public LoggingMixin<PublisherMixin<Frame_RESPONSE, MixinTerminator>> {
-  using Base =  LoggingMixin<PublisherMixin<Frame_RESPONSE, MixinTerminator>>;
+  using Base = LoggingMixin<PublisherMixin<Frame_RESPONSE, MixinTerminator>>;
 
  public:
   using Base::Base;
@@ -60,7 +60,7 @@ class RequestResponseResponderBase
     RESPONDING,
     CLOSED,
   } state_{State::RESPONDING};
- };
+};
 
 using RequestResponseResponder =
     SinkIfMixin<StreamIfMixin<LoggingMixin<ExecutorMixin<LoggingMixin<

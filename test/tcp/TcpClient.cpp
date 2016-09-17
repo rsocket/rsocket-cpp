@@ -57,7 +57,8 @@ int main(int argc, char* argv[]) {
 
         socket->connect(&callback, addr);
 
-        std::cout << "attempting connection to " << addr.describe() << std::endl;
+        std::cout << "attempting connection to " << addr.describe()
+                  << std::endl;
 
         std::unique_ptr<DuplexConnection> connection =
             folly::make_unique<TcpDuplexConnection>(std::move(socket), stats);
