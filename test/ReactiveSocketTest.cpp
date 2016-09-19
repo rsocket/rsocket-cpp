@@ -451,9 +451,9 @@ TEST(ReactiveSocketTest, RequestResponse) {
   // had COMPELTE flag set
   EXPECT_CALL(clientInput, onComplete_()).InSequence(s);
 
-  EXPECT_CALL(serverOutputSub, cancel_()).InSequence(s).WillOnce(Invoke([&]() {
-    serverOutput->onComplete();
-  }));
+  EXPECT_CALL(serverOutputSub, cancel_())
+      .InSequence(s)
+      .WillOnce(Invoke([&]() { serverOutput->onComplete(); }));
 
   // Kick off the magic.
   clientSock->requestResponse(Payload(originalPayload->clone()), clientInput);
