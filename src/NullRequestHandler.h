@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "ConnectionSetupPayload.h"
+#include "src/ConnectionSetupPayload.h"
 #include "src/RequestHandler.h"
 
 namespace reactivesocket {

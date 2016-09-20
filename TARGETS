@@ -5,11 +5,13 @@ cpp_library(
 
     headers = [
         'src/DuplexConnection.h',
+        'src/Frame.h',
         'src/Payload.h',
         'src/framed/FramedReader.h',
         'src/framed/FramedWriter.h',
         'src/framed/FramedDuplexConnection.h',
         'src/folly/FollyKeepaliveTimer.h',
+        'src/Stats.h',
     ],
     srcs = [
         'src/framed/FramedReader.cpp',
@@ -49,6 +51,7 @@ cxx_library(
         'src/NullRequestHandler.cpp',
         'src/Payload.cpp',
         'src/ReactiveSocket.cpp',
+        'src/ResumeCache.cpp',
         'src/Stats.cpp',
     ],
     deps = [
