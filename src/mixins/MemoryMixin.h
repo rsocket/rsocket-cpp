@@ -30,7 +30,7 @@ namespace reactivesocket {
 /// implicitly specified as virtual, depending on whether the Base class
 /// is implementing the (virtual) methods of the
 /// Subscription or the Subscriber interface.
-template <typename Base>
+template <typename Base, typename T = Payload>
 class MemoryMixin : public Base {
   static_assert(
       std::is_base_of<IntrusiveDeleter, Base>::value,
@@ -42,8 +42,8 @@ class MemoryMixin : public Base {
   ~MemoryMixin() {}
 
   /// @{
-  /// Publisher<Payload>
-  void subscribe(Subscriber<Payload>& subscriber) {
+  /// Publisher<T>
+  void subscribe(Subscriber<T>& subscriber) {
     Base::incrementRefCount();
     Base::subscribe(subscriber);
   }
@@ -62,13 +62,13 @@ class MemoryMixin : public Base {
   /// @}
 
   /// @{
-  /// Subscriber<Payload>
+  /// Subscriber<T>
   void onSubscribe(Subscription& subscription) {
     Base::incrementRefCount();
     Base::onSubscribe(subscription);
   }
 
-  void onNext(Payload payload) {
+  void onNext(T payload) {
     Base::onNext(std::move(payload));
   }
 
@@ -126,10 +126,10 @@ class WithIntrusiveDeleter {
 
 } // namespace details
 
-template <typename Base, typename... TArgs>
+template <typename Base, typename T = Payload, typename... TArgs>
 Base& createManagedInstance(TArgs&&... args) {
   auto* instance =
-      new MemoryMixin<typename details::WithIntrusiveDeleter<Base>::T>(
+      new MemoryMixin<typename details::WithIntrusiveDeleter<Base>::T, T>(
           std::forward<TArgs>(args)...);
   return *instance;
 }

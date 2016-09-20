@@ -31,7 +31,7 @@ include(CTest)
 # gmock
 ExternalProject_Add(
   gmock
-  URL ${CMAKE_CURRENT_SOURCE_DIR}/googletest-master-20160722.zip
+  URL ${CMAKE_CURRENT_SOURCE_DIR}/googletest-release-1.8.0.zip
   INSTALL_COMMAND ""
 )
 
@@ -54,9 +54,14 @@ ExternalProject_Add(
 
 find_package(Threads)
 
+if(APPLE)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+else()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+endif(APPLE)
+
 # Common configuration for all build modes.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter -Werror -Woverloaded-virtual")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -momit-leaf-frame-pointer")
 
 # Configuration for Debug build mode.
@@ -92,11 +97,9 @@ add_library(
   src/automata/StreamSubscriptionResponderBase.h
   src/automata/StreamRequester.cpp
   src/automata/StreamRequester.h
-  src/automata/StreamResponder.cpp
   src/automata/StreamResponder.h
   src/automata/SubscriptionRequester.cpp
   src/automata/SubscriptionRequester.h
-  src/automata/SubscriptionResponder.cpp
   src/automata/SubscriptionResponder.h
   src/ConnectionAutomaton.cpp
   src/ConnectionAutomaton.h
@@ -140,6 +143,9 @@ add_library(
   src/ResumeTracker.h
   src/ResumeCache.h
   src/ResumeCache.cpp
+  src/concurrent/atomic64.h
+  src/concurrent/atomic64_gcc_x86_64.h
+  src/concurrent/OneToOneRingBuffer.h
 )
 
 target_link_libraries(
@@ -172,6 +178,7 @@ add_executable(
   test/ReactiveStreamsMocksCompat.h
   test/Test.cpp
   test/MockStats.h
+  test/concurrent/OneToOneRingBufferTest.cpp
 )
 
 target_link_libraries(
@@ -289,5 +296,19 @@ target_link_libraries(
         ${CMAKE_THREAD_LIBS_INIT})
 
 add_dependencies(tcpresumeserver gmock)
+
+add_executable(
+        subscriber_non_payload
+	test/simple/SubscriberNonPayloadTest.cpp
+)
+
+target_link_libraries(
+        subscriber_non_payload
+        ReactiveSocket
+        ${FOLLY_LIBRARIES}
+        ${CMAKE_THREAD_LIBS_INIT}
+)
+
+add_dependencies(subscriber_non_payload ReactiveSocket ReactiveStreams)
 
 # EOF
