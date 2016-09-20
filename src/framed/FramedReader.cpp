@@ -8,13 +8,24 @@
 
 namespace reactivesocket {
 
+FramedReader::~FramedReader() {}
+
+FramedReader::UniquePtr FramedReader::makeUnique(
+    reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>& frames) {
+  return UniquePtr(new FramedReader(frames));
+}
+
 void FramedReader::onSubscribe(Subscription& subscription) {
   CHECK(!streamSubscription_);
+  DestructorGuard dg(this);
+
   streamSubscription_.reset(&subscription);
   frames_.get()->onSubscribe(*this);
+  // no more code here or use DestructorGuard dg(this);
 }
 
 void FramedReader::onNext(std::unique_ptr<folly::IOBuf> payload) {
+  DestructorGuard dg(this);
   streamRequested_ = false;
 
   if (payload) {
@@ -58,21 +69,24 @@ void FramedReader::parseFrames() {
 void FramedReader::onComplete() {
   payloadQueue_.move(); // equivalent to clear(), releases the buffers
   frames_.onComplete();
+  // no more code here or use DestructorGuard dg(this);
 }
 
 void FramedReader::onError(folly::exception_wrapper ex) {
   payloadQueue_.move(); // equivalent to clear(), releases the buffers
   frames_.onError(std::move(ex));
+  // no more code here or use DestructorGuard dg(this);
 }
 
 void FramedReader::request(size_t n) {
+  DestructorGuard dg(this);
   allowance_.release(n);
   parseFrames();
   requestStream();
 }
 
 void FramedReader::requestStream() {
-  if (allowance_.canAcquire()) {
+  if (streamSubscription_ && allowance_.canAcquire()) {
     streamRequested_ = true;
     streamSubscription_.request(1);
   }
@@ -81,6 +95,7 @@ void FramedReader::requestStream() {
 void FramedReader::cancel() {
   payloadQueue_.move(); // equivalent to clear(), releases the buffers
   streamSubscription_.cancel();
+  // no more code here or use DestructorGuard dg(this);
 }
 
 } // reactive socket

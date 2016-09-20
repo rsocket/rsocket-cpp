@@ -34,7 +34,7 @@ FramedDuplexConnection::getOutput() noexcept {
 void FramedDuplexConnection::setInput(
     Subscriber<std::unique_ptr<folly::IOBuf>>& framesSink) {
   CHECK(!inputReader_);
-  inputReader_ = folly::make_unique<FramedReader>(framesSink);
+  inputReader_ = FramedReader::makeUnique(framesSink);
   connection_->setInput(*inputReader_);
 }
 
