@@ -4,6 +4,7 @@
 
 #include <folly/ExceptionWrapper.h>
 #include <reactive-streams/utilities/SmartPointers.h>
+#include <vector>
 #include "src/ReactiveStreamsCompat.h"
 
 namespace folly {
@@ -29,6 +30,8 @@ class FramedWriter
   // Subscription methods
   void request(size_t n) override;
   void cancel() override;
+
+  void onNextMultiple(std::vector<std::unique_ptr<folly::IOBuf>> element);
 
  private:
   SubscriberPtr<reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>>

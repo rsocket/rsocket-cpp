@@ -15,15 +15,14 @@ void FramedWriter::onSubscribe(Subscription& subscription) {
   stream_.get()->onSubscribe(*this);
 }
 
-void FramedWriter::onNext(std::unique_ptr<folly::IOBuf> payload) {
+static std::unique_ptr<folly::IOBuf> appendSize(
+    std::unique_ptr<folly::IOBuf> payload) {
   CHECK(payload);
 
   // the frame size includes the payload size and the size value
   auto payloadLength = payload->computeChainDataLength() + sizeof(int32_t);
   if (payloadLength > std::numeric_limits<int32_t>::max()) {
-    VLOG(1) << "payload too big: " << payloadLength;
-    cancel();
-    return;
+    return nullptr;
   }
 
   if (payload->headroom() >= sizeof(int32_t)) {
@@ -31,14 +30,40 @@ void FramedWriter::onNext(std::unique_ptr<folly::IOBuf> payload) {
     payload->prepend(sizeof(int32_t));
     folly::io::RWPrivateCursor c(payload.get());
     c.writeBE<int32_t>(payloadLength);
-    stream_.onNext(std::move(payload));
+    return payload;
   } else {
     auto newPayload = folly::IOBuf::createCombined(sizeof(int32_t));
     folly::io::Appender appender(newPayload.get(), /* do not grow */ 0);
     appender.writeBE<int32_t>(payloadLength);
     newPayload->appendChain(std::move(payload));
-    stream_.onNext(std::move(newPayload));
+    return newPayload;
   }
+}
+
+void FramedWriter::onNext(std::unique_ptr<folly::IOBuf> payload) {
+  auto sizedPayload = appendSize(std::move(payload));
+  if (!sizedPayload) {
+    VLOG(1) << "payload too big";
+    cancel();
+    return;
+  }
+  stream_.onNext(std::move(sizedPayload));
+}
+
+void FramedWriter::onNextMultiple(
+    std::vector<std::unique_ptr<folly::IOBuf>> payloads) {
+  folly::IOBufQueue payloadQueue;
+
+  for (auto& payload : payloads) {
+    auto sizedPayload = appendSize(std::move(payload));
+    if (!sizedPayload) {
+      VLOG(1) << "payload too big";
+      cancel();
+      return;
+    }
+    payloadQueue.append(std::move(sizedPayload));
+  }
+  stream_.onNext(payloadQueue.move());
 }
 
 void FramedWriter::onComplete() {
