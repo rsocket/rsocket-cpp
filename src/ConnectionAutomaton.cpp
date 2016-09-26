@@ -6,6 +6,7 @@
 
 #include <folly/ExceptionWrapper.h>
 #include <folly/Optional.h>
+#include <folly/String.h>
 #include <folly/io/IOBuf.h>
 #include <glog/logging.h>
 #include <iostream>
@@ -320,7 +321,7 @@ void ConnectionAutomaton::handleUnknownStream(
   // IDs -- let's forget about them for a moment
   if (!factory_(streamId, std::move(payload))) {
     outputFrameOrEnqueue(
-        Frame_ERROR::invalid("unknown stream " + std::to_string(streamId))
+        Frame_ERROR::invalid("unknown stream " + folly::to<std::string>(streamId))
             .serializeOut());
     disconnect();
   }
