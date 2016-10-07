@@ -51,7 +51,6 @@ void ConsumerMixin<Frame, Base>::sendRequests() {
 
 template <typename Frame, typename Base>
 void ConsumerMixin<Frame, Base>::handleFlowControlError() {
-  // TODO should onBadFrame be used instead?  consumingSubscriber_ seems to only apply to streams.
   consumingSubscriber_.onError(std::runtime_error("surplus response"));
 }
 }
