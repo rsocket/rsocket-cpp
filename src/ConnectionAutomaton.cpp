@@ -321,7 +321,8 @@ void ConnectionAutomaton::handleUnknownStream(
   // IDs -- let's forget about them for a moment
   if (!factory_(streamId, std::move(payload))) {
     outputFrameOrEnqueue(
-        Frame_ERROR::invalid("unknown stream " + folly::to<std::string>(streamId))
+        Frame_ERROR::invalid(
+            "unknown stream " + folly::to<std::string>(streamId))
             .serializeOut());
     disconnect();
   }

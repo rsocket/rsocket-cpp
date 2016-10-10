@@ -52,5 +52,7 @@ void ConsumerMixin<Frame, Base>::sendRequests() {
 template <typename Frame, typename Base>
 void ConsumerMixin<Frame, Base>::handleFlowControlError() {
   consumingSubscriber_.onError(std::runtime_error("surplus response"));
+  Base::connection_->outputFrameOrEnqueue(
+      Frame_CANCEL(Base::streamId_).serializeOut());
 }
 }

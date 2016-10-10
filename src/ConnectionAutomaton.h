@@ -8,8 +8,8 @@
 
 #include <reactive-streams/utilities/AllowanceSemaphore.h>
 #include <reactive-streams/utilities/SmartPointers.h>
-#include "src/ReactiveSocket.h"
 #include "src/Payload.h"
+#include "src/ReactiveSocket.h"
 #include "src/ReactiveStreamsCompat.h"
 #include "src/ResumeCache.h"
 #include "src/ResumeTracker.h"
