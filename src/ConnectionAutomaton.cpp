@@ -148,8 +148,8 @@ void ConnectionAutomaton::onNext(std::unique_ptr<folly::IOBuf> frame) {
   auto streamIdPtr = FrameHeader::peekStreamId(*frame);
   if (!streamIdPtr) {
     // Failed to deserialize the frame.
-    // TODO(stupaq): handle connection-level error
-    assert(false);
+    outputFrameOrEnqueue(Frame_ERROR::invalid("invalid frame").serializeOut());
+    disconnect();
     return;
   }
   auto streamId = *streamIdPtr;
