@@ -17,19 +17,19 @@
 using namespace ::testing;
 using namespace ::reactivesocket;
 
-namespace {
-
-std::unique_ptr<folly::IOBuf> makeInvalidHeader() {
-  // Create a header without the stream id
-  folly::IOBufQueue queue(folly::IOBufQueue::cacheChainLength());
-  queue.append(folly::IOBuf::create(FrameHeader::kSize - sizeof(StreamId)));
-  folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
-  appender.writeBE<uint16_t>(static_cast<uint16_t>(FrameType::REQUEST_N));
-  appender.writeBE<uint16_t>(FrameFlags_EMPTY);
-  return queue.move();
-}
-
-}
+// namespace {
+//
+// std::unique_ptr<folly::IOBuf> makeInvalidHeader() {
+//   // Create a header without the stream id
+//   folly::IOBufQueue queue(folly::IOBufQueue::cacheChainLength());
+//   queue.append(folly::IOBuf::create(FrameHeader::kSize - sizeof(StreamId)));
+//   folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
+//   appender.writeBE<uint16_t>(static_cast<uint16_t>(FrameType::REQUEST_N));
+//   appender.writeBE<uint16_t>(FrameFlags_EMPTY);
+//   return queue.move();
+// }
+//
+// }
 
 // TODO: the following tests are functionally correct and validates the
 //       invalid frame functionality. But with the current memory model
