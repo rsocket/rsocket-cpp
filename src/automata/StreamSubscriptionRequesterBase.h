@@ -45,6 +45,8 @@ class StreamSubscriptionRequesterBase
   void cancel();
   /// @}
 
+  std::ostream& logPrefix(std::ostream& os);
+
  protected:
   /// Override in subclass to send the correct type of request frame
   virtual void sendRequestFrame(FrameFlags, size_t, Payload&&) = 0;
@@ -58,8 +60,6 @@ class StreamSubscriptionRequesterBase
   void onNextFrame(Frame_RESPONSE&&);
 
   void onNextFrame(Frame_ERROR&&);
-
-  std::ostream& logPrefix(std::ostream& os);
   /// @}
 
   /// State of the Subscription requester.

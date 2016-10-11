@@ -40,6 +40,8 @@ class RequestResponseRequesterBase : public MixinTerminator {
   void cancel();
   /// @}
 
+  std::ostream& logPrefix(std::ostream& os);
+
  protected:
   /// @{
   void endStream(StreamCompletionSignal signal);
@@ -51,8 +53,6 @@ class RequestResponseRequesterBase : public MixinTerminator {
   void onNextFrame(Frame_ERROR&&);
 
   void onError(folly::exception_wrapper ex);
-
-  std::ostream& logPrefix(std::ostream& os);
   /// @}
 
   /// State of the Subscription requester.

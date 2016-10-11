@@ -20,7 +20,6 @@ class SubscriptionResponderBase : public StreamSubscriptionResponderBase {
  public:
   using Base::Base;
 
- protected:
   std::ostream& logPrefix(std::ostream& os) {
     return os << "SubscriptionResponder(" << &connection_ << ", " << streamId_
               << "): ";

@@ -58,6 +58,8 @@ class ChannelRequesterBase
   void cancel();
   /// @}
 
+  std::ostream& logPrefix(std::ostream& os);
+
  protected:
   /// @{
   void endStream(StreamCompletionSignal);
@@ -68,8 +70,6 @@ class ChannelRequesterBase
   void onNextFrame(Frame_RESPONSE&&);
 
   void onNextFrame(Frame_ERROR&&);
-
-  std::ostream& logPrefix(std::ostream& os);
   /// @}
 
  private:

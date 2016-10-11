@@ -45,6 +45,8 @@ class StreamSubscriptionResponderBase
   void onError(folly::exception_wrapper);
   /// @}
 
+  std::ostream& logPrefix(std::ostream& os);
+
  protected:
   /// @{
   void endStream(StreamCompletionSignal);
@@ -53,8 +55,6 @@ class StreamSubscriptionResponderBase
   using Base::onNextFrame;
 
   void onNextFrame(Frame_CANCEL&&);
-
-  std::ostream& logPrefix(std::ostream& os);
   /// @}
 
   /// State of the Subscription responder.

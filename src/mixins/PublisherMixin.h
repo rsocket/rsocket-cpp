@@ -35,6 +35,11 @@ class PublisherMixin : public Base {
   }
   /// @}
 
+  std::ostream& logPrefix(std::ostream& os) {
+    return os << "PublisherMixin(" << &this->connection_ << ", "
+              << this->streamId_ << "): ";
+  }
+
  protected:
   /// @{
   void endStream(StreamCompletionSignal signal) {
@@ -65,11 +70,6 @@ class PublisherMixin : public Base {
     Base::onNextFrame(std::move(frame));
   }
   /// @}
-
-  std::ostream& logPrefix(std::ostream& os) {
-    return os << "PublisherMixin(" << &this->connection_ << ", "
-              << this->streamId_ << "): ";
-  }
 
  private:
   /// A Subscription that constrols production of payloads.
