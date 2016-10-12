@@ -73,7 +73,6 @@ class RequestResponseRequesterBase : public MixinTerminator {
   reactivestreams::SubscriberPtr<Subscriber<Payload>> consumingSubscriber_;
 };
 
-using RequestResponseRequester =
-    SourceIfMixin<StreamIfMixin<LoggingMixin<ExecutorMixin<LoggingMixin<
-        MemoryMixin<LoggingMixin<RequestResponseRequesterBase>>>>>>>;
+using RequestResponseRequester = SourceIfMixin<StreamIfMixin<
+    ExecutorMixin<MemoryMixin<LoggingMixin<RequestResponseRequesterBase>>>>>;
 }

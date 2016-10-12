@@ -39,6 +39,6 @@ class StreamRequesterBase : public StreamSubscriptionRequesterBase {
   /// @}
 };
 
-using StreamRequester = SourceIfMixin<StreamIfMixin<LoggingMixin<ExecutorMixin<
-    LoggingMixin<MemoryMixin<LoggingMixin<StreamRequesterBase>>>>>>>;
+using StreamRequester = SourceIfMixin<StreamIfMixin<
+    ExecutorMixin<MemoryMixin<LoggingMixin<StreamRequesterBase>>>>>;
 }

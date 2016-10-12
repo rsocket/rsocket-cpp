@@ -29,8 +29,8 @@ enum class StreamCompletionSignal;
 /// Implementation of stream automaton that represents a Stream/Subscription
 /// responder.
 class StreamSubscriptionResponderBase
-    : public LoggingMixin<PublisherMixin<Frame_RESPONSE, MixinTerminator>> {
-  using Base = LoggingMixin<PublisherMixin<Frame_RESPONSE, MixinTerminator>>;
+    : public PublisherMixin<Frame_RESPONSE, MixinTerminator> {
+  using Base = PublisherMixin<Frame_RESPONSE, MixinTerminator>;
 
  public:
   using Base::Base;
