@@ -148,7 +148,8 @@ void ConnectionAutomaton::onNext(std::unique_ptr<folly::IOBuf> frame) {
   auto streamIdPtr = FrameHeader::peekStreamId(*frame);
   if (!streamIdPtr) {
     // Failed to deserialize the frame.
-    outputFrameOrEnqueue(Frame_ERROR::invalid("invalid frame").serializeOut());
+    outputFrameOrEnqueue(
+      Frame_ERROR::connectionError("invalid frame").serializeOut());
     disconnect();
     return;
   }
@@ -189,7 +190,8 @@ void ConnectionAutomaton::onConnectionFrame(
             outputFrameOrEnqueue(frame.serializeOut());
           } else {
             outputFrameOrEnqueue(
-                Frame_ERROR::invalid("keepalive without flag").serializeOut());
+                Frame_ERROR::connectionError("keepalive without flag")
+                .serializeOut());
             disconnect();
           }
         }
@@ -234,7 +236,7 @@ void ConnectionAutomaton::onConnectionFrame(
           resumeCache_->retransmitFromPosition(frame.position_, *this);
         } else {
           outputFrameOrEnqueue(
-              Frame_ERROR::canNotResume("can not resume").serializeOut());
+              Frame_ERROR::connectionError("can not resume").serializeOut());
           disconnect();
         }
       } else {
@@ -251,7 +253,7 @@ void ConnectionAutomaton::onConnectionFrame(
           resumeCache_->retransmitFromPosition(frame.position_, *this);
         } else {
           outputFrameOrEnqueue(
-              Frame_ERROR::canNotResume("can not resume").serializeOut());
+              Frame_ERROR::connectionError("can not resume").serializeOut());
           disconnect();
         }
       } else {
@@ -321,8 +323,8 @@ void ConnectionAutomaton::handleUnknownStream(
   // IDs -- let's forget about them for a moment
   if (!factory_(streamId, std::move(payload))) {
     outputFrameOrEnqueue(
-        Frame_ERROR::invalid("unknown stream " + folly::to<std::string>(streamId))
-            .serializeOut());
+        Frame_ERROR::connectionError(
+          folly::to<std::string>("unknown stream ", streamId)).serializeOut());
     disconnect();
   }
 }
