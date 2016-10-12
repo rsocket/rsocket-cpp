@@ -8,8 +8,8 @@
 #include <queue>
 
 #include <folly/ExceptionWrapper.h>
+#include <folly/Function.h>
 #include <folly/Memory.h>
-#include <folly/MoveWrapper.h>
 #include <folly/futures/QueuedImmediateExecutor.h>
 #include <folly/io/IOBuf.h>
 
@@ -36,9 +36,8 @@ class ExecutorMixin : public Base {
   /// Calling into this method may deliver all enqueued signals immediately.
   void start() {
     if (pendingSignals_) {
-      auto movedSignals = folly::makeMoveWrapper(std::move(pendingSignals_));
-      runInExecutor([movedSignals]() mutable {
-        for (auto& signal : **movedSignals) {
+      runInExecutor([pending_signals = std::move(pendingSignals_)]() mutable {
+        for (auto& signal : *pending_signals) {
           signal();
         }
       });
@@ -76,9 +75,9 @@ class ExecutorMixin : public Base {
   }
 
   void onNext(Payload payload) {
-    auto movedPayload = folly::makeMoveWrapper(std::move(payload));
-    runInExecutor(
-        [this, movedPayload]() mutable { Base::onNext(movedPayload.move()); });
+    runInExecutor([ this, payload = std::move(payload) ]() mutable {
+      Base::onNext(std::move(payload));
+    });
   }
 
   void onComplete() {
@@ -86,8 +85,9 @@ class ExecutorMixin : public Base {
   }
 
   void onError(folly::exception_wrapper ex) {
-    auto movedEx = folly::makeMoveWrapper(std::move(ex));
-    runInExecutor([this, movedEx]() mutable { Base::onError(movedEx.move()); });
+    runInExecutor([ this, ex = std::move(ex) ]() mutable {
+      Base::onError(std::move(ex));
+    });
   }
   /// @}
 
@@ -118,13 +118,13 @@ class ExecutorMixin : public Base {
   template <typename F>
   void runInExecutor(F&& func) {
     if (pendingSignals_) {
-      pendingSignals_->emplace_back(func);
+      pendingSignals_->emplace_back(std::forward<F>(func));
     } else {
-      folly::QueuedImmediateExecutor::addStatic(func);
+      folly::QueuedImmediateExecutor::addStatic(std::forward<F>(func));
     }
   }
 
-  using PendingSignals = std::vector<std::function<void()>>;
+  using PendingSignals = std::vector<folly::Function<void()>>;
   std::unique_ptr<PendingSignals> pendingSignals_{
       folly::make_unique<PendingSignals>()};
 };

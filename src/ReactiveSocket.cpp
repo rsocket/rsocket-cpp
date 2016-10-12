@@ -8,7 +8,6 @@
 
 #include <folly/ExceptionWrapper.h>
 #include <folly/Memory.h>
-#include <folly/MoveWrapper.h>
 
 #include "src/ConnectionAutomaton.h"
 #include "src/ConnectionSetupPayload.h"
