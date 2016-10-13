@@ -82,7 +82,7 @@ enum class ErrorCode : uint32_t {
   INVALID = 0x00000204,
   // EXT = 0xFFFFFFFF,
 };
-std::ostream& operator<<(std::ostream&, FrameType);
+std::ostream& operator<<(std::ostream&, ErrorCode);
 
 // TODO(stupaq): strong typedef
 using FrameFlags = uint16_t;
@@ -466,7 +466,7 @@ class Frame_LEASE {
   uint32_t numberOfRequests_;
   std::unique_ptr<folly::IOBuf> metadata_;
 };
-std::ostream& operator<<(std::ostream&, const Frame_SETUP&);
+std::ostream& operator<<(std::ostream&, const Frame_LEASE&);
 /// @}
 
 class Frame_RESUME {
