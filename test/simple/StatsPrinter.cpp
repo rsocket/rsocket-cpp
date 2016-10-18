@@ -3,7 +3,7 @@
 #include "StatsPrinter.h"
 
 #include <glog/logging.h>
-#include <src/tcp/TcpDuplexConnection.h>
+#include <src/DuplexConnection.h>
 
 namespace reactivesocket {
 void StatsPrinter::socketCreated() {
