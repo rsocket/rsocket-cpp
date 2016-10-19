@@ -3,7 +3,8 @@
 We want to make contributing to this project as easy and transparent as possible.
 
 ## Our Development Process
-<to fill in>
+
+The Github project is the source of truth. All development is done via branches that are merged in via Pull Requests. 
 
 ## Pull Requests
 We actively welcome your pull requests.
@@ -29,5 +30,4 @@ Most of the code formatting will be handled for you by marvellous `clang-format`
 As far as naming conventions are concerned, please try matching existing code as much as possible.
 
 ## License
-By contributing to reactivesocket-cpp, you agree that your contributions will be licensed
-under its BSD license.
+By contributing to reactivesocket-cpp, you agree that your contributions will be licensed under its BSD license.
