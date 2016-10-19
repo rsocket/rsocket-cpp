@@ -424,7 +424,7 @@ TEST(ReactiveSocketTest, RequestSubscriptionSurplusResponse) {
       .InSequence(s)
       .WillOnce(Invoke([&](Subscription* sub) {
         clientInputSub = sub;
-        // Request two payloads immediately.
+        // Request one payload immediately.
         clientInputSub->request(1);
       }));
   // The request reaches the other end and triggers new responder to be set up.
@@ -444,10 +444,11 @@ TEST(ReactiveSocketTest, RequestSubscriptionSurplusResponse) {
       }));
   // Client receives the first payload.
   EXPECT_CALL(clientInput, onNext_(Equals(&originalPayload))).InSequence(s);
-  // Client receives the second payload and requests one more.
-  EXPECT_CALL(clientInput, onError_(_)).InSequence(s);
-  // Client closes the subscription in response.
-  EXPECT_CALL(serverOutputSub, cancel_()).WillOnce(Invoke([&]() {
+  // Client receives error instead of the second payload.
+  EXPECT_CALL(clientInput, onError_(_)).InSequence(s).WillOnce(Invoke([&](folly::exception_wrapper ex) {
+  }));
+//  // Client closes the subscription in response.
+  EXPECT_CALL(serverOutputSub, cancel_()).InSequence(s).WillOnce(Invoke([&]() {
     serverOutput->onComplete();
   }));
 
