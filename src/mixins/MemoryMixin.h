@@ -90,6 +90,11 @@ class MemoryMixin : public Base {
   }
   /// @}
 
+  std::ostream& logPrefix(std::ostream& os) {
+    return os << "MemoryMixin(" << &this->connection_ << ", " << this->streamId_
+              << "): ";
+  }
+
  protected:
   /// @{
   template <typename Frame>
@@ -101,11 +106,6 @@ class MemoryMixin : public Base {
     Base::onBadFrame();
   }
   /// @}
-
-  std::ostream& logPrefix(std::ostream& os) {
-    return os << "MemoryMixin(" << &this->connection_ << ", " << this->streamId_
-              << "): ";
-  }
 };
 
 namespace details {

@@ -27,8 +27,8 @@ enum class StreamCompletionSignal;
 /// Implementation of stream automaton that represents a RequestResponse
 /// responder
 class RequestResponseResponderBase
-    : public LoggingMixin<PublisherMixin<Frame_RESPONSE, MixinTerminator>> {
-  using Base = LoggingMixin<PublisherMixin<Frame_RESPONSE, MixinTerminator>>;
+    : public PublisherMixin<Frame_RESPONSE, MixinTerminator> {
+  using Base = PublisherMixin<Frame_RESPONSE, MixinTerminator>;
 
  public:
   using Base::Base;
@@ -43,6 +43,8 @@ class RequestResponseResponderBase
   void onError(folly::exception_wrapper);
   /// @}
 
+  std::ostream& logPrefix(std::ostream& os);
+
  protected:
   /// @{
   void endStream(StreamCompletionSignal);
@@ -51,8 +53,6 @@ class RequestResponseResponderBase
   using Base::onNextFrame;
 
   void onNextFrame(Frame_CANCEL&&);
-
-  std::ostream& logPrefix(std::ostream& os);
   /// @}
 
   /// State of the Subscription responder.
@@ -62,7 +62,6 @@ class RequestResponseResponderBase
   } state_{State::RESPONDING};
 };
 
-using RequestResponseResponder =
-    SinkIfMixin<StreamIfMixin<LoggingMixin<ExecutorMixin<LoggingMixin<
-        MemoryMixin<LoggingMixin<RequestResponseResponderBase>>>>>>>;
+using RequestResponseResponder = SinkIfMixin<StreamIfMixin<
+    ExecutorMixin<MemoryMixin<LoggingMixin<RequestResponseResponderBase>>>>>;
 }

@@ -3,7 +3,8 @@
 We want to make contributing to this project as easy and transparent as possible.
 
 ## Our Development Process
-<to fill in>
+
+The Github project is the source of truth. All development is done via branches that are merged in via Pull Requests. 
 
 ## Pull Requests
 We actively welcome your pull requests.
@@ -14,13 +15,6 @@ We actively welcome your pull requests.
 4. Ensure the test suite passes.
 5. Make sure your code lints.
 6. Make sure your code is properly formatted by running `devtools/format_all.sh`.
-7. If you haven't already, complete the Contributor License Agreement ("CLA").
-
-## Contributor License Agreement ("CLA")
-In order to accept your pull request, we need you to submit a CLA. You only need
-to do this once to work on any of Facebook's open source projects.
-
-Complete your CLA here: <https://code.facebook.com/cla>
 
 ## Issues
 We use GitHub issues to track public bugs. Please ensure your description is
@@ -36,5 +30,4 @@ Most of the code formatting will be handled for you by marvellous `clang-format`
 As far as naming conventions are concerned, please try matching existing code as much as possible.
 
 ## License
-By contributing to reactivesocket-cpp, you agree that your contributions will be licensed
-under its BSD license.
+By contributing to reactivesocket-cpp, you agree that your contributions will be licensed under its BSD license.

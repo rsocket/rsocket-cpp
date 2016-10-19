@@ -20,14 +20,12 @@ class SubscriptionResponderBase : public StreamSubscriptionResponderBase {
  public:
   using Base::Base;
 
- protected:
   std::ostream& logPrefix(std::ostream& os) {
     return os << "SubscriptionResponder(" << &connection_ << ", " << streamId_
               << "): ";
   }
 };
 
-using SubscriptionResponder =
-    SinkIfMixin<StreamIfMixin<LoggingMixin<ExecutorMixin<
-        LoggingMixin<MemoryMixin<LoggingMixin<SubscriptionResponderBase>>>>>>>;
+using SubscriptionResponder = SinkIfMixin<StreamIfMixin<
+    ExecutorMixin<MemoryMixin<LoggingMixin<SubscriptionResponderBase>>>>>;
 }

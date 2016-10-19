@@ -97,6 +97,11 @@ class ExecutorMixin : public Base {
   }
   /// @}
 
+  std::ostream& logPrefix(std::ostream& os) {
+    return os << "ExecutorMixin(" << &this->connection_ << ", "
+              << this->streamId_ << "): ";
+  }
+
  protected:
   /// @{
   template <typename Frame>
@@ -108,11 +113,6 @@ class ExecutorMixin : public Base {
     Base::onBadFrame();
   }
   /// @}
-
-  std::ostream& logPrefix(std::ostream& os) {
-    return os << "ExecutorMixin(" << &this->connection_ << ", "
-              << this->streamId_ << "): ";
-  }
 
  private:
   template <typename F>

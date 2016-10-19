@@ -45,6 +45,11 @@ class ConsumerMixin : public Base {
   }
   /// @}
 
+  std::ostream& logPrefix(std::ostream& os) {
+    return os << "ConsumerMixin(" << &this->connection_ << ", "
+              << this->streamId_ << "): ";
+  }
+
  protected:
   /// @{
   void endStream(StreamCompletionSignal signal) {
@@ -66,11 +71,6 @@ class ConsumerMixin : public Base {
 
   void onError(folly::exception_wrapper ex);
   /// @}
-
-  std::ostream& logPrefix(std::ostream& os) {
-    return os << "ConsumerMixin(" << &this->connection_ << ", "
-              << this->streamId_ << "): ";
-  }
 
  private:
   void sendRequests();

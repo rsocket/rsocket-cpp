@@ -345,18 +345,18 @@ Frame_ERROR Frame_ERROR::badSetupFrame(const std::string& message) {
   return Frame_ERROR(0, ErrorCode::INVALID_SETUP, Payload(message));
 }
 
-Frame_ERROR Frame_ERROR::invalid(const std::string& message) {
-  return Frame_ERROR(0, ErrorCode::INVALID, Payload(message));
+Frame_ERROR Frame_ERROR::connectionError(const std::string& message) {
+  return Frame_ERROR(0, ErrorCode::CONNECTION_ERROR, Payload(message));
+}
+
+Frame_ERROR Frame_ERROR::invalid(StreamId streamId, const std::string& message) {
+  return Frame_ERROR(streamId, ErrorCode::INVALID, Payload(message));
 }
 
 Frame_ERROR Frame_ERROR::applicationError(
     StreamId streamId,
     const std::string& message) {
   return Frame_ERROR(streamId, ErrorCode::APPLICATION_ERROR, Payload(message));
-}
-
-Frame_ERROR Frame_ERROR::canNotResume(const std::string& message) {
-  return Frame_ERROR(0, ErrorCode::CONNECTION_ERROR, Payload(message));
 }
 
 std::unique_ptr<folly::IOBuf> Frame_ERROR::serializeOut() {

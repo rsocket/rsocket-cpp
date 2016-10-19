@@ -49,6 +49,10 @@ class MixinTerminator
   explicit MixinTerminator(Parameters params)
       : connection_(std::move(params.connection)), streamId_(params.streamId) {}
 
+  /// Logs an identification string of the automaton.
+  std::ostream& logPrefix(std::ostream& os) /* = 0 */;
+  /// @}
+
  protected:
   /// @{
   /// Each mixin in the stack implements a subset of this API.
@@ -71,10 +75,6 @@ class MixinTerminator
   void onNextFrame(Frame_ERROR&&) {}
 
   void onBadFrame() {}
-
-  /// Logs an identification string of the automaton.
-  std::ostream& logPrefix(std::ostream& os) /* = 0 */;
-  /// @}
 
   /// A partially-owning pointer to the connection, the stream runs on.
   const std::shared_ptr<ConnectionAutomaton> connection_;

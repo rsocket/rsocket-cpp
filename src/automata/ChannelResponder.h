@@ -30,13 +30,12 @@ enum class StreamCompletionSignal;
 
 /// Implementation of stream automaton that represents a Channel responder.
 class ChannelResponderBase
-    : public LoggingMixin<PublisherMixin<
+    : public PublisherMixin<
           Frame_RESPONSE,
-          LoggingMixin<
-              ConsumerMixin<Frame_REQUEST_CHANNEL, MixinTerminator>>>> {
-  using Base = LoggingMixin<PublisherMixin<
+          ConsumerMixin<Frame_REQUEST_CHANNEL, MixinTerminator>> {
+  using Base = PublisherMixin<
       Frame_RESPONSE,
-      LoggingMixin<ConsumerMixin<Frame_REQUEST_CHANNEL, MixinTerminator>>>>;
+      ConsumerMixin<Frame_REQUEST_CHANNEL, MixinTerminator>>;
 
  public:
   using Base::Base;
@@ -57,6 +56,8 @@ class ChannelResponderBase
   void cancel();
   /// @}
 
+  std::ostream& logPrefix(std::ostream& os);
+
  protected:
   /// @{
   void endStream(StreamCompletionSignal);
@@ -67,8 +68,6 @@ class ChannelResponderBase
   void onNextFrame(Frame_REQUEST_CHANNEL&&);
 
   void onNextFrame(Frame_CANCEL&&);
-
-  std::ostream& logPrefix(std::ostream& os);
   /// @}
 
  private:
@@ -79,7 +78,6 @@ class ChannelResponderBase
   } state_{State::RESPONDING};
 };
 
-using ChannelResponder =
-    SourceIfMixin<SinkIfMixin<StreamIfMixin<LoggingMixin<ExecutorMixin<
-        LoggingMixin<MemoryMixin<LoggingMixin<ChannelResponderBase>>>>>>>>;
+using ChannelResponder = SourceIfMixin<SinkIfMixin<StreamIfMixin<
+    ExecutorMixin<MemoryMixin<LoggingMixin<ChannelResponderBase>>>>>>;
 }

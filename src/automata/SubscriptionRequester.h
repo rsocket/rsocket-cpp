@@ -33,14 +33,14 @@ class SubscriptionRequesterBase : public StreamSubscriptionRequesterBase {
  public:
   using Base::Base;
 
+  std::ostream& logPrefix(std::ostream& os);
+
  protected:
   /// @{
   void sendRequestFrame(FrameFlags, size_t, Payload&&) override;
-  std::ostream& logPrefix(std::ostream& os);
   /// @}
 };
 
-using SubscriptionRequester =
-    SourceIfMixin<StreamIfMixin<LoggingMixin<ExecutorMixin<
-        LoggingMixin<MemoryMixin<LoggingMixin<SubscriptionRequesterBase>>>>>>>;
+using SubscriptionRequester = SourceIfMixin<StreamIfMixin<
+    ExecutorMixin<MemoryMixin<LoggingMixin<SubscriptionRequesterBase>>>>>;
 }

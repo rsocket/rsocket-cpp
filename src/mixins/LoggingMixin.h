@@ -33,13 +33,13 @@ class LoggingMixin : public Base {
   using Base::Base;
 
   ~LoggingMixin() {
-    Base::logPrefix(LOG(INFO)) << "destroyed";
+    VLOG(6) << *this << "destroyed";
   }
 
   /// @{
   /// Publisher<Payload>
   void subscribe(Subscriber<Payload>& subscriber) {
-    Base::logPrefix(LOG(INFO)) << "subscribe(" << &subscriber << ")";
+    VLOG(6) << *this << "subscribe(" << &subscriber << ")";
     Base::subscribe(subscriber);
   }
   /// @}
@@ -47,12 +47,12 @@ class LoggingMixin : public Base {
   /// @{
   /// Subscription
   void request(size_t n) {
-    Base::logPrefix(LOG(INFO)) << "request(" << n << ")";
+    VLOG(7) << *this << "request(" << n << ")";
     Base::request(n);
   }
 
   void cancel() {
-    Base::logPrefix(LOG(INFO)) << "cancel()";
+    VLOG(6) << *this << "cancel()";
     Base::cancel();
   }
   /// @}
@@ -60,22 +60,22 @@ class LoggingMixin : public Base {
   /// @{
   /// Subscriber<Payload>
   void onSubscribe(Subscription& subscription) {
-    Base::logPrefix(LOG(INFO)) << "onSubscribe(" << &subscription << ")";
+    VLOG(6) << *this << "onSubscribe(" << &subscription << ")";
     Base::onSubscribe(subscription);
   }
 
   void onNext(Payload payload) {
-    Base::logPrefix(LOG(INFO)) << "onNext(" << payload << ")";
+    VLOG(8) << *this << "onNext(" << payload << ")";
     Base::onNext(std::move(payload));
   }
 
   void onNext(Payload payload, FrameFlags flags) {
-    Base::logPrefix(LOG(INFO)) << "onNext(" << payload << ", " << flags << ")";
+    VLOG(8) << *this << "onNext(" << payload << ", " << flags << ")";
     Base::onNext(std::move(payload), flags);
   }
 
   void onComplete() {
-    Base::logPrefix(LOG(INFO)) << "onComplete()";
+    VLOG(6) << *this << "onComplete()";
     Base::onComplete();
   }
 
@@ -87,16 +87,20 @@ class LoggingMixin : public Base {
 
   /// @{
   void endStream(StreamCompletionSignal signal) {
-    Base::logPrefix(LOG(INFO)) << "endStream(" << signal << ")";
+    VLOG(6) << *this << "endStream(" << signal << ")";
     Base::endStream(signal);
   }
   /// @}
+
+  friend std::ostream& operator<<(std::ostream& os, Base& base) {
+    return base.logPrefix(os);
+  }
 
  protected:
   /// @{
   template <typename Frame>
   void onNextFrame(Frame&& frame) {
-    Base::logPrefix(LOG(INFO)) << frame;
+    VLOG(8) << *this << frame;
     Base::onNextFrame(std::move(frame));
   }
 

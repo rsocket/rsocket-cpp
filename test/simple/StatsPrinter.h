@@ -3,7 +3,7 @@
 #pragma once
 
 #include <src/Stats.h>
-#include <src/tcp/TcpDuplexConnection.h>
+#include <src/DuplexConnection.h>
 
 namespace reactivesocket {
 class StatsPrinter : public Stats {
