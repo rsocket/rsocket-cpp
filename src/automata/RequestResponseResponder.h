@@ -10,7 +10,6 @@
 #include "src/ReactiveStreamsCompat.h"
 #include "src/mixins/ExecutorMixin.h"
 #include "src/mixins/LoggingMixin.h"
-#include "src/mixins/MemoryMixin.h"
 #include "src/mixins/MixinTerminator.h"
 #include "src/mixins/PublisherMixin.h"
 #include "src/mixins/SinkIfMixin.h"
@@ -63,5 +62,5 @@ class RequestResponseResponderBase
 };
 
 using RequestResponseResponder = SinkIfMixin<StreamIfMixin<
-    ExecutorMixin<MemoryMixin<LoggingMixin<RequestResponseResponderBase>>>>>;
+    ExecutorMixin<LoggingMixin<RequestResponseResponderBase>>>>;
 }

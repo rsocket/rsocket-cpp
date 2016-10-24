@@ -5,7 +5,6 @@
 #include <folly/io/async/EventBase.h>
 #include <glog/logging.h>
 #include <src/ReactiveSocket.h>
-#include <src/mixins/MemoryMixin.h>
 #include "TypedCommands.h"
 
 using namespace folly;
@@ -134,7 +133,7 @@ std::shared_ptr<TestSubscriber> TestInterpreter::createTestSubscriber(const std:
     throw std::runtime_error("test subscriber with the same id already exists");
   }
 
-  auto testSubscriber = createManagedInstance<TestSubscriber>();
+  auto testSubscriber = std::make_shared<TestSubscriber>();
   testSubscribers_[id] = testSubscriber;
   return testSubscriber;
 }

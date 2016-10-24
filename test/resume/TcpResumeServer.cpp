@@ -7,7 +7,6 @@
 #include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"
 #include "src/framed/FramedDuplexConnection.h"
-#include "src/mixins/MemoryMixin.h"
 #include "src/tcp/TcpDuplexConnection.h"
 #include "test/simple/PrintSubscriber.h"
 #include "test/simple/StatsPrinter.h"
@@ -48,7 +47,7 @@ class ServerRequestHandler : public DefaultRequestHandler {
       override {
     LOG(INFO) << "ServerRequestHandler.handleRequestSubscription " << request;
 
-    response->onSubscribe(createManagedInstance<ServerSubscription>(response));
+    response->onSubscribe(std::make_shared<ServerSubscription>(response));
   }
 
   /// Handles a new inbound Stream requested by the other end.
@@ -56,7 +55,7 @@ class ServerRequestHandler : public DefaultRequestHandler {
       override {
     LOG(INFO) << "ServerRequestHandler.handleRequestStream " << request;
 
-    response->onSubscribe(createManagedInstance<ServerSubscription>(response));
+    response->onSubscribe(std::make_shared<ServerSubscription>(response));
   }
 
   void handleFireAndForgetRequest(Payload request) override {

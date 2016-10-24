@@ -13,7 +13,6 @@
 #include "MockStats.h"
 #include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"
-#include "src/mixins/MemoryMixin.h"
 #include "test/InlineConnection.h"
 #include "test/MockRequestHandler.h"
 #include "test/ReactiveStreamsMocksCompat.h"
@@ -683,7 +682,7 @@ class ReactiveSocketIgnoreRequestTest : public testing::Test {
     std::shared_ptr<Subscriber<Payload>> onRequestChannel(
         Payload /*request*/,
         SubscriberFactory& subscriberFactory) override {
-      return createManagedInstance<NullSubscriber>();
+      return std::make_shared<NullSubscriber>();
     }
 
     void onRequestStream(

@@ -115,12 +115,9 @@ add_library(
   src/mixins/ConsumerMixin-inl.h
   src/mixins/ConsumerMixin.h
   src/mixins/ExecutorMixin.h
-  src/mixins/IntrusiveDeleter.h
   src/mixins/LoggingMixin.h
-  src/mixins/MemoryMixin.h
   src/mixins/MixinTerminator.h
   src/mixins/PublisherMixin.h
-  src/mixins/README.md
   src/mixins/SinkIfMixin.h
   src/mixins/SourceIfMixin.h
   src/mixins/StreamIfMixin.h

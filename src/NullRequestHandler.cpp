@@ -3,7 +3,6 @@
 #include "NullRequestHandler.h"
 
 #include <folly/ExceptionWrapper.h>
-#include "src/mixins/MemoryMixin.h"
 
 namespace reactivesocket {
 
@@ -25,16 +24,16 @@ std::shared_ptr<Subscriber<Payload>> NullRequestHandler::handleRequestChannel(
     Payload /*request*/,
     const std::shared_ptr<Subscriber<Payload>>& response) {
   // TODO(lehecka): get rid of onSubscribe call
-  response->onSubscribe(createManagedInstance<NullSubscription>());
+  response->onSubscribe(std::make_shared<NullSubscription>());
   response->onError(std::runtime_error("NullRequestHandler"));
-  return createManagedInstance<NullSubscriber>();
+  return std::make_shared<NullSubscriber>();
 }
 
 void NullRequestHandler::handleRequestStream(
     Payload /*request*/,
     const std::shared_ptr<Subscriber<Payload>>& response) {
   // TODO(lehecka): get rid of onSubscribe call
-  response->onSubscribe(createManagedInstance<NullSubscription>());
+  response->onSubscribe(std::make_shared<NullSubscription>());
   response->onError(std::runtime_error("NullRequestHandler"));
 }
 
@@ -42,14 +41,14 @@ void NullRequestHandler::handleRequestSubscription(
     Payload /*request*/,
     const std::shared_ptr<Subscriber<Payload>>& response) {
   // TODO(lehecka): get rid of onSubscribe call
-  response->onSubscribe(createManagedInstance<NullSubscription>());
+  response->onSubscribe(std::make_shared<NullSubscription>());
   response->onError(std::runtime_error("NullRequestHandler"));
 }
 
 void NullRequestHandler::handleRequestResponse(
     Payload /*request*/,
     const std::shared_ptr<Subscriber<Payload>>& response) {
-  response->onSubscribe(createManagedInstance<NullSubscription>());
+  response->onSubscribe(std::make_shared<NullSubscription>());
   response->onError(std::runtime_error("NullRequestHandler"));
 }
 

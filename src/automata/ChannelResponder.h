@@ -13,7 +13,6 @@
 #include "src/mixins/ConsumerMixin.h"
 #include "src/mixins/ExecutorMixin.h"
 #include "src/mixins/LoggingMixin.h"
-#include "src/mixins/MemoryMixin.h"
 #include "src/mixins/MixinTerminator.h"
 #include "src/mixins/PublisherMixin.h"
 #include "src/mixins/SinkIfMixin.h"
@@ -79,5 +78,5 @@ class ChannelResponderBase
 };
 
 using ChannelResponder = SourceIfMixin<SinkIfMixin<StreamIfMixin<
-    ExecutorMixin<MemoryMixin<LoggingMixin<ChannelResponderBase>>>>>>;
+    ExecutorMixin<LoggingMixin<ChannelResponderBase>>>>>;
 }

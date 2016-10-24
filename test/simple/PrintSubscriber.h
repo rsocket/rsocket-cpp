@@ -5,7 +5,6 @@
 #include <folly/ExceptionWrapper.h>
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
-#include "src/mixins/IntrusiveDeleter.h"
 
 namespace reactivesocket {
 class PrintSubscriber : public Subscriber<Payload> {

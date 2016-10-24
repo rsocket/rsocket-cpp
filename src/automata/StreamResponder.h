@@ -7,7 +7,6 @@
 #include "src/automata/StreamSubscriptionResponderBase.h"
 #include "src/mixins/ExecutorMixin.h"
 #include "src/mixins/LoggingMixin.h"
-#include "src/mixins/MemoryMixin.h"
 #include "src/mixins/SinkIfMixin.h"
 #include "src/mixins/StreamIfMixin.h"
 
@@ -27,5 +26,5 @@ class StreamResponderBase : public StreamSubscriptionResponderBase {
 };
 
 using StreamResponder = SinkIfMixin<StreamIfMixin<
-    ExecutorMixin<MemoryMixin<LoggingMixin<StreamResponderBase>>>>>;
+    ExecutorMixin<LoggingMixin<StreamResponderBase>>>>;
 }

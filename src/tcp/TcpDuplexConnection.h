@@ -11,7 +11,6 @@
 #include <src/Stats.h>
 #include "src/DuplexConnection.h"
 #include "src/ReactiveStreamsCompat.h"
-#include "src/mixins/IntrusiveDeleter.h"
 
 namespace folly {
 class exception_wrapper;
