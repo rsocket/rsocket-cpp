@@ -20,7 +20,7 @@ void ConsumerMixin<Frame, Base>::onError(folly::exception_wrapper ex) {
 
 template <typename Frame, typename Base>
 void ConsumerMixin<Frame, Base>::onNextFrame(Frame&& frame) {
-  if (frame.payload_.data) {
+  if (frame.payload_) {
     // Frames carry application-level payloads are taken into account when
     // figuring out flow control allowance.
     if (allowance_.tryAcquire()) {

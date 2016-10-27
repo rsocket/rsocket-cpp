@@ -8,7 +8,6 @@
 #include "src/ReactiveSocket.h"
 #include "src/folly/FollyKeepaliveTimer.h"
 #include "src/framed/FramedDuplexConnection.h"
-#include "src/mixins/MemoryMixin.h"
 #include "src/tcp/TcpDuplexConnection.h"
 #include "test/simple/PrintSubscriber.h"
 #include "test/simple/StatsPrinter.h"
@@ -77,7 +76,7 @@ int main(int argc, char* argv[]) {
                 eventBase, std::chrono::milliseconds(5000)));
 
         reactiveSocket->requestSubscription(
-            Payload("from client"), createManagedInstance<PrintSubscriber>());
+            Payload("from client"), std::make_shared<PrintSubscriber>());
       });
 
   std::string name;

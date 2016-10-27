@@ -8,7 +8,6 @@
 #include "src/ReactiveSocket.h"
 #include "src/folly/FollyKeepaliveTimer.h"
 #include "src/framed/FramedDuplexConnection.h"
-#include "src/mixins/MemoryMixin.h"
 #include "src/tcp/TcpDuplexConnection.h"
 #include "test/simple/PrintSubscriber.h"
 #include "test/simple/StatsPrinter.h"
@@ -48,17 +47,13 @@ int main(int argc, char* argv[]) {
   Callback callback;
   StatsPrinter stats;
 
-  folly::AsyncSocket::UniquePtr socket(new folly::AsyncSocket(&eventBase));
-
-  folly::AsyncSocket::UniquePtr socketResume(
-      new folly::AsyncSocket(&eventBase));
-
   ResumeIdentificationToken token;
   token.fill(1);
 
   eventBase.runInEventBaseThreadAndWait([&]() {
     folly::SocketAddress addr(FLAGS_host, FLAGS_port, true);
 
+    folly::AsyncSocket::UniquePtr socket(new folly::AsyncSocket(&eventBase));
     socket->connect(&callback, addr);
 
     std::cout << "attempting connection to " << addr.describe() << "\n";
@@ -81,7 +76,7 @@ int main(int argc, char* argv[]) {
         token);
 
     reactiveSocket->requestSubscription(
-        Payload("from client"), createManagedInstance<PrintSubscriber>());
+        Payload("from client"), std::make_shared<PrintSubscriber>());
   });
 
   std::string input;
@@ -90,6 +85,8 @@ int main(int argc, char* argv[]) {
   eventBase.runInEventBaseThreadAndWait([&]() {
     folly::SocketAddress addr(FLAGS_host, FLAGS_port, true);
 
+    folly::AsyncSocket::UniquePtr socketResume(
+        new folly::AsyncSocket(&eventBase));
     socketResume->connect(&callback, addr);
 
     std::unique_ptr<DuplexConnection> connectionResume =

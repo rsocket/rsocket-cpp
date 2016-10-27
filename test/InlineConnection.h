@@ -3,6 +3,7 @@
 #pragma once
 
 #include <folly/ExceptionWrapper.h>
+#include <reactive-streams/utilities/SmartPointers.h>
 
 #include "src/DuplexConnection.h"
 #include "src/ReactiveStreamsCompat.h"
@@ -19,16 +20,14 @@ namespace reactivesocket {
 /// This class is not thread-safe.
 class InlineConnection : public DuplexConnection {
  public:
+  InlineConnection() = default;
+
   // Noncopyable
   InlineConnection(const InlineConnection&) = delete;
   InlineConnection& operator=(const InlineConnection&) = delete;
   // Nonmovable
   InlineConnection(InlineConnection&&) = delete;
   InlineConnection& operator=(InlineConnection&&) = delete;
-
-  InlineConnection();
-
-  ~InlineConnection() override;
 
   /// Connects this end of a DuplexConnection to another one.
   ///
@@ -37,20 +36,22 @@ class InlineConnection : public DuplexConnection {
   /// accessing input or output of the connection.
   void connectTo(InlineConnection& other);
 
-  void setInput(Subscriber<std::unique_ptr<folly::IOBuf>>& inputSink) override;
+  void setInput(std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>>
+                    inputSink) override;
 
-  Subscriber<std::unique_ptr<folly::IOBuf>>& getOutput() override;
+  std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>> getOutput()
+      override;
 
  private:
-  InlineConnection* other_;
-  Subscriber<std::unique_ptr<folly::IOBuf>>* inputSink_;
+  InlineConnection* other_{nullptr};
+  std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>> inputSink_;
   /// @{
   /// Store pending terminal signal that would be sent to the input, if it was
   /// set at the time the signal was issued. Both fields being false indicate a
   /// situation where no terminal signal has been sent.
-  bool inputSinkCompleted_;
+  bool inputSinkCompleted_{false};
   folly::exception_wrapper inputSinkError_;
   /// @}
-  Subscription* outputSubscription_;
+  std::shared_ptr<Subscription> outputSubscription_;
 };
 }

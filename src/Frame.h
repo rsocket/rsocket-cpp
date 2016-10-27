@@ -71,7 +71,7 @@ enum class ErrorCode : uint32_t {
   // Stream ID MUST be non-0.
   APPLICATION_ERROR = 0x00000201,
   // Despite being a valid request, the Responder decided to reject it. The
-  //Responder guarantees that it didn't process the request. The reason for the
+  // Responder guarantees that it didn't process the request. The reason for the
   // rejection is explained in the metadata section. Stream ID MUST be non-0.
   REJECTED = 0x00000202,
   // The responder canceled the request but potentially have started processing

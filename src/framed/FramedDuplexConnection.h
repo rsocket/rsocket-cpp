@@ -4,7 +4,6 @@
 
 #include <src/Stats.h>
 #include "src/DuplexConnection.h"
-#include "src/framed/FramedReader.h"
 
 namespace reactivesocket {
 
@@ -16,13 +15,15 @@ class FramedDuplexConnection : public virtual DuplexConnection {
   explicit FramedDuplexConnection(std::unique_ptr<DuplexConnection> connection);
   ~FramedDuplexConnection();
 
-  Subscriber<std::unique_ptr<folly::IOBuf>>& getOutput() noexcept override;
-  void setInput(Subscriber<std::unique_ptr<folly::IOBuf>>& framesSink) override;
+  std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>>
+  getOutput() noexcept override;
+  void setInput(std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>>
+                    framesSink) override;
 
  private:
   std::unique_ptr<DuplexConnection> connection_;
-  FramedReader::UniquePtr inputReader_;
-  std::unique_ptr<FramedWriter> outputWriter_;
+  std::shared_ptr<FramedReader> inputReader_;
+  std::shared_ptr<FramedWriter> outputWriter_;
 };
 
 } // reactive socket

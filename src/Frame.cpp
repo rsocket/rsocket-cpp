@@ -349,7 +349,9 @@ Frame_ERROR Frame_ERROR::connectionError(const std::string& message) {
   return Frame_ERROR(0, ErrorCode::CONNECTION_ERROR, Payload(message));
 }
 
-Frame_ERROR Frame_ERROR::invalid(StreamId streamId, const std::string& message) {
+Frame_ERROR Frame_ERROR::invalid(
+    StreamId streamId,
+    const std::string& message) {
   return Frame_ERROR(streamId, ErrorCode::INVALID, Payload(message));
 }
 

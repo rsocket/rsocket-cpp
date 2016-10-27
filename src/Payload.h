@@ -33,7 +33,7 @@ struct Payload {
       const std::string& metadata = std::string());
 
   explicit operator bool() const {
-    return data != nullptr && metadata != nullptr;
+    return data != nullptr || metadata != nullptr;
   }
 
   FrameFlags getFlags() const {

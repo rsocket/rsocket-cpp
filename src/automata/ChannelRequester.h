@@ -13,7 +13,6 @@
 #include "src/mixins/ConsumerMixin.h"
 #include "src/mixins/ExecutorMixin.h"
 #include "src/mixins/LoggingMixin.h"
-#include "src/mixins/MemoryMixin.h"
 #include "src/mixins/MixinTerminator.h"
 #include "src/mixins/PublisherMixin.h"
 #include "src/mixins/SinkIfMixin.h"
@@ -43,7 +42,7 @@ class ChannelRequesterBase
   /// @{
   /// A Subscriber implementation exposed to the user of ReactiveSocket to
   /// receive "request" payloads.
-  void onSubscribe(Subscription&);
+  void onSubscribe(std::shared_ptr<Subscription>);
 
   void onNext(Payload);
 
@@ -84,6 +83,6 @@ class ChannelRequesterBase
   reactivestreams::AllowanceSemaphore initialResponseAllowance_;
 };
 
-using ChannelRequester = SourceIfMixin<SinkIfMixin<StreamIfMixin<
-    ExecutorMixin<MemoryMixin<LoggingMixin<ChannelRequesterBase>>>>>>;
+using ChannelRequester = SourceIfMixin<SinkIfMixin<
+    StreamIfMixin<ExecutorMixin<LoggingMixin<ChannelRequesterBase>>>>>;
 }

@@ -115,12 +115,9 @@ add_library(
   src/mixins/ConsumerMixin-inl.h
   src/mixins/ConsumerMixin.h
   src/mixins/ExecutorMixin.h
-  src/mixins/IntrusiveDeleter.h
   src/mixins/LoggingMixin.h
-  src/mixins/MemoryMixin.h
   src/mixins/MixinTerminator.h
   src/mixins/PublisherMixin.h
-  src/mixins/README.md
   src/mixins/SinkIfMixin.h
   src/mixins/SourceIfMixin.h
   src/mixins/StreamIfMixin.h
@@ -146,7 +143,13 @@ add_library(
   src/concurrent/atomic64.h
   src/concurrent/atomic64_gcc_x86_64.h
   src/concurrent/OneToOneRingBuffer.h
-)
+  src/ReactiveSocketSubscriberFactory.h
+  src/CancellingSubscription.h
+  src/RequestHandler.cpp
+  src/EnableSharedFromThis.h
+  src/SubscriberBase.h
+  src/SubscriptionBase.h
+  src/Executor.cpp)
 
 target_link_libraries(
   ReactiveSocket
@@ -164,9 +167,6 @@ add_executable(
   tests
   test/framed/FramedReaderTest.cpp
   test/framed/FramedWriterTest.cpp
-  test/streams/AllowanceSemaphoreTest.cpp
-  test/streams/OwnershipTest.cpp
-  test/streams/SmartPointersTest.cpp
   test/FrameTest.cpp
   test/ConnectionAutomatonTest.cpp
   test/InlineConnection.cpp
@@ -175,6 +175,7 @@ add_executable(
   test/MockDuplexConnection.h
   test/MockRequestHandler.h
   test/ReactiveSocketTest.cpp
+  test/ReactiveSocketConcurrencyTest.cpp
   test/ReactiveStreamsMocksCompat.h
   test/Test.cpp
   test/MockStats.h
@@ -296,19 +297,5 @@ target_link_libraries(
         ${CMAKE_THREAD_LIBS_INIT})
 
 add_dependencies(tcpresumeserver gmock)
-
-add_executable(
-        subscriber_non_payload
-	test/simple/SubscriberNonPayloadTest.cpp
-)
-
-target_link_libraries(
-        subscriber_non_payload
-        ReactiveSocket
-        ${FOLLY_LIBRARIES}
-        ${CMAKE_THREAD_LIBS_INIT}
-)
-
-add_dependencies(subscriber_non_payload ReactiveSocket ReactiveStreams)
 
 # EOF

@@ -10,18 +10,12 @@
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
 
-namespace folly {
-class EventBase;
-}
-
 namespace reactivesocket {
 namespace tck {
 
 class TestSubscriber : public reactivesocket::Subscriber<Payload> {
  public:
-  explicit TestSubscriber(
-      folly::EventBase& rsEventBase,
-      int initialRequestN = 0);
+  explicit TestSubscriber(int initialRequestN = 0);
 
   void request(int n);
   void cancel();
@@ -40,7 +34,7 @@ class TestSubscriber : public reactivesocket::Subscriber<Payload> {
   void assertCanceled();
 
  protected:
-  void onSubscribe(Subscription& subscription) override;
+  void onSubscribe(std::shared_ptr<Subscription> subscription) override;
   void onNext(Payload element) override;
   void onComplete() override;
   void onError(folly::exception_wrapper ex) override;
@@ -50,8 +44,6 @@ class TestSubscriber : public reactivesocket::Subscriber<Payload> {
 
   SubscriptionPtr<Subscription> subscription_;
   int initialRequestN_{0};
-
-  folly::EventBase* rsEventBase_;
 
   std::atomic<bool> canceled_{false};
 

@@ -3,37 +3,15 @@
 #include "TestSubscriber.h"
 
 #include <folly/io/IOBuf.h>
-#include <folly/io/async/EventBase.h>
 #include <glog/logging.h>
-#include "src/mixins/MemoryMixin.h"
 
 using namespace folly;
 
 namespace reactivesocket {
 namespace tck {
 
-class EventBaseSubscription : public Subscription {
- public:
-  explicit EventBaseSubscription(
-      EventBase& eventBase,
-      Subscription& subscription)
-      : eventBase_(&eventBase), inner_(&subscription) {}
-
-  void request(size_t n) override {
-    eventBase_->runInEventBaseThread([this, n]() { inner_.request(n); });
-  }
-
-  void cancel() override {
-    eventBase_->runInEventBaseThread([this]() { inner_.cancel(); });
-  }
-
- private:
-  EventBase* eventBase_{nullptr};
-  SubscriptionPtr<Subscription> inner_;
-};
-
-TestSubscriber::TestSubscriber(EventBase& rsEventBase, int initialRequestN)
-    : initialRequestN_(initialRequestN), rsEventBase_(&rsEventBase) {}
+TestSubscriber::TestSubscriber(int initialRequestN)
+    : initialRequestN_(initialRequestN) {}
 
 void TestSubscriber::request(int n) {
   subscription_.request(n);
@@ -142,9 +120,8 @@ void TestSubscriber::assertTerminated() {
   }
 }
 
-void TestSubscriber::onSubscribe(Subscription& subscription) {
-  subscription_.reset(&createManagedInstance<EventBaseSubscription>(
-      *rsEventBase_, subscription));
+void TestSubscriber::onSubscribe(std::shared_ptr<Subscription> subscription) {
+  subscription_.reset(std::move(subscription));
 
   //  actual.onSubscribe(s);
 
@@ -153,7 +130,7 @@ void TestSubscriber::onSubscribe(Subscription& subscription) {
   //  }
 
   if (initialRequestN_ > 0) {
-    subscription.request(initialRequestN_);
+    subscription_.request(initialRequestN_);
   }
 
   //  long mr = missedRequested.getAndSet(0L);

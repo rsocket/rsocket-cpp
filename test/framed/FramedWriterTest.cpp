@@ -15,63 +15,63 @@ using namespace ::testing;
 using namespace ::reactivesocket;
 
 TEST(FramedWriterTest, Subscribe) {
-  auto& subscriber = makeMockSubscriber<std::unique_ptr<folly::IOBuf>>();
-  auto& subscription = makeMockSubscription();
+  auto subscriber = makeMockSubscriber<std::unique_ptr<folly::IOBuf>>();
+  auto subscription = makeMockSubscription();
 
-  EXPECT_CALL(subscriber, onSubscribe_(_)).Times(1);
-  EXPECT_CALL(subscription, cancel_()).Times(1);
+  EXPECT_CALL(*subscriber, onSubscribe_(_)).Times(1);
+  EXPECT_CALL(*subscription, cancel_()).Times(1);
 
-  FramedWriter writer(subscriber);
-  writer.onSubscribe(subscription);
+  auto writer = std::make_shared<FramedWriter>(subscriber);
+  writer->onSubscribe(subscription);
 
   // to delete objects
-  subscriber.subscription()->cancel();
-  writer.onComplete();
+  subscriber->subscription()->cancel();
+  writer->onComplete();
 }
 
 TEST(FramedWriterTest, Error) {
-  auto& subscriber = makeMockSubscriber<std::unique_ptr<folly::IOBuf>>();
-  auto& subscription = makeMockSubscription();
+  auto subscriber = makeMockSubscriber<std::unique_ptr<folly::IOBuf>>();
+  auto subscription = makeMockSubscription();
 
-  FramedWriter writer(subscriber);
+  auto writer = std::make_shared<FramedWriter>(subscriber);
 
-  EXPECT_CALL(subscription, cancel_()).Times(1);
-  writer.onSubscribe(subscription);
+  EXPECT_CALL(*subscription, cancel_()).Times(1);
+  writer->onSubscribe(subscription);
 
   // calls passed thru
-  EXPECT_CALL(subscriber, onError_(_)).Times(1);
-  writer.onError(std::runtime_error("error1"));
+  EXPECT_CALL(*subscriber, onError_(_)).Times(1);
+  writer->onError(std::runtime_error("error1"));
 
   //  subscriber.subscription()->cancel();
 }
 
 TEST(FramedWriterTest, Complete) {
-  auto& subscriber = makeMockSubscriber<std::unique_ptr<folly::IOBuf>>();
-  auto& subscription = makeMockSubscription();
+  auto subscriber = makeMockSubscriber<std::unique_ptr<folly::IOBuf>>();
+  auto subscription = makeMockSubscription();
 
-  FramedWriter writer(subscriber);
+  auto writer = std::make_shared<FramedWriter>(subscriber);
 
-  EXPECT_CALL(subscription, cancel_()).Times(1);
-  writer.onSubscribe(subscription);
+  EXPECT_CALL(*subscription, cancel_()).Times(1);
+  writer->onSubscribe(subscription);
 
   // calls passed thru
-  EXPECT_CALL(subscriber, onComplete_()).Times(1);
-  writer.onComplete();
+  EXPECT_CALL(*subscriber, onComplete_()).Times(1);
+  writer->onComplete();
 
   //  subscriber.subscription()->cancel();
 }
 
 static void nextSingleFrameTest(int headroom) {
-  auto& subscriber = makeMockSubscriber<std::unique_ptr<folly::IOBuf>>();
-  auto& subscription = makeMockSubscription();
+  auto subscriber = makeMockSubscriber<std::unique_ptr<folly::IOBuf>>();
+  auto subscription = makeMockSubscription();
 
-  EXPECT_CALL(subscriber, onError_(_)).Times(0);
-  EXPECT_CALL(subscriber, onComplete_()).Times(0);
-  EXPECT_CALL(subscription, cancel_()).Times(0);
+  EXPECT_CALL(*subscriber, onError_(_)).Times(0);
+  EXPECT_CALL(*subscriber, onComplete_()).Times(0);
+  EXPECT_CALL(*subscription, cancel_()).Times(0);
 
   std::string msg("hello");
 
-  EXPECT_CALL(subscriber, onNext_(_))
+  EXPECT_CALL(*subscriber, onNext_(_))
       .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& p) {
         ASSERT_EQ(
             folly::to<std::string>(
@@ -79,16 +79,17 @@ static void nextSingleFrameTest(int headroom) {
             p->moveToFbString().toStdString());
       }));
 
-  FramedWriter writer(subscriber);
-  writer.onSubscribe(subscription);
-  writer.onNext(folly::IOBuf::copyBuffer(msg, headroom));
+  auto writer = std::make_shared<FramedWriter>(subscriber);
+  writer->onSubscribe(subscription);
+  writer->onNext(folly::IOBuf::copyBuffer(msg, headroom));
 
   // to delete objects
-  EXPECT_CALL(subscriber, onComplete_()).Times(1);
-  EXPECT_CALL(subscription, cancel_()).Times(1);
+  EXPECT_CALL(*subscriber, onComplete_()).Times(1);
+  EXPECT_CALL(*subscription, cancel_()).Times(1);
 
-  subscriber.subscription()->cancel();
-  writer.onComplete();
+  // TODO: cancel should be called automatically
+  subscriber->subscription()->cancel();
+  writer->onComplete();
 }
 
 TEST(FramedWriterTest, NextSingleFrameNoHeadroom) {
@@ -100,19 +101,19 @@ TEST(FramedWriterTest, NextSingleFrameWithHeadroom) {
 }
 
 static void nextTwoFramesTest(int headroom) {
-  auto& subscriber = makeMockSubscriber<std::unique_ptr<folly::IOBuf>>();
-  auto& subscription = makeMockSubscription();
+  auto subscriber = makeMockSubscriber<std::unique_ptr<folly::IOBuf>>();
+  auto subscription = makeMockSubscription();
 
-  EXPECT_CALL(subscriber, onError_(_)).Times(0);
-  EXPECT_CALL(subscriber, onComplete_()).Times(0);
-  EXPECT_CALL(subscription, cancel_()).Times(0);
+  EXPECT_CALL(*subscriber, onError_(_)).Times(0);
+  EXPECT_CALL(*subscriber, onComplete_()).Times(0);
+  EXPECT_CALL(*subscription, cancel_()).Times(0);
 
   std::string msg1("hello");
   std::string msg2("world");
 
   folly::IOBuf payloadChain;
 
-  EXPECT_CALL(subscriber, onNext_(_))
+  EXPECT_CALL(*subscriber, onNext_(_))
       .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& p) {
         payloadChain.prependChain(std::move(p));
       }))
@@ -133,17 +134,17 @@ static void nextTwoFramesTest(int headroom) {
             payloadChain.moveToFbString().toStdString());
       }));
 
-  FramedWriter writer(subscriber);
-  writer.onSubscribe(subscription);
-  writer.onNext(folly::IOBuf::copyBuffer(msg1, headroom));
-  writer.onNext(folly::IOBuf::copyBuffer(msg2, headroom));
+  auto writer = std::make_shared<FramedWriter>(subscriber);
+  writer->onSubscribe(subscription);
+  writer->onNext(folly::IOBuf::copyBuffer(msg1, headroom));
+  writer->onNext(folly::IOBuf::copyBuffer(msg2, headroom));
 
   // to delete objects
-  EXPECT_CALL(subscriber, onComplete_()).Times(1);
-  EXPECT_CALL(subscription, cancel_()).Times(1);
+  EXPECT_CALL(*subscriber, onComplete_()).Times(1);
+  EXPECT_CALL(*subscription, cancel_()).Times(1);
 
-  subscriber.subscription()->cancel();
-  writer.onComplete();
+  subscriber->subscription()->cancel();
+  writer->onComplete();
 }
 
 TEST(FramedWriterTest, NextTwoFramesNoHeadroom) {

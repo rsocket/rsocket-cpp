@@ -9,10 +9,10 @@
 
 namespace reactivesocket {
 
-void FramedWriter::onSubscribe(Subscription& subscription) {
+void FramedWriter::onSubscribeImpl(std::shared_ptr<Subscription> subscription) {
   CHECK(!writerSubscription_);
-  writerSubscription_.reset(&subscription);
-  stream_.get()->onSubscribe(*this);
+  writerSubscription_.reset(std::move(subscription));
+  stream_.onSubscribe(shared_from_this());
 }
 
 static std::unique_ptr<folly::IOBuf> appendSize(
@@ -40,7 +40,7 @@ static std::unique_ptr<folly::IOBuf> appendSize(
   }
 }
 
-void FramedWriter::onNext(std::unique_ptr<folly::IOBuf> payload) {
+void FramedWriter::onNextImpl(std::unique_ptr<folly::IOBuf> payload) {
   auto sizedPayload = appendSize(std::move(payload));
   if (!sizedPayload) {
     VLOG(1) << "payload too big";
@@ -66,19 +66,19 @@ void FramedWriter::onNextMultiple(
   stream_.onNext(payloadQueue.move());
 }
 
-void FramedWriter::onComplete() {
+void FramedWriter::onCompleteImpl() {
   stream_.onComplete();
 }
 
-void FramedWriter::onError(folly::exception_wrapper ex) {
+void FramedWriter::onErrorImpl(folly::exception_wrapper ex) {
   stream_.onError(std::move(ex));
 }
 
-void FramedWriter::request(size_t n) {
+void FramedWriter::requestImpl(size_t n) {
   writerSubscription_.request(n);
 }
 
-void FramedWriter::cancel() {
+void FramedWriter::cancelImpl() {
   writerSubscription_.cancel();
 }
 

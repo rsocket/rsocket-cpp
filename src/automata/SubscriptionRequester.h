@@ -13,7 +13,6 @@
 #include "src/automata/StreamSubscriptionRequesterBase.h"
 #include "src/mixins/ExecutorMixin.h"
 #include "src/mixins/LoggingMixin.h"
-#include "src/mixins/MemoryMixin.h"
 #include "src/mixins/MixinTerminator.h"
 #include "src/mixins/SourceIfMixin.h"
 #include "src/mixins/StreamIfMixin.h"
@@ -41,6 +40,6 @@ class SubscriptionRequesterBase : public StreamSubscriptionRequesterBase {
   /// @}
 };
 
-using SubscriptionRequester = SourceIfMixin<StreamIfMixin<
-    ExecutorMixin<MemoryMixin<LoggingMixin<SubscriptionRequesterBase>>>>>;
+using SubscriptionRequester = SourceIfMixin<
+    StreamIfMixin<ExecutorMixin<LoggingMixin<SubscriptionRequesterBase>>>>;
 }

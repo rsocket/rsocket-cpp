@@ -12,14 +12,20 @@
 #include "src/ReactiveStreamsCompat.h"
 #include "src/Stats.h"
 
+namespace folly {
+class Executor;
+}
+
 namespace reactivesocket {
 
 class ConnectionAutomaton;
 class DuplexConnection;
-class RequestHandler;
+class RequestHandlerBase;
 class ReactiveSocket;
 enum class FrameType : uint16_t;
 using StreamId = uint32_t;
+
+folly::Executor& defaultExecutor();
 
 class KeepaliveTimer {
  public:
@@ -59,7 +65,7 @@ class ReactiveSocket {
 
   static std::unique_ptr<ReactiveSocket> fromClientConnection(
       std::unique_ptr<DuplexConnection> connection,
-      std::unique_ptr<RequestHandler> handler,
+      std::unique_ptr<RequestHandlerBase> handler,
       ConnectionSetupPayload setupPayload = ConnectionSetupPayload(),
       Stats& stats = Stats::noop(),
       std::unique_ptr<KeepaliveTimer> keepaliveTimer =
@@ -69,22 +75,33 @@ class ReactiveSocket {
 
   static std::unique_ptr<ReactiveSocket> fromServerConnection(
       std::unique_ptr<DuplexConnection> connection,
-      std::unique_ptr<RequestHandler> handler,
+      std::unique_ptr<RequestHandlerBase> handler,
       Stats& stats = Stats::noop(),
       ResumeSocketListener resumeListener =
           [](ReactiveSocket&,
              const ResumeIdentificationToken&,
              ResumePosition) { return false; });
 
-  Subscriber<Payload>& requestChannel(Subscriber<Payload>& responseSink);
+  std::shared_ptr<Subscriber<Payload>> requestChannel(
+      const std::shared_ptr<Subscriber<Payload>>& responseSink,
+      folly::Executor& executor = defaultExecutor());
 
-  void requestStream(Payload payload, Subscriber<Payload>& responseSink);
+  void requestStream(
+      Payload payload,
+      const std::shared_ptr<Subscriber<Payload>>& responseSink,
+      folly::Executor& executor = defaultExecutor());
 
-  void requestSubscription(Payload payload, Subscriber<Payload>& responseSink);
+  void requestSubscription(
+      Payload payload,
+      const std::shared_ptr<Subscriber<Payload>>& responseSink,
+      folly::Executor& executor = defaultExecutor());
+
+  void requestResponse(
+      Payload payload,
+      const std::shared_ptr<Subscriber<Payload>>& responseSink,
+      folly::Executor& executor = defaultExecutor());
 
   void requestFireAndForget(Payload request);
-
-  void requestResponse(Payload payload, Subscriber<Payload>& responseSink);
 
   void close();
 
@@ -105,7 +122,7 @@ class ReactiveSocket {
   ReactiveSocket(
       bool isServer,
       std::unique_ptr<DuplexConnection> connection,
-      std::unique_ptr<RequestHandler> handler,
+      std::unique_ptr<RequestHandlerBase> handler,
       ResumeSocketListener resumeListener,
       Stats& stats,
       std::unique_ptr<KeepaliveTimer> keepaliveTimer);
@@ -116,7 +133,7 @@ class ReactiveSocket {
       ResumePosition position);
 
   const std::shared_ptr<ConnectionAutomaton> connection_;
-  std::unique_ptr<RequestHandler> handler_;
+  std::unique_ptr<RequestHandlerBase> handler_;
   StreamId nextStreamId_;
   std::unique_ptr<KeepaliveTimer> keepaliveTimer_;
   ResumeSocketListener resumeSocketListener_;

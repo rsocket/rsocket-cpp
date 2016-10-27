@@ -38,9 +38,9 @@ class LoggingMixin : public Base {
 
   /// @{
   /// Publisher<Payload>
-  void subscribe(Subscriber<Payload>& subscriber) {
-    VLOG(6) << *this << "subscribe(" << &subscriber << ")";
-    Base::subscribe(subscriber);
+  void subscribe(std::shared_ptr<Subscriber<Payload>> subscriber) {
+    VLOG(6) << *this << "subscribe(" << subscriber.get() << ")";
+    Base::subscribe(std::move(subscriber));
   }
   /// @}
 
@@ -59,9 +59,9 @@ class LoggingMixin : public Base {
 
   /// @{
   /// Subscriber<Payload>
-  void onSubscribe(Subscription& subscription) {
-    VLOG(6) << *this << "onSubscribe(" << &subscription << ")";
-    Base::onSubscribe(subscription);
+  void onSubscribe(std::shared_ptr<Subscription> subscription) {
+    VLOG(6) << *this << "onSubscribe(" << subscription.get() << ")";
+    Base::onSubscribe(std::move(subscription));
   }
 
   void onNext(Payload payload) {

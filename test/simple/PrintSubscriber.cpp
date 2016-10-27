@@ -6,8 +6,8 @@
 #include <iostream>
 
 namespace reactivesocket {
-void PrintSubscriber::onSubscribe(Subscription& subscription) {
-  subscription.request(std::numeric_limits<int32_t>::max());
+void PrintSubscriber::onSubscribe(std::shared_ptr<Subscription> subscription) {
+  subscription->request(std::numeric_limits<int32_t>::max());
 }
 
 void PrintSubscriber::onNext(Payload element) {
