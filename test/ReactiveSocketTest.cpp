@@ -406,10 +406,10 @@ TEST(ReactiveSocketTest, RequestSubscriptionSurplusResponse) {
   auto serverConn = folly::make_unique<InlineConnection>();
   clientConn->connectTo(*serverConn);
 
-  StrictMock<UnmanagedMockSubscriber<Payload>> clientInput;
-  StrictMock<UnmanagedMockSubscription> serverOutputSub;
-  Subscription* clientInputSub = nullptr;
-  Subscriber<Payload>* serverOutput = nullptr;
+  auto clientInput = std::make_shared<StrictMock<MockSubscriber<Payload>>>();
+  auto serverOutputSub = std::make_shared<StrictMock<MockSubscription>>();
+  std::shared_ptr<Subscription> clientInputSub;
+  std::shared_ptr<Subscriber<Payload>> serverOutput;
 
   auto clientSock = ReactiveSocket::fromClientConnection(
       std::move(clientConn),
@@ -428,9 +428,9 @@ TEST(ReactiveSocketTest, RequestSubscriptionSurplusResponse) {
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
 
   // Client creates a subscription.
-  EXPECT_CALL(clientInput, onSubscribe_(_))
+  EXPECT_CALL(*clientInput, onSubscribe_(_))
       .InSequence(s)
-      .WillOnce(Invoke([&](Subscription* sub) {
+      .WillOnce(Invoke([&](std::shared_ptr<Subscription> sub) {
         clientInputSub = sub;
         // Request one payload immediately.
         clientInputSub->request(1);
@@ -439,11 +439,13 @@ TEST(ReactiveSocketTest, RequestSubscriptionSurplusResponse) {
   EXPECT_CALL(
       serverHandlerRef, handleRequestSubscription_(Equals(&originalPayload), _))
       .InSequence(s)
-      .WillOnce(Invoke([&](Payload& request, Subscriber<Payload>* response) {
-        serverOutput = response;
-        serverOutput->onSubscribe(serverOutputSub);
-      }));
-  EXPECT_CALL(serverOutputSub, request_(1))
+      .WillOnce(Invoke(
+          [&](Payload& request,
+              const std::shared_ptr<Subscriber<Payload>>& response) {
+            serverOutput = response;
+            serverOutput->onSubscribe(serverOutputSub);
+          }));
+  EXPECT_CALL(*serverOutputSub, request_(1))
       .InSequence(s)
       // The server delivers immediately, but an extra one.
       .WillOnce(Invoke([&](size_t) {
@@ -451,12 +453,12 @@ TEST(ReactiveSocketTest, RequestSubscriptionSurplusResponse) {
         serverOutput->onNext(Payload(originalPayload->clone()));
       }));
   // Client receives the first payload.
-  EXPECT_CALL(clientInput, onNext_(Equals(&originalPayload))).InSequence(s);
+  EXPECT_CALL(*clientInput, onNext_(Equals(&originalPayload))).InSequence(s);
   // Client receives error instead of the second payload.
-  EXPECT_CALL(clientInput, onError_(_)).InSequence(s).WillOnce(Invoke([&](folly::exception_wrapper ex) {
-  }));
-//  // Client closes the subscription in response.
-  EXPECT_CALL(serverOutputSub, cancel_()).InSequence(s).WillOnce(Invoke([&]() {
+  EXPECT_CALL(*clientInput, onError_(_)).Times(1).InSequence(s);
+  EXPECT_CALL(*clientInput, onComplete_()).Times(0);
+  //  // Client closes the subscription in response.
+  EXPECT_CALL(*serverOutputSub, cancel_()).InSequence(s).WillOnce(Invoke([&]() {
     serverOutput->onComplete();
   }));
 
