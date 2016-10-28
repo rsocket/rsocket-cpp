@@ -13,7 +13,6 @@
 #include "src/automata/StreamSubscriptionRequesterBase.h"
 #include "src/mixins/ExecutorMixin.h"
 #include "src/mixins/LoggingMixin.h"
-#include "src/mixins/MemoryMixin.h"
 #include "src/mixins/MixinTerminator.h"
 #include "src/mixins/SourceIfMixin.h"
 #include "src/mixins/StreamIfMixin.h"
@@ -33,14 +32,14 @@ class SubscriptionRequesterBase : public StreamSubscriptionRequesterBase {
  public:
   using Base::Base;
 
+  std::ostream& logPrefix(std::ostream& os);
+
  protected:
   /// @{
   void sendRequestFrame(FrameFlags, size_t, Payload&&) override;
-  std::ostream& logPrefix(std::ostream& os);
   /// @}
 };
 
-using SubscriptionRequester =
-    SourceIfMixin<StreamIfMixin<LoggingMixin<ExecutorMixin<
-        LoggingMixin<MemoryMixin<LoggingMixin<SubscriptionRequesterBase>>>>>>>;
+using SubscriptionRequester = SourceIfMixin<
+    StreamIfMixin<ExecutorMixin<LoggingMixin<SubscriptionRequesterBase>>>>;
 }

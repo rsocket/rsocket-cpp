@@ -8,8 +8,8 @@
 
 #include <reactive-streams/utilities/AllowanceSemaphore.h>
 #include <reactive-streams/utilities/SmartPointers.h>
-#include "src/ReactiveSocket.h"
 #include "src/Payload.h"
+#include "src/ReactiveSocket.h"
 #include "src/ReactiveStreamsCompat.h"
 #include "src/ResumeCache.h"
 #include "src/ResumeTracker.h"
@@ -50,7 +50,8 @@ class ConnectionAutomaton :
     /// Registered as an input in the DuplexConnection.
     public Subscriber<std::unique_ptr<folly::IOBuf>>,
     /// Receives signals about connection writability.
-    public Subscription {
+    public Subscription,
+    public std::enable_shared_from_this<ConnectionAutomaton> {
  public:
   ConnectionAutomaton(
       std::unique_ptr<DuplexConnection> connection,
@@ -88,7 +89,9 @@ class ConnectionAutomaton :
   /// No frames will be issued as a result of this call. Stream automaton
   /// must take care of writing appropriate frames to the connection, using
   /// ::writeFrame after calling this method.
-  void addStream(StreamId streamId, AbstractStreamAutomaton& automaton);
+  void addStream(
+      StreamId streamId,
+      std::shared_ptr<AbstractStreamAutomaton> automaton);
 
   /// Enqueues provided frame to be written to the underlying connection.
   /// Enqueuing a terminal frame does not end the stream.
@@ -138,7 +141,7 @@ class ConnectionAutomaton :
   bool endStreamInternal(StreamId streamId, StreamCompletionSignal signal);
 
   /// @{
-  void onSubscribe(Subscription&) override;
+  void onSubscribe(std::shared_ptr<Subscription>) override;
 
   void onNext(std::unique_ptr<folly::IOBuf>) override;
 
@@ -167,18 +170,21 @@ class ConnectionAutomaton :
   void drainOutputFramesQueue();
   void outputFrame(std::unique_ptr<folly::IOBuf>);
 
-  std::unique_ptr<DuplexConnection> connection_;
+  std::shared_ptr<DuplexConnection> connection_;
   StreamAutomatonFactory factory_;
-  // TODO(stupaq): looks like a bug that I have to qualify this
+
   reactivestreams::SubscriberPtr<
       reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
       connectionOutput_;
   reactivestreams::SubscriptionPtr<Subscription> connectionInputSub_;
 
-  std::unordered_map<StreamId, AbstractStreamAutomaton*> streams_;
+  std::unordered_map<StreamId, std::shared_ptr<AbstractStreamAutomaton>>
+      streams_;
+
   reactivestreams::AllowanceSemaphore writeAllowance_;
-  std::deque<std::unique_ptr<folly::IOBuf>>
-      pendingWrites_; // TODO(stupaq): two vectors?
+
+  std::deque<std::unique_ptr<folly::IOBuf>> pendingWrites_;
+
   Stats& stats_;
   bool isServer_;
   bool isResumable_;

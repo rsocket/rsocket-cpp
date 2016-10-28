@@ -2,111 +2,150 @@
 
 #include "TcpDuplexConnection.h"
 #include <folly/ExceptionWrapper.h>
-#include <folly/Memory.h>
+#include <folly/SocketAddress.h>
+#include <folly/io/IOBufQueue.h>
+#include <folly/io/async/AsyncTransport.h>
 #include <glog/logging.h>
-#include "src/mixins/MemoryMixin.h"
+#include <reactive-streams/utilities/SmartPointers.h>
+#include "src/SubscriberBase.h"
+#include "src/SubscriptionBase.h"
 
 namespace reactivesocket {
 using namespace ::folly;
 
-void TcpSubscriptionBase::request(size_t n) {
-  // ignored for now, currently flow control is only at higher layers
-}
+class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
+                        public ::folly::AsyncTransportWrapper::ReadCallback,
+                        public SubscriptionBase,
+                        public SubscriberBaseT<std::unique_ptr<folly::IOBuf>> {
+ public:
+  explicit TcpReaderWriter(
+      folly::AsyncSocket::UniquePtr&& socket,
+      Stats& stats = Stats::noop())
+      : socket_(std::move(socket)), stats_(stats) {}
 
-void TcpSubscriptionBase::cancel() {
-  connection_.closeFromReader();
-}
-
-Subscriber<std::unique_ptr<folly::IOBuf>>& TcpDuplexConnection::getOutput() {
-  if (!outputSubscriber_) {
-    outputSubscriber_ = folly::make_unique<TcpOutputSubscriber>(*this);
+  ~TcpReaderWriter() {
+    socket_->close();
   }
-  return *outputSubscriber_;
-};
 
-void TcpDuplexConnection::setInput(
-    Subscriber<std::unique_ptr<folly::IOBuf>>& inputSubscriber) {
-  inputSubscriber_.reset(&inputSubscriber);
+  void setInput(
+      std::shared_ptr<reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
+          inputSubscriber) {
+    CHECK(!inputSubscriber_);
+    inputSubscriber_.reset(std::move(inputSubscriber));
+    inputSubscriber_.onSubscribe(SubscriptionBase::shared_from_this());
 
-  auto& subscription = createManagedInstance<TcpSubscriptionBase>(*this);
-  inputSubscriber.onSubscribe(subscription);
+    socket_->setReadCB(this);
+  }
 
-  socket_->setReadCB(this);
-};
+ private:
+  void onSubscribeImpl(std::shared_ptr<Subscription> subscription) override {
+    // no flow control at tcp level, since we can't know the size of messages
+    subscription->request(std::numeric_limits<size_t>::max());
+  }
 
-void TcpDuplexConnection::send(std::unique_ptr<folly::IOBuf> element) {
-  stats_.bytesWritten(element->computeChainDataLength());
-  socket_->writeChain(this, std::move(element));
-}
+  void onNextImpl(std::unique_ptr<folly::IOBuf> element) override {
+    send(std::move(element));
+  }
 
-void TcpDuplexConnection::writeSuccess() noexcept {}
+  void onCompleteImpl() override {
+    closeFromWriter();
+  }
 
-void TcpDuplexConnection::writeErr(
-    size_t bytesWritten,
-    const AsyncSocketException& ex) noexcept {
-  if (inputSubscriber_) {
+  void onErrorImpl(folly::exception_wrapper ex) override {
+    closeFromWriter();
+  }
+
+  void requestImpl(size_t n) override {
+    // ignored for now, currently flow control is only at higher layers
+  }
+
+  void cancelImpl() override {
+    closeFromReader();
+  }
+
+  void send(std::unique_ptr<folly::IOBuf> element) {
+    stats_.bytesWritten(element->computeChainDataLength());
+    socket_->writeChain(this, std::move(element));
+  }
+
+  void closeFromWriter() {
+    socket_->close();
+  }
+
+  void closeFromReader() {
+    socket_->close();
+  }
+
+  void writeSuccess() noexcept override {}
+  void writeErr(
+      size_t bytesWritten,
+      const ::folly::AsyncSocketException& ex) noexcept override {
+    if (inputSubscriber_) {
+      inputSubscriber_.onError(ex);
+    }
+  }
+
+  void getReadBuffer(void** bufReturn, size_t* lenReturn) noexcept override {
+    std::tie(*bufReturn, *lenReturn) = readBuffer_.preallocate(4096, 4096);
+  }
+
+  void readDataAvailable(size_t len) noexcept override {
+    readBuffer_.postallocate(len);
+
+    stats_.bytesRead(len);
+
+    if (inputSubscriber_) {
+      readBufferAvailable(readBuffer_.split(len));
+    }
+  }
+
+  void readEOF() noexcept override {
+    inputSubscriber_.onComplete();
+  }
+
+  void readErr(const folly::AsyncSocketException& ex) noexcept override {
     inputSubscriber_.onError(ex);
   }
-}
 
-void TcpDuplexConnection::getReadBuffer(
-    void** bufReturn,
-    size_t* lenReturn) noexcept {
-  std::tie(*bufReturn, *lenReturn) = readBuffer_.preallocate(4096, 4096);
-}
-
-void TcpDuplexConnection::readDataAvailable(size_t len) noexcept {
-  readBuffer_.postallocate(len);
-
-  stats_.bytesRead(len);
-
-  if (inputSubscriber_) {
-    readBufferAvailable(readBuffer_.split(len));
+  bool isBufferMovable() noexcept override {
+    return true;
   }
-}
 
-void TcpDuplexConnection::readEOF() noexcept {
-  if (inputSubscriber_) {
-    inputSubscriber_.onError(std::runtime_error("connection closed"));
+  void readBufferAvailable(
+      std::unique_ptr<folly::IOBuf> readBuf) noexcept override {
+    inputSubscriber_.onNext(std::move(readBuf));
   }
-}
 
-void TcpDuplexConnection::readErr(
-    const folly::AsyncSocketException& ex) noexcept {
-  inputSubscriber_.onError(ex);
-}
+  folly::IOBufQueue readBuffer_{folly::IOBufQueue::cacheChainLength()};
+  folly::AsyncSocket::UniquePtr socket_;
+  Stats& stats_;
 
-bool TcpDuplexConnection::isBufferMovable() noexcept {
-  return true;
-}
-
-void TcpDuplexConnection::readBufferAvailable(
-    std::unique_ptr<IOBuf> readBuf) noexcept {
-  inputSubscriber_.onNext(std::move(readBuf));
-}
-
-void TcpDuplexConnection::closeFromWriter() {
-  socket_->close();
-}
-
-void TcpDuplexConnection::closeFromReader() {
-  socket_->close();
-}
-
-void TcpOutputSubscriber::onSubscribe(Subscription& subscription) {
-  // no flow control at tcp level, since we can't know the size of messages
-  subscription.request(std::numeric_limits<size_t>::max());
+  SubscriberPtr<reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
+      inputSubscriber_;
 };
 
-void TcpOutputSubscriber::onNext(std::unique_ptr<folly::IOBuf> element) {
-  connection_.send(std::move(element));
-};
-
-void TcpOutputSubscriber::onComplete() {
-  connection_.closeFromWriter();
-};
-
-void TcpOutputSubscriber::onError(folly::exception_wrapper ex) {
-  connection_.closeFromWriter();
-};
+TcpDuplexConnection::TcpDuplexConnection(
+    folly::AsyncSocket::UniquePtr&& socket,
+    Stats& stats)
+    : tcpReaderWriter_(
+          std::make_shared<TcpReaderWriter>(std::move(socket), stats)),
+      stats_(stats) {
+  stats_.connectionCreated("tcp", this);
 }
+
+TcpDuplexConnection::~TcpDuplexConnection() {
+  stats_.connectionClosed("tcp", this);
+}
+
+std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>>
+TcpDuplexConnection::getOutput() {
+  return tcpReaderWriter_;
+}
+
+void TcpDuplexConnection::setInput(
+    std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>>
+        inputSubscriber) {
+  tcpReaderWriter_->setInput(std::move(inputSubscriber));
+}
+
+} // reactivesocket

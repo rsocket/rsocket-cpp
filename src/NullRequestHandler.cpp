@@ -3,12 +3,11 @@
 #include "NullRequestHandler.h"
 
 #include <folly/ExceptionWrapper.h>
-#include "src/mixins/MemoryMixin.h"
 
 namespace reactivesocket {
 
-void NullSubscriber::onSubscribe(Subscription& subscription) {
-  subscription.cancel();
+void NullSubscriber::onSubscribe(std::shared_ptr<Subscription> subscription) {
+  subscription->cancel();
 }
 
 void NullSubscriber::onNext(Payload /*element*/) {}
@@ -21,36 +20,36 @@ void NullSubscription::request(size_t /*n*/){};
 
 void NullSubscription::cancel() {}
 
-Subscriber<Payload>& NullRequestHandler::handleRequestChannel(
+std::shared_ptr<Subscriber<Payload>> NullRequestHandler::handleRequestChannel(
     Payload /*request*/,
-    Subscriber<Payload>& response) {
+    const std::shared_ptr<Subscriber<Payload>>& response) {
   // TODO(lehecka): get rid of onSubscribe call
-  response.onSubscribe(createManagedInstance<NullSubscription>());
-  response.onError(std::runtime_error("NullRequestHandler"));
-  return createManagedInstance<NullSubscriber>();
+  response->onSubscribe(std::make_shared<NullSubscription>());
+  response->onError(std::runtime_error("NullRequestHandler"));
+  return std::make_shared<NullSubscriber>();
 }
 
 void NullRequestHandler::handleRequestStream(
     Payload /*request*/,
-    Subscriber<Payload>& response) {
+    const std::shared_ptr<Subscriber<Payload>>& response) {
   // TODO(lehecka): get rid of onSubscribe call
-  response.onSubscribe(createManagedInstance<NullSubscription>());
-  response.onError(std::runtime_error("NullRequestHandler"));
+  response->onSubscribe(std::make_shared<NullSubscription>());
+  response->onError(std::runtime_error("NullRequestHandler"));
 }
 
 void NullRequestHandler::handleRequestSubscription(
     Payload /*request*/,
-    Subscriber<Payload>& response) {
+    const std::shared_ptr<Subscriber<Payload>>& response) {
   // TODO(lehecka): get rid of onSubscribe call
-  response.onSubscribe(createManagedInstance<NullSubscription>());
-  response.onError(std::runtime_error("NullRequestHandler"));
+  response->onSubscribe(std::make_shared<NullSubscription>());
+  response->onError(std::runtime_error("NullRequestHandler"));
 }
 
 void NullRequestHandler::handleRequestResponse(
     Payload /*request*/,
-    Subscriber<Payload>& response) {
-  response.onSubscribe(createManagedInstance<NullSubscription>());
-  response.onError(std::runtime_error("NullRequestHandler"));
+    const std::shared_ptr<Subscriber<Payload>>& response) {
+  response->onSubscribe(std::make_shared<NullSubscription>());
+  response->onError(std::runtime_error("NullRequestHandler"));
 }
 
 void NullRequestHandler::handleFireAndForgetRequest(Payload /*request*/) {}
@@ -60,4 +59,4 @@ void NullRequestHandler::handleMetadataPush(
 
 void NullRequestHandler::handleSetupPayload(
     ConnectionSetupPayload /*request*/) {}
-}
+} // reactivesocket

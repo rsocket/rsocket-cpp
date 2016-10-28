@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include <folly/Optional.h>
 #include <iosfwd>
 
 #include <reactive-streams/utilities/SmartPointers.h>
@@ -11,7 +10,6 @@
 #include "src/ReactiveStreamsCompat.h"
 #include "src/mixins/ExecutorMixin.h"
 #include "src/mixins/LoggingMixin.h"
-#include "src/mixins/MemoryMixin.h"
 #include "src/mixins/MixinTerminator.h"
 #include "src/mixins/SourceIfMixin.h"
 #include "src/mixins/StreamIfMixin.h"
@@ -35,10 +33,12 @@ class RequestResponseRequesterBase : public MixinTerminator {
   void onNext(Payload);
 
   /// @{
-  void subscribe(Subscriber<Payload>& subscriber);
+  void subscribe(std::shared_ptr<Subscriber<Payload>> subscriber);
   void request(size_t);
   void cancel();
   /// @}
+
+  std::ostream& logPrefix(std::ostream& os);
 
  protected:
   /// @{
@@ -51,8 +51,6 @@ class RequestResponseRequesterBase : public MixinTerminator {
   void onNextFrame(Frame_ERROR&&);
 
   void onError(folly::exception_wrapper ex);
-
-  std::ostream& logPrefix(std::ostream& os);
   /// @}
 
   /// State of the Subscription requester.
@@ -65,7 +63,7 @@ class RequestResponseRequesterBase : public MixinTerminator {
   // Whether the Subscriber made the request(1) call and thus is
   // ready to accept the payload.
   bool waitingForPayload_{false};
-  folly::Optional<Payload> payload_;
+  Payload payload_;
 
   /// A Subscriber that will consume payloads.
   /// This mixin is responsible for delivering a terminal signal to the
@@ -73,7 +71,6 @@ class RequestResponseRequesterBase : public MixinTerminator {
   reactivestreams::SubscriberPtr<Subscriber<Payload>> consumingSubscriber_;
 };
 
-using RequestResponseRequester =
-    SourceIfMixin<StreamIfMixin<LoggingMixin<ExecutorMixin<LoggingMixin<
-        MemoryMixin<LoggingMixin<RequestResponseRequesterBase>>>>>>>;
+using RequestResponseRequester = SourceIfMixin<
+    StreamIfMixin<ExecutorMixin<LoggingMixin<RequestResponseRequesterBase>>>>;
 }

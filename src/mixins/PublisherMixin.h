@@ -24,9 +24,9 @@ class PublisherMixin : public Base {
   using Base::Base;
 
   /// @{
-  void onSubscribe(Subscription& subscription) {
+  void onSubscribe(std::shared_ptr<Subscription> subscription) {
     DCHECK(!producingSubscription_);
-    producingSubscription_.reset(&subscription);
+    producingSubscription_.reset(std::move(subscription));
   }
 
   void onNext(Payload payload, FrameFlags flags = FrameFlags_EMPTY) {
@@ -34,6 +34,11 @@ class PublisherMixin : public Base {
     Base::connection_->outputFrameOrEnqueue(frame.serializeOut());
   }
   /// @}
+
+  std::ostream& logPrefix(std::ostream& os) {
+    return os << "PublisherMixin(" << &this->connection_ << ", "
+              << this->streamId_ << "): ";
+  }
 
  protected:
   /// @{
@@ -47,6 +52,9 @@ class PublisherMixin : public Base {
   template <typename Frame>
   typename std::enable_if<Frame::Trait_CarriesAllowance>::type onNextFrame(
       Frame&& frame) {
+    DCHECK(producingSubscription_)
+        << "subscriber::onSubscribe has to be called before onNextFrame. "
+           "This is expected in RequestHandler::handleXXX(subscriber) method";
     if (size_t n = frame.requestN_) {
       producingSubscription_.request(n);
     }
@@ -54,6 +62,9 @@ class PublisherMixin : public Base {
   }
 
   void onNextFrame(Frame_REQUEST_RESPONSE&& frame) {
+    DCHECK(producingSubscription_)
+        << "subscriber::onSubscribe has to be called before onNextFrame. "
+           "This is expected in RequestHandler::handleXXX(subscriber) method";
     producingSubscription_.request(1);
     Base::onNextFrame(std::move(frame));
   }
@@ -65,11 +76,6 @@ class PublisherMixin : public Base {
     Base::onNextFrame(std::move(frame));
   }
   /// @}
-
-  std::ostream& logPrefix(std::ostream& os) {
-    return os << "PublisherMixin(" << &this->connection_ << ", "
-              << this->streamId_ << "): ";
-  }
 
  private:
   /// A Subscription that constrols production of payloads.

@@ -2,8 +2,8 @@
 
 #pragma once
 
+#include <src/DuplexConnection.h>
 #include <src/Stats.h>
-#include <src/tcp/TcpDuplexConnection.h>
 
 namespace reactivesocket {
 class StatsPrinter : public Stats {

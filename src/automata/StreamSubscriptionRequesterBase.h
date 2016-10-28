@@ -13,7 +13,6 @@
 #include "src/mixins/ConsumerMixin.h"
 #include "src/mixins/ExecutorMixin.h"
 #include "src/mixins/LoggingMixin.h"
-#include "src/mixins/MemoryMixin.h"
 #include "src/mixins/MixinTerminator.h"
 #include "src/mixins/SourceIfMixin.h"
 #include "src/mixins/StreamIfMixin.h"
@@ -28,8 +27,8 @@ enum class StreamCompletionSignal;
 
 /// Implementation of stream automaton that represents a Subscription requester.
 class StreamSubscriptionRequesterBase
-    : public LoggingMixin<ConsumerMixin<Frame_RESPONSE, MixinTerminator>> {
-  using Base = LoggingMixin<ConsumerMixin<Frame_RESPONSE, MixinTerminator>>;
+    : public ConsumerMixin<Frame_RESPONSE, MixinTerminator> {
+  using Base = ConsumerMixin<Frame_RESPONSE, MixinTerminator>;
 
  public:
   using Base::Base;
@@ -45,6 +44,8 @@ class StreamSubscriptionRequesterBase
   void cancel();
   /// @}
 
+  std::ostream& logPrefix(std::ostream& os);
+
  protected:
   /// Override in subclass to send the correct type of request frame
   virtual void sendRequestFrame(FrameFlags, size_t, Payload&&) = 0;
@@ -58,8 +59,6 @@ class StreamSubscriptionRequesterBase
   void onNextFrame(Frame_RESPONSE&&);
 
   void onNextFrame(Frame_ERROR&&);
-
-  std::ostream& logPrefix(std::ostream& os);
   /// @}
 
   /// State of the Subscription requester.

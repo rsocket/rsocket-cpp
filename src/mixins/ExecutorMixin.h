@@ -8,6 +8,7 @@
 #include <queue>
 
 #include <folly/ExceptionWrapper.h>
+#include <folly/Executor.h>
 #include <folly/Function.h>
 #include <folly/Memory.h>
 #include <folly/futures/QueuedImmediateExecutor.h>
@@ -19,74 +20,113 @@
 
 namespace reactivesocket {
 
-/// Instead of calling into the respective Base methods, schedules signals
-/// delivery on an executor. Non-signal methods are simply forwarded.
-///
-/// Uses lazy method instantiantiation trick, see LoggingMixin.
-template <typename Base>
-class ExecutorMixin : public Base {
+folly::Executor& defaultExecutor();
+
+class ExecutorBase {
  public:
-  using Base::Base;
+  explicit ExecutorBase(
+      folly::Executor& executor = defaultExecutor(),
+      bool startExecutor = true);
 
-  ~ExecutorMixin() {}
-
-  /// The mixin starts in a queueing mode, where it merely queues signal
+  /// We start in a queueing mode, where it merely queues signal
   /// deliveries until ::start is invoked.
   ///
   /// Calling into this method may deliver all enqueued signals immediately.
-  void start() {
+  void start();
+
+ protected:
+  template <typename F>
+  void runInExecutor(F&& func) {
     if (pendingSignals_) {
+<<<<<<< HEAD
       runInExecutor([pending_signals = std::move(pendingSignals_)]() mutable {
         for (auto& signal : *pending_signals) {
           signal();
         }
       });
+=======
+      pendingSignals_->emplace_back(func);
+    } else {
+      executor_.add(std::move(func));
+>>>>>>> master
     }
   }
 
+ private:
+  using PendingSignals = std::vector<std::function<void()>>;
+  std::unique_ptr<PendingSignals> pendingSignals_;
+  folly::Executor& executor_;
+};
+
+/// Instead of calling into the respective Base methods, schedules signals
+/// delivery on an executor. Non-signal methods are simply forwarded.
+///
+/// Uses lazy method instantiantiation trick, see LoggingMixin.
+template <typename Base>
+class ExecutorMixin : public Base,
+                      public ExecutorBase,
+                      public std::enable_shared_from_this<ExecutorMixin<Base>> {
+  static_assert(
+      !std::is_base_of<std::enable_shared_from_this<Base>, Base>::value,
+      "enable_shared_from_this is already inherited");
+
+ public:
+  struct Parameters : Base::Parameters {
+    Parameters(
+        const typename Base::Parameters& baseParams,
+        folly::Executor& _executor)
+        : Base::Parameters(baseParams), executor(_executor) {}
+    folly::Executor& executor;
+  };
+
+  ExecutorMixin(const Parameters& params)
+      : Base(params), ExecutorBase(params.executor, false) {}
+
   /// @{
   /// Publisher<Payload>
-  void subscribe(Subscriber<Payload>& subscriber) {
+  void subscribe(std::shared_ptr<Subscriber<Payload>> subscriber) {
     // This call punches through the executor-enforced ordering, to ensure that
     // the Subscriber pointer is set as soon as possible.
     // More esoteric reason: this is not a signal in ReactiveStreams language.
-    Base::subscribe(subscriber);
+    Base::subscribe(std::move(subscriber));
   }
   /// @}
 
   /// @{
   /// Subscription
   void request(size_t n) {
-    runInExecutor(std::bind(&Base::request, this, n));
+    runInExecutor(std::bind(&Base::request, this->shared_from_this(), n));
   }
 
   void cancel() {
-    runInExecutor(std::bind(&Base::cancel, this));
+    runInExecutor(std::bind(&Base::cancel, this->shared_from_this()));
   }
   /// @}
 
   /// @{
   /// Subscriber<Payload>
-  void onSubscribe(Subscription& subscription) {
+  void onSubscribe(std::shared_ptr<Subscription> subscription) {
     // This call punches through the executor-enforced ordering, to ensure that
     // the Subscription pointer is set as soon as possible.
     // More esoteric reason: this is not a signal in ReactiveStreams language.
-    Base::onSubscribe(subscription);
+    Base::onSubscribe(std::move(subscription));
   }
 
   void onNext(Payload payload) {
-    runInExecutor([ this, payload = std::move(payload) ]() mutable {
-      Base::onNext(std::move(payload));
+    std::shared_ptr<Base> basePtr = this->shared_from_this();
+    runInExecutor([ basePtr, payload = std::move(payload) ]() mutable {
+      basePtr->onNext(payload);
     });
   }
 
   void onComplete() {
-    runInExecutor(std::bind(&Base::onComplete, this));
+    runInExecutor(std::bind(&Base::onComplete, this->shared_from_this()));
   }
 
   void onError(folly::exception_wrapper ex) {
-    runInExecutor([ this, ex = std::move(ex) ]() mutable {
-      Base::onError(std::move(ex));
+    std::shared_ptr<Base> basePtr = this->shared_from_this();
+    runInExecutor([ basePtr, ex = std::move(ex) ]() mutable {
+      basePtr->onError(movedEx.move());
     });
   }
   /// @}
@@ -96,6 +136,11 @@ class ExecutorMixin : public Base {
     Base::endStream(signal);
   }
   /// @}
+
+  std::ostream& logPrefix(std::ostream& os) {
+    return os << "ExecutorMixin(" << &this->connection_ << ", "
+              << this->streamId_ << "): ";
+  }
 
  protected:
   /// @{
@@ -109,23 +154,5 @@ class ExecutorMixin : public Base {
   }
   /// @}
 
-  std::ostream& logPrefix(std::ostream& os) {
-    return os << "ExecutorMixin(" << &this->connection_ << ", "
-              << this->streamId_ << "): ";
-  }
-
- private:
-  template <typename F>
-  void runInExecutor(F&& func) {
-    if (pendingSignals_) {
-      pendingSignals_->emplace_back(std::forward<F>(func));
-    } else {
-      folly::QueuedImmediateExecutor::addStatic(std::forward<F>(func));
-    }
-  }
-
-  using PendingSignals = std::vector<folly::Function<void()>>;
-  std::unique_ptr<PendingSignals> pendingSignals_{
-      folly::make_unique<PendingSignals>()};
 };
-}
+} // reactivesocket

@@ -13,7 +13,6 @@
 #include "src/mixins/ConsumerMixin.h"
 #include "src/mixins/ExecutorMixin.h"
 #include "src/mixins/LoggingMixin.h"
-#include "src/mixins/MemoryMixin.h"
 #include "src/mixins/MixinTerminator.h"
 #include "src/mixins/PublisherMixin.h"
 #include "src/mixins/SinkIfMixin.h"
@@ -30,12 +29,12 @@ enum class StreamCompletionSignal;
 
 /// Implementation of stream automaton that represents a Channel requester.
 class ChannelRequesterBase
-    : public LoggingMixin<PublisherMixin<
+    : public PublisherMixin<
           Frame_REQUEST_CHANNEL,
-          LoggingMixin<ConsumerMixin<Frame_RESPONSE, MixinTerminator>>>> {
-  using Base = LoggingMixin<PublisherMixin<
+          ConsumerMixin<Frame_RESPONSE, MixinTerminator>> {
+  using Base = PublisherMixin<
       Frame_REQUEST_CHANNEL,
-      LoggingMixin<ConsumerMixin<Frame_RESPONSE, MixinTerminator>>>>;
+      ConsumerMixin<Frame_RESPONSE, MixinTerminator>>;
 
  public:
   using Base::Base;
@@ -43,7 +42,7 @@ class ChannelRequesterBase
   /// @{
   /// A Subscriber implementation exposed to the user of ReactiveSocket to
   /// receive "request" payloads.
-  void onSubscribe(Subscription&);
+  void onSubscribe(std::shared_ptr<Subscription>);
 
   void onNext(Payload);
 
@@ -58,6 +57,8 @@ class ChannelRequesterBase
   void cancel();
   /// @}
 
+  std::ostream& logPrefix(std::ostream& os);
+
  protected:
   /// @{
   void endStream(StreamCompletionSignal);
@@ -68,8 +69,6 @@ class ChannelRequesterBase
   void onNextFrame(Frame_RESPONSE&&);
 
   void onNextFrame(Frame_ERROR&&);
-
-  std::ostream& logPrefix(std::ostream& os);
   /// @}
 
  private:
@@ -84,7 +83,6 @@ class ChannelRequesterBase
   reactivestreams::AllowanceSemaphore initialResponseAllowance_;
 };
 
-using ChannelRequester =
-    SourceIfMixin<SinkIfMixin<StreamIfMixin<LoggingMixin<ExecutorMixin<
-        LoggingMixin<MemoryMixin<LoggingMixin<ChannelRequesterBase>>>>>>>>;
+using ChannelRequester = SourceIfMixin<SinkIfMixin<
+    StreamIfMixin<ExecutorMixin<LoggingMixin<ChannelRequesterBase>>>>>;
 }

@@ -39,12 +39,27 @@ ConnectionAutomaton::ConnectionAutomaton(
 }
 
 void ConnectionAutomaton::connect() {
-  connectionOutput_.reset(&connection_->getOutput());
-  connectionOutput_.get()->onSubscribe(*this);
-  // This may call ::onSubscribe in-line, which calls ::request on the provided
-  // subscription, which might deliver frames in-line.
-  connection_->setInput(*this);
+  CHECK(connection_);
+  connectionOutput_.reset(connection_->getOutput());
+  connectionOutput_.onSubscribe(shared_from_this());
 
+  // the onSubscribe call on the previous line may have called the terminating
+  // signal
+  // which would call disconnect
+  if (connection_) {
+    // This may call ::onSubscribe in-line, which calls ::request on the
+    // provided
+    // subscription, which might deliver frames in-line.
+    // it can also call onComplete which will call disconnect() and reset the
+    // connection_
+    // while still inside of the connection_::setInput method. We will create
+    // a hard reference for that case and keep the object alive until we
+    // return from the setInput method
+    auto connectionCopy = connection_;
+    connectionCopy->setInput(shared_from_this());
+  }
+
+  // TODO: move to appropriate place
   stats_.socketCreated();
 }
 
@@ -75,7 +90,7 @@ void ConnectionAutomaton::disconnect() {
 void ConnectionAutomaton::reconnect(
     std::unique_ptr<DuplexConnection> newConnection) {
   disconnect();
-  connection_ = std::move(newConnection);
+  connection_ = std::shared_ptr<DuplexConnection>(std::move(newConnection));
   connect();
 }
 
@@ -87,8 +102,8 @@ ConnectionAutomaton::~ConnectionAutomaton() {
 
 void ConnectionAutomaton::addStream(
     StreamId streamId,
-    AbstractStreamAutomaton& automaton) {
-  auto result = streams_.emplace(streamId, &automaton);
+    std::shared_ptr<AbstractStreamAutomaton> automaton) {
+  auto result = streams_.emplace(streamId, std::move(automaton));
   (void)result;
   assert(result.second);
 }
@@ -124,9 +139,10 @@ bool ConnectionAutomaton::endStreamInternal(
 }
 
 /// @{
-void ConnectionAutomaton::onSubscribe(Subscription& subscription) {
+void ConnectionAutomaton::onSubscribe(
+    std::shared_ptr<Subscription> subscription) {
   assert(!connectionInputSub_);
-  connectionInputSub_.reset(&subscription);
+  connectionInputSub_.reset(std::move(subscription));
   // This may result in signals being issued by the connection in-line, see
   // ::connect.
   connectionInputSub_.request(std::numeric_limits<size_t>::max());
@@ -148,8 +164,9 @@ void ConnectionAutomaton::onNext(std::unique_ptr<folly::IOBuf> frame) {
   auto streamIdPtr = FrameHeader::peekStreamId(*frame);
   if (!streamIdPtr) {
     // Failed to deserialize the frame.
-    // TODO(stupaq): handle connection-level error
-    assert(false);
+    outputFrameOrEnqueue(
+        Frame_ERROR::connectionError("invalid frame").serializeOut());
+    disconnect();
     return;
   }
   auto streamId = *streamIdPtr;
@@ -189,7 +206,8 @@ void ConnectionAutomaton::onConnectionFrame(
             outputFrameOrEnqueue(frame.serializeOut());
           } else {
             outputFrameOrEnqueue(
-                Frame_ERROR::invalid("keepalive without flag").serializeOut());
+                Frame_ERROR::connectionError("keepalive without flag")
+                    .serializeOut());
             disconnect();
           }
         }
@@ -234,7 +252,7 @@ void ConnectionAutomaton::onConnectionFrame(
           resumeCache_->retransmitFromPosition(frame.position_, *this);
         } else {
           outputFrameOrEnqueue(
-              Frame_ERROR::canNotResume("can not resume").serializeOut());
+              Frame_ERROR::connectionError("can not resume").serializeOut());
           disconnect();
         }
       } else {
@@ -251,7 +269,7 @@ void ConnectionAutomaton::onConnectionFrame(
           resumeCache_->retransmitFromPosition(frame.position_, *this);
         } else {
           outputFrameOrEnqueue(
-              Frame_ERROR::canNotResume("can not resume").serializeOut());
+              Frame_ERROR::connectionError("can not resume").serializeOut());
           disconnect();
         }
       } else {
@@ -321,7 +339,8 @@ void ConnectionAutomaton::handleUnknownStream(
   // IDs -- let's forget about them for a moment
   if (!factory_(streamId, std::move(payload))) {
     outputFrameOrEnqueue(
-        Frame_ERROR::invalid("unknown stream " + folly::to<std::string>(streamId))
+        Frame_ERROR::connectionError(
+            folly::to<std::string>("unknown stream ", streamId))
             .serializeOut());
     disconnect();
   }

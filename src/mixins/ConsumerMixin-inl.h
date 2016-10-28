@@ -20,7 +20,7 @@ void ConsumerMixin<Frame, Base>::onError(folly::exception_wrapper ex) {
 
 template <typename Frame, typename Base>
 void ConsumerMixin<Frame, Base>::onNextFrame(Frame&& frame) {
-  if (frame.payload_.data) {
+  if (frame.payload_) {
     // Frames carry application-level payloads are taken into account when
     // figuring out flow control allowance.
     if (allowance_.tryAcquire()) {
@@ -51,7 +51,8 @@ void ConsumerMixin<Frame, Base>::sendRequests() {
 
 template <typename Frame, typename Base>
 void ConsumerMixin<Frame, Base>::handleFlowControlError() {
-  // TODO(stupaq): communicate flow control error and close the stream
-  CHECK(false);
+  consumingSubscriber_.onError(std::runtime_error("surplus response"));
+  Base::connection_->outputFrameOrEnqueue(
+      Frame_CANCEL(Base::streamId_).serializeOut());
 }
 }

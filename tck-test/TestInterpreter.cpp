@@ -5,7 +5,6 @@
 #include <folly/io/async/EventBase.h>
 #include <glog/logging.h>
 #include <src/ReactiveSocket.h>
-#include <src/mixins/MemoryMixin.h>
 #include "TypedCommands.h"
 
 using namespace folly;
@@ -74,11 +73,12 @@ void TestInterpreter::handleSubscribe(const SubscribeCommand& command) {
     // TODO
     LOG(ERROR) << "request response not implemented";
   } else if (command.isRequestStreamType()) {
-    auto& testSubscriber = createTestSubscriber(command.id());
+    auto testSubscriber = createTestSubscriber(command.id());
     rsEventBase_->runInEventBaseThreadAndWait([&]() {
       reactiveSocket_->requestStream(
           Payload(command.payloadData(), command.payloadMetadata()),
-          testSubscriber);
+          testSubscriber,
+          *rsEventBase_);
     });
   } else {
     throw std::runtime_error("unsupported interaction type");
@@ -86,20 +86,20 @@ void TestInterpreter::handleSubscribe(const SubscribeCommand& command) {
 }
 
 void TestInterpreter::handleRequest(const RequestCommand& command) {
-  getSubscriber(command.id()).request(command.n());
+  getSubscriber(command.id())->request(command.n());
 }
 
 void TestInterpreter::handleCancel(const CancelCommand& command) {
-  getSubscriber(command.id()).cancel();
+  getSubscriber(command.id())->cancel();
 }
 
 void TestInterpreter::handleAwait(const AwaitCommand& command) {
   if (command.isTerminalType()) {
-    getSubscriber(command.id()).awaitTerminalEvent();
+    getSubscriber(command.id())->awaitTerminalEvent();
   } else if (command.isAtLeastType()) {
-    getSubscriber(command.id()).awaitAtLeast(command.numElements());
+    getSubscriber(command.id())->awaitAtLeast(command.numElements());
   } else if (command.isNoEventsType()) {
-    getSubscriber(command.id()).awaitNoEvents(command.numElements());
+    getSubscriber(command.id())->awaitNoEvents(command.numElements());
   } else {
     throw std::runtime_error("unsupported await type");
   }
@@ -108,42 +108,44 @@ void TestInterpreter::handleAwait(const AwaitCommand& command) {
 void TestInterpreter::handleAssert(const AssertCommand& command) {
   if (command.isNoErrorAssert()) {
   } else if (command.isNoErrorAssert()) {
-    getSubscriber(command.id()).assertNoErrors();
+    getSubscriber(command.id())->assertNoErrors();
   } else if (command.isErrorAssert()) {
-    getSubscriber(command.id()).assertError();
+    getSubscriber(command.id())->assertError();
   } else if (command.isReceivedAssert()) {
-    getSubscriber(command.id()).assertValues(command.values());
+    getSubscriber(command.id())->assertValues(command.values());
   } else if (command.isReceivedNAssert()) {
-    getSubscriber(command.id()).assertValueCount(command.valueCount());
+    getSubscriber(command.id())->assertValueCount(command.valueCount());
   } else if (command.isReceivedAtLeastAssert()) {
-    getSubscriber(command.id()).assertReceivedAtLeast(command.valueCount());
+    getSubscriber(command.id())->assertReceivedAtLeast(command.valueCount());
   } else if (command.isCompletedAssert()) {
-    getSubscriber(command.id()).assertCompleted();
+    getSubscriber(command.id())->assertCompleted();
   } else if (command.isNotCompletedAssert()) {
-    getSubscriber(command.id()).assertNotCompleted();
+    getSubscriber(command.id())->assertNotCompleted();
   } else if (command.isCanceledAssert()) {
-    getSubscriber(command.id()).assertCanceled();
+    getSubscriber(command.id())->assertCanceled();
   } else {
     throw std::runtime_error("unsupported assert type");
   }
 }
 
-TestSubscriber& TestInterpreter::createTestSubscriber(const std::string& id) {
+std::shared_ptr<TestSubscriber> TestInterpreter::createTestSubscriber(
+    const std::string& id) {
   if (testSubscribers_.find(id) != testSubscribers_.end()) {
     throw std::runtime_error("test subscriber with the same id already exists");
   }
 
-  auto& testSubscriber = createManagedInstance<TestSubscriber>(*rsEventBase_);
-  testSubscribers_[id] = &testSubscriber;
+  auto testSubscriber = std::make_shared<TestSubscriber>();
+  testSubscribers_[id] = testSubscriber;
   return testSubscriber;
 }
 
-TestSubscriber& TestInterpreter::getSubscriber(const std::string& id) {
+std::shared_ptr<TestSubscriber> TestInterpreter::getSubscriber(
+    const std::string& id) {
   auto found = testSubscribers_.find(id);
   if (found == testSubscribers_.end()) {
     throw std::runtime_error("unable to find test subscriber with provided id");
   }
-  return *found->second;
+  return found->second;
 }
 
 } // tck

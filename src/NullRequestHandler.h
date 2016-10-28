@@ -10,7 +10,7 @@ namespace reactivesocket {
 class NullSubscriber : public Subscriber<Payload> {
  public:
   // Subscriber methods
-  void onSubscribe(Subscription& subscription) override;
+  void onSubscribe(std::shared_ptr<Subscription> subscription) override;
   void onNext(Payload element) override;
   void onComplete() override;
   void onError(folly::exception_wrapper ex) override;
@@ -25,18 +25,21 @@ class NullSubscription : public Subscription {
 
 class NullRequestHandler : public RequestHandler {
  public:
-  Subscriber<Payload>& handleRequestChannel(
+  std::shared_ptr<Subscriber<Payload>> handleRequestChannel(
       Payload request,
-      Subscriber<Payload>& response) override;
+      const std::shared_ptr<Subscriber<Payload>>& response) override;
 
-  void handleRequestStream(Payload request, Subscriber<Payload>& response)
-      override;
+  void handleRequestStream(
+      Payload request,
+      const std::shared_ptr<Subscriber<Payload>>& response) override;
 
-  void handleRequestSubscription(Payload request, Subscriber<Payload>& response)
-      override;
+  void handleRequestSubscription(
+      Payload request,
+      const std::shared_ptr<Subscriber<Payload>>& response) override;
 
-  void handleRequestResponse(Payload request, Subscriber<Payload>& response)
-      override;
+  void handleRequestResponse(
+      Payload request,
+      const std::shared_ptr<Subscriber<Payload>>& response) override;
 
   void handleFireAndForgetRequest(Payload request) override;
 

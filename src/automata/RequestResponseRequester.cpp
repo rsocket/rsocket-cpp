@@ -6,9 +6,10 @@
 
 namespace reactivesocket {
 
-void RequestResponseRequesterBase::subscribe(Subscriber<Payload>& subscriber) {
+void RequestResponseRequesterBase::subscribe(
+    std::shared_ptr<Subscriber<Payload>> subscriber) {
   DCHECK(!consumingSubscriber_);
-  consumingSubscriber_.reset(&subscriber);
+  consumingSubscriber_.reset(std::move(subscriber));
   // FIXME
   // Subscriber::onSubscribe is delivered externally, as it may attempt to
   // synchronously deliver Subscriber::request.
@@ -33,9 +34,15 @@ void RequestResponseRequesterBase::onNext(Payload request) {
 }
 
 void RequestResponseRequesterBase::request(size_t n) {
+  if (n == 0) {
+    return;
+  }
+
   if (payload_) {
-    consumingSubscriber_.onNext(std::move(payload_.value()));
-    payload_.clear();
+    consumingSubscriber_.onNext(std::move(payload_));
+    DCHECK(!payload_);
+    // TODO: only one response is expected so we should close the stream
+    //       after receiving it. Add unit tests for this.
   } else {
     waitingForPayload_ = true;
   }
@@ -97,6 +104,8 @@ void RequestResponseRequesterBase::onNextFrame(Frame_RESPONSE&& frame) {
       CHECK(false);
       break;
     case State::REQUESTED:
+      // TODO: only one response is expected so we should close the stream
+      //       after receiving it. Add unit tests for this.
       if (frame.header_.flags_ & FrameFlags_COMPLETE) {
         state_ = State::CLOSED;
         end = true;
@@ -105,10 +114,10 @@ void RequestResponseRequesterBase::onNextFrame(Frame_RESPONSE&& frame) {
     case State::CLOSED:
       break;
   }
-  if (waitingForPayload_) {
+  if (waitingForPayload_ && frame.payload_) {
     consumingSubscriber_.onNext(std::move(frame.payload_));
   } else {
-    payload_.assign(std::move(frame.payload_));
+    payload_ = std::move(frame.payload_);
   }
 
   if (end) {

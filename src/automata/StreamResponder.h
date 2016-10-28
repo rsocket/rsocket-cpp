@@ -7,7 +7,6 @@
 #include "src/automata/StreamSubscriptionResponderBase.h"
 #include "src/mixins/ExecutorMixin.h"
 #include "src/mixins/LoggingMixin.h"
-#include "src/mixins/MemoryMixin.h"
 #include "src/mixins/SinkIfMixin.h"
 #include "src/mixins/StreamIfMixin.h"
 
@@ -20,13 +19,12 @@ class StreamResponderBase : public StreamSubscriptionResponderBase {
  public:
   using Base::Base;
 
- protected:
   std::ostream& logPrefix(std::ostream& os) {
     return os << "StreamResponder(" << &connection_ << ", " << streamId_
               << "): ";
   }
 };
 
-using StreamResponder = SinkIfMixin<StreamIfMixin<LoggingMixin<ExecutorMixin<
-    LoggingMixin<MemoryMixin<LoggingMixin<StreamResponderBase>>>>>>>;
+using StreamResponder = SinkIfMixin<
+    StreamIfMixin<ExecutorMixin<LoggingMixin<StreamResponderBase>>>>;
 }

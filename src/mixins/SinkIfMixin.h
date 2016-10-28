@@ -22,8 +22,8 @@ class SinkIfMixin : public Base, public Subscriber<Payload> {
  public:
   using Base::Base;
 
-  void onSubscribe(Subscription& subscription) override final {
-    Base::onSubscribe(subscription);
+  void onSubscribe(std::shared_ptr<Subscription> subscription) override final {
+    Base::onSubscribe(std::move(subscription));
   }
 
   void onNext(Payload element) override final {

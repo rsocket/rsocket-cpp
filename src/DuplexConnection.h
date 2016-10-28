@@ -36,13 +36,15 @@ class DuplexConnection {
   /// lifetime of the connection. The connection MUST NOT assume an ownership of
   /// provided Subscriber.
   virtual void setInput(
-      Subscriber<std::unique_ptr<folly::IOBuf>>& framesSink) = 0;
+      std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>>
+          framesSink) = 0;
 
   /// Obtains a Subscriber that should be fed with frames to send (a writer).
   ///
   /// This method is invoked by ReactiveSocket
   /// implementation once in an entire lifetime of the connection. The
   /// connection MUST manage the lifetime of provided Subscriber.
-  virtual Subscriber<std::unique_ptr<folly::IOBuf>>& getOutput() = 0;
+  virtual std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>>
+  getOutput() = 0;
 };
 }

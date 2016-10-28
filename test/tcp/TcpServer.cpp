@@ -6,8 +6,8 @@
 #include <thread>
 #include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"
+#include "src/SubscriptionBase.h"
 #include "src/framed/FramedDuplexConnection.h"
-#include "src/mixins/MemoryMixin.h"
 #include "src/tcp/TcpDuplexConnection.h"
 #include "test/simple/PrintSubscriber.h"
 #include "test/simple/StatsPrinter.h"
@@ -19,17 +19,16 @@ using namespace ::folly;
 DEFINE_string(address, "9898", "host:port to listen to");
 
 namespace {
-class ServerSubscription : public Subscription {
+class ServerSubscription : public SubscriptionBase {
  public:
   explicit ServerSubscription(
-      Subscriber<Payload>& response,
+      std::shared_ptr<Subscriber<Payload>> response,
       size_t numElems = 2)
-      : response_(response), numElems_(numElems) {}
+      : response_(std::move(response)), numElems_(numElems) {}
 
-  ~ServerSubscription(){};
-
+ private:
   // Subscription methods
-  void request(size_t n) override {
+  void requestImpl(size_t n) override {
     for (size_t i = 0; i < numElems_; i++) {
       response_.onNext(Payload("from server " + std::to_string(i)));
     }
@@ -37,37 +36,38 @@ class ServerSubscription : public Subscription {
     //    response_.onError(std::runtime_error("XXX"));
   }
 
-  void cancel() override {}
+  void cancelImpl() override {}
 
- private:
-  Subscriber<Payload>& response_;
+  SubscriberPtr<Subscriber<Payload>> response_;
   size_t numElems_;
 };
 
 class ServerRequestHandler : public DefaultRequestHandler {
  public:
   /// Handles a new inbound Subscription requested by the other end.
-  void handleRequestSubscription(Payload request, Subscriber<Payload>& response)
-      override {
+  void handleRequestSubscription(
+      Payload request,
+      const std::shared_ptr<Subscriber<Payload>>& response) override {
     LOG(INFO) << "ServerRequestHandler.handleRequestSubscription " << request;
 
-    response.onSubscribe(createManagedInstance<ServerSubscription>(response));
+    response->onSubscribe(std::make_shared<ServerSubscription>(response));
   }
 
   /// Handles a new inbound Stream requested by the other end.
-  void handleRequestStream(Payload request, Subscriber<Payload>& response)
-      override {
+  void handleRequestStream(
+      Payload request,
+      const std::shared_ptr<Subscriber<Payload>>& response) override {
     LOG(INFO) << "ServerRequestHandler.handleRequestStream " << request;
 
-    response.onSubscribe(createManagedInstance<ServerSubscription>(response));
+    response->onSubscribe(std::make_shared<ServerSubscription>(response));
   }
 
-  void handleRequestResponse(Payload request, Subscriber<Payload>& response)
-      override {
+  void handleRequestResponse(
+      Payload request,
+      const std::shared_ptr<Subscriber<Payload>>& response) override {
     LOG(INFO) << "ServerRequestHandler.handleRequestResponse " << request;
 
-    response.onSubscribe(
-        createManagedInstance<ServerSubscription>(response, 1));
+    response->onSubscribe(std::make_shared<ServerSubscription>(response, 1));
   }
 
   void handleFireAndForgetRequest(Payload request) override {

@@ -8,24 +8,13 @@
 
 namespace reactivesocket {
 
-FramedReader::~FramedReader() {}
-
-FramedReader::UniquePtr FramedReader::makeUnique(
-    reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>& frames) {
-  return UniquePtr(new FramedReader(frames));
-}
-
-void FramedReader::onSubscribe(Subscription& subscription) {
+void FramedReader::onSubscribeImpl(std::shared_ptr<Subscription> subscription) {
   CHECK(!streamSubscription_);
-  DestructorGuard dg(this);
-
-  streamSubscription_.reset(&subscription);
-  frames_.get()->onSubscribe(*this);
-  // no more code here or use DestructorGuard dg(this);
+  streamSubscription_.reset(std::move(subscription));
+  frames_.onSubscribe(shared_from_this());
 }
 
-void FramedReader::onNext(std::unique_ptr<folly::IOBuf> payload) {
-  DestructorGuard dg(this);
+void FramedReader::onNextImpl(std::unique_ptr<folly::IOBuf> payload) {
   streamRequested_ = false;
 
   if (payload) {
@@ -66,20 +55,17 @@ void FramedReader::parseFrames() {
   dispatchingFrames_ = false;
 }
 
-void FramedReader::onComplete() {
+void FramedReader::onCompleteImpl() {
   payloadQueue_.move(); // equivalent to clear(), releases the buffers
   frames_.onComplete();
-  // no more code here or use DestructorGuard dg(this);
 }
 
-void FramedReader::onError(folly::exception_wrapper ex) {
+void FramedReader::onErrorImpl(folly::exception_wrapper ex) {
   payloadQueue_.move(); // equivalent to clear(), releases the buffers
   frames_.onError(std::move(ex));
-  // no more code here or use DestructorGuard dg(this);
 }
 
-void FramedReader::request(size_t n) {
-  DestructorGuard dg(this);
+void FramedReader::requestImpl(size_t n) {
   allowance_.release(n);
   parseFrames();
   requestStream();
@@ -92,10 +78,9 @@ void FramedReader::requestStream() {
   }
 }
 
-void FramedReader::cancel() {
+void FramedReader::cancelImpl() {
   payloadQueue_.move(); // equivalent to clear(), releases the buffers
   streamSubscription_.cancel();
-  // no more code here or use DestructorGuard dg(this);
 }
 
 } // reactive socket

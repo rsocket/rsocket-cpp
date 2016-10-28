@@ -12,7 +12,6 @@
 #include "src/ReactiveStreamsCompat.h"
 #include "src/mixins/ExecutorMixin.h"
 #include "src/mixins/LoggingMixin.h"
-#include "src/mixins/MemoryMixin.h"
 #include "src/mixins/MixinTerminator.h"
 #include "src/mixins/PublisherMixin.h"
 #include "src/mixins/SinkIfMixin.h"
@@ -29,8 +28,8 @@ enum class StreamCompletionSignal;
 /// Implementation of stream automaton that represents a Stream/Subscription
 /// responder.
 class StreamSubscriptionResponderBase
-    : public LoggingMixin<PublisherMixin<Frame_RESPONSE, MixinTerminator>> {
-  using Base = LoggingMixin<PublisherMixin<Frame_RESPONSE, MixinTerminator>>;
+    : public PublisherMixin<Frame_RESPONSE, MixinTerminator> {
+  using Base = PublisherMixin<Frame_RESPONSE, MixinTerminator>;
 
  public:
   using Base::Base;
@@ -45,6 +44,8 @@ class StreamSubscriptionResponderBase
   void onError(folly::exception_wrapper);
   /// @}
 
+  std::ostream& logPrefix(std::ostream& os);
+
  protected:
   /// @{
   void endStream(StreamCompletionSignal);
@@ -53,8 +54,6 @@ class StreamSubscriptionResponderBase
   using Base::onNextFrame;
 
   void onNextFrame(Frame_CANCEL&&);
-
-  std::ostream& logPrefix(std::ostream& os);
   /// @}
 
   /// State of the Subscription responder.
