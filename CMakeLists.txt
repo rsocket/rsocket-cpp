@@ -180,6 +180,7 @@ add_executable(
   test/Test.cpp
   test/MockStats.h
   test/concurrent/OneToOneRingBufferTest.cpp
+  test/tcp/TcpDuplexConnectionTest.cpp
 )
 
 target_link_libraries(
