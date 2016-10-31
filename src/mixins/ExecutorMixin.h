@@ -38,17 +38,9 @@ class ExecutorBase {
   template <typename F>
   void runInExecutor(F&& func) {
     if (pendingSignals_) {
-<<<<<<< HEAD
-      runInExecutor([pending_signals = std::move(pendingSignals_)]() mutable {
-        for (auto& signal : *pending_signals) {
-          signal();
-        }
-      });
-=======
       pendingSignals_->emplace_back(func);
     } else {
       executor_.add(std::move(func));
->>>>>>> master
     }
   }
 
@@ -115,7 +107,7 @@ class ExecutorMixin : public Base,
   void onNext(Payload payload) {
     std::shared_ptr<Base> basePtr = this->shared_from_this();
     runInExecutor([ basePtr, payload = std::move(payload) ]() mutable {
-      basePtr->onNext(payload);
+      basePtr->onNext(std::move(payload));
     });
   }
 
@@ -126,7 +118,7 @@ class ExecutorMixin : public Base,
   void onError(folly::exception_wrapper ex) {
     std::shared_ptr<Base> basePtr = this->shared_from_this();
     runInExecutor([ basePtr, ex = std::move(ex) ]() mutable {
-      basePtr->onError(movedEx.move());
+      basePtr->onError(std::move(ex));
     });
   }
   /// @}
