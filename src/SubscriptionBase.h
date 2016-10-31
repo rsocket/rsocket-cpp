@@ -19,12 +19,17 @@ class SubscriptionBase : public Subscription,
   using ExecutorBase::ExecutorBase;
 
   void request(size_t n) override final {
-    runInExecutor(
-        std::bind(&SubscriptionBase::requestImpl, shared_from_this(), n));
+    auto thisPtr = this->shared_from_this();
+    runInExecutor([thisPtr, n]() {
+      thisPtr->requestImpl(n);
+    });
   }
 
   void cancel() override final {
-    runInExecutor(std::bind(&SubscriptionBase::cancelImpl, shared_from_this()));
+    auto thisPtr = this->shared_from_this();
+    runInExecutor([thisPtr]() {
+      thisPtr->cancelImpl();
+    });
   }
 };
 

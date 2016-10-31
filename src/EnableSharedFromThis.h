@@ -6,6 +6,14 @@
 
 namespace reactivesocket {
 
+// the purpose of these classes it to allow virtual inheritance of
+// std::enable_shared_from_this<T> which is not allowed because of the
+// implementation details of the class.
+//
+// users should inherit from EnableSharedFromThisBase<T> to make
+// sure the enable_shared_from_this is inherited only once in the
+// class hierarchy.
+
 class EnableSharedFromThisVirtualBase
     : public std::enable_shared_from_this<EnableSharedFromThisVirtualBase> {};
 

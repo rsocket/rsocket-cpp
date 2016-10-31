@@ -24,6 +24,8 @@ folly::Executor& defaultExecutor();
 
 class ExecutorBase {
  public:
+  // if startExecutor == false then all incoming signals will by queued
+  // until start() method is called
   explicit ExecutorBase(
       folly::Executor& executor = defaultExecutor(),
       bool startExecutor = true);
@@ -38,9 +40,9 @@ class ExecutorBase {
   template <typename F>
   void runInExecutor(F&& func) {
     if (pendingSignals_) {
-      pendingSignals_->emplace_back(func);
+      pendingSignals_->emplace_back(std::forward<F>(func));
     } else {
-      executor_.add(std::move(func));
+      executor_.add(std::forward<F>(func));
     }
   }
 
