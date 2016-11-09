@@ -16,10 +16,10 @@ namespace reactivesocket {
 //    on{Subscribe,Next,Complete,Error} methods. Eq. by providing EventBase
 //    as an executor, you can call the methods from any thread and the
 //    marshaling to the right EventBase thread will happen automatically.
-// 2. once the user cancels the subscriber via the subscription, it is
-//    garanteed that no more callbacks will be called. It is safe for the client
-//    to do cleanup and releasing of resources. User doesn't have to call
-//    subscription::cancel in on{Complete,Error}.
+// 2. once the user cancels the subscriber via the subscription::cancel, it is
+//    guaranteed that no more callbacks will be called. It is safe for the
+// client to do cleanup and releasing of resources. User doesn't have to call
+//    subscription::cancel in on{Complete,Error} methods.
 //
 template <typename T>
 class SubscriberBaseT : public Subscriber<T>,
