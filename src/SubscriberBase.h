@@ -9,6 +9,18 @@
 
 namespace reactivesocket {
 
+//
+// SubscriberBase is designed to be a general purpose base class for
+// implementors of Subscriber<T> interface. It provides 2 key features:
+// 1. ExecutorBase: You can specify the Executor you want to use to execute the
+//    on{Subscribe,Next,Complete,Error} methods. Eq. by providing EventBase
+//    as an executor, you can call the methods from any thread and the
+//    marshaling to the right EventBase thread will happen automatically.
+// 2. once the user cancels the subscriber via the subscription, it is
+//    garanteed that no more callbacks will be called. It is safe for the client
+//    to do cleanup and releasing of resources. User doesn't have to call
+//    subscription::cancel in on{Complete,Error}.
+//
 template <typename T>
 class SubscriberBaseT : public Subscriber<T>,
                         public EnableSharedFromThisBase<SubscriberBaseT<T>>,
@@ -18,34 +30,110 @@ class SubscriberBaseT : public Subscriber<T>,
   virtual void onCompleteImpl() = 0;
   virtual void onErrorImpl(folly::exception_wrapper ex) = 0;
 
+  // used to be able to cancel subscription immediatelly, making sure we dont
+  // deliver any other signals after that
+  // also to break the reference cycle involving storing subscription pointer
+  // for the users of the SubscriberBase
+  class SubscriptionShim : public Subscription {
+   public:
+    explicit SubscriptionShim(
+        std::shared_ptr<SubscriberBaseT<T>> parentSubscriber)
+        : parentSubscriber_(std::move(parentSubscriber)) {}
+
+    void request(size_t n) override final {
+      if (auto parent = parentSubscriber_.lock()) {
+        parent->runInExecutor([parent, n]() {
+          if (!parent->cancelled_) {
+            parent->originalSubscription_->request(n);
+          }
+        });
+      }
+    }
+
+    void cancel() override final {
+      if (auto parent = parentSubscriber_.lock()) {
+        if (!parent->cancelled_.exchange(true)) {
+          parent->runInExecutor([parent]() {
+            if (!parent->cancelled_) {
+              parent->originalSubscription_->cancel();
+              parent->originalSubscription_ = nullptr;
+            }
+          });
+        }
+      }
+    }
+
+   private:
+    // we don't want to create cycle with parent subscriber. If we do, we would
+    // have to make sure the class deriving from SubscriberBase would have to
+    // nullify subscription pointer after calling cancel. That is too strong of
+    // a requirement for the users.
+    std::weak_ptr<SubscriberBaseT<T>> parentSubscriber_;
+  };
+
+  friend class SubscriptionShim;
+
  public:
   using ExecutorBase::ExecutorBase;
 
   void onSubscribe(std::shared_ptr<Subscription> subscription) override final {
     auto thisPtr = this->shared_from_this();
-    runInExecutor(
-        [thisPtr, subscription]() { thisPtr->onSubscribeImpl(subscription); });
+    runInExecutor([thisPtr, subscription]() {
+      CHECK(!thisPtr->cancelled_);
+      CHECK(!thisPtr->originalSubscription_);
+      thisPtr->originalSubscription_ = std::move(subscription);
+      thisPtr->onSubscribeImpl(
+          std::make_shared<SubscriptionShim>(thisPtr->shared_from_this()));
+    });
   }
 
   void onNext(T payload) override final {
     auto movedPayload = folly::makeMoveWrapper(std::move(payload));
     auto thisPtr = this->shared_from_this();
     runInExecutor([thisPtr, movedPayload]() mutable {
-      thisPtr->onNextImpl(movedPayload.move());
+      if (!thisPtr->cancelled_) {
+        thisPtr->onNextImpl(movedPayload.move());
+      }
     });
   }
 
   void onComplete() override final {
     auto thisPtr = this->shared_from_this();
-    runInExecutor([thisPtr]() { thisPtr->onCompleteImpl(); });
+    runInExecutor([thisPtr]() {
+      if (!thisPtr->cancelled_.exchange(true)) {
+        thisPtr->onCompleteImpl();
+
+        DCHECK(thisPtr->originalSubscription_);
+        thisPtr->originalSubscription_->cancel();
+        thisPtr->originalSubscription_ = nullptr;
+      }
+    });
   }
 
   void onError(folly::exception_wrapper ex) override final {
     auto movedEx = folly::makeMoveWrapper(std::move(ex));
     auto thisPtr = this->shared_from_this();
-    runInExecutor(
-        [thisPtr, movedEx]() mutable { thisPtr->onErrorImpl(movedEx.move()); });
+    runInExecutor([thisPtr, movedEx]() mutable {
+      if (!thisPtr->cancelled_.exchange(true)) {
+        thisPtr->onErrorImpl(movedEx.move());
+
+        DCHECK(thisPtr->originalSubscription_);
+        thisPtr->originalSubscription_->cancel();
+        thisPtr->originalSubscription_ = nullptr;
+      }
+    });
   }
+
+ private:
+  // Once the subscription is cancelled we will no longer deliver any
+  // other signals.
+  // Scheduling the calls is not atomic operation so it may very well happen
+  // that 2 threads race for sending onNext and onComplete. We need to make sure
+  // that once the terminating signal is delivered we no longer try to deliver
+  // onNext.
+  std::atomic<bool> cancelled_{false};
+
+  std::shared_ptr<Subscription> originalSubscription_;
 };
 
 extern template class SubscriberBaseT<Payload>;

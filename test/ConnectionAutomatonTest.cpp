@@ -50,9 +50,6 @@ TEST(ConnectionAutomatonTest, InvalidFrameHeader) {
       .InSequence(s)
       .WillOnce(Invoke([&](size_t n) {
         framedTestConnection->getOutput()->onNext(makeInvalidFrameHeader());
-      }))
-      .WillOnce(Invoke([&](size_t n) {
-        // ignored
       }));
 
   auto testOutputSubscriber =
@@ -106,9 +103,7 @@ static void terminateTest(
 
   auto inputSubscription = std::make_shared<MockSubscription>();
 
-  if (inOnSubscribe) {
-    EXPECT_CALL(*inputSubscription, request_(_)).Times(0);
-  } else {
+  if (!inOnSubscribe) {
     auto&& exp = EXPECT_CALL(*inputSubscription, request_(_))
                      .WillOnce(Invoke([&](size_t n) {
                        if (inRequest) {
@@ -227,9 +222,6 @@ TEST(ConnectionAutomatonTest, RefuseFrame) {
         frames.push_back(Frame_REQUEST_N(streamId + 2, 1).serializeOut());
 
         framedWriter->onNextMultiple(std::move(frames));
-      }))
-      .WillOnce(Invoke([&](size_t n) {
-        // ignoring
       }));
   EXPECT_CALL(*testOutputSubscriber, onNext_(_))
       .InSequence(s)

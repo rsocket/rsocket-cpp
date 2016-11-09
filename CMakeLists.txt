@@ -165,21 +165,22 @@ enable_testing()
 
 add_executable(
   tests
+  test/concurrent/OneToOneRingBufferTest.cpp
+  test/ConnectionAutomatonTest.cpp
   test/framed/FramedReaderTest.cpp
   test/framed/FramedWriterTest.cpp
   test/FrameTest.cpp
-  test/ConnectionAutomatonTest.cpp
   test/InlineConnection.cpp
   test/InlineConnection.h
   test/InlineConnectionTest.cpp
   test/MockDuplexConnection.h
   test/MockRequestHandler.h
-  test/ReactiveSocketTest.cpp
-  test/ReactiveSocketConcurrencyTest.cpp
-  test/ReactiveStreamsMocksCompat.h
-  test/Test.cpp
   test/MockStats.h
-  test/concurrent/OneToOneRingBufferTest.cpp
+  test/ReactiveSocketConcurrencyTest.cpp
+  test/ReactiveSocketTest.cpp
+  test/ReactiveStreamsMocksCompat.h
+  test/SubscriberBaseTest.cpp
+  test/Test.cpp
 )
 
 target_link_libraries(
