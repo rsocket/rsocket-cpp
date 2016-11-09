@@ -74,7 +74,12 @@ class SubscriberBaseT : public Subscriber<T>,
   friend class SubscriptionShim;
 
  public:
-  using ExecutorBase::ExecutorBase;
+  // in c++11 we have to declare this explicitly, instead of
+  // using ExecutorBase::ExecutorBase because of atomic cancelled :(
+  // maybe its gcc issue
+  explicit SubscriberBaseT(
+      folly::Executor& executor = defaultExecutor(),
+      bool startExecutor = true) : ExecutorBase(executor, startExecutor), cancelled_(false) {}
 
   void onSubscribe(std::shared_ptr<Subscription> subscription) override final {
     auto thisPtr = this->shared_from_this();
@@ -131,7 +136,7 @@ class SubscriberBaseT : public Subscriber<T>,
   // that 2 threads race for sending onNext and onComplete. We need to make sure
   // that once the terminating signal is delivered we no longer try to deliver
   // onNext.
-  std::atomic<bool> cancelled_{false};
+  std::atomic<bool> cancelled_;
 
   std::shared_ptr<Subscription> originalSubscription_;
 };
