@@ -58,11 +58,13 @@ void FramedReader::parseFrames() {
 void FramedReader::onCompleteImpl() {
   payloadQueue_.move(); // equivalent to clear(), releases the buffers
   frames_.onComplete();
+  streamSubscription_.cancel();
 }
 
 void FramedReader::onErrorImpl(folly::exception_wrapper ex) {
   payloadQueue_.move(); // equivalent to clear(), releases the buffers
   frames_.onError(std::move(ex));
+  streamSubscription_.cancel();
 }
 
 void FramedReader::requestImpl(size_t n) {
@@ -81,6 +83,7 @@ void FramedReader::requestStream() {
 void FramedReader::cancelImpl() {
   payloadQueue_.move(); // equivalent to clear(), releases the buffers
   streamSubscription_.cancel();
+  frames_.onComplete();
 }
 
 } // reactive socket

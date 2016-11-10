@@ -68,10 +68,12 @@ void FramedWriter::onNextMultiple(
 
 void FramedWriter::onCompleteImpl() {
   stream_.onComplete();
+  writerSubscription_.cancel();
 }
 
 void FramedWriter::onErrorImpl(folly::exception_wrapper ex) {
   stream_.onError(std::move(ex));
+  writerSubscription_.cancel();
 }
 
 void FramedWriter::requestImpl(size_t n) {
@@ -80,6 +82,7 @@ void FramedWriter::requestImpl(size_t n) {
 
 void FramedWriter::cancelImpl() {
   writerSubscription_.cancel();
+  stream_.onComplete();
 }
 
 } // reactive socket

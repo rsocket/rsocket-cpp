@@ -48,10 +48,6 @@ TEST(InlineConnectionTest, PingPong) {
   output[0]->onSubscribe(outputSub[0]);
   end[1].setInput(input[1]);
 
-  // Whitebox: we do know the connection passes subscription objects verbatim.
-  EXPECT_EQ(outputSub[1].get(), inputSub[0].get());
-  EXPECT_EQ(outputSub[0].get(), inputSub[1].get());
-
   auto originalPayload = folly::IOBuf::copyBuffer("request1");
   EXPECT_CALL(*outputSub[1], request_(1)).InSequence(s);
   EXPECT_CALL(*outputSub[0], request_(1))

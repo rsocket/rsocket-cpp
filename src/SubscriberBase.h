@@ -30,7 +30,7 @@ class SubscriberBaseT : public Subscriber<T>,
   virtual void onCompleteImpl() = 0;
   virtual void onErrorImpl(folly::exception_wrapper ex) = 0;
 
-  // used to be able to cancel subscription immediatelly, making sure we dont
+  // used to be able to cancel subscription immediately, making sure we dont
   // deliver any other signals after that
   // also to break the reference cycle involving storing subscription pointer
   // for the users of the SubscriberBase
@@ -79,7 +79,8 @@ class SubscriberBaseT : public Subscriber<T>,
   // maybe its gcc issue
   explicit SubscriberBaseT(
       folly::Executor& executor = defaultExecutor(),
-      bool startExecutor = true) : ExecutorBase(executor, startExecutor), cancelled_(false) {}
+      bool startExecutor = true)
+      : ExecutorBase(executor, startExecutor), cancelled_(false) {}
 
   void onSubscribe(std::shared_ptr<Subscription> subscription) override final {
     auto thisPtr = this->shared_from_this();

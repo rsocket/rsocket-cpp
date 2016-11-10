@@ -69,9 +69,6 @@ TEST(ConnectionAutomatonTest, InvalidFrameHeader) {
         ASSERT_EQ("invalid frame", error.payload_.moveDataToString());
       }));
   EXPECT_CALL(*testOutputSubscriber, onComplete_()).Times(1).InSequence(s);
-  EXPECT_CALL(*inputSubscription, cancel_()).InSequence(s).WillOnce(Invoke([&] {
-    framedTestConnection->getOutput()->onComplete();
-  }));
 
   framedTestConnection->setInput(testOutputSubscriber);
   framedTestConnection->getOutput()->onSubscribe(inputSubscription);
@@ -104,20 +101,13 @@ static void terminateTest(
   auto inputSubscription = std::make_shared<MockSubscription>();
 
   if (!inOnSubscribe) {
-    auto&& exp = EXPECT_CALL(*inputSubscription, request_(_))
-                     .WillOnce(Invoke([&](size_t n) {
-                       if (inRequest) {
-                         framedTestConnection->getOutput()->onComplete();
-                       } else {
-                         framedTestConnection->getOutput()->onNext(
-                             makeInvalidFrameHeader());
-                       }
-                     }));
-    if (!inRequest) {
-      exp.WillOnce(Invoke([&](size_t n) {
-        // ignored
-      }));
-    }
+    EXPECT_CALL(*inputSubscription, request_(_)).WillOnce(Invoke([&](size_t n) {
+      if (inRequest) {
+        framedTestConnection->getOutput()->onComplete();
+      } else {
+        framedTestConnection->getOutput()->onNext(makeInvalidFrameHeader());
+      }
+    }));
   }
 
   auto testOutputSubscriber =
@@ -146,9 +136,6 @@ static void terminateTest(
   }));
 
   auto testOutput = framedTestConnection->getOutput();
-  EXPECT_CALL(*inputSubscription, cancel_()).WillOnce(Invoke([&] {
-    testOutput->onComplete();
-  }));
 
   framedTestConnection->setInput(testOutputSubscriber);
   framedTestConnection->getOutput()->onSubscribe(inputSubscription);
@@ -230,9 +217,6 @@ TEST(ConnectionAutomatonTest, RefuseFrame) {
         ASSERT_EQ(FrameType::ERROR, frameType);
       }));
   EXPECT_CALL(*testOutputSubscriber, onComplete_()).Times(1).InSequence(s);
-  EXPECT_CALL(*inputSubscription, cancel_()).InSequence(s).WillOnce(Invoke([&] {
-    framedTestConnection->getOutput()->onComplete();
-  }));
 
   framedTestConnection->setInput(testOutputSubscriber);
   framedTestConnection->getOutput()->onSubscribe(inputSubscription);

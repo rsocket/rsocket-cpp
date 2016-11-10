@@ -42,12 +42,13 @@ cpp_library(
         'src/automata/ChannelResponder.cpp',
         'src/automata/RequestResponseRequester.cpp',
         'src/automata/RequestResponseResponder.cpp',
+        'src/automata/StreamRequester.cpp',
         'src/automata/StreamSubscriptionRequesterBase.cpp',
         'src/automata/StreamSubscriptionResponderBase.cpp',
-        'src/automata/StreamRequester.cpp',
         'src/automata/SubscriptionRequester.cpp',
         'src/ConnectionAutomaton.cpp',
         'src/ConnectionSetupPayload.cpp',
+        'src/Executor.cpp',
         'src/Frame.cpp',
         'src/NullRequestHandler.cpp',
         'src/Payload.cpp',
@@ -69,11 +70,14 @@ cpp_library(
     name = 'reactivesocket',
 
     headers = [
+        'src/EnableSharedFromThis.h',
         'src/NullRequestHandler.h',
         'src/Payload.h',
-        'src/RequestHandler.h',
         'src/ReactiveSocket.h',
+        'src/RequestHandler.h',
         'src/Stats.h',
+        'src/SubscriberBase.h',
+        'src/SubscriptionBase.h',
     ],
     deps = [
         ':reactivesocket-internal',
@@ -114,9 +118,15 @@ cpp_unittest(
     headers = subdir_glob([
         ('test', '**/*.h'),
     ]),
-    srcs = glob(['test/*.cpp']),
+    srcs = glob([
+        'test/*.cpp',
+        'test/concurrent/*.cpp',
+        'test/framed/*.cpp',
+        'test/simple/*.cpp',
+        ]),
     deps = [
         ':reactivesocket-internal',
+        ':reactivesocket-plugins',
         ':reactivesocket-streams-mocks',
         '//folly/io/async:util',
     ],
