@@ -27,21 +27,21 @@ void FollyKeepaliveTimer::schedule() {
   eventBase_.runAfterDelay(
       [this, running]() {
         if (*running) {
-          automaton_->sendKeepalive();
+          connection_->sendKeepalive();
           schedule();
         }
       },
       keepaliveTime().count());
 }
 
-// must be called from the thread as start
+// must be called from the same thread as start
 void FollyKeepaliveTimer::stop() {
   *running_ = false;
 }
 
-// must be called from the thread as stop
-void FollyKeepaliveTimer::start(ConnectionAutomaton* automaton) {
-  automaton_ = automaton;
+// must be called from the same thread as stop
+void FollyKeepaliveTimer::start(const std::shared_ptr<ConnectionAutomaton> connection) {
+  connection_ = connection;
   *running_ = true;
 
   schedule();

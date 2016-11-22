@@ -33,7 +33,7 @@ class KeepaliveTimer {
 
   virtual std::chrono::milliseconds keepaliveTime() = 0;
   virtual void stop() = 0;
-  virtual void start(ConnectionAutomaton* automaton) = 0;
+  virtual void start(const std::shared_ptr<ConnectionAutomaton> connection) = 0;
 };
 
 using CloseListener = std::function<void(ReactiveSocket&)>;

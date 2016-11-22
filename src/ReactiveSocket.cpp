@@ -32,7 +32,7 @@ namespace reactivesocket {
 ReactiveSocket::~ReactiveSocket() {
   // Force connection closure, this will trigger terminal signals to be
   // delivered to all stream automata.
-  connection_->disconnect();
+  close();
 }
 
 ReactiveSocket::ReactiveSocket(
@@ -94,7 +94,7 @@ std::unique_ptr<ReactiveSocket> ReactiveSocket::fromClientConnection(
   socket->connection_->outputFrameOrEnqueue(frame.serializeOut());
 
   if (socket->keepaliveTimer_) {
-    socket->keepaliveTimer_->start(socket->connection_.get());
+    socket->keepaliveTimer_->start(socket->connection_);
   }
 
   return socket;
@@ -372,6 +372,11 @@ std::shared_ptr<StreamState> ReactiveSocket::resumeListener(
 }
 
 void ReactiveSocket::close() {
+  // Stop scheduling keepalives since the socket is now closed, but may be destructed later
+  if (keepaliveTimer_) {
+    keepaliveTimer_->stop();
+  }
+
   connection_->disconnect();
 }
 
