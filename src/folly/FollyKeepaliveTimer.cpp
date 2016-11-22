@@ -40,7 +40,8 @@ void FollyKeepaliveTimer::stop() {
 }
 
 // must be called from the same thread as stop
-void FollyKeepaliveTimer::start(const std::shared_ptr<ConnectionAutomaton> connection) {
+void FollyKeepaliveTimer::start(
+    const std::shared_ptr<ConnectionAutomaton>& connection) {
   connection_ = connection;
   *running_ = true;
 

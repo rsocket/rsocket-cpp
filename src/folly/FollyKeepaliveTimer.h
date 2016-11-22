@@ -21,10 +21,10 @@ class FollyKeepaliveTimer : public KeepaliveTimer {
 
   void stop() override;
 
-  void start(const std::shared_ptr<ConnectionAutomaton> connection) override;
+  void start(const std::shared_ptr<ConnectionAutomaton>& connection) override;
 
  private:
-  std::shared_ptr<ConnectionAutomaton> connection_{nullptr};
+  std::shared_ptr<ConnectionAutomaton> connection_;
   folly::EventBase& eventBase_;
   std::shared_ptr<bool> running_;
   std::chrono::milliseconds period_;

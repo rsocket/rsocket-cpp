@@ -29,7 +29,7 @@ public:
     MOCK_METHOD0(stop_,
     void());
 
-    void start(const std::shared_ptr <ConnectionAutomaton> connection) override {
+    void start(const std::shared_ptr<ConnectionAutomaton>& connection) override {
         start_(connection);
     }
 
