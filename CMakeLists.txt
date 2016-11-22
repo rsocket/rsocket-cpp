@@ -192,6 +192,7 @@ add_executable(
   test/InlineConnection.h
   test/InlineConnectionTest.cpp
   test/MockDuplexConnection.h
+  test/MockKeepaliveTimer.h
   test/MockRequestHandler.h
   test/MockStats.h
   test/ReactiveSocketConcurrencyTest.cpp

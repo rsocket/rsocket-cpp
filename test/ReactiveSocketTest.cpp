@@ -14,6 +14,7 @@
 #include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"
 #include "test/InlineConnection.h"
+#include "test/MockKeepaliveTimer.h"
 #include "test/MockRequestHandler.h"
 #include "test/ReactiveStreamsMocksCompat.h"
 
@@ -638,7 +639,7 @@ TEST(ReactiveSocketTest, SetupData) {
       // No interactions on this mock, the client will not accept any requests.
       folly::make_unique<StrictMock<MockRequestHandler>>(),
       ConnectionSetupPayload(
-          "text/plain", "tex/plain", Payload("meta", "data")));
+          "text/plain", "text/plain", Payload("meta", "data")));
 
   auto serverHandler = folly::make_unique<StrictMock<MockRequestHandler>>();
   auto& serverHandlerRef = *serverHandler;
@@ -646,6 +647,44 @@ TEST(ReactiveSocketTest, SetupData) {
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .InSequence(s)
       .WillRepeatedly(Return(std::make_shared<StreamState>()));
+
+  auto serverSock = ReactiveSocket::fromServerConnection(
+      std::move(serverConn), std::move(serverHandler));
+}
+
+TEST(ReactiveSocketTest, SetupWithKeepaliveAndStats) {
+  // InlineConnection forwards appropriate calls in-line, hence the order of
+  // mock calls will be deterministic.
+  Sequence s;
+
+  auto clientConn = folly::make_unique<InlineConnection>();
+  auto serverConn = folly::make_unique<InlineConnection>();
+  clientConn->connectTo(*serverConn);
+
+  StrictMock<MockSubscriber<Payload>> clientInput;
+  NiceMock<MockStats> clientStats;
+  std::unique_ptr<MockKeepaliveTimer> clientKeepalive =
+      folly::make_unique<MockKeepaliveTimer>();
+
+  EXPECT_CALL(*clientKeepalive, start_(_)).InSequence(s);
+
+auto serverHandler = folly::make_unique<StrictMock<MockRequestHandler>>();
+auto& serverHandlerRef = *serverHandler;
+
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
+      .InSequence(s)
+      .WillRepeatedly(Return(std::make_shared<StreamState>()));
+
+  EXPECT_CALL(*clientKeepalive, stop_()).InSequence(s);
+
+  auto clientSock = ReactiveSocket::fromClientConnection(
+      std::move(clientConn),
+      // No interactions on this mock, the client will not accept any requests.
+      folly::make_unique<StrictMock<MockRequestHandler>>(),
+      ConnectionSetupPayload(
+          "text/plain", "text/plain", Payload("meta", "data")),
+      clientStats,
+      std::move(clientKeepalive));
 
   auto serverSock = ReactiveSocket::fromServerConnection(
       std::move(serverConn), std::move(serverHandler));
