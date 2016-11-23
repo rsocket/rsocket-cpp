@@ -39,7 +39,10 @@ void FramedReader::parseFrames() {
 
     folly::io::Cursor c(payloadQueue_.front());
     const auto nextFrameSize = c.readBE<int32_t>();
-    CHECK_GE(nextFrameSize, sizeof(int32_t));
+
+    if (nextFrameSize > sizeof(int32_t)) {
+        onErrorImpl(std::runtime_error("invalid data stream"));
+    }
 
     if (payloadQueue_.chainLength() < (size_t)nextFrameSize) {
       // need to accumulate more data
