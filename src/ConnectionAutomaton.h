@@ -136,6 +136,8 @@ class ConnectionAutomaton :
   void onClose(ConnectionCloseListener listener);
 
  private:
+  void closeDuplexConnection(folly::exception_wrapper ex);
+
   /// Performs the same actions as ::endStream without propagating closure
   /// signal to the underlying connection.
   ///

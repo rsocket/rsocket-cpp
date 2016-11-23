@@ -56,8 +56,14 @@ std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>>
 InlineConnection::getOutput() {
   using namespace ::testing;
 
+  if (outputSink_) {
+    return outputSink_;
+  }
+
   auto outputSink =
       std::make_shared<MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
+  outputSink_ = outputSink;
+
   // A check point for either of the terminal signals.
   auto* checkpoint = new MockFunction<void()>();
 

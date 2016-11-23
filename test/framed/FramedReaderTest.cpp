@@ -9,7 +9,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/framed/FramedDuplexConnection.h"
 #include "src/framed/FramedReader.h"
+#include "test/InlineConnection.h"
+#include "test/MockRequestHandler.h"
 #include "test/ReactiveStreamsMocksCompat.h"
 
 using namespace ::testing;
@@ -166,4 +169,51 @@ TEST(FramedReaderTest, Read1FrameIncomplete) {
 
   frameSubscriber->subscription()->cancel();
   framedReader->onComplete();
+}
+
+TEST(FramedReaderTest, InvalidDataStream) {
+  auto rsConnection = folly::make_unique<InlineConnection>();
+  auto testConnection = folly::make_unique<InlineConnection>();
+
+  rsConnection->connectTo(*testConnection);
+
+  auto framedRsAutomatonConnection =
+      folly::make_unique<FramedDuplexConnection>(std::move(rsConnection));
+
+  // Dump 1 invalid frame and expect an error
+  auto inputSubscription = std::make_shared<MockSubscription>();
+
+  EXPECT_CALL(*inputSubscription, request_(_)).WillOnce(Invoke([&](size_t n) {
+    auto invalidFrameSizePayload =
+        folly::IOBuf::createCombined(sizeof(int32_t));
+    folly::io::Appender appender(
+        invalidFrameSizePayload.get(), /* do not grow */ 0);
+    appender.writeBE<int32_t>(1);
+
+    testConnection->getOutput()->onNext(std::move(invalidFrameSizePayload));
+  }));
+  EXPECT_CALL(*inputSubscription, cancel_()).WillOnce(Invoke([&]() {
+    testConnection->getOutput()->onComplete();
+  }));
+
+  auto testOutputSubscriber =
+      std::make_shared<MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
+  EXPECT_CALL(*testOutputSubscriber, onSubscribe_(_))
+      .WillOnce(Invoke([&](std::shared_ptr<Subscription> subscription) {
+        // allow receiving frames from the automaton
+        subscription->request(std::numeric_limits<size_t>::max());
+      }));
+  EXPECT_CALL(*testOutputSubscriber, onNext_(_)).Times(0);
+  EXPECT_CALL(*testOutputSubscriber, onComplete_()).Times(0);
+  EXPECT_CALL(*testOutputSubscriber, onError_(_)).Times(1);
+
+  testConnection->setInput(testOutputSubscriber);
+  testConnection->getOutput()->onSubscribe(inputSubscription);
+
+  auto reactiveSocket = ReactiveSocket::fromClientConnection(
+      std::move(framedRsAutomatonConnection),
+      // No interactions on this mock, the client will not accept any
+      // requests.
+      folly::make_unique<StrictMock<MockRequestHandler>>(),
+      ConnectionSetupPayload("", "", Payload()));
 }

@@ -67,5 +67,6 @@ class InlineConnection : public DuplexConnection {
 
   std::shared_ptr<SharedState> other_;
   std::shared_ptr<SharedState> this_{std::make_shared<SharedState>()};
+  std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>> outputSink_;
 };
 }

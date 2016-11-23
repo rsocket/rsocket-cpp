@@ -67,7 +67,10 @@ void ConnectionAutomaton::connect() {
 
 void ConnectionAutomaton::disconnect() {
   VLOG(6) << "disconnect";
+  closeDuplexConnection(folly::exception_wrapper());
+}
 
+void ConnectionAutomaton::closeDuplexConnection(folly::exception_wrapper ex) {
   if (!connectionOutput_) {
     return;
   }
@@ -79,7 +82,11 @@ void ConnectionAutomaton::disconnect() {
   // Send terminal signals to the DuplexConnection's input and output before
   // tearing it down. We must do this per DuplexConnection specification (see
   // interface definition).
-  connectionOutput_.onComplete();
+  if (ex) {
+    connectionOutput_.onError(std::move(ex));
+  } else {
+    connectionOutput_.onComplete();
+  }
   connectionInputSub_.cancel();
   connection_.reset();
 
@@ -323,7 +330,7 @@ void ConnectionAutomaton::onTerminal(folly::exception_wrapper ex) {
     assert(streamState_->streams_.size() == oldSize - 1);
   }
 
-  disconnect();
+  closeDuplexConnection(std::move(ex));
 }
 
 /// @{
