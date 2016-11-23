@@ -24,6 +24,6 @@ before_script:
 script:
   - mkdir build
   - cd build
-  - cmake .. -DCMAKE_BUILD_TYPE=DEBUG
+  - cmake -DCMAKE_CXX_COMPILER=$COMPILER -DCMAKE_BUILD_TYPE=DEBUG ..
   - make -j8
   - ./tests
