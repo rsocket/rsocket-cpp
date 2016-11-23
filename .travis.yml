@@ -24,6 +24,6 @@ before_script:
 script:
   - mkdir build
   - cd build
-  - CXX=g++49 CC=gcc49 cmake .. -DCMAKE_BUILD_TYPE=DEBUG
+  - cmake .. -DCMAKE_BUILD_TYPE=DEBUG
   - make -j8
   - ./tests
