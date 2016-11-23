@@ -1,8 +1,6 @@
 sudo: required
 dist: trusty
 
-install: travis_wait 30 mvn install
-
 language: cpp
 
 os:
