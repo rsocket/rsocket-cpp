@@ -1,11 +1,9 @@
+# Use new trusty images, should yield newer compilers and packages
 sudo: required
 dist: trusty
-
+group: beta
 language: cpp
 
-os:
-  - linux
-  
 matrix:
   include:
     - compiler: gcc
@@ -15,15 +13,29 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - g++-4.9
-      env: COMPILER=g++-4.9
+      env: COMPILER=g++-4.9 CXX=g++-4.9
+    - compiler: clang
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-precise-3.6
+          packages:
+            - clang-3.6
+      env: COMPILER=clang++-3.6 CXX=clang++-3.6
 
-
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -y libopencv-dev
+  - test -n $CC  && unset CC
+  - test -n $CXX && unset CXX
 before_script:
   - ./scripts/fetch_folly_ubuntu_trusty.sh
   - ./scripts/prepare_ubuntu_trusty.sh
 script:
   - mkdir build
   - cd build
-  - cmake -DCMAKE_CXX_COMPILER=$COMPILER -DCMAKE_BUILD_TYPE=DEBUG ..
+  - export CXX=g++-4.9
+  - cmake -DCMAKE_BUILD_TYPE=DEBUG -DCMAKE_CXX_COMPILER=$COMPILER ..
   - make -j8
   - ./tests
