@@ -38,7 +38,7 @@ void FramedReader::parseFrames() {
     }
 
     folly::io::Cursor c(payloadQueue_.front());
-    const auto nextFrameSize = c.readBE<int32_t>();
+    const auto nextFrameSize = static_cast<size_t>(c.readBE<int32_t>());
 
     // the frame size includes the payload size and the size value
     // so if the size value is less than sizeof(int32_t) something is wrong
@@ -47,7 +47,7 @@ void FramedReader::parseFrames() {
       break;
     }
 
-    if (payloadQueue_.chainLength() < (size_t)nextFrameSize) {
+    if (payloadQueue_.chainLength() < nextFrameSize) {
       // need to accumulate more data
       break;
     }
