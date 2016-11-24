@@ -73,7 +73,8 @@ void ConnectionAutomaton::disconnect() {
 }
 
 void ConnectionAutomaton::disconnectWithError(Frame_ERROR&& error) {
-  VLOG(4) << "disconnectWithError " << error.payload_.data->cloneAsValue().moveToFbString();
+  VLOG(4) << "disconnectWithError "
+          << error.payload_.data->cloneAsValue().moveToFbString();
 
   outputFrameOrEnqueue(error.serializeOut());
   disconnect();
@@ -183,8 +184,7 @@ void ConnectionAutomaton::onNext(std::unique_ptr<folly::IOBuf> frame) {
   auto streamIdPtr = FrameHeader::peekStreamId(*frame);
   if (!streamIdPtr) {
     // Failed to deserialize the frame.
-    disconnectWithError(
-        Frame_ERROR::connectionError("invalid frame"));
+    disconnectWithError(Frame_ERROR::connectionError("invalid frame"));
     return;
   }
   auto streamId = *streamIdPtr;
@@ -230,9 +230,8 @@ void ConnectionAutomaton::onConnectionFrame(
           streamState_->resumeCache_->resetUpToPosition(frame.position_);
         } else {
           if (frame.header_.flags_ & FrameFlags_KEEPALIVE_RESPOND) {
-            disconnectWithError(
-                Frame_ERROR::connectionError(
-                    "client received keepalive with respond flag"));
+            disconnectWithError(Frame_ERROR::connectionError(
+                "client received keepalive with respond flag"));
           } else if (keepaliveTimer_) {
             keepaliveTimer_->keepaliveReceived();
           }
@@ -284,8 +283,7 @@ void ConnectionAutomaton::onConnectionFrame(
             }
           }
         } else {
-          disconnectWithError(
-              Frame_ERROR::connectionError("can not resume"));
+          disconnectWithError(Frame_ERROR::connectionError("can not resume"));
         }
       } else {
         disconnectWithError(Frame_ERROR::unexpectedFrame());
@@ -298,8 +296,7 @@ void ConnectionAutomaton::onConnectionFrame(
         if (!isServer_ && isResumable_ &&
             streamState_->resumeCache_->isPositionAvailable(frame.position_)) {
         } else {
-          disconnectWithError(
-              Frame_ERROR::connectionError("can not resume"));
+          disconnectWithError(Frame_ERROR::connectionError("can not resume"));
         }
       } else {
         disconnectWithError(Frame_ERROR::unexpectedFrame());
@@ -366,9 +363,8 @@ void ConnectionAutomaton::handleUnknownStream(
   // TODO(stupaq): there are some rules about monotonically increasing stream
   // IDs -- let's forget about them for a moment
   if (!factory_(*this, streamId, std::move(payload))) {
-    disconnectWithError(
-        Frame_ERROR::connectionError(
-            folly::to<std::string>("unknown stream ", streamId)));
+    disconnectWithError(Frame_ERROR::connectionError(
+        folly::to<std::string>("unknown stream ", streamId)));
   }
 }
 /// @}

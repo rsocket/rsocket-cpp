@@ -3,7 +3,7 @@
 #pragma once
 
 #include <string>
-#include "DuplexConnection.h"
+#include "src/DuplexConnection.h"
 #include "src/Frame.h"
 
 namespace reactivesocket {
