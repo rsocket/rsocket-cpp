@@ -8,9 +8,9 @@
 
 namespace reactivesocket {
 FollyKeepaliveTimer::FollyKeepaliveTimer(
-    folly::EventBase& eventBase,
+    folly::ScheduledExecutor& executor,
     std::chrono::milliseconds period)
-    : eventBase_(eventBase), period_(period) {
+    : executor_(executor), period_(period) {
   running_ = std::make_shared<bool>(false);
 };
 
@@ -24,22 +24,29 @@ std::chrono::milliseconds FollyKeepaliveTimer::keepaliveTime() {
 
 void FollyKeepaliveTimer::schedule() {
   auto running = running_;
-  eventBase_.runAfterDelay(
+  executor_.schedule(
       [this, running]() {
         if (*running) {
-          if (pending_) {
-            stop();
+          sendKeepalive();
 
-            connection_->disconnectWithError(
-                Frame_ERROR::connectionError("no response to keepalive"));
-          } else {
-            connection_->sendKeepalive();
-            pending_ = true;
+          if (*running) {
             schedule();
           }
         }
       },
-      keepaliveTime().count());
+      keepaliveTime());
+}
+
+void FollyKeepaliveTimer::sendKeepalive() {
+  if (pending_) {
+    stop();
+
+    connection_->disconnectWithError(
+        Frame_ERROR::connectionError("no response to keepalive"));
+  } else {
+    connection_->sendKeepalive();
+    pending_ = true;
+  }
 }
 
 // must be called from the same thread as start
@@ -48,8 +55,7 @@ void FollyKeepaliveTimer::stop() {
 }
 
 // must be called from the same thread as stop
-void FollyKeepaliveTimer::start(
-    const std::shared_ptr<ConnectionAutomaton>& connection) {
+void FollyKeepaliveTimer::start(const std::shared_ptr<FrameSink>& connection) {
   connection_ = connection;
   *running_ = true;
 
