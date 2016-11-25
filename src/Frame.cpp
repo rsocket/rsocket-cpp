@@ -2,6 +2,8 @@
 
 #include "src/Frame.h"
 
+#include <bitset>
+
 #include <folly/Memory.h>
 #include <folly/Optional.h>
 #include <folly/Singleton.h>
