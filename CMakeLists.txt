@@ -128,8 +128,6 @@ add_library(
   src/DuplexConnection.h
   src/EnableSharedFromThis.h
   src/Executor.cpp
-  src/folly/EventBaseExecutor.cpp
-  src/folly/EventBaseExecutor.h
   src/folly/FollyKeepaliveTimer.cpp
   src/folly/FollyKeepaliveTimer.h
   src/Frame.cpp

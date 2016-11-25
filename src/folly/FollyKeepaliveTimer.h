@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <folly/futures/ScheduledExecutor.h>
+#include <folly/io/async/EventBase.h>
 #include <src/ConnectionAutomaton.h>
 #include <src/ReactiveSocket.h>
 
@@ -10,7 +10,7 @@ namespace reactivesocket {
 class FollyKeepaliveTimer : public KeepaliveTimer {
  public:
   FollyKeepaliveTimer(
-      folly::ScheduledExecutor& executor,
+      folly::EventBase& eventBase,
       std::chrono::milliseconds period);
 
   ~FollyKeepaliveTimer();
@@ -29,7 +29,7 @@ class FollyKeepaliveTimer : public KeepaliveTimer {
 
  private:
   std::shared_ptr<FrameSink> connection_;
-  folly::ScheduledExecutor& executor_;
+  folly::EventBase& eventBase_;
   std::shared_ptr<bool> running_;
   std::chrono::milliseconds period_;
   std::atomic<bool> pending_{false};

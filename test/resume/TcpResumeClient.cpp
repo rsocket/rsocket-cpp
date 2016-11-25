@@ -2,10 +2,10 @@
 
 #include <folly/Memory.h>
 #include <folly/io/async/EventBaseManager.h>
+#include <folly/io/async/ScopedEventBaseThread.h>
 #include <gmock/gmock.h>
 #include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"
-#include "src/folly/EventBaseExecutor.h"
 #include "src/folly/FollyKeepaliveTimer.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/tcp/TcpDuplexConnection.h"
@@ -40,8 +40,7 @@ int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
 
-  EventBaseExecutor executor("client");
-  executor.startThread();
+  ScopedEventBaseThread eventBaseThread;
 
   std::unique_ptr<ReactiveSocket> reactiveSocket;
   Callback callback;
@@ -50,10 +49,11 @@ int main(int argc, char* argv[]) {
   ResumeIdentificationToken token;
   token.fill(1);
 
-  executor.eventBase().runInEventBaseThreadAndWait([&]() {
+  eventBaseThread.getEventBase()->runInEventBaseThreadAndWait([&]() {
     folly::SocketAddress addr(FLAGS_host, FLAGS_port, true);
 
-    folly::AsyncSocket::UniquePtr socket(new folly::AsyncSocket(&executor.eventBase()));
+    folly::AsyncSocket::UniquePtr socket(
+        new folly::AsyncSocket(eventBaseThread.getEventBase()));
     socket->connect(&callback, addr);
 
     std::cout << "attempting connection to " << addr.describe() << "\n";
@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
             "text/plain", "text/plain", Payload("meta", "data")),
         stats,
         folly::make_unique<FollyKeepaliveTimer>(
-            executor, std::chrono::milliseconds(5000)),
+            *eventBaseThread.getEventBase(), std::chrono::milliseconds(5000)),
         token);
 
     reactiveSocket->requestSubscription(
@@ -82,11 +82,11 @@ int main(int argc, char* argv[]) {
   std::string input;
   std::getline(std::cin, input);
 
-  executor.eventBase().runInEventBaseThreadAndWait([&]() {
+  eventBaseThread.getEventBase()->runInEventBaseThreadAndWait([&]() {
     folly::SocketAddress addr(FLAGS_host, FLAGS_port, true);
 
     folly::AsyncSocket::UniquePtr socketResume(
-        new folly::AsyncSocket(&executor.eventBase()));
+        new folly::AsyncSocket(eventBaseThread.getEventBase()));
     socketResume->connect(&callback, addr);
 
     std::unique_ptr<DuplexConnection> connectionResume =
@@ -100,10 +100,8 @@ int main(int argc, char* argv[]) {
   std::getline(std::cin, input);
 
   // TODO why need to shutdown in eventbase?
-  executor.eventBase().runInEventBaseThreadAndWait(
+  eventBaseThread.getEventBase()->runInEventBaseThreadAndWait(
       [&reactiveSocket]() { reactiveSocket.reset(nullptr); });
-
-  executor.stopThread();
 
   return 0;
 }

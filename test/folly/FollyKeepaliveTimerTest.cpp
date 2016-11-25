@@ -2,7 +2,6 @@
 
 #include <folly/ExceptionWrapper.h>
 #include <folly/Format.h>
-#include <folly/futures/ManualExecutor.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <gmock/gmock.h>
@@ -37,9 +36,9 @@ TEST(FollyKeepaliveTimerTest, StartStopWithResponse) {
 
   EXPECT_CALL(*connectionAutomaton, sendKeepalive_()).Times(2);
 
-  folly::ManualExecutor manualExecutor;
+  folly::EventBase eventBase;
 
-  FollyKeepaliveTimer timer(manualExecutor, std::chrono::milliseconds(100));
+  FollyKeepaliveTimer timer(eventBase, std::chrono::milliseconds(100));
 
   timer.start(connectionAutomaton);
 
@@ -59,9 +58,9 @@ TEST(FollyKeepaliveTimerTest, NoResponse) {
   EXPECT_CALL(*connectionAutomaton, sendKeepalive_()).Times(1);
   EXPECT_CALL(*connectionAutomaton, disconnectWithError_(_)).Times(1);
 
-  folly::ManualExecutor manualExecutor;
+  folly::EventBase eventBase;
 
-  FollyKeepaliveTimer timer(manualExecutor, std::chrono::milliseconds(100));
+  FollyKeepaliveTimer timer(eventBase, std::chrono::milliseconds(100));
 
   timer.start(connectionAutomaton);
 

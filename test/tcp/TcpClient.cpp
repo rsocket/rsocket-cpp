@@ -2,11 +2,11 @@
 
 #include <folly/Memory.h>
 #include <folly/io/async/EventBaseManager.h>
+#include <folly/io/async/ScopedEventBaseThread.h>
 #include <gmock/gmock.h>
 #include <thread>
 #include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"
-#include "src/folly/EventBaseExecutor.h"
 #include "src/folly/FollyKeepaliveTimer.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/tcp/TcpDuplexConnection.h"
@@ -41,17 +41,16 @@ int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
 
-  EventBaseExecutor executor("client");
-  executor.startThread();
+  ScopedEventBaseThread eventBaseThread;
 
   std::unique_ptr<ReactiveSocket> reactiveSocket;
   Callback callback;
   StatsPrinter stats;
 
-  executor.eventBase().runInEventBaseThreadAndWait(
-      [&callback, &reactiveSocket, &executor, &stats]() {
+  eventBaseThread.getEventBase()->runInEventBaseThreadAndWait(
+      [&callback, &reactiveSocket, &eventBaseThread, &stats]() {
         folly::AsyncSocket::UniquePtr socket(
-            new folly::AsyncSocket(&executor.eventBase()));
+            new folly::AsyncSocket(eventBaseThread.getEventBase()));
 
         folly::SocketAddress addr(FLAGS_host, FLAGS_port, true);
 
@@ -74,7 +73,8 @@ int main(int argc, char* argv[]) {
                 "text/plain", "text/plain", Payload("meta", "data")),
             stats,
             folly::make_unique<FollyKeepaliveTimer>(
-                executor, std::chrono::milliseconds(5000)));
+                *eventBaseThread.getEventBase(),
+                std::chrono::milliseconds(5000)));
 
         reactiveSocket->requestSubscription(
             Payload("from client"), std::make_shared<PrintSubscriber>());
@@ -83,10 +83,8 @@ int main(int argc, char* argv[]) {
   std::string name;
   std::getline(std::cin, name);
 
-  executor.eventBase().runInEventBaseThreadAndWait(
+  eventBaseThread.getEventBase()->runInEventBaseThreadAndWait(
       [&reactiveSocket]() { reactiveSocket.reset(nullptr); });
-
-  executor.stopThread();
 
   return 0;
 }

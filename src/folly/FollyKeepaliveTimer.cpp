@@ -1,16 +1,13 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "FollyKeepaliveTimer.h"
-#include <folly/io/IOBuf.h>
 #include <folly/io/async/EventBase.h>
-#include <src/ConnectionAutomaton.h>
-#include <src/ReactiveSocket.h>
 
 namespace reactivesocket {
 FollyKeepaliveTimer::FollyKeepaliveTimer(
-    folly::ScheduledExecutor& executor,
+    folly::EventBase& eventBase,
     std::chrono::milliseconds period)
-    : executor_(executor), period_(period) {
+    : eventBase_(eventBase), period_(period) {
   running_ = std::make_shared<bool>(false);
 };
 
@@ -24,7 +21,7 @@ std::chrono::milliseconds FollyKeepaliveTimer::keepaliveTime() {
 
 void FollyKeepaliveTimer::schedule() {
   auto running = running_;
-  executor_.schedule(
+  eventBase_.runAfterDelay(
       [this, running]() {
         if (*running) {
           sendKeepalive();
@@ -34,7 +31,7 @@ void FollyKeepaliveTimer::schedule() {
           }
         }
       },
-      keepaliveTime());
+      keepaliveTime().count());
 }
 
 void FollyKeepaliveTimer::sendKeepalive() {

@@ -17,7 +17,6 @@
 #include "src/Frame.h"
 #include "src/Payload.h"
 #include "src/ReactiveSocketSubscriberFactory.h"
-#include "src/RequestHandler.h"
 #include "src/automata/ChannelRequester.h"
 #include "src/automata/ChannelResponder.h"
 #include "src/automata/RequestResponseRequester.h"
