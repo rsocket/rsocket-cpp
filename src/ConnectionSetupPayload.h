@@ -4,8 +4,8 @@
 
 #include <folly/io/IOBuf.h>
 #include <string>
-#include "Payload.h"
-#include "StreamState.h"
+#include "src/Payload.h"
+#include "src/StreamState.h"
 
 namespace reactivesocket {
 class ConnectionSetupPayload {
@@ -14,12 +14,12 @@ class ConnectionSetupPayload {
       std::string _metadataMimeType = "",
       std::string _dataMimeType = "",
       Payload _payload = Payload(),
-      const ResumeIdentificationToken& token =
+      const ResumeIdentificationToken& _token =
           {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}})
       : metadataMimeType(std::move(_metadataMimeType)),
         dataMimeType(std::move(_dataMimeType)),
         payload(std::move(_payload)),
-        token(token){};
+        token(_token){};
 
   std::string metadataMimeType;
   std::string dataMimeType;

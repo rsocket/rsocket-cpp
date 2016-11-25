@@ -7,8 +7,8 @@
 #include <memory>
 #include <unordered_map>
 
-#include "ResumeCache.h"
-#include "ResumeTracker.h"
+#include "src/ResumeCache.h"
+#include "src/ResumeTracker.h"
 
 namespace reactivesocket {
 
