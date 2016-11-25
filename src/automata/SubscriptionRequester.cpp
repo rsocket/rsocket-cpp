@@ -2,9 +2,6 @@
 
 #include "SubscriptionRequester.h"
 
-#include <algorithm>
-#include <iostream>
-
 namespace reactivesocket {
 
 void SubscriptionRequesterBase::sendRequestFrame(

@@ -7,7 +7,6 @@
 #include <folly/io/IOBuf.h>
 
 #include "src/Frame.h"
-#include "src/Payload.h"
 
 namespace reactivesocket {
 

@@ -2,20 +2,10 @@
 
 #include "src/ConnectionAutomaton.h"
 
-#include <limits>
-
 #include <folly/ExceptionWrapper.h>
-#include <folly/Optional.h>
 #include <folly/String.h>
-#include <folly/io/IOBuf.h>
-#include <glog/logging.h>
-#include <iostream>
-#include <sstream>
 
 #include "src/AbstractStreamAutomaton.h"
-#include "src/DuplexConnection.h"
-#include "src/Frame.h"
-#include "src/ReactiveStreamsCompat.h"
 
 namespace reactivesocket {
 

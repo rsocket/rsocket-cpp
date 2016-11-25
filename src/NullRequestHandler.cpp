@@ -1,7 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "NullRequestHandler.h"
-#include "StreamState.h"
 
 #include <folly/ExceptionWrapper.h>
 

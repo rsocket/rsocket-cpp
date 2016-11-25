@@ -2,7 +2,6 @@
 
 #include "RequestResponseRequester.h"
 
-#include <iostream>
 #include "src/Common.h"
 
 namespace reactivesocket {

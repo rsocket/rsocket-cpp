@@ -3,14 +3,12 @@
 #include <array>
 #include <chrono>
 #include <condition_variable>
-#include <memory>
 #include <thread>
 
 #include <folly/Memory.h>
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <gmock/gmock.h>
-#include <gtest/gtest.h>
 
 #include "MockStats.h"
 #include "src/ReactiveSocket.h"

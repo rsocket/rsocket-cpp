@@ -2,7 +2,6 @@
 
 #include <folly/futures/QueuedImmediateExecutor.h>
 #include "src/SubscriberBase.h"
-#include "src/mixins/ExecutorMixin.h"
 
 namespace reactivesocket {
 

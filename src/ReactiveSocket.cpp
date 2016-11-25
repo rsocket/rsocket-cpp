@@ -2,22 +2,13 @@
 
 #include "src/ReactiveSocket.h"
 
-#include <cassert>
-#include <functional>
-#include <memory>
-
 #include <folly/ExceptionWrapper.h>
 #include <folly/Memory.h>
 #include <folly/MoveWrapper.h>
 
 #include "src/CancellingSubscription.h"
 #include "src/ConnectionAutomaton.h"
-#include "src/ConnectionSetupPayload.h"
-#include "src/DuplexConnection.h"
-#include "src/Frame.h"
-#include "src/Payload.h"
 #include "src/ReactiveSocketSubscriberFactory.h"
-#include "src/RequestHandler.h"
 #include "src/automata/ChannelRequester.h"
 #include "src/automata/ChannelResponder.h"
 #include "src/automata/RequestResponseRequester.h"

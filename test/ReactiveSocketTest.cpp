@@ -2,13 +2,11 @@
 
 #include <array>
 #include <chrono>
-#include <memory>
 #include <thread>
 
 #include <folly/Memory.h>
 #include <folly/io/IOBuf.h>
 #include <gmock/gmock.h>
-#include <gtest/gtest.h>
 
 #include "MockStats.h"
 #include "src/NullRequestHandler.h"

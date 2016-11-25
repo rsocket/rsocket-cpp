@@ -1,10 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "FollyKeepaliveTimer.h"
-#include <folly/io/IOBuf.h>
-#include <folly/io/async/EventBase.h>
-#include <src/ConnectionAutomaton.h>
-#include <src/ReactiveSocket.h>
 
 namespace reactivesocket {
 FollyKeepaliveTimer::FollyKeepaliveTimer(

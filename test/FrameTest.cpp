@@ -7,7 +7,6 @@
 #include <gmock/gmock.h>
 
 #include "src/Frame.h"
-#include "src/Payload.h"
 
 using namespace ::testing;
 using namespace ::reactivesocket;

@@ -5,9 +5,7 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/Format.h>
 #include <folly/io/Cursor.h>
-#include <folly/io/IOBuf.h>
 #include <gmock/gmock.h>
-#include <gtest/gtest.h>
 
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/framed/FramedReader.h"

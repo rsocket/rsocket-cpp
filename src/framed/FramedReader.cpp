@@ -1,10 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 #include "FramedReader.h"
 
-#include <folly/ExceptionWrapper.h>
 #include <folly/io/Cursor.h>
-#include <folly/io/IOBuf.h>
-#include <glog/logging.h>
 
 namespace reactivesocket {
 

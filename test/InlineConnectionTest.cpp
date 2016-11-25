@@ -5,7 +5,6 @@
 #include <folly/Memory.h>
 #include <folly/io/IOBuf.h>
 #include <gmock/gmock.h>
-#include <gtest/gtest.h>
 
 #include "test/InlineConnection.h"
 #include "test/ReactiveStreamsMocksCompat.h"
