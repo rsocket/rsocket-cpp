@@ -6,12 +6,7 @@
 
 #include <folly/Memory.h>
 #include <folly/Optional.h>
-#include <folly/Singleton.h>
 #include <folly/io/Cursor.h>
-
-namespace {
-folly::Singleton<reactivesocket::FrameBufferAllocator> bufferAllocatorSingleton;
-}
 
 // TODO(stupaq): strict enum validation
 // TODO(stupaq): verify whether frames contain extra data
@@ -26,8 +21,11 @@ static folly::IOBufQueue createBufferQueue(uint32_t bufferSize) {
 }
 
 std::unique_ptr<folly::IOBuf> FrameBufferAllocator::allocate(size_t size) {
-  return folly::Singleton<FrameBufferAllocator>::try_get()->allocateBuffer(
-      size);
+  // Purposely leak the allocator, since it's hard to deterministically
+  // guarantee that threads will stop using it before it would get statically
+  // destructed.
+  static auto* singleton = new FrameBufferAllocator;
+  return singleton->allocateBuffer(size);
 }
 
 std::unique_ptr<folly::IOBuf> FrameBufferAllocator::allocateBuffer(
