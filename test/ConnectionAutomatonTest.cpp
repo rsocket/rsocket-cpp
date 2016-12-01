@@ -5,6 +5,7 @@
 #include <folly/Memory.h>
 #include <folly/io/Cursor.h>
 #include <gmock/gmock.h>
+#include <src/NullRequestHandler.h>
 #include "src/ConnectionAutomaton.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/framed/FramedWriter.h"
@@ -76,6 +77,7 @@ TEST(ConnectionAutomatonTest, InvalidFrameHeader) {
         return false;
       },
       std::make_shared<StreamState>(),
+      std::make_shared<NullRequestHandler>(),
       nullptr,
       Stats::noop(),
       std::shared_ptr<KeepaliveTimer>(),
@@ -147,6 +149,7 @@ static void terminateTest(
         return false;
       },
       std::make_shared<StreamState>(),
+      std::make_shared<NullRequestHandler>(),
       nullptr,
       Stats::noop(),
       std::shared_ptr<KeepaliveTimer>(),
@@ -232,6 +235,7 @@ TEST(ConnectionAutomatonTest, RefuseFrame) {
         return false;
       },
       std::make_shared<StreamState>(),
+      std::make_shared<NullRequestHandler>(),
       nullptr,
       Stats::noop(),
       std::shared_ptr<KeepaliveTimer>(),

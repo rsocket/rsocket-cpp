@@ -3,6 +3,7 @@
 #include <folly/Memory.h>
 #include <folly/io/async/EventBaseManager.h>
 #include <gmock/gmock.h>
+#include <uuid/uuid.h>
 #include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"
 #include "src/folly/FollyKeepaliveTimer.h"
@@ -31,6 +32,39 @@ class Callback : public AsyncSocket::ConnectCallback {
 };
 }
 
+class ClientResumeStatus : public ClientResumeStatusCallback {
+public:
+  void onResumeOk() override {
+    std::cout << "resumed OK" << "\n";
+  }
+
+  void onConnectionError(folly::exception_wrapper ex) override {
+    std::cout << "resume connection error " << ex.what() << "\n";
+  }
+};
+
+class GuidGenerator {
+public:
+  // method to generate a UUID for the Resume Token
+  void static generateAndFill(ResumeIdentificationToken& token) {
+      ::uuid_t uuid;
+
+      ::memset(&uuid, 0, sizeof(uuid));
+      ::uuid_generate(uuid);
+      ::memcpy(token.data(), &uuid, std::min(sizeof(uuid), token.size()));
+  }
+};
+
+std::ostream& operator<<(std::ostream& os, const ResumeIdentificationToken & token) {
+  std::stringstream str;
+
+  for (std::uint8_t byte : token) {
+    str << std::hex << std::setw(2) << std::setfill('0') << (int)byte;
+  }
+
+  return os << str.str();
+}
+
 int main(int argc, char* argv[]) {
   FLAGS_logtostderr = true;
   FLAGS_minloglevel = 0;
@@ -47,7 +81,9 @@ int main(int argc, char* argv[]) {
   StatsPrinter stats;
 
   ResumeIdentificationToken token;
-  token.fill(1);
+  GuidGenerator::generateAndFill(token);
+
+  LOG(INFO) << "Token <" << token << ">";
 
   eventBase.runInEventBaseThreadAndWait([&]() {
     folly::SocketAddress addr(FLAGS_host, FLAGS_port, true);
@@ -92,8 +128,13 @@ int main(int argc, char* argv[]) {
         folly::make_unique<TcpDuplexConnection>(std::move(socketResume), stats);
     std::unique_ptr<DuplexConnection> framedConnectionResume =
         folly::make_unique<FramedDuplexConnection>(std::move(connectionResume));
+    std::unique_ptr<ClientResumeStatus> statusCallback =
+        folly::make_unique<ClientResumeStatus>();
 
-    reactiveSocket->tryClientResume(std::move(framedConnectionResume), token);
+    reactiveSocket->tryClientResume(
+        token,
+        std::move(framedConnectionResume),
+        std::move(statusCallback));
   });
 
   std::getline(std::cin, input);

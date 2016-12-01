@@ -11,6 +11,7 @@
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
 #include "src/Stats.h"
+#include "ClientResumeStatusCallback.h"
 
 namespace folly {
 class Executor;
@@ -104,8 +105,9 @@ class ReactiveSocket {
   void metadataPush(std::unique_ptr<folly::IOBuf> metadata);
 
   void tryClientResume(
+      const ResumeIdentificationToken& token,
       std::unique_ptr<DuplexConnection> newConnection,
-      const ResumeIdentificationToken& token);
+      std::unique_ptr<ClientResumeStatusCallback> statusCallback);
 
  private:
   ReactiveSocket(

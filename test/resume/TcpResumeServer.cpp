@@ -18,6 +18,53 @@ using namespace ::folly;
 DEFINE_string(address, "9898", "host:port to listen to");
 
 namespace {
+
+// Simple ResumeIdentificationToken to StreamState map
+class StreamStateMap {
+public:
+
+  std::shared_ptr<StreamState> findExistingStreamState(
+    const ResumeIdentificationToken& token) {
+    auto it = map_.find(token);
+    std::shared_ptr<StreamState> result;
+
+    if (it != map_.end()) {
+      result = (*it).second;
+    }
+
+    return result;
+  }
+
+  std::shared_ptr<StreamState> newStreamState(
+    const ResumeIdentificationToken& token) {
+    std::shared_ptr<StreamState> streamState = std::make_shared<StreamState>();
+
+    map_[token] = streamState;
+    return streamState;
+  }
+
+protected:
+  template<typename T, std::size_t N>
+  class TokenHash {
+  public:
+    std::size_t operator()(std::array<T, N> const &arr) const {
+      std::size_t sum = 0;
+
+      for (auto &&i : arr) {
+        sum += std::hash<T>()(i);
+      }
+
+      return sum;
+    }
+  };
+
+private:
+  std::unordered_map<
+      ResumeIdentificationToken,
+      std::shared_ptr<StreamState>,
+      TokenHash<std::uint8_t, 16>> map_;
+};
+
 class ServerSubscription : public SubscriptionBase {
  public:
   explicit ServerSubscription(std::shared_ptr<Subscriber<Payload>> response)
@@ -39,10 +86,20 @@ class ServerSubscription : public SubscriptionBase {
   SubscriberPtr<Subscriber<Payload>> response_;
 };
 
+std::ostream& operator<<(std::ostream& os, const ResumeIdentificationToken & token) {
+  std::stringstream str;
+
+  for (std::uint8_t byte : token) {
+    str << std::hex << std::setw(2) << std::setfill('0') << (int)byte;
+  }
+
+  return os << str.str();
+}
+
 class ServerRequestHandler : public DefaultRequestHandler {
  public:
-  explicit ServerRequestHandler(std::shared_ptr<StreamState> streamState)
-      : streamState_(streamState) {}
+  explicit ServerRequestHandler(std::shared_ptr<StreamStateMap> streamStateMap)
+      : streamStateMap_(streamStateMap) {}
 
   /// Handles a new inbound Subscription requested by the other end.
   void handleRequestSubscription(
@@ -76,53 +133,40 @@ class ServerRequestHandler : public DefaultRequestHandler {
 
   std::shared_ptr<StreamState> handleSetupPayload(
       ConnectionSetupPayload request) override {
-    std::stringstream str;
+    std::shared_ptr<StreamState> streamState = streamStateMap_->newStreamState(request.token);
 
-    str << "ServerRequestHandler.handleSetupPayload " << request
-        << " setup token <";
-    for (uint8_t byte : request.token) {
-      str << (int)byte;
-    }
-    str << "> " << streamState_.get() << " " << streamState_->streams_.size()
-        << "\n";
-    LOG(INFO) << str.str();
-    return streamState_;
+    LOG(INFO) << "ServerRequestHandler.handleSetupPayload " << request
+      << " setup token <" << request.token << "> " << streamState.get();
+
+    return streamState;
   }
 
   std::shared_ptr<StreamState> handleResume(
       const ResumeIdentificationToken& token) override {
-    std::stringstream str;
+    std::shared_ptr<StreamState> streamState = streamStateMap_->findExistingStreamState(token);
 
-    str << "ServerRequestHandler.handleResume resume token <";
-    for (uint8_t byte : token) {
-      str << (int)byte;
-    }
-    str << "> " << streamState_.get() << " " << streamState_->streams_.size()
-        << "\n";
+    LOG(INFO) << "ServerRequestHandler.handleResume resume token <" << token << "> "
+      << streamState.get();
 
-    LOG(INFO) << str.str();
-    return streamState_;
+    return streamState;
   }
 
-  void handleCleanResume(std::shared_ptr<Subscription> response) override {
-    LOG(INFO) << "clean resume stream"
-              << "\n";
+  void handleCleanResume(StreamId streamId, ErrorStream& errorStream) override {
+    LOG(INFO) << "clean resume streamId " << streamId;
   }
 
-  void handleDirtyResume(std::shared_ptr<Subscription> response) override {
-    LOG(INFO) << "dirty resume stream"
-              << "\n";
+  void handleDirtyResume(StreamId streamId, ErrorStream& errorStream) override {
+    LOG(INFO) << "dirty resume streamId " << streamId;
   }
 
  private:
-  // only keeping one
-  std::shared_ptr<StreamState> streamState_;
+  std::shared_ptr<StreamStateMap> streamStateMap_;
 };
 
 class Callback : public AsyncServerSocket::AcceptCallback {
  public:
   Callback(EventBase& eventBase, Stats& stats)
-      : streamState_(std::make_shared<StreamState>()),
+      : streamStateMap_(std::make_shared<StreamStateMap>()),
         eventBase_(eventBase),
         stats_(stats){};
 
@@ -141,7 +185,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     std::unique_ptr<DuplexConnection> framedConnection =
         folly::make_unique<FramedDuplexConnection>(std::move(connection));
     std::unique_ptr<RequestHandler> requestHandler =
-        folly::make_unique<ServerRequestHandler>(streamState_);
+        folly::make_unique<ServerRequestHandler>(streamStateMap_);
 
     std::unique_ptr<ReactiveSocket> rs = ReactiveSocket::fromServerConnection(
         std::move(framedConnection), std::move(requestHandler), stats_);
@@ -176,8 +220,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
   }
 
  private:
-  // only one for demo purposes. Should be token dependent.
-  std::shared_ptr<StreamState> streamState_;
+  std::shared_ptr<StreamStateMap> streamStateMap_;
   std::vector<std::unique_ptr<ReactiveSocket>> reactiveSockets_;
   EventBase& eventBase_;
   Stats& stats_;

@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <folly/ExceptionWrapper.h>
 #include "src/ConnectionSetupPayload.h"
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
@@ -20,6 +21,25 @@ class SubscriberFactory {
   virtual std::shared_ptr<Subscriber<Payload>> createSubscriber() = 0;
   virtual std::shared_ptr<Subscriber<Payload>> createSubscriber(
       folly::Executor& executor) = 0;
+};
+
+// Object to hold state for erroring a stream during resume callbacks
+class ErrorStream {
+public:
+  void operator()(folly::exception_wrapper ex) {
+    ex_ = ex;
+  }
+
+  void operator()() {
+    ex_ = std::runtime_error("");
+  }
+
+  explicit operator bool() const {
+    return ex_ ? true : false;
+  }
+
+private:
+  folly::exception_wrapper ex_;
 };
 
 class RequestHandlerBase {
@@ -74,10 +94,12 @@ class RequestHandlerBase {
       const ResumeIdentificationToken& token) = 0;
 
   // Handle a stream that can resume in a "clean" state. Client and Server are up-to-date.
-  virtual void handleCleanResume(std::shared_ptr<Subscription> response) = 0;
+  // Stream may be errored by calling errorStream and optionally passing an exception ala onError.
+  virtual void handleCleanResume(StreamId streamId, ErrorStream& errorStream) = 0;
 
   // Handle a stream that can resume in a "dirty" state. Client is "behind" Server.
-  virtual void handleDirtyResume(std::shared_ptr<Subscription> response) = 0;
+  // Stream may be errored by calling errorStream and optionally passing an exception ala onError.
+  virtual void handleDirtyResume(StreamId streamId, ErrorStream& errorStream) = 0;
 };
 
 class RequestHandler : public RequestHandlerBase {

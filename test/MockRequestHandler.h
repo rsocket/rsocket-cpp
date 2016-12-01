@@ -85,8 +85,8 @@ class MockRequestHandlerBase : public RequestHandlerBase {
     return handleResume_(token);
   }
 
-  void handleCleanResume(std::shared_ptr<Subscription> response) override {}
-  void handleDirtyResume(std::shared_ptr<Subscription> response) override {}
+  void handleCleanResume(StreamId streamId, ErrorStream& errorStream) override {}
+  void handleDirtyResume(StreamId streamId, ErrorStream& errorStream) override {}
 };
 
 class MockRequestHandler : public RequestHandler {
@@ -163,7 +163,7 @@ class MockRequestHandler : public RequestHandler {
     return handleResume_(token);
   }
 
-  void handleCleanResume(std::shared_ptr<Subscription> response) override {}
-  void handleDirtyResume(std::shared_ptr<Subscription> response) override {}
+  void handleCleanResume(StreamId streamId, ErrorStream& errorStream) override {}
+  void handleDirtyResume(StreamId streamId, ErrorStream& errorStream) override {}
 };
 }
