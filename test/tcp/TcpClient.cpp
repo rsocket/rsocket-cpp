@@ -5,6 +5,7 @@
 #include <gmock/gmock.h>
 #include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"
+#include "src/folly/EventBaseExecutor.h"
 #include "src/folly/FollyKeepaliveTimer.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/tcp/TcpDuplexConnection.h"
@@ -39,17 +40,17 @@ int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
 
-  EventBase eventBase;
-  auto thread = std::thread([&]() { eventBase.loopForever(); });
+  EventBaseExecutor executor("client");
+  executor.startThread();
 
   std::unique_ptr<ReactiveSocket> reactiveSocket;
   Callback callback;
   StatsPrinter stats;
 
-  eventBase.runInEventBaseThreadAndWait(
-      [&callback, &reactiveSocket, &eventBase, &stats]() {
+  executor.eventBase().runInEventBaseThreadAndWait(
+      [&callback, &reactiveSocket, &executor, &stats]() {
         folly::AsyncSocket::UniquePtr socket(
-            new folly::AsyncSocket(&eventBase));
+            new folly::AsyncSocket(&executor.eventBase()));
 
         folly::SocketAddress addr(FLAGS_host, FLAGS_port, true);
 
@@ -72,7 +73,7 @@ int main(int argc, char* argv[]) {
                 "text/plain", "text/plain", Payload("meta", "data")),
             stats,
             folly::make_unique<FollyKeepaliveTimer>(
-                eventBase, std::chrono::milliseconds(5000)));
+                executor, std::chrono::milliseconds(5000)));
 
         reactiveSocket->requestSubscription(
             Payload("from client"), std::make_shared<PrintSubscriber>());
@@ -81,11 +82,10 @@ int main(int argc, char* argv[]) {
   std::string name;
   std::getline(std::cin, name);
 
-  eventBase.runInEventBaseThreadAndWait(
+  executor.eventBase().runInEventBaseThreadAndWait(
       [&reactiveSocket]() { reactiveSocket.reset(nullptr); });
 
-  eventBase.terminateLoopSoon();
-  thread.join();
+  executor.stopThread();
 
   return 0;
 }

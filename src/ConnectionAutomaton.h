@@ -42,6 +42,18 @@ using ResumeListener = std::function<std::shared_ptr<StreamState>(
 
 using ConnectionCloseListener = std::function<void()>;
 
+class FrameSink {
+ public:
+  /// Terminates underlying connection sending the error frame
+  /// on the connection.
+  ///
+  /// This may synchronously deliver terminal signals to all
+  /// AbstractStreamAutomaton attached to this ConnectionAutomaton.
+  virtual void disconnectWithError(Frame_ERROR&& error) = 0;
+
+  virtual void sendKeepalive() = 0;
+};
+
 /// Handles connection-level frames and (de)multiplexes streams.
 ///
 /// Instances of this class should be accessed and managed via shared_ptr,
@@ -54,6 +66,7 @@ class ConnectionAutomaton :
     public Subscriber<std::unique_ptr<folly::IOBuf>>,
     /// Receives signals about connection writability.
     public Subscription,
+    public FrameSink,
     public std::enable_shared_from_this<ConnectionAutomaton> {
  public:
   ConnectionAutomaton(
@@ -66,6 +79,8 @@ class ConnectionAutomaton :
       const std::shared_ptr<KeepaliveTimer>& keepaliveTimer_,
       bool client);
 
+  void disconnectWithError(Frame_ERROR&& error) override;
+
   /// Kicks off connection procedure.
   ///
   /// May result, depending on the implementation of the DuplexConnection, in
@@ -77,13 +92,6 @@ class ConnectionAutomaton :
   /// This may synchronously deliver terminal signals to all
   /// AbstractStreamAutomaton attached to this ConnectionAutomaton.
   void disconnect();
-
-  /// Terminates underlying connection sending the error frame
-  /// on the connection.
-  ///
-  /// This may synchronously deliver terminal signals to all
-  /// AbstractStreamAutomaton attached to this ConnectionAutomaton.
-  void disconnectWithError(Frame_ERROR&& error);
 
   /// Terminate underlying connection and connect new connection
   void reconnect(std::unique_ptr<DuplexConnection> newConnection);
@@ -135,7 +143,7 @@ class ConnectionAutomaton :
   void useStreamState(std::shared_ptr<StreamState> streamState);
   /// @}
 
-  void sendKeepalive();
+  void sendKeepalive() override;
   void sendResume(const ResumeIdentificationToken& token);
 
   bool isPositionAvailable(ResumePosition position);
