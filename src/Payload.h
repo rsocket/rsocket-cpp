@@ -2,12 +2,12 @@
 
 #pragma once
 
+#include <folly/io/IOBuf.h>
 #include <array>
 #include <memory>
 #include <string>
 
 namespace folly {
-class IOBuf;
 
 namespace io {
 class Cursor;

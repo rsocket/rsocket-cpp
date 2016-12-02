@@ -2,10 +2,13 @@
 
 #pragma once
 
+#include <folly/ExceptionWrapper.h>
 #include <folly/MoveWrapper.h>
+#include <glog/logging.h>
 #include "src/EnableSharedFromThis.h"
+#include "src/Executor.h"
+#include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
-#include "src/mixins/ExecutorMixin.h"
 
 namespace reactivesocket {
 
@@ -129,6 +132,11 @@ class SubscriberBaseT : public Subscriber<T>,
         thisPtr->originalSubscription_ = nullptr;
       }
     });
+  }
+
+ protected:
+  bool isCancelled() const {
+    return cancelled_;
   }
 
  private:

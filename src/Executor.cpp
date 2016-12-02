@@ -1,5 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
+#include <folly/Memory.h>
 #include <folly/futures/QueuedImmediateExecutor.h>
 #include "src/SubscriberBase.h"
 

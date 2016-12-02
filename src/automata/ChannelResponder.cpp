@@ -4,7 +4,12 @@
 
 namespace reactivesocket {
 
-void ChannelResponderBase::onNext(Payload response) {
+void ChannelResponder::onSubscribeImpl(
+    std::shared_ptr<Subscription> subscription) {
+  Base::onSubscribe(subscription);
+}
+
+void ChannelResponder::onNextImpl(Payload response) {
   switch (state_) {
     case State::RESPONDING:
       Base::onNext(std::move(response));
@@ -14,7 +19,7 @@ void ChannelResponderBase::onNext(Payload response) {
   }
 }
 
-void ChannelResponderBase::onComplete() {
+void ChannelResponder::onCompleteImpl() {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
@@ -27,7 +32,7 @@ void ChannelResponderBase::onComplete() {
   }
 }
 
-void ChannelResponderBase::onError(folly::exception_wrapper ex) {
+void ChannelResponder::onErrorImpl(folly::exception_wrapper ex) {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
@@ -41,7 +46,7 @@ void ChannelResponderBase::onError(folly::exception_wrapper ex) {
   }
 }
 
-void ChannelResponderBase::request(size_t n) {
+void ChannelResponder::requestImpl(size_t n) {
   switch (state_) {
     case State::RESPONDING:
       Base::request(n);
@@ -50,7 +55,7 @@ void ChannelResponderBase::request(size_t n) {
   }
 }
 
-void ChannelResponderBase::cancel() {
+void ChannelResponder::cancelImpl() {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
@@ -63,7 +68,7 @@ void ChannelResponderBase::cancel() {
   }
 }
 
-void ChannelResponderBase::endStream(StreamCompletionSignal signal) {
+void ChannelResponder::endStream(StreamCompletionSignal signal) {
   switch (state_) {
     case State::RESPONDING:
       // Spontaneous ::endStream signal means an error.
@@ -76,7 +81,7 @@ void ChannelResponderBase::endStream(StreamCompletionSignal signal) {
   Base::endStream(signal);
 }
 
-void ChannelResponderBase::onNextFrame(Frame_REQUEST_CHANNEL&& frame) {
+void ChannelResponder::onNextFrame(Frame_REQUEST_CHANNEL&& frame) {
   bool end = false;
   switch (state_) {
     case State::RESPONDING:
@@ -94,7 +99,7 @@ void ChannelResponderBase::onNextFrame(Frame_REQUEST_CHANNEL&& frame) {
   }
 }
 
-void ChannelResponderBase::onNextFrame(Frame_CANCEL&& frame) {
+void ChannelResponder::onNextFrame(Frame_CANCEL&& frame) {
   switch (state_) {
     case State::RESPONDING:
       state_ = State::CLOSED;
@@ -105,7 +110,7 @@ void ChannelResponderBase::onNextFrame(Frame_CANCEL&& frame) {
   }
 }
 
-std::ostream& ChannelResponderBase::logPrefix(std::ostream& os) {
+std::ostream& ChannelResponder::logPrefix(std::ostream& os) {
   return os << "ChannelResponder(" << &connection_ << ", " << streamId_
             << "): ";
 }

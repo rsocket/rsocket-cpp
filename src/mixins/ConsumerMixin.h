@@ -5,7 +5,6 @@
 #include <cstddef>
 #include <iostream>
 
-#include <folly/ExceptionWrapper.h>
 #include <reactive-streams/utilities/AllowanceSemaphore.h>
 #include <reactive-streams/utilities/SmartPointers.h>
 #include "src/Common.h"

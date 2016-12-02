@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <iosfwd>
 
+#include "src/Common.h"
 #include "src/Payload.h"
 
 namespace folly {
@@ -23,19 +24,6 @@ class Frame_CANCEL;
 class Frame_RESPONSE;
 class Frame_ERROR;
 using StreamId = uint32_t;
-
-/// Indicates the reason why the stream automaton received a terminal signal
-/// from the connection.
-enum class StreamCompletionSignal {
-  GRACEFUL,
-  ERROR,
-  INVALID_SETUP,
-  UNSUPPORTED_SETUP,
-  REJECTED_SETUP,
-  CONNECTION_ERROR,
-  CONNECTION_END,
-};
-std::ostream& operator<<(std::ostream&, StreamCompletionSignal);
 
 /// Represents an abtract stream, which can support one of the following:
 /// Channel, Subscription, Stream or RequestResponse.

@@ -54,53 +54,61 @@ class ClientSideConcurrencyTest : public testing::Test {
     // up.
     EXPECT_CALL(serverHandlerRef, handleRequestResponse_(_, _, _))
         .Times(AtMost(1))
-        .WillOnce(Invoke([&](
-            Payload& request, StreamId streamId, std::shared_ptr<Subscriber<Payload>> response) {
-          serverOutput = response;
-          serverOutput->onSubscribe(serverOutputSub);
-        }));
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                std::shared_ptr<Subscriber<Payload>> response) {
+              serverOutput = response;
+              serverOutput->onSubscribe(serverOutputSub);
+            }));
     EXPECT_CALL(serverHandlerRef, handleRequestStream_(_, _, _))
         .Times(AtMost(1))
-        .WillOnce(Invoke([&](
-            Payload& request, StreamId streamId, std::shared_ptr<Subscriber<Payload>> response) {
-          serverOutput = response;
-          serverOutput->onSubscribe(serverOutputSub);
-        }));
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                std::shared_ptr<Subscriber<Payload>> response) {
+              serverOutput = response;
+              serverOutput->onSubscribe(serverOutputSub);
+            }));
     EXPECT_CALL(serverHandlerRef, handleRequestSubscription_(_, _, _))
         .Times(AtMost(1))
-        .WillOnce(Invoke([&](
-            Payload& request, StreamId streamId, std::shared_ptr<Subscriber<Payload>> response) {
-          serverOutput = response;
-          serverOutput->onSubscribe(serverOutputSub);
-        }));
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                std::shared_ptr<Subscriber<Payload>> response) {
+              serverOutput = response;
+              serverOutput->onSubscribe(serverOutputSub);
+            }));
     EXPECT_CALL(serverHandlerRef, handleRequestChannel_(_, _, _))
         .Times(AtMost(1))
-        .WillOnce(Invoke([&](
-            Payload& request, StreamId streamId, std::shared_ptr<Subscriber<Payload>> response) {
-          clientTerminatesInteraction_ = false;
-          EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                std::shared_ptr<Subscriber<Payload>> response) {
+              clientTerminatesInteraction_ = false;
+              EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
 
-          EXPECT_CALL(*serverInput, onSubscribe_(_))
-              .WillOnce(Invoke([&](std::shared_ptr<Subscription> sub) {
+              EXPECT_CALL(*serverInput, onSubscribe_(_))
+                  .WillOnce(Invoke([&](std::shared_ptr<Subscription> sub) {
+                    EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
+                    serverInputSub = sub;
+                    sub->request(2);
+                  }));
+              EXPECT_CALL(*serverInput, onNext_(_))
+                  .WillOnce(Invoke([&](Payload& payload) {
+                    EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
+                    serverInputSub->cancel();
+                    serverInputSub = nullptr;
+                  }));
+              EXPECT_CALL(*serverInput, onComplete_()).WillOnce(Invoke([&]() {
                 EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
-                serverInputSub = sub;
-                sub->request(2);
               }));
-          EXPECT_CALL(*serverInput, onNext_(_))
-              .WillOnce(Invoke([&](Payload& payload) {
-                EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
-                serverInputSub->cancel();
-                serverInputSub = nullptr;
-              }));
-          EXPECT_CALL(*serverInput, onComplete_()).WillOnce(Invoke([&]() {
-            EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
-          }));
 
-          serverOutput = response;
-          serverOutput->onSubscribe(serverOutputSub);
+              serverOutput = response;
+              serverOutput->onSubscribe(serverOutputSub);
 
-          return serverInput;
-        }));
+              return serverInput;
+            }));
 
     EXPECT_CALL(*serverOutputSub, request_(_))
         // The server delivers them immediately.
@@ -254,8 +262,10 @@ class ServerSideConcurrencyTest : public testing::Test {
     // up.
     EXPECT_CALL(serverHandlerRef, handleRequestResponse_(_, _, _))
         .Times(AtMost(1))
-        .WillOnce(
-            Invoke([&](Payload& request, StreamId streamId, SubscriberFactory& subscriberFactory) {
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                SubscriberFactory& subscriberFactory) {
               serverOutput =
                   subscriberFactory.createSubscriber(*thread2.getEventBase());
               // TODO: should onSubscribe be queued and also called from
@@ -264,24 +274,30 @@ class ServerSideConcurrencyTest : public testing::Test {
             }));
     EXPECT_CALL(serverHandlerRef, handleRequestStream_(_, _, _))
         .Times(AtMost(1))
-        .WillOnce(
-            Invoke([&](Payload& request, StreamId streamId, SubscriberFactory& subscriberFactory) {
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                SubscriberFactory& subscriberFactory) {
               serverOutput =
                   subscriberFactory.createSubscriber(*thread2.getEventBase());
               serverOutput->onSubscribe(serverOutputSub);
             }));
     EXPECT_CALL(serverHandlerRef, handleRequestSubscription_(_, _, _))
         .Times(AtMost(1))
-        .WillOnce(
-            Invoke([&](Payload& request, StreamId streamId, SubscriberFactory& subscriberFactory) {
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                SubscriberFactory& subscriberFactory) {
               serverOutput =
                   subscriberFactory.createSubscriber(*thread2.getEventBase());
               serverOutput->onSubscribe(serverOutputSub);
             }));
     EXPECT_CALL(serverHandlerRef, handleRequestChannel_(_, _, _))
         .Times(AtMost(1))
-        .WillOnce(
-            Invoke([&](Payload& request, StreamId streamId, SubscriberFactory& subscriberFactory) {
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                SubscriberFactory& subscriberFactory) {
               clientTerminatesInteraction_ = false;
 
               EXPECT_CALL(*serverInput, onSubscribe_(_))

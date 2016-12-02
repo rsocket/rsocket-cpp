@@ -5,6 +5,7 @@
 
 #include <algorithm>
 
+#include <folly/ExceptionWrapper.h>
 #include <glog/logging.h>
 
 #include "src/ConnectionAutomaton.h"

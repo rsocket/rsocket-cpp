@@ -140,12 +140,8 @@ add_library(
   src/framed/FramedWriter.h
   src/mixins/ConsumerMixin-inl.h
   src/mixins/ConsumerMixin.h
-  src/mixins/ExecutorMixin.h
-  src/mixins/LoggingMixin.h
   src/mixins/MixinTerminator.h
   src/mixins/PublisherMixin.h
-  src/mixins/SinkIfMixin.h
-  src/mixins/SourceIfMixin.h
   src/mixins/StreamIfMixin.h
   src/NullRequestHandler.cpp
   src/NullRequestHandler.h
@@ -166,7 +162,9 @@ add_library(
   src/SubscriberBase.h
   src/SubscriptionBase.h
   src/tcp/TcpDuplexConnection.cpp
-  src/tcp/TcpDuplexConnection.h)
+  src/tcp/TcpDuplexConnection.h
+  src/Executor.h)
+
 
 target_link_libraries(
   ReactiveSocket

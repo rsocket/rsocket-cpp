@@ -2,56 +2,59 @@
 
 #pragma once
 
+#include <reactive-streams/utilities/SmartPointers.h>
 #include <iosfwd>
 
-#include <reactive-streams/utilities/SmartPointers.h>
 #include "src/Frame.h"
-#include "src/Payload.h"
-#include "src/ReactiveStreamsCompat.h"
-#include "src/mixins/ExecutorMixin.h"
-#include "src/mixins/LoggingMixin.h"
+#include "src/SubscriptionBase.h"
 #include "src/mixins/MixinTerminator.h"
-#include "src/mixins/SourceIfMixin.h"
 #include "src/mixins/StreamIfMixin.h"
-
-namespace folly {
-class exception_wrapper;
-}
 
 namespace reactivesocket {
 
-enum class StreamCompletionSignal;
-
 /// Implementation of stream automaton that represents a RequestResponse
 /// requester
-class RequestResponseRequesterBase : public MixinTerminator {
+class RequestResponseRequester
+    : public StreamIfMixin<MixinTerminator>,
+      public SubscriptionBase,
+      public EnableSharedFromThisBase<RequestResponseRequester> {
+  using Base = StreamIfMixin<MixinTerminator>;
+
  public:
-  using MixinTerminator::MixinTerminator;
+  struct Parameters : Base::Parameters {
+    Parameters(
+        const typename Base::Parameters& baseParams,
+        folly::Executor& _executor)
+        : Base::Parameters(baseParams), executor(_executor) {}
+    folly::Executor& executor;
+  };
+
+  explicit RequestResponseRequester(const Parameters& params)
+      : ExecutorBase(params.executor, false), Base(params) {}
 
   /// Degenerate form of the Subscriber interface -- only one request payload
   /// will be sent to the server.
+  // TODO(lehecka): rename to avoid confusion
   void onNext(Payload);
 
   /// @{
   bool subscribe(std::shared_ptr<Subscriber<Payload>> subscriber);
-  void request(size_t);
-  void cancel();
   /// @}
+
+  /// Not all frames are intercepted, some just pass through.
+  using Base::onNextFrame;
+  void onNextFrame(Frame_RESPONSE&&) override;
+  void onNextFrame(Frame_ERROR&&) override;
 
   std::ostream& logPrefix(std::ostream& os);
 
- protected:
-  /// @{
-  void endStream(StreamCompletionSignal signal);
+ private:
+  void requestImpl(size_t) override;
+  void cancelImpl() override;
 
-  /// Not all frames are intercepted, some just pass through.
-  using MixinTerminator::onNextFrame;
+  void onNextImpl(Payload);
 
-  void onNextFrame(Frame_RESPONSE&&);
-  void onNextFrame(Frame_ERROR&&);
-
-  void onError(folly::exception_wrapper ex);
-  /// @}
+  void endStream(StreamCompletionSignal signal) override;
 
   /// State of the Subscription requester.
   enum class State : uint8_t {
@@ -70,7 +73,4 @@ class RequestResponseRequesterBase : public MixinTerminator {
   /// Subscriber once the stream ends.
   reactivestreams::SubscriberPtr<Subscriber<Payload>> consumingSubscriber_;
 };
-
-using RequestResponseRequester = SourceIfMixin<
-    StreamIfMixin<ExecutorMixin<LoggingMixin<RequestResponseRequesterBase>>>>;
 }

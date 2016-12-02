@@ -58,7 +58,9 @@ class RequestHandlerBase {
       SubscriberFactory& subscriberFactory) = 0;
 
   /// Handles a new fire-and-forget request sent by the other end.
-  virtual void handleFireAndForgetRequest(Payload request, StreamId streamId) = 0;
+  virtual void handleFireAndForgetRequest(
+      Payload request,
+      StreamId streamId) = 0;
 
   /// Handles a new metadata-push sent by the other end.
   virtual void handleMetadataPush(std::unique_ptr<folly::IOBuf> request) = 0;
@@ -73,10 +75,12 @@ class RequestHandlerBase {
   virtual std::shared_ptr<StreamState> handleResume(
       const ResumeIdentificationToken& token) = 0;
 
-  // Handle a stream that can resume in a "clean" state. Client and Server are up-to-date.
+  // Handle a stream that can resume in a "clean" state. Client and Server are
+  // up-to-date.
   virtual void handleCleanResume(std::shared_ptr<Subscription> response) = 0;
 
-  // Handle a stream that can resume in a "dirty" state. Client is "behind" Server.
+  // Handle a stream that can resume in a "dirty" state. Client is "behind"
+  // Server.
   virtual void handleDirtyResume(std::shared_ptr<Subscription> response) = 0;
 };
 

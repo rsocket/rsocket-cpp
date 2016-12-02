@@ -2,10 +2,9 @@
 
 #pragma once
 
-#include <folly/MoveWrapper.h>
 #include "src/EnableSharedFromThis.h"
+#include "src/Executor.h"
 #include "src/ReactiveStreamsCompat.h"
-#include "src/mixins/ExecutorMixin.h"
 
 namespace reactivesocket {
 
