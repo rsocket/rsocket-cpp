@@ -61,10 +61,6 @@ class ConsumerMixin : public Base {
 
  protected:
   /// @{
-  // TODO(lehecka): this should call setCancelled in the SubscribeBase, once
-  //               the SubscriberBase is used in the inheritance
-  //               this is effectively a terminating signal from the
-  //               ReactiveSocket instance
   void endStream(StreamCompletionSignal signal) {
     if (signal == StreamCompletionSignal::GRACEFUL) {
       consumingSubscriber_.onComplete();

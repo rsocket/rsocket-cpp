@@ -3,6 +3,7 @@
 #include <folly/Memory.h>
 #include <folly/io/async/AsyncServerSocket.h>
 #include <gmock/gmock.h>
+#include <reactive-streams/utilities/SmartPointers.h>
 #include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"
 #include "src/SubscriptionBase.h"

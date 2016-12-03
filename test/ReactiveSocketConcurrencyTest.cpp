@@ -113,7 +113,6 @@ class ClientSideConcurrencyTest : public testing::Test {
     EXPECT_CALL(*serverOutputSub, request_(_))
         // The server delivers them immediately.
         .WillOnce(Invoke([&](size_t) {
-          EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
           serverOutput->onNext(Payload(originalPayload->clone()));
         }));
     EXPECT_CALL(*clientInput, onNext_(_))
@@ -125,12 +124,12 @@ class ClientSideConcurrencyTest : public testing::Test {
             thread1.getEventBase()->runInEventBaseThreadAndWait([&]() {
               clientInputSub->cancel();
               clientInputSub = nullptr;
+              done();
             });
           }
         }));
 
     EXPECT_CALL(*serverOutputSub, cancel_()).WillOnce(Invoke([&]() {
-      EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
       serverOutput->onComplete();
       serverOutput = nullptr;
     }));
@@ -216,11 +215,9 @@ TEST_F(ClientSideConcurrencyTest, RequestChannelTest) {
     // second payload for the server input subscriber
     clientOutput->onNext(Payload(originalPayload->clone()));
   }));
-  EXPECT_CALL(*clientOutputSub, cancel_()).WillOnce(Invoke([&]() {
-    thread1.getEventBase()->runInEventBaseThread([&]() {
-      clientOutput->onComplete();
-      clientOutput = nullptr;
-    });
+  EXPECT_CALL(*clientOutputSub, cancel_()).WillOnce(Invoke([=]() {
+    thread1.getEventBase()->runInEventBaseThread(
+        [=]() { clientOutput->onComplete(); });
   }));
 
   thread1.getEventBase()->runInEventBaseThreadAndWait(
@@ -307,12 +304,7 @@ class ServerSideConcurrencyTest : public testing::Test {
                         [&]() { sub->request(2); });
                   }));
               EXPECT_CALL(*serverInput, onNext_(_))
-                  .WillOnce(Invoke([&](Payload& payload) {
-                    thread1.getEventBase()->runInEventBaseThreadAndWait([&]() {
-                      serverInputSub->cancel();
-                      serverInputSub = nullptr;
-                    });
-                  }));
+                  .WillOnce(Invoke([&](Payload& payload) {}));
               EXPECT_CALL(*serverInput, onComplete_()).WillOnce(Invoke([&]() {
                 EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
               }));
@@ -330,21 +322,24 @@ class ServerSideConcurrencyTest : public testing::Test {
           thread1.getEventBase()->runInEventBaseThreadAndWait([&]() {
             serverOutput->onNext(Payload(originalPayload->clone()));
           });
+          thread1.getEventBase()->runInEventBaseThreadAndWait([&]() {
+            if (serverInputSub) {
+              serverInputSub->cancel();
+              serverInputSub = nullptr;
+            }
+          });
         }));
     EXPECT_CALL(*clientInput, onNext_(_))
         // Client receives the payload. We will complete the interaction
         .WillOnce(Invoke([&](Payload&) {
-          EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
-          // cancel is called from the thread1
-          // but delivered on thread2
           if (clientTerminatesInteraction_) {
             clientInputSub->cancel();
             clientInputSub = nullptr;
+            done();
           }
         }));
 
     EXPECT_CALL(*serverOutputSub, cancel_()).WillOnce(Invoke([&]() {
-      EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
       serverOutput->onComplete();
       serverOutput = nullptr;
     }));

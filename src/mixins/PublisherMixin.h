@@ -69,7 +69,7 @@ class PublisherMixin : public Base {
   typename std::enable_if<Frame::Trait_CarriesAllowance>::type onNextFrame(
       Frame&& frame) {
     // if producingSubscription_ == nullptr that means the instance is
-    // terminated
+    // new and onSubscribe hasn't been called yet or it is terminated
     if (size_t n = frame.requestN_) {
       if (producingSubscription_) {
         producingSubscription_.request(n);
@@ -82,10 +82,13 @@ class PublisherMixin : public Base {
 
   void onNextFrame(Frame_REQUEST_RESPONSE&& frame) {
     // if producingSubscription_ == nullptr that means the instance is
-    // terminated
+    // new and onSubscribe hasn't been called yet or it is terminated
     if (producingSubscription_) {
       producingSubscription_.request(1);
       Base::onNextFrame(std::move(frame));
+
+    } else {
+      initialRequestN_ = 1;
     }
   }
 
