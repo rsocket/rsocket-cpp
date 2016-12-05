@@ -8,7 +8,7 @@
 #include "src/mixins/ConsumerMixin.h"
 #include "src/mixins/MixinTerminator.h"
 #include "src/mixins/StreamIfMixin.h"
-#include "src/subscriptionBase.h"
+#include "src/SubscriptionBase.h"
 
 namespace reactivesocket {
 
