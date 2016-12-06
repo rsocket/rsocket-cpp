@@ -198,13 +198,8 @@ bool ReactiveSocket::createResponder(
       Frame_SETUP frame;
       if (frame.deserializeFrom(std::move(serializedFrame))) {
         if (frame.header_.flags_ & FrameFlags_LEASE) {
-          // TODO(yschimke) We don't have the correct lease and wait logic above
-          // yet
-          LOG(WARNING) << "ignoring setup frame with lease";
-          //          connectionOutput_.onNext(
-          //              Frame_ERROR::badSetupFrame("leases not supported")
-          //                  .serializeOut());
-          //          disconnect();
+          connection.disconnectWithError(
+              Frame_ERROR::badSetupFrame("leases not supported"));
         }
 
         auto streamState = handler->handleSetupPayload(ConnectionSetupPayload(
@@ -215,14 +210,8 @@ bool ReactiveSocket::createResponder(
 
         connection.useStreamState(streamState);
       } else {
-        // TODO(yschimke) enable this later after clients upgraded
-        LOG(WARNING) << "ignoring bad setup frame";
-        //        connectionOutput_.onNext(
-        //            Frame_ERROR::badSetupFrame("bad setup
-        //            frame").serializeOut());
-        //        disconnect();
+        return false;
       }
-
       break;
     }
     case FrameType::REQUEST_CHANNEL: {

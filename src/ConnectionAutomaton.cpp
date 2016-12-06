@@ -182,6 +182,9 @@ void ConnectionAutomaton::onNext(std::unique_ptr<folly::IOBuf> frame) {
     onConnectionFrame(std::move(frame));
     return;
   }
+  if (isServer_ && !receivedSetup_) {
+    disconnectWithError(Frame_ERROR::badSetupFrame("expected setup frame"));
+  }
   auto it = streamState_->streams_.find(streamId);
   if (it == streamState_->streams_.end()) {
     handleUnknownStream(streamId, std::move(frame));
@@ -203,6 +206,32 @@ void ConnectionAutomaton::onError(folly::exception_wrapper ex) {
 void ConnectionAutomaton::onConnectionFrame(
     std::unique_ptr<folly::IOBuf> payload) {
   auto type = FrameHeader::peekType(*payload);
+
+  if (type == FrameType::SETUP) {
+    if (isServer_) {
+      if (!receivedSetup_) {
+        if (!factory_(*this, 0, std::move(payload))) {
+          disconnectWithError(Frame_ERROR::badSetupFrame("bad setup frame"));
+        }
+
+        receivedSetup_ = true;
+      } else {
+        // A server MUST ignore a SETUP frame after it has accepted a previous
+        // SETUP.
+      }
+    } else {
+      // A client MUST ignore a SETUP frame.
+    }
+    // TODO(tmont): check for ENABLE_RESUME and make sure isResumable_ is true
+
+    return;
+  }
+
+  if (isServer_ && !receivedSetup_) {
+    disconnectWithError(
+        Frame_ERROR::connectionError("no setup frame received"));
+  }
+
   switch (type) {
     case FrameType::KEEPALIVE: {
       Frame_KEEPALIVE frame;
@@ -230,13 +259,7 @@ void ConnectionAutomaton::onConnectionFrame(
       }
       return;
     }
-    case FrameType::SETUP: {
-      // TODO(tmont): check for ENABLE_RESUME and make sure isResumable_ is true
-      if (!factory_(*this, 0, std::move(payload))) {
-        assert(false);
-      }
-      return;
-    }
+
     case FrameType::METADATA_PUSH: {
       if (!factory_(*this, 0, std::move(payload))) {
         assert(false);
