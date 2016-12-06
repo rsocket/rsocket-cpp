@@ -2,18 +2,6 @@
 
 #include "ChannelRequester.h"
 
-#include <algorithm>
-#include <iostream>
-
-#include <folly/ExceptionWrapper.h>
-#include <folly/io/IOBuf.h>
-#include <glog/logging.h>
-
-#include "src/ConnectionAutomaton.h"
-#include "src/Frame.h"
-#include "src/Payload.h"
-#include "src/ReactiveStreamsCompat.h"
-
 namespace reactivesocket {
 
 void ChannelRequesterBase::onSubscribe(

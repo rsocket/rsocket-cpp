@@ -4,7 +4,6 @@
 #include <folly/io/async/EventBaseManager.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <gmock/gmock.h>
-#include <thread>
 #include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"
 #include "src/folly/FollyKeepaliveTimer.h"

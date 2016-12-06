@@ -1,8 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 #include "FramedDuplexConnection.h"
 
-#include <glog/logging.h>
-#include <memory>
 #include "FramedReader.h"
 #include "FramedWriter.h"
 

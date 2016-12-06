@@ -2,9 +2,6 @@
 
 #include "StatsPrinter.h"
 
-#include <glog/logging.h>
-#include <src/DuplexConnection.h>
-
 namespace reactivesocket {
 void StatsPrinter::socketCreated() {
   LOG(INFO) << "socketCreated";

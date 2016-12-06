@@ -3,7 +3,6 @@
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <gmock/gmock.h>
 #include <random>
-#include <thread>
 #include "src/SubscriberBase.h"
 
 using namespace ::testing;

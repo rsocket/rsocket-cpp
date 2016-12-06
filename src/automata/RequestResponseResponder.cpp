@@ -2,11 +2,6 @@
 
 #include "RequestResponseResponder.h"
 
-#include "src/ConnectionAutomaton.h"
-#include "src/Frame.h"
-#include "src/Payload.h"
-#include "src/ReactiveStreamsCompat.h"
-
 namespace reactivesocket {
 
 void RequestResponseResponderBase::onNext(Payload response) {

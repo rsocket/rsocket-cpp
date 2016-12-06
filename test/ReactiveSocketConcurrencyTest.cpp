@@ -3,17 +3,16 @@
 #include <array>
 #include <chrono>
 #include <condition_variable>
-#include <memory>
 #include <thread>
 
 #include <folly/Memory.h>
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <gmock/gmock.h>
-#include <gtest/gtest.h>
 
 #include "MockStats.h"
 #include "src/ReactiveSocket.h"
+#include "src/framed/FramedDuplexConnection.h"
 #include "test/InlineConnection.h"
 #include "test/MockRequestHandler.h"
 #include "test/ReactiveStreamsMocksCompat.h"
@@ -54,31 +53,39 @@ class ClientSideConcurrencyTest : public testing::Test {
         }));
     // The request reaches the other end and triggers new responder to be set
     // up.
-    EXPECT_CALL(serverHandlerRef, handleRequestResponse_(_, _))
+    EXPECT_CALL(serverHandlerRef, handleRequestResponse_(_, _, _))
+        .Times(AtMost(1))
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                std::shared_ptr<Subscriber<Payload>> response) {
+              serverOutput = response;
+              serverOutput->onSubscribe(serverOutputSub);
+            }));
+    EXPECT_CALL(serverHandlerRef, handleRequestStream_(_, _, _))
+        .Times(AtMost(1))
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                std::shared_ptr<Subscriber<Payload>> response) {
+              serverOutput = response;
+              serverOutput->onSubscribe(serverOutputSub);
+            }));
+    EXPECT_CALL(serverHandlerRef, handleRequestSubscription_(_, _, _))
+        .Times(AtMost(1))
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                std::shared_ptr<Subscriber<Payload>> response) {
+              serverOutput = response;
+              serverOutput->onSubscribe(serverOutputSub);
+            }));
+    EXPECT_CALL(serverHandlerRef, handleRequestChannel_(_, _, _))
         .Times(AtMost(1))
         .WillOnce(Invoke([&](
-            Payload& request, std::shared_ptr<Subscriber<Payload>> response) {
-          serverOutput = response;
-          serverOutput->onSubscribe(serverOutputSub);
-        }));
-    EXPECT_CALL(serverHandlerRef, handleRequestStream_(_, _))
-        .Times(AtMost(1))
-        .WillOnce(Invoke([&](
-            Payload& request, std::shared_ptr<Subscriber<Payload>> response) {
-          serverOutput = response;
-          serverOutput->onSubscribe(serverOutputSub);
-        }));
-    EXPECT_CALL(serverHandlerRef, handleRequestSubscription_(_, _))
-        .Times(AtMost(1))
-        .WillOnce(Invoke([&](
-            Payload& request, std::shared_ptr<Subscriber<Payload>> response) {
-          serverOutput = response;
-          serverOutput->onSubscribe(serverOutputSub);
-        }));
-    EXPECT_CALL(serverHandlerRef, handleRequestChannel_(_, _))
-        .Times(AtMost(1))
-        .WillOnce(Invoke([&](
-            Payload& request, std::shared_ptr<Subscriber<Payload>> response) {
+            Payload& request,
+            StreamId streamId,
+            std::shared_ptr<Subscriber<Payload>> response) {
           clientTerminatesInteraction_ = false;
           EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
 
@@ -254,36 +261,44 @@ class ServerSideConcurrencyTest : public testing::Test {
         }));
     // The request reaches the other end and triggers new responder to be set
     // up.
-    EXPECT_CALL(serverHandlerRef, handleRequestResponse_(_, _))
+    EXPECT_CALL(serverHandlerRef, handleRequestResponse_(_, _, _))
         .Times(AtMost(1))
-        .WillOnce(
-            Invoke([&](Payload& request, SubscriberFactory& subscriberFactory) {
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                SubscriberFactory& subscriberFactory) {
               serverOutput =
                   subscriberFactory.createSubscriber(*thread2.getEventBase());
               // TODO: should onSubscribe be queued and also called from
               // thread1?
               serverOutput->onSubscribe(serverOutputSub);
             }));
-    EXPECT_CALL(serverHandlerRef, handleRequestStream_(_, _))
+    EXPECT_CALL(serverHandlerRef, handleRequestStream_(_, _, _))
         .Times(AtMost(1))
-        .WillOnce(
-            Invoke([&](Payload& request, SubscriberFactory& subscriberFactory) {
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                SubscriberFactory& subscriberFactory) {
               serverOutput =
                   subscriberFactory.createSubscriber(*thread2.getEventBase());
               serverOutput->onSubscribe(serverOutputSub);
             }));
-    EXPECT_CALL(serverHandlerRef, handleRequestSubscription_(_, _))
+    EXPECT_CALL(serverHandlerRef, handleRequestSubscription_(_, _, _))
         .Times(AtMost(1))
-        .WillOnce(
-            Invoke([&](Payload& request, SubscriberFactory& subscriberFactory) {
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                SubscriberFactory& subscriberFactory) {
               serverOutput =
                   subscriberFactory.createSubscriber(*thread2.getEventBase());
               serverOutput->onSubscribe(serverOutputSub);
             }));
-    EXPECT_CALL(serverHandlerRef, handleRequestChannel_(_, _))
+    EXPECT_CALL(serverHandlerRef, handleRequestChannel_(_, _, _))
         .Times(AtMost(1))
-        .WillOnce(
-            Invoke([&](Payload& request, SubscriberFactory& subscriberFactory) {
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                SubscriberFactory& subscriberFactory) {
               clientTerminatesInteraction_ = false;
 
               EXPECT_CALL(*serverInput, onSubscribe_(_))
@@ -421,4 +436,144 @@ TEST_F(ServerSideConcurrencyTest, RequestChannelTest) {
   clientOutput->onSubscribe(clientOutputSub);
 
   wainUntilDone();
+}
+
+class InitialRequestNDeliveredTest : public testing::Test {
+ public:
+  InitialRequestNDeliveredTest() {
+    auto serverSocketConnection = folly::make_unique<InlineConnection>();
+    auto testInlineConnection = folly::make_unique<InlineConnection>();
+
+    serverSocketConnection->connectTo(*testInlineConnection);
+
+    testConnection = folly::make_unique<FramedDuplexConnection>(
+        std::move(testInlineConnection));
+
+    testInputSubscription = std::make_shared<MockSubscription>();
+
+    auto testOutputSubscriber =
+        std::make_shared<MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
+    EXPECT_CALL(*testOutputSubscriber, onSubscribe_(_))
+        .WillOnce(Invoke([&](std::shared_ptr<Subscription> subscription) {
+          // allow receiving frames from the automaton
+          subscription->request(std::numeric_limits<size_t>::max());
+        }));
+    EXPECT_CALL(*testOutputSubscriber, onComplete_()).WillOnce(Invoke([&]() {
+      done = true;
+    }));
+
+    testConnection->setInput(testOutputSubscriber);
+    testConnection->getOutput()->onSubscribe(testInputSubscription);
+
+    validatingSubscription = std::make_shared<MockSubscription>();
+
+    EXPECT_CALL(*validatingSubscription, request_(_))
+        .WillOnce(Invoke([&](size_t n) {
+          EXPECT_EQ(expectedRequestN, n);
+          serverSocket.reset();
+        }));
+
+    auto serverHandler =
+        folly::make_unique<StrictMock<MockRequestHandlerBase>>();
+    auto& serverHandlerRef = *serverHandler;
+
+    EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
+        .WillRepeatedly(Return(std::make_shared<StreamState>()));
+
+    EXPECT_CALL(serverHandlerRef, handleRequestSubscription_(_, _, _))
+        .Times(AtMost(1))
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                SubscriberFactory& subscriberFactory) {
+              auto response = subscriberFactory.createSubscriber(eventBase_);
+              thread2.getEventBase()->runInEventBaseThread([response, this] {
+                /* sleep override */ std::this_thread::sleep_for(
+                    std::chrono::milliseconds(5));
+                response->onSubscribe(validatingSubscription);
+              });
+            }));
+    EXPECT_CALL(serverHandlerRef, handleRequestStream_(_, _, _))
+        .Times(AtMost(1))
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                SubscriberFactory& subscriberFactory) {
+              auto response = subscriberFactory.createSubscriber(eventBase_);
+              thread2.getEventBase()->runInEventBaseThread([response, this] {
+                /* sleep override */ std::this_thread::sleep_for(
+                    std::chrono::milliseconds(5));
+                response->onSubscribe(validatingSubscription);
+              });
+            }));
+    EXPECT_CALL(serverHandlerRef, handleRequestResponse_(_, _, _))
+        .Times(AtMost(1))
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                SubscriberFactory& subscriberFactory) {
+              auto response = subscriberFactory.createSubscriber(eventBase_);
+              thread2.getEventBase()->runInEventBaseThread([response, this] {
+                /* sleep override */ std::this_thread::sleep_for(
+                    std::chrono::milliseconds(5));
+                response->onSubscribe(validatingSubscription);
+              });
+            }));
+
+    serverSocket = ReactiveSocket::fromServerConnection(
+        folly::make_unique<FramedDuplexConnection>(
+            std::move(serverSocketConnection)),
+        std::move(serverHandler));
+
+    testConnection->getOutput()->onNext(Frame_SETUP(
+                                            FrameFlags_EMPTY,
+                                            0,
+                                            0,
+                                            0,
+                                            ResumeIdentificationToken(),
+                                            "",
+                                            "",
+                                            Payload())
+                                            .serializeOut());
+  }
+
+  void loopEventBaseUntilDone() {
+    while (!done) {
+      eventBase_.loop();
+    }
+  }
+
+  std::unique_ptr<ReactiveSocket> serverSocket;
+  std::shared_ptr<MockSubscription> testInputSubscription;
+  std::unique_ptr<DuplexConnection> testConnection;
+  std::shared_ptr<MockSubscription> validatingSubscription;
+
+  const size_t kStreamId{1};
+  const size_t kRequestN{500};
+
+  std::atomic<bool> done{false};
+  size_t expectedRequestN{kRequestN};
+  folly::EventBase eventBase_;
+  folly::ScopedEventBaseThread thread2;
+};
+
+TEST_F(InitialRequestNDeliveredTest, RequestResponse) {
+  expectedRequestN = 1;
+  Frame_REQUEST_RESPONSE requestFrame(kStreamId, FrameFlags_EMPTY, Payload());
+  testConnection->getOutput()->onNext(requestFrame.serializeOut());
+  loopEventBaseUntilDone();
+}
+
+TEST_F(InitialRequestNDeliveredTest, RequestStream) {
+  Frame_REQUEST_STREAM requestFrame(
+      kStreamId, FrameFlags_EMPTY, kRequestN, Payload());
+  testConnection->getOutput()->onNext(requestFrame.serializeOut());
+  loopEventBaseUntilDone();
+}
+
+TEST_F(InitialRequestNDeliveredTest, RequestSubscription) {
+  Frame_REQUEST_SUB requestFrame(
+      kStreamId, FrameFlags_EMPTY, kRequestN, Payload());
+  testConnection->getOutput()->onNext(requestFrame.serializeOut());
+  loopEventBaseUntilDone();
 }

@@ -1,7 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "NullRequestHandler.h"
-#include "StreamState.h"
 
 #include <folly/ExceptionWrapper.h>
 
@@ -23,6 +22,7 @@ void NullSubscription::cancel() {}
 
 std::shared_ptr<Subscriber<Payload>> NullRequestHandler::handleRequestChannel(
     Payload /*request*/,
+    StreamId /*streamId*/,
     const std::shared_ptr<Subscriber<Payload>>& response) {
   // TODO(lehecka): get rid of onSubscribe call
   response->onSubscribe(std::make_shared<NullSubscription>());
@@ -32,6 +32,7 @@ std::shared_ptr<Subscriber<Payload>> NullRequestHandler::handleRequestChannel(
 
 void NullRequestHandler::handleRequestStream(
     Payload /*request*/,
+    StreamId /*streamId*/,
     const std::shared_ptr<Subscriber<Payload>>& response) {
   // TODO(lehecka): get rid of onSubscribe call
   response->onSubscribe(std::make_shared<NullSubscription>());
@@ -40,6 +41,7 @@ void NullRequestHandler::handleRequestStream(
 
 void NullRequestHandler::handleRequestSubscription(
     Payload /*request*/,
+    StreamId /*streamId*/,
     const std::shared_ptr<Subscriber<Payload>>& response) {
   // TODO(lehecka): get rid of onSubscribe call
   response->onSubscribe(std::make_shared<NullSubscription>());
@@ -48,12 +50,15 @@ void NullRequestHandler::handleRequestSubscription(
 
 void NullRequestHandler::handleRequestResponse(
     Payload /*request*/,
+    StreamId /*streamId*/,
     const std::shared_ptr<Subscriber<Payload>>& response) {
   response->onSubscribe(std::make_shared<NullSubscription>());
   response->onError(std::runtime_error("NullRequestHandler"));
 }
 
-void NullRequestHandler::handleFireAndForgetRequest(Payload /*request*/) {}
+void NullRequestHandler::handleFireAndForgetRequest(
+    Payload /*request*/,
+    StreamId /*streamId*/) {}
 
 void NullRequestHandler::handleMetadataPush(
     std::unique_ptr<folly::IOBuf> /*request*/) {}

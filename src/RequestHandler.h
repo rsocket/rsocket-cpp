@@ -36,25 +36,31 @@ class RequestHandlerBase {
   /// Handles a new Channel requested by the other end.
   virtual std::shared_ptr<Subscriber<Payload>> onRequestChannel(
       Payload request,
+      StreamId streamId,
       SubscriberFactory& subscriberFactory) = 0;
 
   /// Handles a new Stream requested by the other end.
   virtual void onRequestStream(
       Payload request,
+      StreamId streamId,
       SubscriberFactory& subscriberFactory) = 0;
 
   /// Handles a new inbound Subscription requested by the other end.
   virtual void onRequestSubscription(
       Payload request,
+      StreamId streamId,
       SubscriberFactory& subscriberFactory) = 0;
 
   /// Handles a new inbound RequestResponse requested by the other end.
   virtual void onRequestResponse(
       Payload request,
+      StreamId streamId,
       SubscriberFactory& subscriberFactory) = 0;
 
   /// Handles a new fire-and-forget request sent by the other end.
-  virtual void handleFireAndForgetRequest(Payload request) = 0;
+  virtual void handleFireAndForgetRequest(
+      Payload request,
+      StreamId streamId) = 0;
 
   /// Handles a new metadata-push sent by the other end.
   virtual void handleMetadataPush(std::unique_ptr<folly::IOBuf> request) = 0;
@@ -65,12 +71,16 @@ class RequestHandlerBase {
       ConnectionSetupPayload request) = 0;
 
   /// Temporary home - this should accompany handleSetupPayload
-  /// Return stream state for the given token. Reutn nullptr to disable resume
+  /// Return stream state for the given token. Return nullptr to disable resume
   virtual std::shared_ptr<StreamState> handleResume(
       const ResumeIdentificationToken& token) = 0;
 
+  // Handle a stream that can resume in a "clean" state. Client and Server are
+  // up-to-date.
   virtual void handleCleanResume(std::shared_ptr<Subscription> response) = 0;
 
+  // Handle a stream that can resume in a "dirty" state. Client is "behind"
+  // Server.
   virtual void handleDirtyResume(std::shared_ptr<Subscription> response) = 0;
 };
 
@@ -84,39 +94,49 @@ class RequestHandler : public RequestHandlerBase {
   /// Handles a new Channel requested by the other end.
   virtual std::shared_ptr<Subscriber<Payload>> handleRequestChannel(
       Payload request,
+      StreamId streamId,
       const std::shared_ptr<Subscriber<Payload>>& response) = 0;
 
   /// Handles a new Stream requested by the other end.
   virtual void handleRequestStream(
       Payload request,
+      StreamId streamId,
       const std::shared_ptr<Subscriber<Payload>>& response) = 0;
 
   /// Handles a new inbound Subscription requested by the other end.
   virtual void handleRequestSubscription(
       Payload request,
+      StreamId streamId,
       const std::shared_ptr<Subscriber<Payload>>& response) = 0;
 
   /// Handles a new inbound RequestResponse requested by the other end.
   virtual void handleRequestResponse(
       Payload request,
+      StreamId streamId,
       const std::shared_ptr<Subscriber<Payload>>& response) = 0;
 
  private:
   std::shared_ptr<Subscriber<Payload>> onRequestChannel(
       Payload request,
+      StreamId streamId,
       SubscriberFactory& subscriberFactory) override;
 
   /// Handles a new Stream requested by the other end.
-  void onRequestStream(Payload request, SubscriberFactory& subscriberFactory)
-      override;
+  void onRequestStream(
+      Payload request,
+      StreamId streamId,
+      SubscriberFactory& subscriberFactory) override;
 
   /// Handles a new inbound Subscription requested by the other end.
   void onRequestSubscription(
       Payload request,
+      StreamId streamId,
       SubscriberFactory& subscriberFactory) override;
 
   /// Handles a new inbound RequestResponse requested by the other end.
-  void onRequestResponse(Payload request, SubscriberFactory& subscriberFactory)
-      override;
+  void onRequestResponse(
+      Payload request,
+      StreamId streamId,
+      SubscriberFactory& subscriberFactory) override;
 };
 }

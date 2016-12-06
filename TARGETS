@@ -1,3 +1,12 @@
+cpp_library(
+    name = 'reactivesocket-internal',
+
+    header_namespace = 'src',
+    headers = subdir_glob([
+        ('src', '**/*.h')
+    ]),
+)
+
 # A target, on which implementations of various pluggable strategies depend.
 # Contains minimal amount of code needed to implement those strategies.
 cpp_library(
@@ -11,6 +20,7 @@ cpp_library(
         'src/framed/FramedWriter.h',
         'src/framed/FramedDuplexConnection.h',
         'src/folly/FollyKeepaliveTimer.h',
+        'src/StackTraceUtils.h',
         'src/Stats.h',
     ],
     srcs = [
@@ -21,21 +31,28 @@ cpp_library(
         'src/Payload.cpp',
     ],
     deps = [
-        ':reactivesocket-streams',
         ':reactivesocket-internal',
+        ':reactivesocket-streams',
         '@/folly:exception_wrapper',
         '@/folly/io:iobuf',
+        '@/folly/io/async:async',
+        '@/lithium/reactive-streams-cpp:reactive-streams-utilities',
     ],
 )
 
-# Actual implementation of the ReactiveSocket library.
 cpp_library(
-    name = 'reactivesocket-internal',
+    name = 'reactivesocket',
 
-    header_namespace = 'src',
-    headers = subdir_glob([
-        ('src', '**/*.h')
-    ]),
+    headers = [
+        'src/EnableSharedFromThis.h',
+        'src/NullRequestHandler.h',
+        'src/Payload.h',
+        'src/ReactiveSocket.h',
+        'src/RequestHandler.h',
+        'src/Stats.h',
+        'src/SubscriberBase.h',
+        'src/SubscriptionBase.h',
+    ],
     srcs = [
         'src/AbstractStreamAutomaton.cpp',
         'src/automata/ChannelRequester.cpp',
@@ -59,29 +76,13 @@ cpp_library(
         'src/Stats.cpp',
     ],
     deps = [
+        ':reactivesocket-internal',
         ':reactivesocket-streams',
         '@/folly/futures:futures',
         '@/folly/io:iobuf',
         '@/folly:exception_wrapper',
         '@/lithium/reactive-streams-cpp:reactive-streams-utilities',
-    ],
-)
-
-cpp_library(
-    name = 'reactivesocket',
-
-    headers = [
-        'src/EnableSharedFromThis.h',
-        'src/NullRequestHandler.h',
-        'src/Payload.h',
-        'src/ReactiveSocket.h',
-        'src/RequestHandler.h',
-        'src/Stats.h',
-        'src/SubscriberBase.h',
-        'src/SubscriptionBase.h',
-    ],
-    deps = [
-        ':reactivesocket-internal',
+        '@/lithium/reactivesocket-utils:reactivesocket-external-utils',
     ],
 )
 
@@ -92,23 +93,23 @@ cpp_library(
     headers = subdir_glob([
         ('src/tcp', '**/*.h'),
     ]),
-    srcs = [
-        'src/tcp/TcpDuplexConnection.cpp',
-    ],
     deps = [
         ':reactivesocket-internal',
-        '//folly/io/async:async',
     ],
 )
 
 cpp_library(
     name = 'reactivesocket-tcp',
-
     headers = [
         'src/tcp/TcpDuplexConnection.h',
     ],
+    srcs = [
+        'src/tcp/TcpDuplexConnection.cpp',
+    ],
     deps = [
         ':reactivesocket-tcp-internal',
+        '@/lithium/reactive-streams-cpp:reactive-streams',
+        '//folly/io/async:async',
     ],
 )
 
@@ -127,10 +128,12 @@ cpp_unittest(
         ]),
     deps = [
         ':reactivesocket-internal',
+        ':reactivesocket',
         ':reactivesocket-plugins',
         ':reactivesocket-streams-mocks',
         '//folly/io/async:util',
     ],
+    compiler_flags=['-DREACTIVE_SOCKET_EXTERNAL_STACK_TRACE_UTILS'],
 )
 
 # Compatibility target for ReactiveStreams API.

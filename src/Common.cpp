@@ -2,7 +2,6 @@
 
 #include "src/Common.h"
 #include <folly/io/IOBuf.h>
-#include <glog/logging.h>
 #include "src/AbstractStreamAutomaton.h"
 
 namespace reactivesocket {

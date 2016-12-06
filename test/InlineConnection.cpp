@@ -5,9 +5,7 @@
 #include <folly/Memory.h>
 #include <folly/io/IOBuf.h>
 #include <gmock/gmock.h>
-#include <gtest/gtest.h>
 
-#include "src/ReactiveStreamsCompat.h"
 #include "test/ReactiveStreamsMocksCompat.h"
 
 namespace reactivesocket {

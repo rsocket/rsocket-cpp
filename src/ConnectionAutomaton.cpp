@@ -2,20 +2,10 @@
 
 #include "src/ConnectionAutomaton.h"
 
-#include <limits>
-
 #include <folly/ExceptionWrapper.h>
-#include <folly/Optional.h>
 #include <folly/String.h>
-#include <folly/io/IOBuf.h>
-#include <glog/logging.h>
-#include <iostream>
-#include <sstream>
 
 #include "src/AbstractStreamAutomaton.h"
-#include "src/DuplexConnection.h"
-#include "src/Frame.h"
-#include "src/ReactiveStreamsCompat.h"
 
 namespace reactivesocket {
 
@@ -213,7 +203,6 @@ void ConnectionAutomaton::onError(folly::exception_wrapper ex) {
 void ConnectionAutomaton::onConnectionFrame(
     std::unique_ptr<folly::IOBuf> payload) {
   auto type = FrameHeader::peekType(*payload);
-
   switch (type) {
     case FrameType::KEEPALIVE: {
       Frame_KEEPALIVE frame;
@@ -243,7 +232,6 @@ void ConnectionAutomaton::onConnectionFrame(
     }
     case FrameType::SETUP: {
       // TODO(tmont): check for ENABLE_RESUME and make sure isResumable_ is true
-
       if (!factory_(*this, 0, std::move(payload))) {
         assert(false);
       }

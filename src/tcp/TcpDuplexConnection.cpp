@@ -2,10 +2,6 @@
 
 #include "TcpDuplexConnection.h"
 #include <folly/ExceptionWrapper.h>
-#include <folly/SocketAddress.h>
-#include <folly/io/IOBufQueue.h>
-#include <folly/io/async/AsyncTransport.h>
-#include <glog/logging.h>
 #include <reactive-streams/utilities/SmartPointers.h>
 #include "src/SubscriberBase.h"
 #include "src/SubscriptionBase.h"

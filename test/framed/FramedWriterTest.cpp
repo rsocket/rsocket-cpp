@@ -6,7 +6,6 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/io/IOBuf.h>
 #include <gmock/gmock.h>
-#include <gtest/gtest.h>
 
 #include "src/framed/FramedWriter.h"
 #include "test/ReactiveStreamsMocksCompat.h"

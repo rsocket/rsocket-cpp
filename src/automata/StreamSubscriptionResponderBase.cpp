@@ -2,15 +2,6 @@
 
 #include "StreamSubscriptionResponderBase.h"
 
-#include <folly/ExceptionWrapper.h>
-#include <folly/io/IOBuf.h>
-#include <glog/logging.h>
-
-#include "src/ConnectionAutomaton.h"
-#include "src/Frame.h"
-#include "src/Payload.h"
-#include "src/ReactiveStreamsCompat.h"
-
 namespace reactivesocket {
 
 void StreamSubscriptionResponderBase::onNext(Payload response) {

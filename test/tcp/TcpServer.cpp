@@ -3,7 +3,6 @@
 #include <folly/Memory.h>
 #include <folly/io/async/AsyncServerSocket.h>
 #include <gmock/gmock.h>
-#include <thread>
 #include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"
 #include "src/SubscriptionBase.h"
@@ -47,6 +46,7 @@ class ServerRequestHandler : public DefaultRequestHandler {
   /// Handles a new inbound Subscription requested by the other end.
   void handleRequestSubscription(
       Payload request,
+      StreamId streamId,
       const std::shared_ptr<Subscriber<Payload>>& response) override {
     LOG(INFO) << "ServerRequestHandler.handleRequestSubscription " << request;
 
@@ -56,6 +56,7 @@ class ServerRequestHandler : public DefaultRequestHandler {
   /// Handles a new inbound Stream requested by the other end.
   void handleRequestStream(
       Payload request,
+      StreamId streamId,
       const std::shared_ptr<Subscriber<Payload>>& response) override {
     LOG(INFO) << "ServerRequestHandler.handleRequestStream " << request;
 
@@ -64,13 +65,14 @@ class ServerRequestHandler : public DefaultRequestHandler {
 
   void handleRequestResponse(
       Payload request,
+      StreamId streamId,
       const std::shared_ptr<Subscriber<Payload>>& response) override {
     LOG(INFO) << "ServerRequestHandler.handleRequestResponse " << request;
 
     response->onSubscribe(std::make_shared<ServerSubscription>(response, 1));
   }
 
-  void handleFireAndForgetRequest(Payload request) override {
+  void handleFireAndForgetRequest(Payload request, StreamId streamId) override {
     LOG(INFO) << "ServerRequestHandler.handleFireAndForgetRequest " << request;
   }
 

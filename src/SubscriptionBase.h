@@ -20,12 +20,18 @@ class SubscriptionBase : public Subscription,
 
   void request(size_t n) override final {
     auto thisPtr = this->shared_from_this();
-    runInExecutor([thisPtr, n]() { thisPtr->requestImpl(n); });
+    runInExecutor([thisPtr, n]() {
+      VLOG(1) << (ExecutorBase*)thisPtr.get() << " request";
+      thisPtr->requestImpl(n);
+    });
   }
 
   void cancel() override final {
     auto thisPtr = this->shared_from_this();
-    runInExecutor([thisPtr]() { thisPtr->cancelImpl(); });
+    runInExecutor([thisPtr]() {
+      VLOG(1) << (ExecutorBase*)thisPtr.get() << " cancel";
+      thisPtr->cancelImpl();
+    });
   }
 };
 

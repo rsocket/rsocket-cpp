@@ -7,7 +7,6 @@
 #include <memory>
 #include <mutex>
 #include <queue>
-
 #include <folly/ExceptionWrapper.h>
 #include <folly/Executor.h>
 #include <folly/Memory.h>

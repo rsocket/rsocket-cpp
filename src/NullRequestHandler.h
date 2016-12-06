@@ -27,21 +27,25 @@ class NullRequestHandler : public RequestHandler {
  public:
   std::shared_ptr<Subscriber<Payload>> handleRequestChannel(
       Payload request,
+      StreamId streamId,
       const std::shared_ptr<Subscriber<Payload>>& response) override;
 
   void handleRequestStream(
       Payload request,
+      StreamId streamId,
       const std::shared_ptr<Subscriber<Payload>>& response) override;
 
   void handleRequestSubscription(
       Payload request,
+      StreamId streamId,
       const std::shared_ptr<Subscriber<Payload>>& response) override;
 
   void handleRequestResponse(
       Payload request,
+      StreamId streamId,
       const std::shared_ptr<Subscriber<Payload>>& response) override;
 
-  void handleFireAndForgetRequest(Payload request) override;
+  void handleFireAndForgetRequest(Payload request, StreamId streamId) override;
 
   void handleMetadataPush(std::unique_ptr<folly::IOBuf> request) override;
 

@@ -13,21 +13,24 @@ namespace reactivesocket {
 
 class MockRequestHandlerBase : public RequestHandlerBase {
  public:
-  MOCK_METHOD2(
+  MOCK_METHOD3(
       handleRequestChannel_,
       std::shared_ptr<Subscriber<Payload>>(
           Payload& request,
+          StreamId streamId,
           SubscriberFactory&));
-  MOCK_METHOD2(
+  MOCK_METHOD3(
       handleRequestStream_,
-      void(Payload& request, SubscriberFactory&));
-  MOCK_METHOD2(
+      void(Payload& request, StreamId streamId, SubscriberFactory&));
+  MOCK_METHOD3(
       handleRequestSubscription_,
-      void(Payload& request, SubscriberFactory&));
-  MOCK_METHOD2(
+      void(Payload& request, StreamId streamId, SubscriberFactory&));
+  MOCK_METHOD3(
       handleRequestResponse_,
-      void(Payload& request, SubscriberFactory&));
-  MOCK_METHOD1(handleFireAndForgetRequest_, void(Payload& request));
+      void(Payload& request, StreamId streamId, SubscriberFactory&));
+  MOCK_METHOD2(
+      handleFireAndForgetRequest_,
+      void(Payload& request, StreamId streamId));
   MOCK_METHOD1(
       handleMetadataPush_,
       void(std::unique_ptr<folly::IOBuf>& request));
@@ -40,28 +43,34 @@ class MockRequestHandlerBase : public RequestHandlerBase {
 
   std::shared_ptr<Subscriber<Payload>> onRequestChannel(
       Payload request,
+      StreamId streamId,
       SubscriberFactory& subscriberFactory) override {
-    return handleRequestChannel_(request, subscriberFactory);
+    return handleRequestChannel_(request, streamId, subscriberFactory);
   }
 
-  void onRequestStream(Payload request, SubscriberFactory& subscriberFactory)
-      override {
-    handleRequestStream_(request, subscriberFactory);
+  void onRequestStream(
+      Payload request,
+      StreamId streamId,
+      SubscriberFactory& subscriberFactory) override {
+    handleRequestStream_(request, streamId, subscriberFactory);
   }
 
   void onRequestSubscription(
       Payload request,
+      StreamId streamId,
       SubscriberFactory& subscriberFactory) override {
-    handleRequestSubscription_(request, subscriberFactory);
+    handleRequestSubscription_(request, streamId, subscriberFactory);
   }
 
-  void onRequestResponse(Payload request, SubscriberFactory& subscriberFactory)
-      override {
-    handleRequestResponse_(request, subscriberFactory);
+  void onRequestResponse(
+      Payload request,
+      StreamId streamId,
+      SubscriberFactory& subscriberFactory) override {
+    handleRequestResponse_(request, streamId, subscriberFactory);
   }
 
-  void handleFireAndForgetRequest(Payload request) override {
-    handleFireAndForgetRequest_(request);
+  void handleFireAndForgetRequest(Payload request, StreamId streamId) override {
+    handleFireAndForgetRequest_(request, streamId);
   }
 
   void handleMetadataPush(std::unique_ptr<folly::IOBuf> request) override {
@@ -84,21 +93,33 @@ class MockRequestHandlerBase : public RequestHandlerBase {
 
 class MockRequestHandler : public RequestHandler {
  public:
-  MOCK_METHOD2(
+  MOCK_METHOD3(
       handleRequestChannel_,
       std::shared_ptr<Subscriber<Payload>>(
           Payload& request,
+          StreamId streamId,
+          const std::shared_ptr<Subscriber<Payload>>&));
+  MOCK_METHOD3(
+      handleRequestStream_,
+      void(
+          Payload& request,
+          StreamId streamId,
+          const std::shared_ptr<Subscriber<Payload>>&));
+  MOCK_METHOD3(
+      handleRequestSubscription_,
+      void(
+          Payload& request,
+          StreamId streamId,
+          const std::shared_ptr<Subscriber<Payload>>&));
+  MOCK_METHOD3(
+      handleRequestResponse_,
+      void(
+          Payload& request,
+          StreamId streamId,
           const std::shared_ptr<Subscriber<Payload>>&));
   MOCK_METHOD2(
-      handleRequestStream_,
-      void(Payload& request, const std::shared_ptr<Subscriber<Payload>>&));
-  MOCK_METHOD2(
-      handleRequestSubscription_,
-      void(Payload& request, const std::shared_ptr<Subscriber<Payload>>&));
-  MOCK_METHOD2(
-      handleRequestResponse_,
-      void(Payload& request, const std::shared_ptr<Subscriber<Payload>>&));
-  MOCK_METHOD1(handleFireAndForgetRequest_, void(Payload& request));
+      handleFireAndForgetRequest_,
+      void(Payload& request, StreamId streamId));
   MOCK_METHOD1(
       handleMetadataPush_,
       void(std::unique_ptr<folly::IOBuf>& request));
@@ -111,30 +132,34 @@ class MockRequestHandler : public RequestHandler {
 
   std::shared_ptr<Subscriber<Payload>> handleRequestChannel(
       Payload request,
+      StreamId streamId,
       const std::shared_ptr<Subscriber<Payload>>& response) override {
-    return handleRequestChannel_(request, response);
+    return handleRequestChannel_(request, streamId, response);
   }
 
   void handleRequestStream(
       Payload request,
+      StreamId streamId,
       const std::shared_ptr<Subscriber<Payload>>& response) override {
-    handleRequestStream_(request, response);
+    handleRequestStream_(request, streamId, response);
   }
 
   void handleRequestSubscription(
       Payload request,
+      StreamId streamId,
       const std::shared_ptr<Subscriber<Payload>>& response) override {
-    handleRequestSubscription_(request, response);
+    handleRequestSubscription_(request, streamId, response);
   }
 
   void handleRequestResponse(
       Payload request,
+      StreamId streamId,
       const std::shared_ptr<Subscriber<Payload>>& response) override {
-    handleRequestResponse_(request, response);
+    handleRequestResponse_(request, streamId, response);
   }
 
-  void handleFireAndForgetRequest(Payload request) override {
-    handleFireAndForgetRequest_(request);
+  void handleFireAndForgetRequest(Payload request, StreamId streamId) override {
+    handleFireAndForgetRequest_(request, streamId);
   }
 
   void handleMetadataPush(std::unique_ptr<folly::IOBuf> request) override {

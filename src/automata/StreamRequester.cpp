@@ -2,9 +2,6 @@
 
 #include "StreamRequester.h"
 
-#include <algorithm>
-#include <iostream>
-
 namespace reactivesocket {
 
 void StreamRequesterBase::sendRequestFrame(
