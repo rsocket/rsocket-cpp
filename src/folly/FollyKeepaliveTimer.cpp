@@ -23,19 +23,26 @@ void FollyKeepaliveTimer::schedule() {
   eventBase_.runAfterDelay(
       [this, running]() {
         if (*running) {
-          if (pending_) {
-            stop();
+          sendKeepalive();
 
-            connection_->disconnectWithError(
-                Frame_ERROR::connectionError("no response to keepalive"));
-          } else {
-            connection_->sendKeepalive();
-            pending_ = true;
+          if (*running) {
             schedule();
           }
         }
       },
       keepaliveTime().count());
+}
+
+void FollyKeepaliveTimer::sendKeepalive() {
+  if (pending_) {
+    stop();
+
+    connection_->disconnectWithError(
+        Frame_ERROR::connectionError("no response to keepalive"));
+  } else {
+    connection_->sendKeepalive();
+    pending_ = true;
+  }
 }
 
 // must be called from the same thread as start
@@ -44,8 +51,7 @@ void FollyKeepaliveTimer::stop() {
 }
 
 // must be called from the same thread as stop
-void FollyKeepaliveTimer::start(
-    const std::shared_ptr<ConnectionAutomaton>& connection) {
+void FollyKeepaliveTimer::start(const std::shared_ptr<FrameSink>& connection) {
   connection_ = connection;
   *running_ = true;
 

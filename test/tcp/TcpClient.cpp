@@ -2,6 +2,7 @@
 
 #include <folly/Memory.h>
 #include <folly/io/async/EventBaseManager.h>
+#include <folly/io/async/ScopedEventBaseThread.h>
 #include <gmock/gmock.h>
 #include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"
@@ -39,17 +40,16 @@ int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
 
-  EventBase eventBase;
-  auto thread = std::thread([&]() { eventBase.loopForever(); });
+  ScopedEventBaseThread eventBaseThread;
 
   std::unique_ptr<ReactiveSocket> reactiveSocket;
   Callback callback;
   StatsPrinter stats;
 
-  eventBase.runInEventBaseThreadAndWait(
-      [&callback, &reactiveSocket, &eventBase, &stats]() {
+  eventBaseThread.getEventBase()->runInEventBaseThreadAndWait(
+      [&callback, &reactiveSocket, &eventBaseThread, &stats]() {
         folly::AsyncSocket::UniquePtr socket(
-            new folly::AsyncSocket(&eventBase));
+            new folly::AsyncSocket(eventBaseThread.getEventBase()));
 
         folly::SocketAddress addr(FLAGS_host, FLAGS_port, true);
 
@@ -72,7 +72,8 @@ int main(int argc, char* argv[]) {
                 "text/plain", "text/plain", Payload("meta", "data")),
             stats,
             folly::make_unique<FollyKeepaliveTimer>(
-                eventBase, std::chrono::milliseconds(5000)));
+                *eventBaseThread.getEventBase(),
+                std::chrono::milliseconds(5000)));
 
         reactiveSocket->requestSubscription(
             Payload("from client"), std::make_shared<PrintSubscriber>());
@@ -81,11 +82,8 @@ int main(int argc, char* argv[]) {
   std::string name;
   std::getline(std::cin, name);
 
-  eventBase.runInEventBaseThreadAndWait(
+  eventBaseThread.getEventBase()->runInEventBaseThreadAndWait(
       [&reactiveSocket]() { reactiveSocket.reset(nullptr); });
-
-  eventBase.terminateLoopSoon();
-  thread.join();
 
   return 0;
 }

@@ -86,6 +86,7 @@ class SubscriberBaseT : public Subscriber<T>,
   void onSubscribe(std::shared_ptr<Subscription> subscription) override final {
     auto thisPtr = this->shared_from_this();
     runInExecutor([thisPtr, subscription]() {
+      VLOG(1) << (ExecutorBase*)thisPtr.get() << " onSubscribe";
       CHECK(!thisPtr->originalSubscription_);
       thisPtr->originalSubscription_ = std::move(subscription);
       // if the subscription got cancelled in the meantime, we will not try to
@@ -101,6 +102,7 @@ class SubscriberBaseT : public Subscriber<T>,
     auto movedPayload = folly::makeMoveWrapper(std::move(payload));
     auto thisPtr = this->shared_from_this();
     runInExecutor([thisPtr, movedPayload]() mutable {
+      VLOG(1) << (ExecutorBase*)thisPtr.get() << " onNext";
       if (!thisPtr->cancelled_) {
         thisPtr->onNextImpl(movedPayload.move());
       }
@@ -110,6 +112,7 @@ class SubscriberBaseT : public Subscriber<T>,
   void onComplete() override final {
     auto thisPtr = this->shared_from_this();
     runInExecutor([thisPtr]() {
+      VLOG(1) << (ExecutorBase*)thisPtr.get() << " onComplete";
       if (!thisPtr->cancelled_.exchange(true)) {
         thisPtr->onCompleteImpl();
 
@@ -124,6 +127,7 @@ class SubscriberBaseT : public Subscriber<T>,
     auto movedEx = folly::makeMoveWrapper(std::move(ex));
     auto thisPtr = this->shared_from_this();
     runInExecutor([thisPtr, movedEx]() mutable {
+      VLOG(1) << (ExecutorBase*)thisPtr.get() << " onError";
       if (!thisPtr->cancelled_.exchange(true)) {
         thisPtr->onErrorImpl(movedEx.move());
 

@@ -85,11 +85,10 @@ class PublisherMixin : public Base {
     // new and onSubscribe hasn't been called yet or it is terminated
     if (producingSubscription_) {
       producingSubscription_.request(1);
-      Base::onNextFrame(std::move(frame));
-
     } else {
       initialRequestN_ = 1;
     }
+    Base::onNextFrame(std::move(frame));
   }
 
   /// Remaining frames just pass through.
