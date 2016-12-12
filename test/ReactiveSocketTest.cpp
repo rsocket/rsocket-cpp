@@ -75,9 +75,9 @@ TEST(ReactiveSocketTest, RequestChannel) {
   // The initial payload is requested automatically.
   EXPECT_CALL(*clientOutputSub, request_(1))
       .InSequence(s)
-          // Client sends the initial request.
+      // Client sends the initial request.
       .WillOnce(Invoke([&](size_t) {
-          clientOutput->onNext(Payload(originalPayload->clone()));
+        clientOutput->onNext(Payload(originalPayload->clone()));
       }));
   // The request reaches the other end and triggers new responder to be set up.
   EXPECT_CALL(
@@ -87,27 +87,27 @@ TEST(ReactiveSocketTest, RequestChannel) {
           [&](Payload& request,
               StreamId streamId,
               std::shared_ptr<Subscriber<Payload>> response) {
-              serverOutput = response;
-              serverOutput->onSubscribe(serverOutputSub);
-              return serverInput;
+            serverOutput = response;
+            serverOutput->onSubscribe(serverOutputSub);
+            return serverInput;
           }));
   EXPECT_CALL(*serverInput, onSubscribe_(_))
       .InSequence(s)
       .WillOnce(Invoke([&](std::shared_ptr<Subscription> sub) {
-          serverInputSub = sub;
-          // Client requests two payloads.
-          clientInputSub->request(2);
+        serverInputSub = sub;
+        // Client requests two payloads.
+        clientInputSub->request(2);
       }));
   EXPECT_CALL(*serverOutputSub, request_(2))
       .InSequence(s)
-          // The server delivers them immediately.
+      // The server delivers them immediately.
       .WillOnce(Invoke([&](size_t) {
-          serverOutput->onNext(Payload(originalPayload->clone()));
-          serverOutput->onNext(Payload(originalPayload->clone()));
+        serverOutput->onNext(Payload(originalPayload->clone()));
+        serverOutput->onNext(Payload(originalPayload->clone()));
       }));
   EXPECT_CALL(*clientInput, onNext_(Equals(&originalPayload)))
       .InSequence(s)
-          // Client receives the first payload and requests one.
+      // Client receives the first payload and requests one.
       .WillOnce(Invoke([&](Payload&) { clientInputSub->request(1); }));
   // Client receives the second payload.
   EXPECT_CALL(*clientInput, onNext_(Equals(&originalPayload))).InSequence(s);
@@ -117,13 +117,13 @@ TEST(ReactiveSocketTest, RequestChannel) {
       .WillOnce(Invoke([&](size_t) { serverInputSub->request(2); }));
   EXPECT_CALL(*clientOutputSub, request_(2))
       .InSequence(s)
-          // Client responds with the first one.
+      // Client responds with the first one.
       .WillOnce(Invoke([&](size_t) {
-          clientOutput->onNext(Payload(originalPayload->clone()));
+        clientOutput->onNext(Payload(originalPayload->clone()));
       }));
   EXPECT_CALL(*serverInput, onNext_(Equals(&originalPayload)))
       .InSequence(s)
-          // Server sends one in return.
+      // Server sends one in return.
       .WillOnce(
           Invoke([&](Payload& p) { serverOutput->onNext(std::move(p)); }));
   // Client sends the second one.
@@ -134,10 +134,10 @@ TEST(ReactiveSocketTest, RequestChannel) {
   Sequence s0, s1, s2, s3;
   EXPECT_CALL(*serverInput, onNext_(Equals(&originalPayload)))
       .InSequence(s, s0, s1, s2, s3)
-          // Server closes the channel in response.
+      // Server closes the channel in response.
       .WillOnce(Invoke([&](Payload&) {
-          serverOutput->onComplete();
-          serverInputSub->cancel();
+        serverOutput->onComplete();
+        serverInputSub->cancel();
       }));
   EXPECT_CALL(*serverOutputSub, cancel_()).InSequence(s0);
   EXPECT_CALL(*serverInput, onComplete_()).InSequence(s1);
@@ -189,9 +189,9 @@ TEST(ReactiveSocketTest, RequestStreamComplete) {
   EXPECT_CALL(*clientInput, onSubscribe_(_))
       .InSequence(s)
       .WillOnce(Invoke([&](std::shared_ptr<Subscription> sub) {
-          clientInputSub = sub;
-          // Request two payloads immediately.
-          clientInputSub->request(2);
+        clientInputSub = sub;
+        // Request two payloads immediately.
+        clientInputSub->request(2);
       }));
   // The request reaches the other end and triggers new responder to be set up.
   EXPECT_CALL(
@@ -201,15 +201,15 @@ TEST(ReactiveSocketTest, RequestStreamComplete) {
           [&](Payload& request,
               StreamId streamId,
               std::shared_ptr<Subscriber<Payload>> response) {
-              serverOutput = response;
-              serverOutput->onSubscribe(serverOutputSub);
+            serverOutput = response;
+            serverOutput->onSubscribe(serverOutputSub);
           }));
   EXPECT_CALL(*serverOutputSub, request_(2))
       .InSequence(s)
-          // The server delivers them immediately.
+      // The server delivers them immediately.
       .WillOnce(Invoke([&](size_t) {
-          serverOutput->onNext(Payload(originalPayload->clone()));
-          serverOutput->onNext(Payload(originalPayload->clone()));
+        serverOutput->onNext(Payload(originalPayload->clone()));
+        serverOutput->onNext(Payload(originalPayload->clone()));
       }));
   // Client receives the first payload.
   EXPECT_CALL(*clientInput, onNext_(Equals(&originalPayload))).InSequence(s);
@@ -221,17 +221,17 @@ TEST(ReactiveSocketTest, RequestStreamComplete) {
   EXPECT_CALL(*serverOutputSub, request_(1))
       .InSequence(s)
       .WillOnce(Invoke([&](size_t) {
-          serverOutput->onNext(Payload(originalPayload->clone()));
+        serverOutput->onNext(Payload(originalPayload->clone()));
       }));
   // Client receives the third (and last) payload
   Sequence s0, s1;
   EXPECT_CALL(*clientInput, onNext_(Equals(&originalPayload)))
       .InSequence(s, s0, s1)
-          // Server closes the subscription by calling onComplete() in response
-          // to sending the final item
+      // Server closes the subscription by calling onComplete() in response
+      // to sending the final item
       .WillOnce(Invoke([&](Payload&) {
-          EXPECT_CALL(*serverOutputSub, cancel_()).InSequence(s0);
-          serverOutput->onComplete();
+        EXPECT_CALL(*serverOutputSub, cancel_()).InSequence(s0);
+        serverOutput->onComplete();
       }));
   EXPECT_CALL(*clientInput, onComplete_())
       .InSequence(s1)
@@ -277,9 +277,9 @@ TEST(ReactiveSocketTest, RequestStreamCancel) {
   EXPECT_CALL(*clientInput, onSubscribe_(_))
       .InSequence(s)
       .WillOnce(Invoke([&](std::shared_ptr<Subscription> sub) {
-          clientInputSub = sub;
-          // Request two payloads immediately.
-          clientInputSub->request(2);
+        clientInputSub = sub;
+        // Request two payloads immediately.
+        clientInputSub->request(2);
       }));
   // The request reaches the other end and triggers new responder to be set up.
   EXPECT_CALL(
@@ -289,15 +289,15 @@ TEST(ReactiveSocketTest, RequestStreamCancel) {
           [&](Payload& request,
               StreamId streamId,
               std::shared_ptr<Subscriber<Payload>> response) {
-              serverOutput = response;
-              serverOutput->onSubscribe(serverOutputSub);
+            serverOutput = response;
+            serverOutput->onSubscribe(serverOutputSub);
           }));
   EXPECT_CALL(*serverOutputSub, request_(2))
       .InSequence(s)
-          // The server delivers them immediately.
+      // The server delivers them immediately.
       .WillOnce(Invoke([&](size_t) {
-          serverOutput->onNext(Payload(originalPayload->clone()));
-          serverOutput->onNext(Payload(originalPayload->clone()));
+        serverOutput->onNext(Payload(originalPayload->clone()));
+        serverOutput->onNext(Payload(originalPayload->clone()));
       }));
   // Client receives the first payload.
   EXPECT_CALL(*clientInput, onNext_(Equals(&originalPayload))).InSequence(s);
@@ -309,13 +309,13 @@ TEST(ReactiveSocketTest, RequestStreamCancel) {
   EXPECT_CALL(*serverOutputSub, request_(1))
       .InSequence(s)
       .WillOnce(Invoke([&](size_t) {
-          serverOutput->onNext(Payload(originalPayload->clone()));
+        serverOutput->onNext(Payload(originalPayload->clone()));
       }));
   // Client receives the third (and last) payload
   Sequence s0, s1;
   EXPECT_CALL(*clientInput, onNext_(Equals(&originalPayload)))
       .InSequence(s, s0, s1)
-          // Client closes the subscription in response.
+      // Client closes the subscription in response.
       .WillOnce(Invoke([&](Payload&) { clientInputSub->cancel(); }));
   EXPECT_CALL(*serverOutputSub, cancel_())
       .InSequence(s0)
@@ -362,9 +362,9 @@ TEST(ReactiveSocketTest, RequestSubscription) {
   EXPECT_CALL(*clientInput, onSubscribe_(_))
       .InSequence(s)
       .WillOnce(Invoke([&](std::shared_ptr<Subscription> sub) {
-          clientInputSub = sub;
-          // Request two payloads immediately.
-          clientInputSub->request(2);
+        clientInputSub = sub;
+        // Request two payloads immediately.
+        clientInputSub->request(2);
       }));
   // The request reaches the other end and triggers new responder to be set up.
   EXPECT_CALL(
@@ -375,15 +375,15 @@ TEST(ReactiveSocketTest, RequestSubscription) {
           [&](Payload& request,
               StreamId streamId,
               std::shared_ptr<Subscriber<Payload>> response) {
-              serverOutput = response;
-              serverOutput->onSubscribe(serverOutputSub);
+            serverOutput = response;
+            serverOutput->onSubscribe(serverOutputSub);
           }));
   EXPECT_CALL(*serverOutputSub, request_(2))
       .InSequence(s)
-          // The server delivers them immediately.
+      // The server delivers them immediately.
       .WillOnce(Invoke([&](size_t) {
-          serverOutput->onNext(Payload(originalPayload->clone()));
-          serverOutput->onNext(Payload(originalPayload->clone()));
+        serverOutput->onNext(Payload(originalPayload->clone()));
+        serverOutput->onNext(Payload(originalPayload->clone()));
       }));
   // Client receives the first payload.
   EXPECT_CALL(*clientInput, onNext_(Equals(&originalPayload))).InSequence(s);
@@ -395,13 +395,13 @@ TEST(ReactiveSocketTest, RequestSubscription) {
   EXPECT_CALL(*serverOutputSub, request_(1))
       .InSequence(s)
       .WillOnce(Invoke([&](size_t) {
-          serverOutput->onNext(Payload(originalPayload->clone()));
+        serverOutput->onNext(Payload(originalPayload->clone()));
       }));
   // Client receives the third (and last) payload.
   Sequence s0, s1;
   EXPECT_CALL(*clientInput, onNext_(Equals(&originalPayload)))
       .InSequence(s, s0, s1)
-          // Client closes the subscription in response.
+      // Client closes the subscription in response.
       .WillOnce(Invoke([&](Payload&) { clientInputSub->cancel(); }));
   EXPECT_CALL(*serverOutputSub, cancel_())
       .InSequence(s0)
@@ -449,9 +449,9 @@ TEST(ReactiveSocketTest, RequestSubscriptionSurplusResponse) {
   EXPECT_CALL(*clientInput, onSubscribe_(_))
       .InSequence(s)
       .WillOnce(Invoke([&](std::shared_ptr<Subscription> sub) {
-          clientInputSub = sub;
-          // Request one payload immediately.
-          clientInputSub->request(1);
+        clientInputSub = sub;
+        // Request one payload immediately.
+        clientInputSub->request(1);
       }));
   // The request reaches the other end and triggers new responder to be set up.
   EXPECT_CALL(
@@ -462,15 +462,15 @@ TEST(ReactiveSocketTest, RequestSubscriptionSurplusResponse) {
           [&](Payload& request,
               StreamId streamId,
               const std::shared_ptr<Subscriber<Payload>>& response) {
-              serverOutput = response;
-              serverOutput->onSubscribe(serverOutputSub);
+            serverOutput = response;
+            serverOutput->onSubscribe(serverOutputSub);
           }));
   EXPECT_CALL(*serverOutputSub, request_(1))
       .InSequence(s)
-          // The server delivers immediately, but an extra one.
+      // The server delivers immediately, but an extra one.
       .WillOnce(Invoke([&](size_t) {
-          serverOutput->onNext(Payload(originalPayload->clone()));
-          serverOutput->onNext(Payload(originalPayload->clone()));
+        serverOutput->onNext(Payload(originalPayload->clone()));
+        serverOutput->onNext(Payload(originalPayload->clone()));
       }));
   // Client receives the first payload.
   EXPECT_CALL(*clientInput, onNext_(Equals(&originalPayload))).InSequence(s);
@@ -479,7 +479,7 @@ TEST(ReactiveSocketTest, RequestSubscriptionSurplusResponse) {
   EXPECT_CALL(*clientInput, onComplete_()).Times(0);
   //  // Client closes the subscription in response.
   EXPECT_CALL(*serverOutputSub, cancel_()).InSequence(s).WillOnce(Invoke([&]() {
-      serverOutput->onComplete();
+    serverOutput->onComplete();
   }));
 
   // Kick off the magic.
@@ -522,9 +522,9 @@ TEST(ReactiveSocketTest, RequestResponse) {
   EXPECT_CALL(*clientInput, onSubscribe_(_))
       .InSequence(s)
       .WillOnce(Invoke([&](std::shared_ptr<Subscription> sub) {
-          clientInputSub = sub;
-          // Request payload immediately.
-          clientInputSub->request(1);
+        clientInputSub = sub;
+        // Request payload immediately.
+        clientInputSub->request(1);
       }));
 
   // The request reaches the other end and triggers new responder to be set up.
@@ -535,15 +535,15 @@ TEST(ReactiveSocketTest, RequestResponse) {
           [&](Payload& request,
               StreamId streamId,
               std::shared_ptr<Subscriber<Payload>> response) {
-              serverOutput = response;
-              serverOutput->onSubscribe(serverOutputSub);
+            serverOutput = response;
+            serverOutput->onSubscribe(serverOutputSub);
           }));
 
   EXPECT_CALL(*serverOutputSub, request_(_))
       .InSequence(s)
-          // The server deliver the response immediately.
+      // The server deliver the response immediately.
       .WillOnce(Invoke([&](size_t) {
-          serverOutput->onNext(Payload(originalPayload->clone()));
+        serverOutput->onNext(Payload(originalPayload->clone()));
       }));
 
   // Client receives the only payload and closes the subscription in response.
@@ -555,7 +555,7 @@ TEST(ReactiveSocketTest, RequestResponse) {
   EXPECT_CALL(*clientInput, onComplete_()).InSequence(s);
 
   EXPECT_CALL(*serverOutputSub, cancel_()).InSequence(s).WillOnce(Invoke([&]() {
-      serverOutput->onComplete();
+    serverOutput->onComplete();
   }));
 
   // Kick off the magic.
@@ -758,9 +758,9 @@ TEST(ReactiveSocketTest, Destructor) {
         .InSequence(s)
         .WillOnce(
             Invoke([i, &clientInputSubs](std::shared_ptr<Subscription> sub) {
-                clientInputSubs[i] = sub;
-                // Request two payloads immediately.
-                sub->request(2);
+              clientInputSubs[i] = sub;
+              // Request two payloads immediately.
+              sub->request(2);
             }));
     // The request reaches the other end and triggers new responder to be set
     // up.
@@ -772,18 +772,18 @@ TEST(ReactiveSocketTest, Destructor) {
             Payload& request,
             StreamId streamId,
             std::shared_ptr<Subscriber<Payload>> response) {
-            serverOutputs[i] = response;
-            serverOutputs[i]->onSubscribe(serverOutputSubs[i]);
+          serverOutputs[i] = response;
+          serverOutputs[i]->onSubscribe(serverOutputSubs[i]);
         }));
     Sequence s0, s1;
     EXPECT_CALL(*serverOutputSubs[i], request_(2))
         .InSequence(s, s0, s1)
         .WillOnce(Invoke([i, &serverSock](size_t) {
-            if (i == 1) {
-              // The second subscription tears down server-side instance of
-              // ReactiveSocket immediately upon receiving request(n) signal.
-              serverSock.reset();
-            }
+          if (i == 1) {
+            // The second subscription tears down server-side instance of
+            // ReactiveSocket immediately upon receiving request(n) signal.
+            serverSock.reset();
+          }
         }));
     // Subscriptions will be terminated by ReactiveSocket implementation.
     EXPECT_CALL(*serverOutputSubs[i], cancel_())
@@ -829,76 +829,77 @@ TEST(ReactiveSocketTest, ReactiveSocketOverInlineConnection) {
 }
 
 class ReactiveSocketIgnoreRequestTest : public testing::Test {
-public:
-    class TestRequestHandler : public NullRequestHandler {
-        std::shared_ptr<Subscriber<Payload>> onRequestChannel(
-            Payload /*request*/,
-            StreamId streamId,
-            SubscriberFactory& subscriberFactory) override {
-          return std::make_shared<NullSubscriber>();
-        }
+ public:
+  class TestRequestHandler : public NullRequestHandler {
+    std::shared_ptr<Subscriber<Payload>> onRequestChannel(
+        Payload /*request*/,
+        StreamId streamId,
+        SubscriberFactory& subscriberFactory) override {
+      return std::make_shared<NullSubscriber>();
+    }
 
-        void onRequestStream(
-            Payload /*request*/,
-            StreamId streamId,
-            SubscriberFactory& subscriberFactory) override {}
+    void onRequestStream(
+        Payload /*request*/,
+        StreamId streamId,
+        SubscriberFactory& subscriberFactory) override {}
 
-        void onRequestSubscription(
-            Payload /*request*/,
-            StreamId streamId,
-            SubscriberFactory& subscriberFactory) override {}
+    void onRequestSubscription(
+        Payload /*request*/,
+        StreamId streamId,
+        SubscriberFactory& subscriberFactory) override {}
 
-        void onRequestResponse(
-            Payload /*request*/,
-            StreamId streamId,
-            SubscriberFactory& subscriberFactory) override {}
-    };
+    void onRequestResponse(
+        Payload /*request*/,
+        StreamId streamId,
+        SubscriberFactory& subscriberFactory) override {}
+  };
 
-    ReactiveSocketIgnoreRequestTest() {
-      auto clientConn = folly::make_unique<InlineConnection>();
-      auto serverConn = folly::make_unique<InlineConnection>();
-      clientConn->connectTo(*serverConn);
+  ReactiveSocketIgnoreRequestTest() {
+    auto clientConn = folly::make_unique<InlineConnection>();
+    auto serverConn = folly::make_unique<InlineConnection>();
+    clientConn->connectTo(*serverConn);
 
-      clientSock = ReactiveSocket::fromClientConnection(
-          std::move(clientConn),
-          // No interactions on this mock, the client will not accept any
-          // requests.
-          folly::make_unique<StrictMock<MockRequestHandler>>(),
-          ConnectionSetupPayload("", "", Payload()));
+    clientSock = ReactiveSocket::fromClientConnection(
+        std::move(clientConn),
+        // No interactions on this mock, the client will not accept any
+        // requests.
+        folly::make_unique<StrictMock<MockRequestHandler>>(),
+        ConnectionSetupPayload("", "", Payload()));
 
-      serverSock = ReactiveSocket::fromServerConnection(
-          std::move(serverConn), folly::make_unique<TestRequestHandler>());
+    serverSock = ReactiveSocket::fromServerConnection(
+        std::move(serverConn), folly::make_unique<TestRequestHandler>());
 
-      // Client request.
-      EXPECT_CALL(*clientInput, onSubscribe_(_))
-          .WillOnce(Invoke([&](std::shared_ptr<Subscription> sub) {
-              clientInputSub = sub;
-              sub->request(2);
-          }));
+    // Client request.
+    EXPECT_CALL(*clientInput, onSubscribe_(_))
+        .WillOnce(Invoke([&](std::shared_ptr<Subscription> sub) {
+          clientInputSub = sub;
+          sub->request(2);
+        }));
 
-      //
-      // server RequestHandler is ignoring the request, we expect terminating
-      // response
-      //
+    //
+    // server RequestHandler is ignoring the request, we expect terminating
+    // response
+    //
 
-      EXPECT_CALL(*clientInput, onNext_(_)).Times(0);
-      EXPECT_CALL(*clientInput, onComplete_()).Times(0);
-      EXPECT_CALL(*clientInput, onError_(_)).WillOnce(Invoke([&](const folly::exception_wrapper& ex) {
+    EXPECT_CALL(*clientInput, onNext_(_)).Times(0);
+    EXPECT_CALL(*clientInput, onComplete_()).Times(0);
+    EXPECT_CALL(*clientInput, onError_(_))
+        .WillOnce(Invoke([&](const folly::exception_wrapper& ex) {
           LOG(INFO) << "expected error: " << ex.what();
           clientInputSub->cancel();
           clientInputSub = nullptr;
-      }));
-    }
+        }));
+  }
 
-    std::unique_ptr<ReactiveSocket> clientSock;
-    std::unique_ptr<ReactiveSocket> serverSock;
+  std::unique_ptr<ReactiveSocket> clientSock;
+  std::unique_ptr<ReactiveSocket> serverSock;
 
-    std::shared_ptr<StrictMock<MockSubscriber<Payload>>> clientInput{
-        std::make_shared<StrictMock<MockSubscriber<Payload>>>()};
-    std::shared_ptr<Subscription> clientInputSub;
+  std::shared_ptr<StrictMock<MockSubscriber<Payload>>> clientInput{
+      std::make_shared<StrictMock<MockSubscriber<Payload>>>()};
+  std::shared_ptr<Subscription> clientInputSub;
 
-    const std::unique_ptr<folly::IOBuf> originalPayload{
-        folly::IOBuf::copyBuffer("foo")};
+  const std::unique_ptr<folly::IOBuf> originalPayload{
+      folly::IOBuf::copyBuffer("foo")};
 };
 
 TEST_F(ReactiveSocketIgnoreRequestTest, IgnoreRequestResponse) {
@@ -919,132 +920,132 @@ TEST_F(ReactiveSocketIgnoreRequestTest, IgnoreRequestChannel) {
 
   auto clientOutputSub = std::make_shared<StrictMock<MockSubscription>>();
   EXPECT_CALL(*clientOutputSub, request_(1)).WillOnce(Invoke([&](size_t) {
-      clientOutput->onNext(Payload(originalPayload->clone()));
+    clientOutput->onNext(Payload(originalPayload->clone()));
   }));
   EXPECT_CALL(*clientOutputSub, cancel_()).WillOnce(Invoke([&]() {
-      clientOutput->onComplete();
-      clientOutput = nullptr;
+    clientOutput->onComplete();
+    clientOutput = nullptr;
   }));
 
   clientOutput->onSubscribe(clientOutputSub);
 }
 
 class ReactiveSocketOnErrorOnShutdownTest : public testing::Test {
-public:
-    ReactiveSocketOnErrorOnShutdownTest() {
-      auto clientConn = folly::make_unique<InlineConnection>();
-      auto serverConn = folly::make_unique<InlineConnection>();
-      clientConn->connectTo(*serverConn);
+ public:
+  ReactiveSocketOnErrorOnShutdownTest() {
+    auto clientConn = folly::make_unique<InlineConnection>();
+    auto serverConn = folly::make_unique<InlineConnection>();
+    clientConn->connectTo(*serverConn);
 
-      clientSock = ReactiveSocket::fromClientConnection(
-          std::move(clientConn),
-          // No interactions on this mock, the client will not accept any
-          // requests.
-          folly::make_unique<StrictMock<MockRequestHandler>>(),
-          ConnectionSetupPayload("", "", Payload()));
+    clientSock = ReactiveSocket::fromClientConnection(
+        std::move(clientConn),
+        // No interactions on this mock, the client will not accept any
+        // requests.
+        folly::make_unique<StrictMock<MockRequestHandler>>(),
+        ConnectionSetupPayload("", "", Payload()));
 
-      auto serverHandler = folly::make_unique<StrictMock<MockRequestHandler>>();
-      auto& serverHandlerRef = *serverHandler;
+    auto serverHandler = folly::make_unique<StrictMock<MockRequestHandler>>();
+    auto& serverHandlerRef = *serverHandler;
 
-      EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
-          .WillRepeatedly(Return(std::make_shared<StreamState>()));
+    EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
+        .WillRepeatedly(Return(std::make_shared<StreamState>()));
 
-      serverSock = ReactiveSocket::fromServerConnection(
-          std::move(serverConn), std::move(serverHandler));
+    serverSock = ReactiveSocket::fromServerConnection(
+        std::move(serverConn), std::move(serverHandler));
 
-      EXPECT_CALL(*clientInput, onSubscribe_(_))
-          .WillOnce(Invoke([&](std::shared_ptr<Subscription> sub) {
-              clientInputSub = sub;
-              sub->request(2);
-          }));
+    EXPECT_CALL(*clientInput, onSubscribe_(_))
+        .WillOnce(Invoke([&](std::shared_ptr<Subscription> sub) {
+          clientInputSub = sub;
+          sub->request(2);
+        }));
 
-      EXPECT_CALL(serverHandlerRef, handleRequestResponse_(_, _, _))
-          .Times(AtMost(1))
-          .WillOnce(Invoke([&](
-              Payload& request,
-              StreamId streamId,
-              std::shared_ptr<Subscriber<Payload>> response) {
-              serverOutput = response;
-              serverOutput->onSubscribe(serverOutputSub);
-              serverSock.reset(); // should close everything, but streams should end
-              // with onError
-          }));
-      EXPECT_CALL(serverHandlerRef, handleRequestStream_(_, _, _))
-          .Times(AtMost(1))
-          .WillOnce(Invoke([&](
-              Payload& request,
-              StreamId streamId,
-              std::shared_ptr<Subscriber<Payload>> response) {
-              serverOutput = response;
-              serverOutput->onSubscribe(serverOutputSub);
-              serverSock.reset(); // should close everything, but streams should end
-              // with onError
-          }));
-      EXPECT_CALL(serverHandlerRef, handleRequestSubscription_(_, _, _))
-          .Times(AtMost(1))
-          .WillOnce(Invoke([&](
-              Payload& request,
-              StreamId streamId,
-              std::shared_ptr<Subscriber<Payload>> response) {
-              serverOutput = response;
-              serverOutput->onSubscribe(serverOutputSub);
-              serverSock.reset(); // should close everything, but streams should end
-              // with onError
-          }));
-      EXPECT_CALL(serverHandlerRef, handleRequestChannel_(_, _, _))
-          .Times(AtMost(1))
-          .WillOnce(Invoke([&](
-              Payload& request,
-              StreamId streamId,
-              std::shared_ptr<Subscriber<Payload>> response) {
+    EXPECT_CALL(serverHandlerRef, handleRequestResponse_(_, _, _))
+        .Times(AtMost(1))
+        .WillOnce(Invoke([&](
+            Payload& request,
+            StreamId streamId,
+            std::shared_ptr<Subscriber<Payload>> response) {
+          serverOutput = response;
+          serverOutput->onSubscribe(serverOutputSub);
+          serverSock.reset(); // should close everything, but streams should end
+          // with onError
+        }));
+    EXPECT_CALL(serverHandlerRef, handleRequestStream_(_, _, _))
+        .Times(AtMost(1))
+        .WillOnce(Invoke([&](
+            Payload& request,
+            StreamId streamId,
+            std::shared_ptr<Subscriber<Payload>> response) {
+          serverOutput = response;
+          serverOutput->onSubscribe(serverOutputSub);
+          serverSock.reset(); // should close everything, but streams should end
+          // with onError
+        }));
+    EXPECT_CALL(serverHandlerRef, handleRequestSubscription_(_, _, _))
+        .Times(AtMost(1))
+        .WillOnce(Invoke([&](
+            Payload& request,
+            StreamId streamId,
+            std::shared_ptr<Subscriber<Payload>> response) {
+          serverOutput = response;
+          serverOutput->onSubscribe(serverOutputSub);
+          serverSock.reset(); // should close everything, but streams should end
+          // with onError
+        }));
+    EXPECT_CALL(serverHandlerRef, handleRequestChannel_(_, _, _))
+        .Times(AtMost(1))
+        .WillOnce(Invoke([&](
+            Payload& request,
+            StreamId streamId,
+            std::shared_ptr<Subscriber<Payload>> response) {
 
-              EXPECT_CALL(*serverInput, onSubscribe_(_))
-                  .WillOnce(Invoke([&](std::shared_ptr<Subscription> sub) {
-                      serverInputSub = sub;
-                      sub->request(2);
-                  }));
-              EXPECT_CALL(*serverInput, onComplete_()).Times(1);
+          EXPECT_CALL(*serverInput, onSubscribe_(_))
+              .WillOnce(Invoke([&](std::shared_ptr<Subscription> sub) {
+                serverInputSub = sub;
+                sub->request(2);
+              }));
+          EXPECT_CALL(*serverInput, onComplete_()).Times(1);
 
-              serverOutput = response;
-              serverOutput->onSubscribe(serverOutputSub);
-              serverSock.reset(); // should close everything, but streams should end
-              // with onError
+          serverOutput = response;
+          serverOutput->onSubscribe(serverOutputSub);
+          serverSock.reset(); // should close everything, but streams should end
+          // with onError
 
-              return serverInput;
-          }));
+          return serverInput;
+        }));
 
-      EXPECT_CALL(*clientInput, onNext_(_)).Times(0);
-      EXPECT_CALL(*clientInput, onComplete_()).Times(0);
+    EXPECT_CALL(*clientInput, onNext_(_)).Times(0);
+    EXPECT_CALL(*clientInput, onComplete_()).Times(0);
 
-      EXPECT_CALL(*serverOutputSub, cancel_()).WillOnce(Invoke([&]() {
-          serverOutput->onComplete();
-          serverOutput = nullptr;
-      }));
+    EXPECT_CALL(*serverOutputSub, cancel_()).WillOnce(Invoke([&]() {
+      serverOutput->onComplete();
+      serverOutput = nullptr;
+    }));
 
-      EXPECT_CALL(*clientInput, onError_(_))
-          .WillOnce(Invoke([&](folly::exception_wrapper) {
-              clientInputSub->cancel();
-              clientInputSub = nullptr;
-          }));
-    }
+    EXPECT_CALL(*clientInput, onError_(_))
+        .WillOnce(Invoke([&](folly::exception_wrapper) {
+          clientInputSub->cancel();
+          clientInputSub = nullptr;
+        }));
+  }
 
-    std::unique_ptr<ReactiveSocket> clientSock;
-    std::unique_ptr<ReactiveSocket> serverSock;
+  std::unique_ptr<ReactiveSocket> clientSock;
+  std::unique_ptr<ReactiveSocket> serverSock;
 
-    const std::unique_ptr<folly::IOBuf> originalPayload{
-        folly::IOBuf::copyBuffer("foo")};
+  const std::unique_ptr<folly::IOBuf> originalPayload{
+      folly::IOBuf::copyBuffer("foo")};
 
-    std::shared_ptr<StrictMock<MockSubscriber<Payload>>> clientInput{
-        std::make_shared<StrictMock<MockSubscriber<Payload>>>()};
-    std::shared_ptr<Subscription> clientInputSub;
+  std::shared_ptr<StrictMock<MockSubscriber<Payload>>> clientInput{
+      std::make_shared<StrictMock<MockSubscriber<Payload>>>()};
+  std::shared_ptr<Subscription> clientInputSub;
 
-    std::shared_ptr<Subscriber<Payload>> serverOutput;
-    std::shared_ptr<StrictMock<MockSubscription>> serverOutputSub{
-        std::make_shared<StrictMock<MockSubscription>>()};
+  std::shared_ptr<Subscriber<Payload>> serverOutput;
+  std::shared_ptr<StrictMock<MockSubscription>> serverOutputSub{
+      std::make_shared<StrictMock<MockSubscription>>()};
 
-    std::shared_ptr<StrictMock<MockSubscriber<Payload>>> serverInput{
-        std::make_shared<StrictMock<MockSubscriber<Payload>>>()};
-    std::shared_ptr<Subscription> serverInputSub;
+  std::shared_ptr<StrictMock<MockSubscriber<Payload>>> serverInput{
+      std::make_shared<StrictMock<MockSubscriber<Payload>>>()};
+  std::shared_ptr<Subscription> serverInputSub;
 };
 
 TEST_F(ReactiveSocketOnErrorOnShutdownTest, RequestResponse) {
@@ -1065,12 +1066,12 @@ TEST_F(ReactiveSocketOnErrorOnShutdownTest, RequestChannel) {
 
   auto clientOutputSub = std::make_shared<StrictMock<MockSubscription>>();
   EXPECT_CALL(*clientOutputSub, request_(1)).WillOnce(Invoke([&](size_t) {
-      // this will initiate the interaction
-      clientOutput->onNext(Payload(originalPayload->clone()));
+    // this will initiate the interaction
+    clientOutput->onNext(Payload(originalPayload->clone()));
   }));
   EXPECT_CALL(*clientOutputSub, cancel_()).WillOnce(Invoke([&]() {
-      clientOutput->onComplete();
-      clientOutput = nullptr;
+    clientOutput->onComplete();
+    clientOutput = nullptr;
   }));
 
   clientOutput->onSubscribe(clientOutputSub);

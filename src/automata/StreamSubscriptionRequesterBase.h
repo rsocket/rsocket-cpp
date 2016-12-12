@@ -5,10 +5,10 @@
 #include <reactive-streams/utilities/AllowanceSemaphore.h>
 #include "src/AbstractStreamAutomaton.h"
 #include "src/Frame.h"
+#include "src/SubscriptionBase.h"
 #include "src/mixins/ConsumerMixin.h"
 #include "src/mixins/MixinTerminator.h"
 #include "src/mixins/StreamIfMixin.h"
-#include "src/SubscriptionBase.h"
 
 namespace reactivesocket {
 

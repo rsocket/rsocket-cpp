@@ -3,8 +3,8 @@
 #pragma once
 #include "ConsumerMixin.h"
 
-#include <algorithm>
 #include <glog/logging.h>
+#include <algorithm>
 #include "src/ConnectionAutomaton.h"
 #include "src/Frame.h"
 #include "src/Payload.h"
