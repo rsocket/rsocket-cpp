@@ -4,7 +4,6 @@
 
 #include <folly/ExceptionWrapper.h>
 #include <folly/Memory.h>
-#include <folly/MoveWrapper.h>
 
 #include "src/CancellingSubscription.h"
 #include "src/ConnectionAutomaton.h"

@@ -4,8 +4,9 @@
 
 #include <folly/ExceptionWrapper.h>
 #include <folly/Executor.h>
+#include <folly/Function.h>
 #include <folly/Memory.h>
-#include <folly/MoveWrapper.h>
+#include <folly/futures/QueuedImmediateExecutor.h>
 #include <folly/io/IOBuf.h>
 #include <cstddef>
 #include <functional>
@@ -95,10 +96,9 @@ class ExecutorMixin : public Base,
   }
 
   void onNext(Payload payload) {
-    auto movedPayload = folly::makeMoveWrapper(std::move(payload));
     std::shared_ptr<Base> basePtr = this->shared_from_this();
-    runInExecutor([basePtr, movedPayload]() mutable {
-      basePtr->onNext(movedPayload.move());
+    runInExecutor([ basePtr, payload = std::move(payload) ]() mutable {
+      basePtr->onNext(std::move(payload));
     });
   }
 
@@ -107,10 +107,10 @@ class ExecutorMixin : public Base,
   }
 
   void onError(folly::exception_wrapper ex) {
-    auto movedEx = folly::makeMoveWrapper(std::move(ex));
     std::shared_ptr<Base> basePtr = this->shared_from_this();
-    runInExecutor(
-        [basePtr, movedEx]() mutable { basePtr->onError(movedEx.move()); });
+    runInExecutor([ basePtr, ex = std::move(ex) ]() mutable {
+      basePtr->onError(std::move(ex));
+    });
   }
   /// @}
 
@@ -136,5 +136,6 @@ class ExecutorMixin : public Base,
     Base::onBadFrame();
   }
   /// @}
+
 };
 } // reactivesocket
