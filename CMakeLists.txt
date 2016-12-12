@@ -115,7 +115,6 @@ add_library(
   src/automata/SubscriptionRequester.cpp
   src/automata/SubscriptionRequester.h
   src/automata/SubscriptionResponder.h
-  src/CancellingSubscription.h
   src/Common.cpp
   src/Common.h
   src/concurrent/atomic64_gcc_x86_64.h
