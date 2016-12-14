@@ -78,6 +78,8 @@ find_path(GFLAGS_INCLUDE_DIR gflags/gflags.h)
 find_library(GLOG_LIBRARY glog)
 find_library(GFLAGS_LIBRARY gflags)
 
+find_library(UUID_LIBRARY uuid)
+
 message("gflags include_dir <${GFLAGS_INCLUDE_DIR}> lib <${GFLAGS_LIBRARY}>")
 message("glog include_dir <${GLOG_INCLUDE_DIR}> lib <${GLOG_LIBRARY}>")
 
@@ -115,6 +117,7 @@ add_library(
   src/automata/SubscriptionRequester.cpp
   src/automata/SubscriptionRequester.h
   src/automata/SubscriptionResponder.h
+        src/ClientResumeStatusHandler.h
   src/Common.cpp
   src/Common.h
   src/concurrent/atomic64_gcc_x86_64.h
@@ -285,6 +288,11 @@ add_executable(
         test/simple/StatsPrinter.cpp
         test/simple/StatsPrinter.h)
 
+set(UUID_LIBS "")
+if(UUID_LIBRARY)
+  set(UUID_LIBS ${UUID_LIBRARY})
+endif()
+
 target_link_libraries(
         tcpresumeclient
         ReactiveSocket
@@ -292,6 +300,7 @@ target_link_libraries(
         ${GFLAGS_LIBRARY}
         ${GMOCK_LIBS}
         ${GLOG_LIBRARY}
+        ${UUID_LIBS}
         ${CMAKE_THREAD_LIBS_INIT})
 
 add_dependencies(tcpresumeclient gmock)

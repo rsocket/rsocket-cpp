@@ -74,9 +74,9 @@ std::shared_ptr<StreamState> NullRequestHandler::handleResume(
 }
 
 void NullRequestHandler::handleCleanResume(
-    std::shared_ptr<Subscription> /* response */) {}
+    StreamId /*streamId*/, ErrorStream& /*errorStream*/) {}
 
 void NullRequestHandler::handleDirtyResume(
-    std::shared_ptr<Subscription> /* response */) {}
+    StreamId /*streamId*/, ErrorStream& /*errorStream*/) {}
 
 } // reactivesocket

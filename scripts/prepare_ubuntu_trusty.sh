@@ -19,4 +19,5 @@ sudo apt-get -y install \
     binutils-dev \
     libjemalloc-dev \
     libssl-dev \
-    libiberty-dev
+    libiberty-dev \
+    uuid-dev

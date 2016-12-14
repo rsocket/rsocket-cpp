@@ -43,6 +43,7 @@ ReactiveSocket::ReactiveSocket(
                 handler, connection, streamId, std::move(serializedFrame));
           },
           std::make_shared<StreamState>(),
+          handler,
           std::bind(
               &ReactiveSocket::resumeListener,
               this,
@@ -111,7 +112,7 @@ std::shared_ptr<Subscriber<Payload>> ReactiveSocket::requestChannel(
   // TODO(stupaq): handle any exceptions
   StreamId streamId = nextStreamId_;
   nextStreamId_ += 2;
-  ChannelRequester::Parameters params = {{connection_, streamId, handler_},
+  ChannelRequester::Parameters params = {{connection_, streamId},
                                          executor};
   auto automaton = std::make_shared<ChannelRequester>(params);
   connection_->addStream(streamId, automaton);
@@ -128,7 +129,7 @@ void ReactiveSocket::requestStream(
   // TODO(stupaq): handle any exceptions
   StreamId streamId = nextStreamId_;
   nextStreamId_ += 2;
-  StreamRequester::Parameters params = {{connection_, streamId, handler_},
+  StreamRequester::Parameters params = {{connection_, streamId},
                                         executor};
   auto automaton = std::make_shared<StreamRequester>(params);
   connection_->addStream(streamId, automaton);
@@ -145,7 +146,7 @@ void ReactiveSocket::requestSubscription(
   // TODO(stupaq): handle any exceptions
   StreamId streamId = nextStreamId_;
   nextStreamId_ += 2;
-  SubscriptionRequester::Parameters params = {{connection_, streamId, handler_},
+  SubscriptionRequester::Parameters params = {{connection_, streamId},
                                               executor};
   auto automaton = std::make_shared<SubscriptionRequester>(params);
   connection_->addStream(streamId, automaton);
@@ -172,7 +173,7 @@ void ReactiveSocket::requestResponse(
   StreamId streamId = nextStreamId_;
   nextStreamId_ += 2;
   RequestResponseRequester::Parameters params = {
-      {connection_, streamId, handler_}, executor};
+      {connection_, streamId}, executor};
   auto automaton = std::make_shared<RequestResponseRequester>(params);
   connection_->addStream(streamId, automaton);
   automaton->subscribe(responseSink);
@@ -233,7 +234,7 @@ bool ReactiveSocket::createResponder(
       ReactiveSocketSubscriberFactory subscriberFactory(
           [&](folly::Executor* executor) {
             ChannelResponder::Parameters params = {
-                {connection.shared_from_this(), streamId, handler},
+                {connection.shared_from_this(), streamId},
                 executor ? *executor : defaultExecutor()};
             automaton = std::make_shared<ChannelResponder>(params);
             connection.addStream(streamId, automaton);
@@ -267,7 +268,7 @@ bool ReactiveSocket::createResponder(
       ReactiveSocketSubscriberFactory subscriberFactory(
           [&](folly::Executor* executor) {
             StreamResponder::Parameters params = {
-                {connection.shared_from_this(), streamId, handler},
+                {connection.shared_from_this(), streamId},
                 executor ? *executor : defaultExecutor()};
             automaton = std::make_shared<StreamResponder>(params);
             connection.addStream(streamId, automaton);
@@ -293,7 +294,7 @@ bool ReactiveSocket::createResponder(
       ReactiveSocketSubscriberFactory subscriberFactory(
           [&](folly::Executor* executor) {
             SubscriptionResponder::Parameters params = {
-                {connection.shared_from_this(), streamId, handler},
+                {connection.shared_from_this(), streamId},
                 executor ? *executor : defaultExecutor()};
             automaton = std::make_shared<SubscriptionResponder>(params);
             connection.addStream(streamId, automaton);
@@ -319,7 +320,7 @@ bool ReactiveSocket::createResponder(
       ReactiveSocketSubscriberFactory subscriberFactory(
           [&](folly::Executor* executor) {
             RequestResponseResponder::Parameters params = {
-                {connection.shared_from_this(), streamId, handler},
+                {connection.shared_from_this(), streamId},
                 executor ? *executor : defaultExecutor()};
             automaton = std::make_shared<RequestResponseResponder>(params);
             connection.addStream(streamId, automaton);
@@ -381,9 +382,10 @@ void ReactiveSocket::onClose(CloseListener listener) {
 }
 
 void ReactiveSocket::tryClientResume(
-    std::unique_ptr<DuplexConnection> newConnection,
-    const ResumeIdentificationToken& token) {
-  connection_->reconnect(std::move(newConnection));
+  const ResumeIdentificationToken& token,
+  std::unique_ptr<DuplexConnection> newConnection,
+  std::unique_ptr<ClientResumeStatusHandler> statusCallback) {
+  connection_->reconnect(std::move(newConnection), std::move(statusCallback));
   connection_->sendResume(token);
 }
 }

@@ -49,15 +49,6 @@ class PublisherMixin : public Base {
               << this->streamId_ << "): ";
   }
 
-  void onCleanResume() {
-    Base::requestHandler_->handleCleanResume(producingSubscription_);
-    Base::onCleanResume();
-  }
-  void onDirtyResume() {
-    Base::requestHandler_->handleDirtyResume(producingSubscription_);
-    Base::onDirtyResume();
-  }
-
   std::shared_ptr<Subscription> subscription() {
     return producingSubscription_;
   }

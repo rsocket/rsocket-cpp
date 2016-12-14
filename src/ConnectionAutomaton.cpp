@@ -6,6 +6,7 @@
 #include <folly/String.h>
 
 #include "src/AbstractStreamAutomaton.h"
+#include "RequestHandler.h"
 
 namespace reactivesocket {
 
@@ -13,6 +14,7 @@ ConnectionAutomaton::ConnectionAutomaton(
     std::unique_ptr<DuplexConnection> connection,
     StreamAutomatonFactory factory,
     std::shared_ptr<StreamState> streamState,
+    std::shared_ptr<RequestHandlerBase> requestHandler,
     ResumeListener resumeListener,
     Stats& stats,
     const std::shared_ptr<KeepaliveTimer>& keepaliveTimer,
@@ -24,7 +26,8 @@ ConnectionAutomaton::ConnectionAutomaton(
       isServer_(isServer),
       isResumable_(true),
       resumeListener_(resumeListener),
-      keepaliveTimer_(keepaliveTimer) {
+      keepaliveTimer_(keepaliveTimer),
+      requestHandler_(requestHandler) {
   // We deliberately do not "open" input or output to avoid having c'tor on the
   // stack when processing any signals from the connection. See ::connect and
   // ::onSubscribe.
@@ -98,9 +101,15 @@ void ConnectionAutomaton::closeDuplexConnection(folly::exception_wrapper ex) {
 }
 
 void ConnectionAutomaton::reconnect(
-    std::unique_ptr<DuplexConnection> newConnection) {
+  std::unique_ptr<DuplexConnection> newConnection,
+  std::unique_ptr<ClientResumeStatusHandler> statusCallback) {
+  CHECK(!resumeStatusHandler_);
+  CHECK(isResumable_);
+  CHECK(!isServer_);
+
   disconnect();
   connection_ = std::shared_ptr<DuplexConnection>(std::move(newConnection));
+  resumeStatusHandler_ = std::shared_ptr<ClientResumeStatusHandler>(std::move(statusCallback));
   connect();
 }
 
@@ -260,14 +269,23 @@ void ConnectionAutomaton::onConnectionFrame(
           outputFrameOrEnqueue(
               Frame_RESUME_OK(streamState_->resumeTracker_->impliedPosition())
                   .serializeOut());
-          for (auto it : streamState_->streams_) {
-            const StreamId streamId = it.first;
+          for (auto it = streamState_->streams_.begin(); it != streamState_->streams_.end();) {
+            const StreamId streamId = (*it).first;
+            std::shared_ptr<AbstractStreamAutomaton> automaton = (*it).second;
 
-            if (streamState_->resumeCache_->isPositionAvailable(
-                    frame.position_, streamId)) {
-              it.second->onCleanResume();
+            ErrorStream errorStream;
+
+            if (streamState_->resumeCache_->isPositionAvailable(frame.position_, streamId)) {
+                requestHandler_->handleCleanResume(streamId, errorStream);
             } else {
-              it.second->onDirtyResume();
+                requestHandler_->handleDirtyResume(streamId, errorStream);
+            }
+
+            if (errorStream) {
+                it = streamState_->streams_.erase(it);
+                automaton->endStream(StreamCompletionSignal::ERROR);
+            } else {
+                it++;
             }
           }
         } else {
@@ -283,6 +301,10 @@ void ConnectionAutomaton::onConnectionFrame(
       if (frame.deserializeFrom(std::move(payload))) {
         if (!isServer_ && isResumable_ &&
             streamState_->resumeCache_->isPositionAvailable(frame.position_)) {
+            if (resumeStatusHandler_) {
+              resumeStatusHandler_->onResumeOk();
+              resumeStatusHandler_.reset();
+            }
         } else {
           disconnectWithError(Frame_ERROR::connectionError("can not resume"));
         }
@@ -290,6 +312,17 @@ void ConnectionAutomaton::onConnectionFrame(
         disconnectWithError(Frame_ERROR::unexpectedFrame());
       }
       return;
+    }
+    case FrameType::ERROR: {
+      Frame_ERROR frame;
+      if (frame.deserializeFrom(std::move(payload))) {
+        if (frame.errorCode_ == ErrorCode::CONNECTION_ERROR && resumeStatusHandler_) {
+            resumeStatusHandler_->onResumeError(std::runtime_error(frame.payload_.moveDataToString()));
+          resumeStatusHandler_.reset();
+          // fall through
+        }
+      }
+      // if not handled, then fall through to default
     }
     default:
       disconnectWithError(Frame_ERROR::unexpectedFrame());

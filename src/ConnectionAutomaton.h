@@ -76,6 +76,7 @@ class ConnectionAutomaton :
       // TODO(stupaq): for testing only, can devirtualise if necessary
       StreamAutomatonFactory factory,
       std::shared_ptr<StreamState> streamState,
+      std::shared_ptr<RequestHandlerBase> requestHandler,
       ResumeListener resumeListener,
       Stats& stats,
       const std::shared_ptr<KeepaliveTimer>& keepaliveTimer_,
@@ -96,7 +97,9 @@ class ConnectionAutomaton :
   void disconnect();
 
   /// Terminate underlying connection and connect new connection
-  void reconnect(std::unique_ptr<DuplexConnection> newConnection);
+  void reconnect(
+    std::unique_ptr<DuplexConnection> newConnection,
+    std::unique_ptr<ClientResumeStatusHandler> statusCallback);
 
   ~ConnectionAutomaton();
 
@@ -210,5 +213,7 @@ class ConnectionAutomaton :
   std::vector<ConnectionCloseListener> closeListeners_;
   ResumeListener resumeListener_;
   const std::shared_ptr<KeepaliveTimer> keepaliveTimer_;
+  std::shared_ptr<ClientResumeStatusHandler> resumeStatusHandler_;
+  std::shared_ptr<RequestHandlerBase> requestHandler_;
 };
 }

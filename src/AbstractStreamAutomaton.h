@@ -73,9 +73,6 @@ class AbstractStreamAutomaton {
   /// 3. per "unsubscribe handshake", the automaton must deliver corresponding
   ///   terminal signal to the connection.
   virtual void endStream(StreamCompletionSignal signal) = 0;
-
-  virtual void onCleanResume() = 0;
-  virtual void onDirtyResume() = 0;
   /// @}
 
  protected:

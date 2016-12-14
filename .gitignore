@@ -50,6 +50,7 @@ install_manifest.txt
 /reactivesocket-cpp/ReactiveSocketTest
 /reactivesocket-cpp/compile_commands.json
 /reactivesocket-cpp/external/
+/cmake-build-debug
 
 ### Git ###
 .git/
