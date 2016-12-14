@@ -6,6 +6,7 @@
 #include "src/ConnectionSetupPayload.h"
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
+#include "Common.h"
 
 namespace folly {
 class Executor;
@@ -26,20 +27,16 @@ class SubscriberFactory {
 // Object to hold state for erroring a stream during resume callbacks
 class ErrorStream {
 public:
-  void operator()(folly::exception_wrapper ex) {
-    ex_ = ex;
-  }
-
   void operator()() {
-    ex_ = std::runtime_error("");
+    errored_ = true;
   }
 
   explicit operator bool() const {
-    return ex_ ? true : false;
+    return errored_;
   }
 
 private:
-  folly::exception_wrapper ex_;
+  bool errored_ = false;
 };
 
 class RequestHandlerBase {

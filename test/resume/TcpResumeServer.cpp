@@ -77,7 +77,7 @@ class ServerSubscription : public SubscriptionBase {
   void requestImpl(size_t n) override {
     response_.onNext(Payload("from server"));
     response_.onNext(Payload("from server2"));
-    response_.onComplete();
+    //response_.onComplete();
     //    response_.onError(std::runtime_error("XXX"));
   }
 

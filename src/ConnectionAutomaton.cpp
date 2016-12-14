@@ -102,10 +102,14 @@ void ConnectionAutomaton::closeDuplexConnection(folly::exception_wrapper ex) {
 
 void ConnectionAutomaton::reconnect(
   std::unique_ptr<DuplexConnection> newConnection,
-  std::unique_ptr<ClientResumeStatusCallback> statusCallback) {
+  std::unique_ptr<ClientResumeStatusHandler> statusCallback) {
+  CHECK(!resumeStatusCallback_);
+  CHECK(isResumable_);
+  CHECK(!isServer_);
+
   disconnect();
   connection_ = std::shared_ptr<DuplexConnection>(std::move(newConnection));
-  resumeStatusCallback_ = std::shared_ptr<ClientResumeStatusCallback>(std::move(statusCallback));
+  resumeStatusCallback_ = std::shared_ptr<ClientResumeStatusHandler>(std::move(statusCallback));
   connect();
 }
 
@@ -267,6 +271,7 @@ void ConnectionAutomaton::onConnectionFrame(
                   .serializeOut());
           for (auto it = streamState_->streams_.begin(); it != streamState_->streams_.end();) {
             const StreamId streamId = (*it).first;
+            std::shared_ptr<AbstractStreamAutomaton> automaton = (*it).second;
 
             ErrorStream errorStream;
 
@@ -278,7 +283,7 @@ void ConnectionAutomaton::onConnectionFrame(
 
             if (errorStream) {
                 it = streamState_->streams_.erase(it);
-                // TODO: send ERROR
+                automaton->endStream(StreamCompletionSignal::ERROR);
             } else {
                 it++;
             }
@@ -311,8 +316,8 @@ void ConnectionAutomaton::onConnectionFrame(
     case FrameType::ERROR: {
       Frame_ERROR frame;
       if (frame.deserializeFrom(std::move(payload))) {
-        if (frame.errorCode_ == ErrorCode::CONNECTION_ERROR && !isServer_ && isResumable_ && resumeStatusCallback_) {
-          resumeStatusCallback_->onConnectionError(std::runtime_error(frame.payload_.moveDataToString()));
+        if (frame.errorCode_ == ErrorCode::CONNECTION_ERROR && resumeStatusCallback_) {
+            resumeStatusCallback_->onResumeError(std::runtime_error(frame.payload_.moveDataToString()));
           resumeStatusCallback_.reset();
           // fall through
         }

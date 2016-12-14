@@ -33,13 +33,13 @@ class Callback : public AsyncSocket::ConnectCallback {
 };
 }
 
-class ClientResumeStatus : public ClientResumeStatusCallback {
+class ClientResumeStatus : public ClientResumeStatusHandler {
 public:
   void onResumeOk() override {
     std::cout << "resumed OK" << "\n";
   }
 
-  void onConnectionError(folly::exception_wrapper ex) override {
+  void onResumeError(folly::exception_wrapper ex) override {
     std::cout << "resume connection error " << ex.what() << "\n";
   }
 };

@@ -6,19 +6,20 @@
 
 namespace reactivesocket {
 
-class ClientResumeStatusCallback {
+class ClientResumeStatusHandler {
 public:
+  virtual ~ClientResumeStatusHandler() = default;
 
   // Called when a RESUME_OK frame is received during resuming operation
   virtual void onResumeOk() = 0;
 
   // Called when an ERROR frame with CONNECTION_ERROR is received during resuming operation
-  virtual void onConnectionError(folly::exception_wrapper ex) = 0;
+  virtual void onResumeError(folly::exception_wrapper ex) = 0;
 };
 
-class ClientResumeStatusCallbackDefault : public ClientResumeStatusCallback {
+class DefaultClientResumeStatusHandler : public ClientResumeStatusHandler {
 public:
   virtual void onResumeOk() {}
-  virtual void onConnectionError(folly::exception_wrapper ex) {}
+  virtual void onResumeError(folly::exception_wrapper ex) {}
 };
 }

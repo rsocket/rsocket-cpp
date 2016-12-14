@@ -99,7 +99,7 @@ class ConnectionAutomaton :
   /// Terminate underlying connection and connect new connection
   void reconnect(
     std::unique_ptr<DuplexConnection> newConnection,
-    std::unique_ptr<ClientResumeStatusCallback> statusCallback);
+    std::unique_ptr<ClientResumeStatusHandler> statusCallback);
 
   ~ConnectionAutomaton();
 
@@ -213,7 +213,7 @@ class ConnectionAutomaton :
   std::vector<ConnectionCloseListener> closeListeners_;
   ResumeListener resumeListener_;
   const std::shared_ptr<KeepaliveTimer> keepaliveTimer_;
-  std::shared_ptr<ClientResumeStatusCallback> resumeStatusCallback_;
+  std::shared_ptr<ClientResumeStatusHandler> resumeStatusCallback_;
   std::shared_ptr<RequestHandlerBase> requestHandler_;
 };
 }

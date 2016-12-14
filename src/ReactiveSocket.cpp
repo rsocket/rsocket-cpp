@@ -384,7 +384,7 @@ void ReactiveSocket::onClose(CloseListener listener) {
 void ReactiveSocket::tryClientResume(
   const ResumeIdentificationToken& token,
   std::unique_ptr<DuplexConnection> newConnection,
-  std::unique_ptr<ClientResumeStatusCallback> statusCallback) {
+  std::unique_ptr<ClientResumeStatusHandler> statusCallback) {
   connection_->reconnect(std::move(newConnection), std::move(statusCallback));
   connection_->sendResume(token);
 }
