@@ -28,7 +28,9 @@ class MockRequestHandlerBase : public RequestHandlerBase {
   MOCK_METHOD3(
       handleRequestResponse_,
       void(Payload& request, StreamId streamId, SubscriberFactory&));
-  MOCK_METHOD2(handleFireAndForgetRequest_, void(Payload& request, StreamId streamId));
+  MOCK_METHOD2(
+      handleFireAndForgetRequest_,
+      void(Payload& request, StreamId streamId));
   MOCK_METHOD1(
       handleMetadataPush_,
       void(std::unique_ptr<folly::IOBuf>& request));
@@ -99,14 +101,25 @@ class MockRequestHandler : public RequestHandler {
           const std::shared_ptr<Subscriber<Payload>>&));
   MOCK_METHOD3(
       handleRequestStream_,
-      void(Payload& request, StreamId streamId, const std::shared_ptr<Subscriber<Payload>>&));
+      void(
+          Payload& request,
+          StreamId streamId,
+          const std::shared_ptr<Subscriber<Payload>>&));
   MOCK_METHOD3(
       handleRequestSubscription_,
-      void(Payload& request, StreamId streamId, const std::shared_ptr<Subscriber<Payload>>&));
+      void(
+          Payload& request,
+          StreamId streamId,
+          const std::shared_ptr<Subscriber<Payload>>&));
   MOCK_METHOD3(
       handleRequestResponse_,
-      void(Payload& request, StreamId streamId, const std::shared_ptr<Subscriber<Payload>>&));
-  MOCK_METHOD2(handleFireAndForgetRequest_, void(Payload& request, StreamId streamId));
+      void(
+          Payload& request,
+          StreamId streamId,
+          const std::shared_ptr<Subscriber<Payload>>&));
+  MOCK_METHOD2(
+      handleFireAndForgetRequest_,
+      void(Payload& request, StreamId streamId));
   MOCK_METHOD1(
       handleMetadataPush_,
       void(std::unique_ptr<folly::IOBuf>& request));

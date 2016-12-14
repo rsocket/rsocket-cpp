@@ -4,7 +4,13 @@
 
 namespace reactivesocket {
 
-void RequestResponseResponderBase::onNext(Payload response) {
+void RequestResponseResponder::onSubscribeImpl(
+    std::shared_ptr<Subscription> subscription) {
+  Base::onSubscribe(subscription);
+}
+
+void RequestResponseResponder::onNextImpl(Payload response) {
+  debugCheckOnNextOnCompleteOnError();
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
@@ -17,7 +23,8 @@ void RequestResponseResponderBase::onNext(Payload response) {
   }
 }
 
-void RequestResponseResponderBase::onComplete() {
+void RequestResponseResponder::onCompleteImpl() {
+  debugCheckOnNextOnCompleteOnError();
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
@@ -30,7 +37,8 @@ void RequestResponseResponderBase::onComplete() {
   }
 }
 
-void RequestResponseResponderBase::onError(folly::exception_wrapper ex) {
+void RequestResponseResponder::onErrorImpl(folly::exception_wrapper ex) {
+  debugCheckOnNextOnCompleteOnError();
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
@@ -44,7 +52,7 @@ void RequestResponseResponderBase::onError(folly::exception_wrapper ex) {
   }
 }
 
-void RequestResponseResponderBase::endStream(StreamCompletionSignal signal) {
+void RequestResponseResponder::endStream(StreamCompletionSignal signal) {
   switch (state_) {
     case State::RESPONDING:
       // Spontaneous ::endStream signal means an error.
@@ -57,7 +65,7 @@ void RequestResponseResponderBase::endStream(StreamCompletionSignal signal) {
   Base::endStream(signal);
 }
 
-void RequestResponseResponderBase::onNextFrame(Frame_CANCEL&& frame) {
+void RequestResponseResponder::onNextFrame(Frame_CANCEL&& frame) {
   switch (state_) {
     case State::RESPONDING:
       state_ = State::CLOSED;
@@ -68,7 +76,7 @@ void RequestResponseResponderBase::onNextFrame(Frame_CANCEL&& frame) {
   }
 }
 
-std::ostream& RequestResponseResponderBase::logPrefix(std::ostream& os) {
+std::ostream& RequestResponseResponder::logPrefix(std::ostream& os) {
   return os << "RequestResponseResponder(" << &connection_ << ", " << streamId_
             << "): ";
 }

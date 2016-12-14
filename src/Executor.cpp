@@ -1,6 +1,8 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
+#include <folly/Memory.h>
 #include <folly/futures/QueuedImmediateExecutor.h>
+#include "src/StackTraceUtils.h"
 #include "src/SubscriberBase.h"
 
 namespace reactivesocket {
@@ -23,6 +25,7 @@ ExecutorBase::ExecutorBase(folly::Executor& executor, bool startExecutor)
 void ExecutorBase::runInExecutor(folly::Func func) {
   {
     std::lock_guard<std::recursive_mutex> lock(pendingSignalsMutex_);
+    VLOG(1) << this << ": " << getStackTrace();
     if (pendingSignals_) {
       pendingSignals_->emplace_back(std::move(func));
       return;

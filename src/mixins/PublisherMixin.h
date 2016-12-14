@@ -25,12 +25,20 @@ class PublisherMixin : public Base {
 
   /// @{
   void onSubscribe(std::shared_ptr<Subscription> subscription) {
-    DCHECK(!producingSubscription_);
+    if (Base::isTerminated()) {
+      subscription->cancel();
+      return;
+    }
+
+    debugCheckOnSubscribe();
     producingSubscription_.reset(std::move(subscription));
+    if (initialRequestN_) {
+      producingSubscription_.request(initialRequestN_);
+    }
   }
 
   void onNext(Payload payload, FrameFlags flags = FrameFlags_EMPTY) {
-    DCHECK(producingSubscription_);
+    debugCheckOnNextOnCompleteOnError();
     ProducedFrame frame(Base::streamId_, flags, std::move(payload));
     Base::connection_->outputFrameOrEnqueue(frame.serializeOut());
   }
@@ -46,6 +54,17 @@ class PublisherMixin : public Base {
   }
 
  protected:
+  void debugCheckOnSubscribe() {
+    DCHECK(!producingSubscription_);
+  }
+
+  void debugCheckOnNextOnCompleteOnError() {
+    DCHECK(producingSubscription_);
+    // the previous DCHECK should also cover !Base::isTerminated()
+    // but we will make sure that invariant is not broken as well
+    DCHECK(!Base::isTerminated());
+  }
+
   /// @{
   void endStream(StreamCompletionSignal signal) {
     producingSubscription_.cancel();
@@ -57,22 +76,26 @@ class PublisherMixin : public Base {
   typename std::enable_if<Frame::Trait_CarriesAllowance>::type onNextFrame(
       Frame&& frame) {
     // if producingSubscription_ == nullptr that means the instance is
-    // terminated
-    if (producingSubscription_) {
-      if (size_t n = frame.requestN_) {
+    // new and onSubscribe hasn't been called yet or it is terminated
+    if (size_t n = frame.requestN_) {
+      if (producingSubscription_) {
         producingSubscription_.request(n);
+      } else {
+        initialRequestN_ += n;
       }
-      Base::onNextFrame(std::move(frame));
     }
+    Base::onNextFrame(std::move(frame));
   }
 
   void onNextFrame(Frame_REQUEST_RESPONSE&& frame) {
     // if producingSubscription_ == nullptr that means the instance is
-    // terminated
+    // new and onSubscribe hasn't been called yet or it is terminated
     if (producingSubscription_) {
       producingSubscription_.request(1);
-      Base::onNextFrame(std::move(frame));
+    } else {
+      initialRequestN_ = 1;
     }
+    Base::onNextFrame(std::move(frame));
   }
 
   /// Remaining frames just pass through.
@@ -88,5 +111,6 @@ class PublisherMixin : public Base {
   /// This mixin is responsible for delivering a terminal signal to the
   /// Subscription once the stream ends.
   reactivestreams::SubscriptionPtr<Subscription> producingSubscription_;
+  size_t initialRequestN_{0};
 };
 }

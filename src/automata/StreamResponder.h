@@ -3,17 +3,12 @@
 #pragma once
 
 #include <iosfwd>
-
 #include "src/automata/StreamSubscriptionResponderBase.h"
-#include "src/mixins/ExecutorMixin.h"
-#include "src/mixins/LoggingMixin.h"
-#include "src/mixins/SinkIfMixin.h"
-#include "src/mixins/StreamIfMixin.h"
 
 namespace reactivesocket {
 
 /// Implementation of stream automaton that represents a Stream responder
-class StreamResponderBase : public StreamSubscriptionResponderBase {
+class StreamResponder : public StreamSubscriptionResponderBase {
   using Base = StreamSubscriptionResponderBase;
 
  public:
@@ -24,7 +19,4 @@ class StreamResponderBase : public StreamSubscriptionResponderBase {
               << "): ";
   }
 };
-
-using StreamResponder = SinkIfMixin<
-    StreamIfMixin<ExecutorMixin<LoggingMixin<StreamResponderBase>>>>;
-}
+} // reactivesocket

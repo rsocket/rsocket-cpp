@@ -17,7 +17,8 @@ void RequestHandler::onRequestStream(
     Payload request,
     StreamId streamId,
     SubscriberFactory& subscriberFactory) {
-  handleRequestStream(std::move(request), streamId, subscriberFactory.createSubscriber());
+  handleRequestStream(
+      std::move(request), streamId, subscriberFactory.createSubscriber());
 }
 
 /// Handles a new inbound Subscription requested by the other end.

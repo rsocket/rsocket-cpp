@@ -208,7 +208,6 @@ void ConnectionAutomaton::onError(folly::exception_wrapper ex) {
 void ConnectionAutomaton::onConnectionFrame(
     std::unique_ptr<folly::IOBuf> payload) {
   auto type = FrameHeader::peekType(*payload);
-
   switch (type) {
     case FrameType::KEEPALIVE: {
       Frame_KEEPALIVE frame;
@@ -238,7 +237,6 @@ void ConnectionAutomaton::onConnectionFrame(
     }
     case FrameType::SETUP: {
       // TODO(tmont): check for ENABLE_RESUME and make sure isResumable_ is true
-
       if (!factory_(*this, 0, std::move(payload))) {
         assert(false);
       }

@@ -78,7 +78,9 @@ class RequestHandlerBase {
       SubscriberFactory& subscriberFactory) = 0;
 
   /// Handles a new fire-and-forget request sent by the other end.
-  virtual void handleFireAndForgetRequest(Payload request, StreamId streamId) = 0;
+  virtual void handleFireAndForgetRequest(
+      Payload request,
+      StreamId streamId) = 0;
 
   /// Handles a new metadata-push sent by the other end.
   virtual void handleMetadataPush(std::unique_ptr<folly::IOBuf> request) = 0;

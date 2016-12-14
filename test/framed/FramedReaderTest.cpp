@@ -6,7 +6,7 @@
 #include <folly/Format.h>
 #include <folly/io/Cursor.h>
 #include <gmock/gmock.h>
-
+#include "src/ReactiveSocket.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/framed/FramedReader.h"
 #include "test/InlineConnection.h"

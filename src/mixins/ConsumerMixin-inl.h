@@ -3,10 +3,8 @@
 #pragma once
 #include "ConsumerMixin.h"
 
-#include <algorithm>
-
 #include <glog/logging.h>
-
+#include <algorithm>
 #include "src/ConnectionAutomaton.h"
 #include "src/Frame.h"
 #include "src/Payload.h"
@@ -15,7 +13,7 @@
 namespace reactivesocket {
 template <typename Frame, typename Base>
 void ConsumerMixin<Frame, Base>::onError(folly::exception_wrapper ex) {
-  consumingSubscriber_.onError(ex);
+  consumingSubscriber_.onError(std::move(ex));
 };
 
 template <typename Frame, typename Base>

@@ -4,7 +4,13 @@
 
 namespace reactivesocket {
 
-void StreamSubscriptionResponderBase::onNext(Payload response) {
+void StreamSubscriptionResponderBase::onSubscribeImpl(
+    std::shared_ptr<Subscription> subscription) {
+  Base::onSubscribe(subscription);
+}
+
+void StreamSubscriptionResponderBase::onNextImpl(Payload response) {
+  debugCheckOnNextOnCompleteOnError();
   switch (state_) {
     case State::RESPONDING:
       Base::onNext(std::move(response));
@@ -14,7 +20,8 @@ void StreamSubscriptionResponderBase::onNext(Payload response) {
   }
 }
 
-void StreamSubscriptionResponderBase::onComplete() {
+void StreamSubscriptionResponderBase::onCompleteImpl() {
+  debugCheckOnNextOnCompleteOnError();
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
@@ -27,7 +34,8 @@ void StreamSubscriptionResponderBase::onComplete() {
   }
 }
 
-void StreamSubscriptionResponderBase::onError(folly::exception_wrapper ex) {
+void StreamSubscriptionResponderBase::onErrorImpl(folly::exception_wrapper ex) {
+  debugCheckOnNextOnCompleteOnError();
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;

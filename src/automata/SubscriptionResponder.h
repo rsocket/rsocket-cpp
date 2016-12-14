@@ -3,17 +3,12 @@
 #pragma once
 
 #include <iosfwd>
-
 #include "src/automata/StreamSubscriptionResponderBase.h"
-#include "src/mixins/ExecutorMixin.h"
-#include "src/mixins/LoggingMixin.h"
-#include "src/mixins/SinkIfMixin.h"
-#include "src/mixins/StreamIfMixin.h"
 
 namespace reactivesocket {
 
 /// Implementation of stream automaton that represents a Subscription responder.
-class SubscriptionResponderBase : public StreamSubscriptionResponderBase {
+class SubscriptionResponder : public StreamSubscriptionResponderBase {
   using Base = StreamSubscriptionResponderBase;
 
  public:
@@ -23,8 +18,10 @@ class SubscriptionResponderBase : public StreamSubscriptionResponderBase {
     return os << "SubscriptionResponder(" << &connection_ << ", " << streamId_
               << "): ";
   }
+
+  void onCompleteImpl() override {
+    LOG(FATAL) << "onComplete is not allowed on Subscription iteraction.";
+  }
 };
 
-using SubscriptionResponder = SinkIfMixin<
-    StreamIfMixin<ExecutorMixin<LoggingMixin<SubscriptionResponderBase>>>>;
-}
+} // reactivesocket

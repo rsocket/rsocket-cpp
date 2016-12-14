@@ -23,6 +23,7 @@ class ConnectionAutomaton;
 class DuplexConnection;
 class RequestHandlerBase;
 class ReactiveSocket;
+class FrameSink;
 enum class FrameType : uint16_t;
 using StreamId = uint32_t;
 
@@ -35,8 +36,7 @@ class KeepaliveTimer {
 
   virtual std::chrono::milliseconds keepaliveTime() = 0;
   virtual void stop() = 0;
-  virtual void start(
-      const std::shared_ptr<ConnectionAutomaton>& connection) = 0;
+  virtual void start(const std::shared_ptr<FrameSink>& connection) = 0;
   virtual void keepaliveReceived() = 0;
 };
 

@@ -2,12 +2,11 @@
 
 #pragma once
 
-#include <cstddef>
-#include <iostream>
-
 #include <folly/ExceptionWrapper.h>
 #include <reactive-streams/utilities/AllowanceSemaphore.h>
 #include <reactive-streams/utilities/SmartPointers.h>
+#include <cstddef>
+#include <iostream>
 #include "src/Common.h"
 #include "src/NullRequestHandler.h"
 #include "src/Payload.h"
@@ -62,10 +61,6 @@ class ConsumerMixin : public Base {
 
  protected:
   /// @{
-  // TODO(lehecka): this should call setCancelled in the SubscribeBase, once
-  //               the SubscriberBase is used in the inheritance
-  //               this is effectively a terminating signal from the
-  //               ReactiveSocket instance
   void endStream(StreamCompletionSignal signal) {
     if (signal == StreamCompletionSignal::GRACEFUL) {
       consumingSubscriber_.onComplete();
