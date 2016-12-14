@@ -213,7 +213,7 @@ class ConnectionAutomaton :
   std::vector<ConnectionCloseListener> closeListeners_;
   ResumeListener resumeListener_;
   const std::shared_ptr<KeepaliveTimer> keepaliveTimer_;
-  std::shared_ptr<ClientResumeStatusHandler> resumeStatusCallback_;
+  std::shared_ptr<ClientResumeStatusHandler> resumeStatusHandler_;
   std::shared_ptr<RequestHandlerBase> requestHandler_;
 };
 }

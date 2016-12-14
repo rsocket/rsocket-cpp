@@ -103,13 +103,13 @@ void ConnectionAutomaton::closeDuplexConnection(folly::exception_wrapper ex) {
 void ConnectionAutomaton::reconnect(
   std::unique_ptr<DuplexConnection> newConnection,
   std::unique_ptr<ClientResumeStatusHandler> statusCallback) {
-  CHECK(!resumeStatusCallback_);
+  CHECK(!resumeStatusHandler_);
   CHECK(isResumable_);
   CHECK(!isServer_);
 
   disconnect();
   connection_ = std::shared_ptr<DuplexConnection>(std::move(newConnection));
-  resumeStatusCallback_ = std::shared_ptr<ClientResumeStatusHandler>(std::move(statusCallback));
+  resumeStatusHandler_ = std::shared_ptr<ClientResumeStatusHandler>(std::move(statusCallback));
   connect();
 }
 
@@ -301,9 +301,9 @@ void ConnectionAutomaton::onConnectionFrame(
       if (frame.deserializeFrom(std::move(payload))) {
         if (!isServer_ && isResumable_ &&
             streamState_->resumeCache_->isPositionAvailable(frame.position_)) {
-            if (resumeStatusCallback_) {
-              resumeStatusCallback_->onResumeOk();
-              resumeStatusCallback_.reset();
+            if (resumeStatusHandler_) {
+              resumeStatusHandler_->onResumeOk();
+              resumeStatusHandler_.reset();
             }
         } else {
           disconnectWithError(Frame_ERROR::connectionError("can not resume"));
@@ -316,9 +316,9 @@ void ConnectionAutomaton::onConnectionFrame(
     case FrameType::ERROR: {
       Frame_ERROR frame;
       if (frame.deserializeFrom(std::move(payload))) {
-        if (frame.errorCode_ == ErrorCode::CONNECTION_ERROR && resumeStatusCallback_) {
-            resumeStatusCallback_->onResumeError(std::runtime_error(frame.payload_.moveDataToString()));
-          resumeStatusCallback_.reset();
+        if (frame.errorCode_ == ErrorCode::CONNECTION_ERROR && resumeStatusHandler_) {
+            resumeStatusHandler_->onResumeError(std::runtime_error(frame.payload_.moveDataToString()));
+          resumeStatusHandler_.reset();
           // fall through
         }
       }
