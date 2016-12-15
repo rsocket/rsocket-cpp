@@ -29,9 +29,13 @@ class ConnectionAutomaton;
 ///
 /// It is a responsibility of this strategy to register the responder with the
 /// connection automaton and provide it with the initial frame if needed.
-/// Returns true if the responder has been created successfully, false if the
-/// frame cannot start a new stream, in which case the frame (passed by a
-/// mutable referece) must not be modified.
+///
+/// Returns true if the responder has been created successfully or handled
+/// the error itself,
+/// false if the frame cannot start a new stream, in which case the frame
+/// (passed by a mutable reference) must not be modified.
+///
+/// TODO implement Ignore flag handling
 using StreamAutomatonFactory = std::function<bool(
     ConnectionAutomaton& connection,
     StreamId,
@@ -73,13 +77,12 @@ class ConnectionAutomaton :
  public:
   ConnectionAutomaton(
       std::unique_ptr<DuplexConnection> connection,
-      // TODO(stupaq): for testing only, can devirtualise if necessary
       StreamAutomatonFactory factory,
       std::shared_ptr<StreamState> streamState,
       ResumeListener resumeListener,
       Stats& stats,
       const std::shared_ptr<KeepaliveTimer>& keepaliveTimer_,
-      bool client);
+      bool isServer);
 
   void disconnectWithError(Frame_ERROR&& error) override;
 
@@ -207,6 +210,7 @@ class ConnectionAutomaton :
   Stats& stats_;
   bool isServer_;
   bool isResumable_;
+  bool receivedSetup_{false};
   std::vector<ConnectionCloseListener> closeListeners_;
   ResumeListener resumeListener_;
   const std::shared_ptr<KeepaliveTimer> keepaliveTimer_;
