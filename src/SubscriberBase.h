@@ -85,7 +85,8 @@ class SubscriberBaseT : public Subscriber<T>,
 
   virtual ~SubscriberBaseT() {
     if (!cancelled_ && originalSubscription_) {
-      runInExecutor([subscription = std::move(originalSubscription_)] {
+      auto subscription = std::move(originalSubscription_);
+      runInExecutor([subscription] {
         subscription->cancel();
       });
     }
