@@ -83,6 +83,14 @@ class SubscriberBaseT : public Subscriber<T>,
       bool startExecutor = true)
       : ExecutorBase(executor, startExecutor), cancelled_(false) {}
 
+  virtual ~SubscriberBaseT() {
+    if (!cancelled_ && originalSubscription_) {
+      runInExecutor([subscription = std::move(originalSubscription_)] {
+        subscription->cancel();
+      });
+    }
+  }
+
   void onSubscribe(std::shared_ptr<Subscription> subscription) override final {
     auto thisPtr = this->shared_from_this();
     runInExecutor([thisPtr, subscription]() {
