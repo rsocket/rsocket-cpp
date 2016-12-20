@@ -385,4 +385,9 @@ void ReactiveSocket::tryClientResume(
   connection_->reconnect(std::move(newConnection));
   connection_->sendResume(token);
 }
+
+const DuplexConnection& ReactiveSocket::getDuplexConnection() {
+  CHECK(connection_);
+  return connection_->getDuplexConnection();
+}
 }

@@ -430,4 +430,9 @@ void ConnectionAutomaton::useStreamState(
     streamState_.swap(streamState);
   }
 }
+
+const DuplexConnection& ReactiveSocket::getDuplexConnection() {
+  CHECK(connection_);
+  return *connection_;
+}
 }

@@ -143,6 +143,8 @@ class ConnectionAutomaton :
 
   void onClose(ConnectionCloseListener listener);
 
+  const DuplexConnection& getDuplexConnection();
+
  private:
   void closeDuplexConnection(folly::exception_wrapper ex);
 
