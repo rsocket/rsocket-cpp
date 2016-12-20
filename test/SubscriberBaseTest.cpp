@@ -159,3 +159,13 @@ TEST(SubscriberBaseTest, SubscriptionCancel) {
   std::shared_ptr<Subscriber<int>> ptr = subscriber;
   ptr->onSubscribe(originalSubscription);
 }
+
+TEST(SubscriberBaseTest, SubscriptionCancelsUponSubscriberDestruction) {
+  auto subscriber = std::make_shared<SubscriberBaseMock>();
+
+  auto originalSubscription = std::make_shared<StrictMock<MockSubscription>>();
+  EXPECT_CALL(*originalSubscription, cancel_()).Times(1);
+
+  subscriber->onSubscribe(originalSubscription);
+  originalSubscription.reset();
+}
