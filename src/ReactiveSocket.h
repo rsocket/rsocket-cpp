@@ -107,7 +107,7 @@ class ReactiveSocket {
       std::unique_ptr<DuplexConnection> newConnection,
       const ResumeIdentificationToken& token);
 
-  const DuplexConnection& getDuplexConnection();
+  const DuplexConnection& duplexConnection();
 
  private:
   ReactiveSocket(
