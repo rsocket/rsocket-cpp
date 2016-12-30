@@ -505,7 +505,7 @@ void ConnectionAutomaton::useStreamState(
 }
 
 
-const DuplexConnection& ReactiveSocket::duplexConnection() {
+const DuplexConnection& ConnectionAutomaton::duplexConnection() {
   CHECK(connection_);
   return *connection_;
 }
