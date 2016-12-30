@@ -53,7 +53,8 @@ class NullRequestHandler : public RequestHandler {
       ConnectionSetupPayload request) override;
 
   std::shared_ptr<StreamState> handleResume(
-      const ResumeIdentificationToken& token) override;
+      const ResumeIdentificationToken& token,
+      ResumePosition position) override;
 
   void handleCleanResume(std::shared_ptr<Subscription> response) override;
 

@@ -421,7 +421,7 @@ std::ostream& operator<<(std::ostream& os, const Frame_KEEPALIVE& frame) {
 /// @{
 std::unique_ptr<folly::IOBuf> Frame_SETUP::serializeOut() {
   auto queue = createBufferQueue(
-      FrameHeader::kSize + 3 * sizeof(uint32_t) + token_.size() + 2 +
+      FrameHeader::kSize + 3 * sizeof(uint32_t) + token_.data().size() + 2 +
       metadataMimeType_.length() + dataMimeType_.length() +
       payload_.framingSize());
   folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
@@ -430,7 +430,7 @@ std::unique_ptr<folly::IOBuf> Frame_SETUP::serializeOut() {
   appender.writeBE(static_cast<uint32_t>(version_));
   appender.writeBE(static_cast<uint32_t>(keepaliveTime_));
   appender.writeBE(static_cast<uint32_t>(maxLifetime_));
-  appender.push((const uint8_t*)token_.data(), token_.size());
+  appender.push((const uint8_t*)token_.data().data(), token_.data().size());
 
   CHECK(metadataMimeType_.length() <= std::numeric_limits<uint8_t>::max());
   appender.writeBE(static_cast<uint8_t>(metadataMimeType_.length()));
@@ -452,7 +452,9 @@ bool Frame_SETUP::deserializeFrom(std::unique_ptr<folly::IOBuf> in) {
     version_ = cur.readBE<uint32_t>();
     keepaliveTime_ = cur.readBE<uint32_t>();
     maxLifetime_ = cur.readBE<uint32_t>();
-    cur.pull(token_.data(), token_.size());
+    ResumeIdentificationToken::Data data;
+    cur.pull(data.data(), data.size());
+    token_.set(std::move(data));
 
     int mdmtLen = cur.readBE<uint8_t>();
     metadataMimeType_ = cur.readFixedString(mdmtLen);
@@ -514,7 +516,7 @@ std::unique_ptr<folly::IOBuf> Frame_RESUME::serializeOut() {
   folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
 
   header_.serializeInto(appender);
-  appender.push(token_.data(), sizeof(token_));
+  appender.push(token_.data().data(), token_.data().size());
   appender.writeBE(position_);
 
   return queue.move();
@@ -524,7 +526,9 @@ bool Frame_RESUME::deserializeFrom(std::unique_ptr<folly::IOBuf> in) {
   folly::io::Cursor cur(in.get());
   try {
     header_.deserializeFrom(cur);
-    cur.pull(token_.data(), sizeof(token_));
+    ResumeIdentificationToken::Data data;
+    cur.pull(data.data(), data.size());
+    token_.set(std::move(data));
     position_ = cur.readBE<ResumePosition>();
   } catch (...) {
     return false;

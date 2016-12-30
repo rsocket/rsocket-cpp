@@ -21,19 +21,19 @@ class MockKeepaliveTimer : public KeepaliveTimer {
     VLOG(2) << "dtor MockKeepaliveTimer " << this;
   }
 
-  MOCK_METHOD1(
-      start_,
-      void(const std::shared_ptr<ConnectionAutomaton> connection));
+  MOCK_METHOD1(start_, void(const std::shared_ptr<FrameSink> connection));
   MOCK_METHOD0(stop_, void());
   MOCK_METHOD0(keepaliveReceived_, void());
 
-  void start(const std::shared_ptr<ConnectionAutomaton>& connection) override {
+  void start(const std::shared_ptr<FrameSink>& connection) override {
     start_(connection);
   }
 
   void stop() override {
     stop_();
   }
+
+  void sendKeepalive() {}
 
   void keepaliveReceived() override {
     keepaliveReceived_();

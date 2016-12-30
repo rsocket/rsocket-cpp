@@ -2,65 +2,52 @@
 
 #pragma once
 
-#include <iosfwd>
-
-#include <reactive-streams/utilities/AllowanceSemaphore.h>
-#include <reactive-streams/utilities/SmartPointers.h>
 #include "src/AbstractStreamAutomaton.h"
+#include "src/AllowanceSemaphore.h"
 #include "src/Frame.h"
-#include "src/Payload.h"
-#include "src/ReactiveStreamsCompat.h"
+#include "src/SubscriptionBase.h"
 #include "src/mixins/ConsumerMixin.h"
-#include "src/mixins/ExecutorMixin.h"
-#include "src/mixins/LoggingMixin.h"
-#include "src/mixins/MixinTerminator.h"
-#include "src/mixins/SourceIfMixin.h"
-#include "src/mixins/StreamIfMixin.h"
-
-namespace folly {
-class exception_wrapper;
-}
 
 namespace reactivesocket {
 
-enum class StreamCompletionSignal;
-
 /// Implementation of stream automaton that represents a Subscription requester.
 class StreamSubscriptionRequesterBase
-    : public ConsumerMixin<Frame_RESPONSE, MixinTerminator> {
-  using Base = ConsumerMixin<Frame_RESPONSE, MixinTerminator>;
+    : public ConsumerMixin<Frame_RESPONSE>,
+      public SubscriptionBase,
+      public EnableSharedFromThisBase<StreamSubscriptionRequesterBase> {
+  using Base = ConsumerMixin<Frame_RESPONSE>;
 
  public:
-  using Base::Base;
-  virtual ~StreamSubscriptionRequesterBase() = default;
+  struct Parameters : Base::Parameters {
+    Parameters(
+        const typename Base::Parameters& baseParams,
+        folly::Executor& _executor)
+        : Base::Parameters(baseParams), executor(_executor) {}
+    folly::Executor& executor;
+  };
+
+  explicit StreamSubscriptionRequesterBase(const Parameters& params)
+      : ExecutorBase(params.executor, false), Base(params) {}
 
   /// Degenerate form of the Subscriber interface -- only one request payload
   /// will be sent to the server.
+  // TODO(lehecka): rename to avoid confusion
   void onNext(Payload);
 
-  /// @{
-  /// A Subscriber interface to control ingestion of response payloads.
-  void request(size_t);
+ private:
+  void onNextImpl(Payload);
 
-  void cancel();
-  /// @}
-
-  std::ostream& logPrefix(std::ostream& os);
-
- protected:
   /// Override in subclass to send the correct type of request frame
   virtual void sendRequestFrame(FrameFlags, size_t, Payload&&) = 0;
 
-  /// @{
-  void endStream(StreamCompletionSignal);
+  void requestImpl(size_t) override;
+  void cancelImpl() override;
 
-  /// Not all frames are intercepted, some just pass through.
   using Base::onNextFrame;
+  void onNextFrame(Frame_RESPONSE&&) override;
+  void onNextFrame(Frame_ERROR&&) override;
 
-  void onNextFrame(Frame_RESPONSE&&);
-
-  void onNextFrame(Frame_ERROR&&);
-  /// @}
+  void endStream(StreamCompletionSignal) override;
 
   /// State of the Subscription requester.
   enum class State : uint8_t {
@@ -71,6 +58,6 @@ class StreamSubscriptionRequesterBase
 
   /// An allowance accumulated before the stream is initialised.
   /// Remaining part of the allowance is forwarded to the ConsumerMixin.
-  reactivestreams::AllowanceSemaphore initialResponseAllowance_;
+  AllowanceSemaphore initialResponseAllowance_;
 };
 }

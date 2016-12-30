@@ -9,7 +9,7 @@
 namespace reactivesocket {
 class PrintSubscriber : public Subscriber<Payload> {
  public:
-  ~PrintSubscriber() override = default;
+  ~PrintSubscriber();
 
   void onSubscribe(std::shared_ptr<Subscription> subscription) override;
 

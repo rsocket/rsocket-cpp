@@ -3,9 +3,9 @@
 #pragma once
 
 #include <folly/ExceptionWrapper.h>
-#include <reactive-streams/utilities/SmartPointers.h>
 #include <vector>
 #include "src/ReactiveStreamsCompat.h"
+#include "src/SmartPointers.h"
 #include "src/SubscriberBase.h"
 #include "src/SubscriptionBase.h"
 
@@ -22,7 +22,7 @@ class FramedWriter : public SubscriberBaseT<std::unique_ptr<folly::IOBuf>>,
   explicit FramedWriter(
       std::shared_ptr<reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
           stream)
-      : stream_(std::move(stream)) {}
+      : ExecutorBase(defaultExecutor()), stream_(std::move(stream)) {}
 
   void onNextMultiple(std::vector<std::unique_ptr<folly::IOBuf>> element);
 

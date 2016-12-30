@@ -11,13 +11,17 @@ void StatsPrinter::socketClosed() {
   LOG(INFO) << "socketClosed";
 }
 
-void StatsPrinter::connectionCreated(
+void StatsPrinter::socketDisconnected() {
+  LOG(INFO) << "socketDisconnected";
+}
+
+void StatsPrinter::duplexConnectionCreated(
     const std::string& type,
     reactivesocket::DuplexConnection* connection) {
   LOG(INFO) << "connectionCreated " << type;
 }
 
-void StatsPrinter::connectionClosed(
+void StatsPrinter::duplexConnectionClosed(
     const std::string& type,
     reactivesocket::DuplexConnection* connection) {
   LOG(INFO) << "connectionClosed " << type;

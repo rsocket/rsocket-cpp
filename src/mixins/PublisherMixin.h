@@ -2,16 +2,14 @@
 
 #pragma once
 
+#include <glog/logging.h>
 #include <iostream>
 #include <type_traits>
-
-#include <glog/logging.h>
-
-#include <reactive-streams/utilities/SmartPointers.h>
 #include "src/ConnectionAutomaton.h"
 #include "src/Frame.h"
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
+#include "src/SmartPointers.h"
 
 namespace reactivesocket {
 
@@ -25,12 +23,20 @@ class PublisherMixin : public Base {
 
   /// @{
   void onSubscribe(std::shared_ptr<Subscription> subscription) {
-    DCHECK(!producingSubscription_);
+    if (Base::isTerminated()) {
+      subscription->cancel();
+      return;
+    }
+
+    debugCheckOnSubscribe();
     producingSubscription_.reset(std::move(subscription));
+    if (initialRequestN_) {
+      producingSubscription_.request(initialRequestN_);
+    }
   }
 
   void onNext(Payload payload, FrameFlags flags = FrameFlags_EMPTY) {
-    DCHECK(producingSubscription_);
+    debugCheckOnNextOnCompleteOnError();
     ProducedFrame frame(Base::streamId_, flags, std::move(payload));
     Base::connection_->outputFrameOrEnqueue(frame.serializeOut());
   }
@@ -41,11 +47,11 @@ class PublisherMixin : public Base {
               << this->streamId_ << "): ";
   }
 
-  void onCleanResume() {
+  void onCleanResume() override {
     Base::requestHandler_->handleCleanResume(producingSubscription_);
     Base::onCleanResume();
   }
-  void onDirtyResume() {
+  void onDirtyResume() override {
     Base::requestHandler_->handleDirtyResume(producingSubscription_);
     Base::onDirtyResume();
   }
@@ -55,47 +61,58 @@ class PublisherMixin : public Base {
   }
 
  protected:
+  void debugCheckOnSubscribe() {
+    DCHECK(!producingSubscription_);
+  }
+
+  void debugCheckOnNextOnCompleteOnError() {
+    DCHECK(producingSubscription_);
+    // the previous DCHECK should also cover !Base::isTerminated()
+    // but we will make sure that invariant is not broken as well
+    DCHECK(!Base::isTerminated());
+  }
+
   /// @{
-  void endStream(StreamCompletionSignal signal) {
+  void endStream(StreamCompletionSignal signal) override {
     producingSubscription_.cancel();
     Base::endStream(signal);
   }
 
+  using Base::onNextFrame;
+  void onNextFrame(Frame_REQUEST_N&& frame) override {
+    processRequestN(frame);
+  }
+
   /// Intercept frames that carry allowance.
   template <typename Frame>
-  typename std::enable_if<Frame::Trait_CarriesAllowance>::type onNextFrame(
-      Frame&& frame) {
+  typename std::enable_if<Frame::Trait_CarriesAllowance>::type processRequestN(
+      const Frame& frame) {
     // if producingSubscription_ == nullptr that means the instance is
-    // terminated
-    if (producingSubscription_) {
-      if (size_t n = frame.requestN_) {
+    // new and onSubscribe hasn't been called yet or it is terminated
+    if (size_t n = frame.requestN_) {
+      if (producingSubscription_) {
         producingSubscription_.request(n);
+      } else {
+        initialRequestN_ += n;
       }
-      Base::onNextFrame(std::move(frame));
     }
   }
 
-  void onNextFrame(Frame_REQUEST_RESPONSE&& frame) {
+  void processRequest1() {
     // if producingSubscription_ == nullptr that means the instance is
-    // terminated
+    // new and onSubscribe hasn't been called yet or it is terminated
     if (producingSubscription_) {
       producingSubscription_.request(1);
-      Base::onNextFrame(std::move(frame));
+    } else {
+      initialRequestN_ = 1;
     }
   }
-
-  /// Remaining frames just pass through.
-  template <typename Frame>
-  typename std::enable_if<!Frame::Trait_CarriesAllowance>::type onNextFrame(
-      Frame&& frame) {
-    Base::onNextFrame(std::move(frame));
-  }
-  /// @}
 
  private:
   /// A Subscription that constrols production of payloads.
   /// This mixin is responsible for delivering a terminal signal to the
   /// Subscription once the stream ends.
   reactivestreams::SubscriptionPtr<Subscription> producingSubscription_;
+  size_t initialRequestN_{0};
 };
 }

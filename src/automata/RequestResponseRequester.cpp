@@ -1,23 +1,34 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "RequestResponseRequester.h"
-
+#include "src/automata/RequestResponseRequester.h"
+#include <folly/ExceptionWrapper.h>
+#include <folly/MoveWrapper.h>
 #include "src/Common.h"
+#include "src/ConnectionAutomaton.h"
 
 namespace reactivesocket {
 
-bool RequestResponseRequesterBase::subscribe(
+bool RequestResponseRequester::subscribe(
     std::shared_ptr<Subscriber<Payload>> subscriber) {
   DCHECK(!isTerminated());
   DCHECK(!consumingSubscriber_);
   consumingSubscriber_.reset(std::move(subscriber));
-  // FIXME
+  // FIXME(lehecka): now it is possible to move it here
   // Subscriber::onSubscribe is delivered externally, as it may attempt to
   // synchronously deliver Subscriber::request.
   return true;
 }
 
-void RequestResponseRequesterBase::onNext(Payload request) {
+void RequestResponseRequester::onNext(Payload request) {
+  auto movedPayload = folly::makeMoveWrapper(std::move(request));
+  auto thisPtr =
+      EnableSharedFromThisBase<RequestResponseRequester>::shared_from_this();
+  runInExecutor([thisPtr, movedPayload]() mutable {
+    thisPtr->onNextImpl(movedPayload.move());
+  });
+}
+
+void RequestResponseRequester::onNextImpl(Payload request) {
   switch (state_) {
     case State::NEW: {
       state_ = State::REQUESTED;
@@ -35,7 +46,7 @@ void RequestResponseRequesterBase::onNext(Payload request) {
   }
 }
 
-void RequestResponseRequesterBase::request(size_t n) {
+void RequestResponseRequester::requestImpl(size_t n) {
   if (n == 0) {
     return;
   }
@@ -50,7 +61,7 @@ void RequestResponseRequesterBase::request(size_t n) {
   }
 }
 
-void RequestResponseRequesterBase::cancel() {
+void RequestResponseRequester::cancelImpl() {
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;
@@ -66,7 +77,7 @@ void RequestResponseRequesterBase::cancel() {
   }
 }
 
-void RequestResponseRequesterBase::endStream(StreamCompletionSignal signal) {
+void RequestResponseRequester::endStream(StreamCompletionSignal signal) {
   switch (state_) {
     case State::NEW:
     case State::REQUESTED:
@@ -84,7 +95,7 @@ void RequestResponseRequesterBase::endStream(StreamCompletionSignal signal) {
   }
 }
 
-void RequestResponseRequesterBase::onNextFrame(Frame_ERROR&& frame) {
+void RequestResponseRequester::onNextFrame(Frame_ERROR&& frame) {
   switch (state_) {
     case State::NEW:
       // Cannot receive a frame before sending the initial request.
@@ -101,7 +112,7 @@ void RequestResponseRequesterBase::onNextFrame(Frame_ERROR&& frame) {
   }
 }
 
-void RequestResponseRequesterBase::onNextFrame(Frame_RESPONSE&& frame) {
+void RequestResponseRequester::onNextFrame(Frame_RESPONSE&& frame) {
   bool end = false;
   switch (state_) {
     case State::NEW:
@@ -130,7 +141,7 @@ void RequestResponseRequesterBase::onNextFrame(Frame_RESPONSE&& frame) {
   }
 }
 
-std::ostream& RequestResponseRequesterBase::logPrefix(std::ostream& os) {
+std::ostream& RequestResponseRequester::logPrefix(std::ostream& os) {
   return os << " RequestResponseRequester(" << &connection_ << ", " << streamId_
             << "): ";
 }

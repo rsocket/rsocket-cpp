@@ -16,12 +16,15 @@ class MockStats : public Stats {
  public:
   MOCK_METHOD0(socketCreated_, void());
   MOCK_METHOD0(socketClosed_, void());
+  MOCK_METHOD0(socketDisconnected_, void());
+
   MOCK_METHOD2(
-      connectionCreated_,
+      duplexConnectionCreated_,
       void(const std::string&, reactivesocket::DuplexConnection*));
   MOCK_METHOD2(
-      connectionClosed_,
+      duplexConnectionClosed_,
       void(const std::string&, reactivesocket::DuplexConnection*));
+
   MOCK_METHOD1(bytesWritten_, void(size_t));
   MOCK_METHOD1(bytesRead_, void(size_t));
   MOCK_METHOD1(frameWritten_, void(const std::string&));
@@ -35,16 +38,20 @@ class MockStats : public Stats {
     socketClosed_();
   }
 
-  void connectionCreated(
-      const std::string& type,
-      reactivesocket::DuplexConnection* connection) override {
-    connectionCreated_(type, connection);
+  void socketDisconnected() override {
+    socketDisconnected_();
   }
 
-  void connectionClosed(
+  void duplexConnectionCreated(
       const std::string& type,
       reactivesocket::DuplexConnection* connection) override {
-    connectionClosed_(type, connection);
+    duplexConnectionCreated_(type, connection);
+  }
+
+  void duplexConnectionClosed(
+      const std::string& type,
+      reactivesocket::DuplexConnection* connection) override {
+    duplexConnectionClosed_(type, connection);
   }
 
   virtual void bytesWritten(size_t bytes) override {

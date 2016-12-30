@@ -444,7 +444,7 @@ class Frame_SETUP {
   uint32_t version_;
   uint32_t keepaliveTime_;
   uint32_t maxLifetime_;
-  ResumeIdentificationToken token_;
+  ResumeIdentificationToken token_{ResumeIdentificationToken::empty()};
   std::string metadataMimeType_;
   std::string dataMimeType_;
   Payload payload_;
@@ -489,7 +489,7 @@ class Frame_RESUME {
   bool deserializeFrom(std::unique_ptr<folly::IOBuf> in);
 
   FrameHeader header_;
-  ResumeIdentificationToken token_;
+  ResumeIdentificationToken token_{ResumeIdentificationToken::empty()};
   ResumePosition position_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_RESUME&);

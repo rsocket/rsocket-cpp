@@ -115,14 +115,15 @@ static void nextTwoFramesTest(int headroom) {
   std::string msg1("hello");
   std::string msg2("world");
 
-  folly::IOBuf payloadChain;
+  std::unique_ptr<folly::IOBuf> payloadChain;
 
   EXPECT_CALL(*subscriber, onNext_(_))
       .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& p) {
-        payloadChain.prependChain(std::move(p));
+        EXPECT_EQ(payloadChain, nullptr);
+        payloadChain = std::move(p);
       }))
       .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& p) {
-        payloadChain.prependChain(std::move(p));
+        payloadChain->prependChain(std::move(p));
         ASSERT_EQ(
             folly::to<std::string>(
                 '\0',
@@ -135,7 +136,7 @@ static void nextTwoFramesTest(int headroom) {
                 '\0',
                 char(msg2.size() + sizeof(int32_t)),
                 msg2),
-            payloadChain.moveToFbString().toStdString());
+            payloadChain->moveToFbString().toStdString());
       }));
 
   auto writer = std::make_shared<FramedWriter>(subscriber);

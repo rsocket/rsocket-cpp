@@ -5,6 +5,7 @@
 #include <gmock/gmock.h>
 #include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"
+#include "src/SmartPointers.h"
 #include "src/SubscriptionBase.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/tcp/TcpDuplexConnection.h"
@@ -23,7 +24,9 @@ class ServerSubscription : public SubscriptionBase {
   explicit ServerSubscription(
       std::shared_ptr<Subscriber<Payload>> response,
       size_t numElems = 2)
-      : response_(std::move(response)), numElems_(numElems) {}
+      : ExecutorBase(defaultExecutor()),
+        response_(std::move(response)),
+        numElems_(numElems) {}
 
  private:
   // Subscription methods
@@ -113,7 +116,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     auto rs = ReactiveSocket::fromServerConnection(
         std::move(framedConnection), std::move(requestHandler), stats_);
 
-    rs->onClose(
+    rs->onClosed(
         std::bind(&Callback::removeSocket, this, std::placeholders::_1));
 
     reactiveSockets_.push_back(std::move(rs));

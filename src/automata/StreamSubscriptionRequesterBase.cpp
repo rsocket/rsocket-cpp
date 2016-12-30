@@ -1,10 +1,20 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "StreamSubscriptionRequesterBase.h"
+#include "src/automata/StreamSubscriptionRequesterBase.h"
+#include <folly/MoveWrapper.h>
 
 namespace reactivesocket {
 
 void StreamSubscriptionRequesterBase::onNext(Payload request) {
+  auto movedPayload = folly::makeMoveWrapper(std::move(request));
+  auto thisPtr = EnableSharedFromThisBase<
+      StreamSubscriptionRequesterBase>::shared_from_this();
+  runInExecutor([thisPtr, movedPayload]() mutable {
+    thisPtr->onNextImpl(movedPayload.move());
+  });
+}
+
+void StreamSubscriptionRequesterBase::onNextImpl(Payload request) {
   switch (state_) {
     case State::NEW: {
       state_ = State::REQUESTED;
@@ -35,7 +45,7 @@ void StreamSubscriptionRequesterBase::onNext(Payload request) {
   }
 }
 
-void StreamSubscriptionRequesterBase::request(size_t n) {
+void StreamSubscriptionRequesterBase::requestImpl(size_t n) {
   switch (state_) {
     case State::NEW:
       // The initial request has not been sent out yet, hence we must accumulate
@@ -52,7 +62,7 @@ void StreamSubscriptionRequesterBase::request(size_t n) {
   }
 }
 
-void StreamSubscriptionRequesterBase::cancel() {
+void StreamSubscriptionRequesterBase::cancelImpl() {
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;
@@ -98,7 +108,9 @@ void StreamSubscriptionRequesterBase::onNextFrame(Frame_RESPONSE&& frame) {
     case State::CLOSED:
       break;
   }
-  Base::onNextFrame(std::move(frame));
+
+  processPayload(std::move(frame));
+
   if (end) {
     connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
   }

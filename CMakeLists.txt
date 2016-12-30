@@ -115,7 +115,6 @@ add_library(
   src/automata/SubscriptionRequester.cpp
   src/automata/SubscriptionRequester.h
   src/automata/SubscriptionResponder.h
-  src/CancellingSubscription.h
   src/Common.cpp
   src/Common.h
   src/concurrent/atomic64_gcc_x86_64.h
@@ -140,13 +139,7 @@ add_library(
   src/framed/FramedWriter.h
   src/mixins/ConsumerMixin-inl.h
   src/mixins/ConsumerMixin.h
-  src/mixins/ExecutorMixin.h
-  src/mixins/LoggingMixin.h
-  src/mixins/MixinTerminator.h
   src/mixins/PublisherMixin.h
-  src/mixins/SinkIfMixin.h
-  src/mixins/SourceIfMixin.h
-  src/mixins/StreamIfMixin.h
   src/NullRequestHandler.cpp
   src/NullRequestHandler.h
   src/Payload.cpp
@@ -166,7 +159,16 @@ add_library(
   src/SubscriberBase.h
   src/SubscriptionBase.h
   src/tcp/TcpDuplexConnection.cpp
-  src/tcp/TcpDuplexConnection.h)
+  src/tcp/TcpDuplexConnection.h
+  src/ClientResumeStatusCallback.h
+  src/Executor.h
+  src/automata/StreamAutomatonBase.cpp
+  src/automata/StreamAutomatonBase.h
+  src/automata/StreamResponder.cpp
+  src/automata/SubscriptionResponder.cpp
+  src/FrameTransport.cpp
+  src/FrameTransport.h
+  src/FrameProcessor.h)
 
 target_link_libraries(
   ReactiveSocket
@@ -200,7 +202,10 @@ add_executable(
   test/ReactiveStreamsMocksCompat.h
   test/SubscriberBaseTest.cpp
   test/Test.cpp
-)
+  test/folly/FollyKeepaliveTimerTest.cpp
+  test/ReactiveSocketResumabilityTest.cpp
+  test/SmartPointersTest.cpp
+  test/AllowanceSemaphoreTest.cpp)
 
 target_link_libraries(
   tests

@@ -12,13 +12,16 @@ class Stats {
   static Stats& noop();
 
   virtual void socketCreated() = 0;
+  virtual void socketDisconnected() = 0;
   virtual void socketClosed() = 0;
-  virtual void connectionCreated(
+
+  virtual void duplexConnectionCreated(
       const std::string& type,
       reactivesocket::DuplexConnection* connection) = 0;
-  virtual void connectionClosed(
+  virtual void duplexConnectionClosed(
       const std::string& type,
       reactivesocket::DuplexConnection* connection) = 0;
+
   virtual void bytesWritten(size_t bytes) = 0;
   virtual void bytesRead(size_t bytes) = 0;
   virtual void frameWritten(const std::string& frameType) = 0;

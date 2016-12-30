@@ -3,28 +3,24 @@
 #pragma once
 
 #include <iosfwd>
-
 #include "src/automata/StreamSubscriptionResponderBase.h"
-#include "src/mixins/ExecutorMixin.h"
-#include "src/mixins/LoggingMixin.h"
-#include "src/mixins/SinkIfMixin.h"
-#include "src/mixins/StreamIfMixin.h"
 
 namespace reactivesocket {
 
 /// Implementation of stream automaton that represents a Subscription responder.
-class SubscriptionResponderBase : public StreamSubscriptionResponderBase {
+class SubscriptionResponder : public StreamSubscriptionResponderBase {
   using Base = StreamSubscriptionResponderBase;
 
  public:
-  using Base::Base;
+  explicit SubscriptionResponder(const Base::Parameters& params)
+      : ExecutorBase(params.executor, false), Base(params) {}
 
-  std::ostream& logPrefix(std::ostream& os) {
-    return os << "SubscriptionResponder(" << &connection_ << ", " << streamId_
-              << "): ";
-  }
+  void processInitialFrame(Frame_REQUEST_SUB&&);
+
+  std::ostream& logPrefix(std::ostream& os);
+
+ private:
+  void onCompleteImpl() override;
 };
 
-using SubscriptionResponder = SinkIfMixin<
-    StreamIfMixin<ExecutorMixin<LoggingMixin<SubscriptionResponderBase>>>>;
-}
+} // reactivesocket

@@ -3,10 +3,9 @@
 #pragma once
 
 #include <folly/ExceptionWrapper.h>
-#include <reactive-streams/utilities/SmartPointers.h>
-
 #include "src/DuplexConnection.h"
 #include "src/ReactiveStreamsCompat.h"
+#include "src/SmartPointers.h"
 
 namespace reactivesocket {
 

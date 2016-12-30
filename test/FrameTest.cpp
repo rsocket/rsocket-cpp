@@ -140,8 +140,10 @@ TEST(FrameTest, Frame_SETUP) {
   uint32_t version = 0;
   uint32_t keepaliveTime = std::numeric_limits<uint32_t>::max();
   uint32_t maxLifetime = std::numeric_limits<uint32_t>::max();
-  ResumeIdentificationToken token;
-  token.fill(1);
+  ResumeIdentificationToken::Data tokenData;
+  tokenData.fill(1);
+  auto token = ResumeIdentificationToken::empty();
+  token.set(std::move(tokenData));
   auto data = folly::IOBuf::copyBuffer("424242");
   auto frame = reserialize<Frame_SETUP>(
       flags,

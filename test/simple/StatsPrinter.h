@@ -10,12 +10,15 @@ class StatsPrinter : public Stats {
  public:
   void socketCreated() override;
   void socketClosed() override;
-  virtual void connectionCreated(
+  void socketDisconnected() override;
+
+  virtual void duplexConnectionCreated(
       const std::string& type,
       reactivesocket::DuplexConnection* connection) override;
-  virtual void connectionClosed(
+  virtual void duplexConnectionClosed(
       const std::string& type,
       reactivesocket::DuplexConnection* connection) override;
+
   virtual void bytesWritten(size_t bytes) override;
   virtual void bytesRead(size_t bytes) override;
   virtual void frameWritten(const std::string& frameType) override;

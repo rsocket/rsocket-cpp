@@ -3,12 +3,12 @@
 #pragma once
 
 #include <folly/ExceptionWrapper.h>
-#include <reactive-streams/utilities/SmartPointers.h>
 #include <condition_variable>
 #include <mutex>
 #include <vector>
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
+#include "src/SmartPointers.h"
 
 namespace reactivesocket {
 namespace tck {

@@ -3,8 +3,10 @@
 #include <folly/Memory.h>
 #include <folly/io/async/AsyncServerSocket.h>
 #include <gmock/gmock.h>
+#include "src/FrameTransport.h"
 #include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"
+#include "src/SmartPointers.h"
 #include "src/SubscriptionBase.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/tcp/TcpDuplexConnection.h"
@@ -18,22 +20,33 @@ using namespace ::folly;
 DEFINE_string(address, "9898", "host:port to listen to");
 
 namespace {
+
+std::vector<
+    std::pair<std::unique_ptr<ReactiveSocket>, ResumeIdentificationToken>>
+    g_reactiveSockets;
+
 class ServerSubscription : public SubscriptionBase {
  public:
   explicit ServerSubscription(std::shared_ptr<Subscriber<Payload>> response)
-      : response_(std::move(response)) {}
+      : ExecutorBase(defaultExecutor()), response_(std::move(response)) {}
 
-  ~ServerSubscription(){};
+  ~ServerSubscription() {
+    LOG(INFO) << "~ServerSubscription " << this;
+  }
 
   // Subscription methods
   void requestImpl(size_t n) override {
+    LOG(INFO) << "request " << this;
     response_.onNext(Payload("from server"));
     response_.onNext(Payload("from server2"));
+    LOG(INFO) << "calling onComplete";
     response_.onComplete();
     //    response_.onError(std::runtime_error("XXX"));
   }
 
-  void cancelImpl() override {}
+  void cancelImpl() override {
+    LOG(INFO) << "cancel " << this;
+  }
 
  private:
   SubscriberPtr<Subscriber<Payload>> response_;
@@ -50,7 +63,6 @@ class ServerRequestHandler : public DefaultRequestHandler {
       StreamId streamId,
       const std::shared_ptr<Subscriber<Payload>>& response) override {
     LOG(INFO) << "ServerRequestHandler.handleRequestSubscription " << request;
-
     response->onSubscribe(std::make_shared<ServerSubscription>(response));
   }
 
@@ -80,28 +92,44 @@ class ServerRequestHandler : public DefaultRequestHandler {
 
     str << "ServerRequestHandler.handleSetupPayload " << request
         << " setup token <";
-    for (uint8_t byte : request.token) {
+    for (uint8_t byte : request.token.data()) {
       str << (int)byte;
     }
     str << "> " << streamState_.get() << " " << streamState_->streams_.size()
         << "\n";
     LOG(INFO) << str.str();
+    // TODO: we need to get ReactiveSocket pointer somehow
+    g_reactiveSockets[0].second = request.token;
     return streamState_;
   }
 
   std::shared_ptr<StreamState> handleResume(
-      const ResumeIdentificationToken& token) override {
+      const ResumeIdentificationToken& token,
+      ResumePosition position) override {
     std::stringstream str;
 
     str << "ServerRequestHandler.handleResume resume token <";
-    for (uint8_t byte : token) {
+    for (uint8_t byte : token.data()) {
       str << (int)byte;
     }
     str << "> " << streamState_.get() << " " << streamState_->streams_.size()
         << "\n";
 
     LOG(INFO) << str.str();
-    return streamState_;
+
+    CHECK(g_reactiveSockets.size() == 2);
+    CHECK(g_reactiveSockets[0].second == token);
+
+    LOG(INFO) << "detaching frame transport";
+    auto frameTransport = g_reactiveSockets[1].first->detachFrameTransport();
+    LOG(INFO) << "tryResumeServer...";
+    auto result =
+        g_reactiveSockets[0].first->tryResumeServer(frameTransport, position);
+    LOG(INFO) << "resume " << (result ? "SUCCEEDED" : "FAILED");
+
+    // TODO(lehecka): unused, make it used again
+    // return streamState_;
+    return nullptr;
   }
 
   void handleCleanResume(std::shared_ptr<Subscription> response) override {
@@ -131,7 +159,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
   virtual void connectionAccepted(
       int fd,
       const SocketAddress& clientAddr) noexcept override {
-    std::cout << "connectionAccepted" << clientAddr.describe() << "\n";
+    LOG(INFO) << "connectionAccepted" << clientAddr.describe();
 
     auto socket =
         folly::AsyncSocket::UniquePtr(new AsyncSocket(&eventBase_, fd));
@@ -143,42 +171,64 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     std::unique_ptr<RequestHandler> requestHandler =
         folly::make_unique<ServerRequestHandler>(streamState_);
 
-    std::unique_ptr<ReactiveSocket> rs = ReactiveSocket::fromServerConnection(
-        std::move(framedConnection), std::move(requestHandler), stats_);
+    std::unique_ptr<ReactiveSocket> rs =
+        ReactiveSocket::disconnectedServer(std::move(requestHandler), stats_);
 
-    std::cout << "RS " << rs.get() << std::endl;
+    rs->onConnected([](ReactiveSocket& socket) {
+      LOG(INFO) << "socket connected " << &socket;
+    });
+    rs->onDisconnected([](ReactiveSocket& socket) {
+      LOG(INFO) << "socket disconnect " << &socket;
+      // to verify these frames will be queued up
+      socket.requestStream(
+          Payload("from server resume"), std::make_shared<PrintSubscriber>());
+    });
+    rs->onClosed([](ReactiveSocket& socket) {
+      LOG(INFO) << "socket closed " << &socket;
+    });
 
-    // keep the ReactiveSocket around so it can be resumed
-    //    rs->onClose(
-    //        std::bind(&Callback::removeSocket, this, std::placeholders::_1));
+    if (g_reactiveSockets.empty()) {
+      LOG(INFO) << "requestStream";
+      rs->requestStream(
+          Payload("from server"), std::make_shared<PrintSubscriber>());
+    }
 
-    reactiveSockets_.push_back(std::move(rs));
+    LOG(INFO) << "serverConnecting ...";
+    rs->serverConnect(
+        FrameTransport::fromDuplexConnection(std::move(framedConnection)),
+        true);
+
+    LOG(INFO) << "RS " << rs.get();
+
+    g_reactiveSockets.emplace_back(
+        std::move(rs), ResumeIdentificationToken::generateNew());
   }
 
   void removeSocket(ReactiveSocket& socket) {
     if (!shuttingDown) {
-      reactiveSockets_.erase(std::remove_if(
-          reactiveSockets_.begin(),
-          reactiveSockets_.end(),
-          [&socket](std::unique_ptr<ReactiveSocket>& vecSocket) {
-            return vecSocket.get() == &socket;
+      g_reactiveSockets.erase(std::remove_if(
+          g_reactiveSockets.begin(),
+          g_reactiveSockets.end(),
+          [&socket](const std::pair<
+                    std::unique_ptr<ReactiveSocket>,
+                    ResumeIdentificationToken>& kv) {
+            return kv.first.get() == &socket;
           }));
     }
   }
 
   virtual void acceptError(const std::exception& ex) noexcept override {
-    std::cout << "acceptError" << ex.what() << "\n";
+    LOG(INFO) << "acceptError" << ex.what();
   }
 
   void shutdown() {
     shuttingDown = true;
-    reactiveSockets_.clear();
+    g_reactiveSockets.clear();
   }
 
  private:
   // only one for demo purposes. Should be token dependent.
   std::shared_ptr<StreamState> streamState_;
-  std::vector<std::unique_ptr<ReactiveSocket>> reactiveSockets_;
   EventBase& eventBase_;
   Stats& stats_;
   bool shuttingDown{false};
@@ -213,10 +263,9 @@ int main(int argc, char* argv[]) {
         serverSocket->listen(10);
         serverSocket->startAccepting();
 
-        std::cout << "server listening on ";
+        LOG(INFO) << "server listening on ";
         for (auto i : serverSocket->getAddresses())
-          std::cout << i.describe() << ' ';
-        std::cout << '\n';
+          LOG(INFO) << i.describe() << ' ';
       });
 
   std::string name;

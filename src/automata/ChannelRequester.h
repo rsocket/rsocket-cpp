@@ -4,20 +4,12 @@
 
 #include <iosfwd>
 
-#include <reactive-streams/utilities/AllowanceSemaphore.h>
-#include <reactive-streams/utilities/SmartPointers.h>
-#include "src/AbstractStreamAutomaton.h"
 #include "src/Frame.h"
 #include "src/Payload.h"
-#include "src/ReactiveStreamsCompat.h"
+#include "src/SubscriberBase.h"
+#include "src/SubscriptionBase.h"
 #include "src/mixins/ConsumerMixin.h"
-#include "src/mixins/ExecutorMixin.h"
-#include "src/mixins/LoggingMixin.h"
-#include "src/mixins/MixinTerminator.h"
 #include "src/mixins/PublisherMixin.h"
-#include "src/mixins/SinkIfMixin.h"
-#include "src/mixins/SourceIfMixin.h"
-#include "src/mixins/StreamIfMixin.h"
 
 namespace folly {
 class exception_wrapper;
@@ -25,53 +17,48 @@ class exception_wrapper;
 
 namespace reactivesocket {
 
-enum class StreamCompletionSignal;
-
 /// Implementation of stream automaton that represents a Channel requester.
-class ChannelRequesterBase
-    : public PublisherMixin<
-          Frame_REQUEST_CHANNEL,
-          ConsumerMixin<Frame_RESPONSE, MixinTerminator>> {
-  using Base = PublisherMixin<
-      Frame_REQUEST_CHANNEL,
-      ConsumerMixin<Frame_RESPONSE, MixinTerminator>>;
+class ChannelRequester : public PublisherMixin<
+                             Frame_REQUEST_CHANNEL,
+                             ConsumerMixin<Frame_RESPONSE>>,
+                         public SubscriberBase,
+                         public SubscriptionBase {
+  using Base =
+      PublisherMixin<Frame_REQUEST_CHANNEL, ConsumerMixin<Frame_RESPONSE>>;
 
  public:
-  using Base::Base;
+  struct Parameters : Base::Parameters {
+    Parameters(
+        const typename Base::Parameters& baseParams,
+        folly::Executor& _executor)
+        : Base::Parameters(baseParams), executor(_executor) {}
+    folly::Executor& executor;
+  };
 
-  /// @{
-  /// A Subscriber implementation exposed to the user of ReactiveSocket to
-  /// receive "request" payloads.
-  void onSubscribe(std::shared_ptr<Subscription>);
-
-  void onNext(Payload);
-
-  void onComplete();
-
-  void onError(folly::exception_wrapper);
-  /// @}
-
-  /// @{
-  void request(size_t);
-
-  void cancel();
-  /// @}
+  explicit ChannelRequester(const Parameters& params)
+      : ExecutorBase(params.executor, false), Base(params) {}
 
   std::ostream& logPrefix(std::ostream& os);
 
- protected:
+ private:
   /// @{
-  void endStream(StreamCompletionSignal);
-
-  /// Not all frames are intercepted, some just pass through.
-  using Base::onNextFrame;
-
-  void onNextFrame(Frame_RESPONSE&&);
-
-  void onNextFrame(Frame_ERROR&&);
+  void onSubscribeImpl(std::shared_ptr<Subscription>) override;
+  void onNextImpl(Payload) override;
+  void onCompleteImpl() override;
+  void onErrorImpl(folly::exception_wrapper) override;
   /// @}
 
- private:
+  /// @{
+  void requestImpl(size_t) override;
+  void cancelImpl() override;
+  /// @}
+
+  using Base::onNextFrame;
+  void onNextFrame(Frame_RESPONSE&&) override;
+  void onNextFrame(Frame_ERROR&&) override;
+
+  void endStream(StreamCompletionSignal) override;
+
   /// State of the Channel requester.
   enum class State : uint8_t {
     NEW,
@@ -80,9 +67,7 @@ class ChannelRequesterBase
   } state_{State::NEW};
   /// An allowance accumulated before the stream is initialised.
   /// Remaining part of the allowance is forwarded to the ConsumerMixin.
-  reactivestreams::AllowanceSemaphore initialResponseAllowance_;
+  AllowanceSemaphore initialResponseAllowance_;
 };
 
-using ChannelRequester = SourceIfMixin<SinkIfMixin<
-    StreamIfMixin<ExecutorMixin<LoggingMixin<ChannelRequesterBase>>>>>;
-}
+} // reactivesocket

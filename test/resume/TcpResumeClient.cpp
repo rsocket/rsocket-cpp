@@ -2,7 +2,10 @@
 
 #include <folly/Memory.h>
 #include <folly/io/async/EventBaseManager.h>
+#include <folly/io/async/ScopedEventBaseThread.h>
 #include <gmock/gmock.h>
+#include "src/ClientResumeStatusCallback.h"
+#include "src/FrameTransport.h"
 #include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"
 #include "src/folly/FollyKeepaliveTimer.h"
@@ -29,6 +32,24 @@ class Callback : public AsyncSocket::ConnectCallback {
     std::cout << "TODO error" << ex.what() << " " << ex.getType() << "\n";
   }
 };
+
+class ResumeCallback : public ClientResumeStatusCallback {
+  void onResumeOk() override {
+    LOG(INFO) << "resumeOk";
+  }
+
+  // Called when an ERROR frame with CONNECTION_ERROR is received during
+  // resuming operation
+  void onResumeError(folly::exception_wrapper ex) override {
+    LOG(INFO) << "resumeError: " << ex.what();
+  }
+
+  // Called when the resume operation was interrupted due to network
+  // the application code may try to resume again.
+  void onConnectionError(folly::exception_wrapper ex) override {
+    LOG(INFO) << "connectionError: " << ex.what();
+  }
+};
 }
 
 int main(int argc, char* argv[]) {
@@ -39,23 +60,22 @@ int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
 
-  EventBase eventBase;
-  auto thread = std::thread([&]() { eventBase.loopForever(); });
+  ScopedEventBaseThread eventBaseThread;
 
   std::unique_ptr<ReactiveSocket> reactiveSocket;
   Callback callback;
   StatsPrinter stats;
 
-  ResumeIdentificationToken token;
-  token.fill(1);
+  auto token = ResumeIdentificationToken::generateNew();
 
-  eventBase.runInEventBaseThreadAndWait([&]() {
+  eventBaseThread.getEventBase()->runInEventBaseThreadAndWait([&]() {
     folly::SocketAddress addr(FLAGS_host, FLAGS_port, true);
 
-    folly::AsyncSocket::UniquePtr socket(new folly::AsyncSocket(&eventBase));
+    folly::AsyncSocket::UniquePtr socket(
+        new folly::AsyncSocket(eventBaseThread.getEventBase()));
     socket->connect(&callback, addr);
 
-    std::cout << "attempting connection to " << addr.describe() << "\n";
+    LOG(INFO) << "attempting connection to " << addr.describe();
 
     std::unique_ptr<DuplexConnection> connection =
         folly::make_unique<TcpDuplexConnection>(std::move(socket), stats);
@@ -64,28 +84,52 @@ int main(int argc, char* argv[]) {
     std::unique_ptr<RequestHandler> requestHandler =
         folly::make_unique<DefaultRequestHandler>();
 
-    reactiveSocket = ReactiveSocket::fromClientConnection(
-        std::move(framedConnection),
+    reactiveSocket = ReactiveSocket::disconnectedClient(
         std::move(requestHandler),
-        ConnectionSetupPayload(
-            "text/plain", "text/plain", Payload("meta", "data")),
         stats,
         folly::make_unique<FollyKeepaliveTimer>(
-            eventBase, std::chrono::milliseconds(5000)),
-        token);
+            *eventBaseThread.getEventBase(), std::chrono::seconds(10)));
 
-    reactiveSocket->requestSubscription(
+    reactiveSocket->onConnected([](ReactiveSocket& socket) {
+      LOG(INFO) << "socket connected " << &socket;
+    });
+    reactiveSocket->onDisconnected([](ReactiveSocket& socket) {
+      LOG(INFO) << "socket disconnect " << &socket;
+    });
+    reactiveSocket->onClosed([](ReactiveSocket& socket) {
+      LOG(INFO) << "socket closed " << &socket;
+    });
+
+    LOG(INFO) << "requestStream:";
+    reactiveSocket->requestStream(
         Payload("from client"), std::make_shared<PrintSubscriber>());
+
+    LOG(INFO) << "connecting RS ...";
+    reactiveSocket->clientConnect(
+        FrameTransport::fromDuplexConnection(std::move(framedConnection)),
+        ConnectionSetupPayload(
+            "text/plain", "text/plain", Payload("meta", "data"), true, token));
   });
 
   std::string input;
   std::getline(std::cin, input);
 
-  eventBase.runInEventBaseThreadAndWait([&]() {
+  eventBaseThread.getEventBase()->runInEventBaseThreadAndWait([&]() {
+    LOG(INFO) << "disconnecting RS ...";
+    reactiveSocket->disconnect();
+    LOG(INFO) << "requestStream:";
+    reactiveSocket->requestStream(
+        Payload("from client2"), std::make_shared<PrintSubscriber>());
+  });
+
+  std::getline(std::cin, input);
+
+  eventBaseThread.getEventBase()->runInEventBaseThreadAndWait([&]() {
     folly::SocketAddress addr(FLAGS_host, FLAGS_port, true);
 
+    LOG(INFO) << "new TCP connection ...";
     folly::AsyncSocket::UniquePtr socketResume(
-        new folly::AsyncSocket(&eventBase));
+        new folly::AsyncSocket(eventBaseThread.getEventBase()));
     socketResume->connect(&callback, addr);
 
     std::unique_ptr<DuplexConnection> connectionResume =
@@ -93,17 +137,21 @@ int main(int argc, char* argv[]) {
     std::unique_ptr<DuplexConnection> framedConnectionResume =
         folly::make_unique<FramedDuplexConnection>(std::move(connectionResume));
 
-    reactiveSocket->tryClientResume(std::move(framedConnectionResume), token);
+    LOG(INFO) << "try resume ...";
+    reactiveSocket->tryClientResume(
+        token,
+        std::move(framedConnectionResume),
+        folly::make_unique<ResumeCallback>());
   });
 
   std::getline(std::cin, input);
 
   // TODO why need to shutdown in eventbase?
-  eventBase.runInEventBaseThreadAndWait(
-      [&reactiveSocket]() { reactiveSocket.reset(nullptr); });
-
-  eventBase.terminateLoopSoon();
-  thread.join();
+  eventBaseThread.getEventBase()->runInEventBaseThreadAndWait(
+      [&reactiveSocket]() {
+        LOG(INFO) << "releasing RS";
+        reactiveSocket.reset(nullptr);
+      });
 
   return 0;
 }

@@ -2,24 +2,26 @@
 
 #pragma once
 
+#include <folly/ExceptionWrapper.h>
 #include <cstddef>
 #include <iostream>
-
-#include <folly/ExceptionWrapper.h>
-#include <reactive-streams/utilities/AllowanceSemaphore.h>
-#include <reactive-streams/utilities/SmartPointers.h>
+#include "src/AllowanceSemaphore.h"
 #include "src/Common.h"
 #include "src/NullRequestHandler.h"
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
+#include "src/SmartPointers.h"
+#include "src/automata/StreamAutomatonBase.h"
 
 namespace reactivesocket {
 
 enum class StreamCompletionSignal;
 
 /// A mixin that represents a flow-control-aware consumer of data.
-template <typename Frame, typename Base>
-class ConsumerMixin : public Base {
+template <typename Frame>
+class ConsumerMixin : public StreamAutomatonBase {
+  using Base = StreamAutomatonBase;
+
  public:
   using Base::Base;
 
@@ -62,11 +64,7 @@ class ConsumerMixin : public Base {
 
  protected:
   /// @{
-  // TODO(lehecka): this should call setCancelled in the SubscribeBase, once
-  //               the SubscriberBase is used in the inheritance
-  //               this is effectively a terminating signal from the
-  //               ReactiveSocket instance
-  void endStream(StreamCompletionSignal signal) {
+  void endStream(StreamCompletionSignal signal) override {
     if (signal == StreamCompletionSignal::GRACEFUL) {
       consumingSubscriber_.onComplete();
     } else {
@@ -75,10 +73,7 @@ class ConsumerMixin : public Base {
     Base::endStream(signal);
   }
 
-  /// Not all frames are intercepted, some just pass through.
-  using Base::onNextFrame;
-
-  void onNextFrame(Frame&&);
+  void processPayload(Frame&&);
 
   void onError(folly::exception_wrapper ex);
   /// @}
@@ -94,10 +89,10 @@ class ConsumerMixin : public Base {
   reactivestreams::SubscriberPtr<Subscriber<Payload>> consumingSubscriber_;
 
   /// A total, net allowance (requested less delivered) by this consumer.
-  reactivestreams::AllowanceSemaphore allowance_;
+  AllowanceSemaphore allowance_;
   /// An allowance that have yet to be synced to the other end by sending
   /// REQUEST_N frames.
-  reactivestreams::AllowanceSemaphore pendingAllowance_;
+  AllowanceSemaphore pendingAllowance_;
 };
 }
 

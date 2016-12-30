@@ -4,57 +4,44 @@
 
 #include <iosfwd>
 
-#include "reactive-streams/utilities/AllowanceSemaphore.h"
-#include "reactive-streams/utilities/SmartPointers.h"
 #include "src/AbstractStreamAutomaton.h"
 #include "src/Frame.h"
-#include "src/Payload.h"
-#include "src/ReactiveStreamsCompat.h"
-#include "src/mixins/ExecutorMixin.h"
-#include "src/mixins/LoggingMixin.h"
-#include "src/mixins/MixinTerminator.h"
+#include "src/SubscriberBase.h"
+#include "src/automata/StreamAutomatonBase.h"
 #include "src/mixins/PublisherMixin.h"
-#include "src/mixins/SinkIfMixin.h"
-#include "src/mixins/StreamIfMixin.h"
-
-namespace folly {
-class exception_wrapper;
-}
 
 namespace reactivesocket {
-
-enum class StreamCompletionSignal;
 
 /// Implementation of stream automaton that represents a Stream/Subscription
 /// responder.
 class StreamSubscriptionResponderBase
-    : public PublisherMixin<Frame_RESPONSE, MixinTerminator> {
-  using Base = PublisherMixin<Frame_RESPONSE, MixinTerminator>;
+    : public PublisherMixin<Frame_RESPONSE, StreamAutomatonBase>,
+      public SubscriberBase {
+  using Base = PublisherMixin<Frame_RESPONSE, StreamAutomatonBase>;
 
  public:
-  using Base::Base;
+  struct Parameters : Base::Parameters {
+    Parameters(
+        const typename Base::Parameters& baseParams,
+        folly::Executor& _executor)
+        : Base::Parameters(baseParams), executor(_executor) {}
+    folly::Executor& executor;
+  };
 
-  /// @{
-  /// A Subscriber implementation exposed to the user of ReactiveSocket to
-  /// receive "response" payloads.
-  void onNext(Payload);
-
-  void onComplete();
-
-  void onError(folly::exception_wrapper);
-  /// @}
-
-  std::ostream& logPrefix(std::ostream& os);
+  explicit StreamSubscriptionResponderBase(const Parameters& params)
+      : ExecutorBase(params.executor, false), Base(params) {}
 
  protected:
-  /// @{
-  void endStream(StreamCompletionSignal);
-
-  /// Not all frames are intercepted, some just pass through.
   using Base::onNextFrame;
+  void onNextFrame(Frame_CANCEL&&) override;
 
-  void onNextFrame(Frame_CANCEL&&);
-  /// @}
+ private:
+  void onSubscribeImpl(std::shared_ptr<Subscription>) override;
+  void onNextImpl(Payload) override;
+  void onCompleteImpl() override;
+  void onErrorImpl(folly::exception_wrapper) override;
+
+  void endStream(StreamCompletionSignal) override;
 
   /// State of the Subscription responder.
   enum class State : uint8_t {

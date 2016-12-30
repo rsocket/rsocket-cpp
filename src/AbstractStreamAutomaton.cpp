@@ -10,27 +10,6 @@
 
 namespace reactivesocket {
 
-std::ostream& operator<<(std::ostream& os, StreamCompletionSignal signal) {
-  switch (signal) {
-    case StreamCompletionSignal::GRACEFUL:
-      return os << "GRACEFUL";
-    case StreamCompletionSignal::ERROR:
-      return os << "ERROR";
-    case StreamCompletionSignal::INVALID_SETUP:
-      return os << "INVALID_SETUP";
-    case StreamCompletionSignal::UNSUPPORTED_SETUP:
-      return os << "UNSUPPORTED_SETUP";
-    case StreamCompletionSignal::REJECTED_SETUP:
-      return os << "REJECTED_SETUP";
-    case StreamCompletionSignal::CONNECTION_ERROR:
-      return os << "CONNECTION_ERROR";
-    case StreamCompletionSignal::CONNECTION_END:
-      return os << "CONNECTION_END";
-  }
-  // this should be never hit because the switch is over all cases
-  std::abort();
-}
-
 void AbstractStreamAutomaton::onNextFrame(
     std::unique_ptr<folly::IOBuf> payload) {
   assert(payload);
@@ -60,7 +39,7 @@ void AbstractStreamAutomaton::onNextFrame(
       return;
     case FrameType::RESERVED:
     default:
-      onBadFrame();
+      onUnknownFrame();
       return;
   }
 }

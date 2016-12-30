@@ -1,10 +1,10 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "SubscriptionRequester.h"
+#include "src/automata/SubscriptionRequester.h"
 
 namespace reactivesocket {
 
-void SubscriptionRequesterBase::sendRequestFrame(
+void SubscriptionRequester::sendRequestFrame(
     FrameFlags flags,
     size_t initialN,
     Payload&& request) {
@@ -13,7 +13,7 @@ void SubscriptionRequesterBase::sendRequestFrame(
   connection_->outputFrameOrEnqueue(frame.serializeOut());
 }
 
-std::ostream& SubscriptionRequesterBase::logPrefix(std::ostream& os) {
+std::ostream& SubscriptionRequester::logPrefix(std::ostream& os) {
   return os << "SubscriptionRequester(" << &connection_ << ", " << streamId_
             << "): ";
 }

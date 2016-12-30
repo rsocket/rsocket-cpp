@@ -14,17 +14,20 @@ class ConnectionSetupPayload {
       std::string _metadataMimeType = "",
       std::string _dataMimeType = "",
       Payload _payload = Payload(),
+      bool _resumable = false,
       const ResumeIdentificationToken& _token =
-          {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}})
+          ResumeIdentificationToken::generateNew())
       : metadataMimeType(std::move(_metadataMimeType)),
         dataMimeType(std::move(_dataMimeType)),
         payload(std::move(_payload)),
-        token(_token){};
+        token(_token),
+        resumable(_resumable){};
 
   std::string metadataMimeType;
   std::string dataMimeType;
   Payload payload;
-  const ResumeIdentificationToken token;
+  ResumeIdentificationToken token;
+  bool resumable;
 };
 
 std::ostream& operator<<(std::ostream&, const ConnectionSetupPayload&);

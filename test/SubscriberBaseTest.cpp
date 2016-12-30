@@ -10,7 +10,9 @@ using namespace ::reactivesocket;
 
 class SubscriberBaseMock : public SubscriberBaseT<int> {
  public:
-  using SubscriberBaseT::SubscriberBaseT;
+  SubscriberBaseMock() : ExecutorBase(defaultExecutor()) {}
+  explicit SubscriberBaseMock(folly::Executor& executor)
+      : ExecutorBase(executor) {}
 
   MOCK_METHOD1(
       onSubscribeImpl_,

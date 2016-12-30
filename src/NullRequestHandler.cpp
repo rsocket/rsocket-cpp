@@ -69,7 +69,8 @@ std::shared_ptr<StreamState> NullRequestHandler::handleSetupPayload(
 }
 
 std::shared_ptr<StreamState> NullRequestHandler::handleResume(
-    const ResumeIdentificationToken& /*token*/) {
+    const ResumeIdentificationToken& /*token*/,
+    ResumePosition /*position*/) {
   return std::make_shared<StreamState>();
 }
 

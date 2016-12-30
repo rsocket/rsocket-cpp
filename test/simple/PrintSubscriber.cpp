@@ -3,22 +3,28 @@
 #include "PrintSubscriber.h"
 #include <folly/Memory.h>
 #include <folly/io/IOBufQueue.h>
-#include <iostream>
+#include <glog/logging.h>
 
 namespace reactivesocket {
+
+PrintSubscriber::~PrintSubscriber() {
+  LOG(INFO) << "~PrintSubscriber " << this;
+}
+
 void PrintSubscriber::onSubscribe(std::shared_ptr<Subscription> subscription) {
+  LOG(INFO) << "PrintSubscriber " << this << " onSubscribe";
   subscription->request(std::numeric_limits<int32_t>::max());
 }
 
 void PrintSubscriber::onNext(Payload element) {
-  std::cout << "PrintSubscriber.onNext " << element << "\n";
+  LOG(INFO) << "PrintSubscriber " << this << " onNext " << element;
 }
 
 void PrintSubscriber::onComplete() {
-  std::cout << "PrintSubscriber.onComplete\n";
+  LOG(INFO) << "PrintSubscriber " << this << " onComplete";
 }
 
 void PrintSubscriber::onError(folly::exception_wrapper ex) {
-  std::cout << "PrintSubscriber.onError " << ex.what() << "\n";
+  LOG(INFO) << "PrintSubscriber " << this << " onError " << ex.what();
 }
 }

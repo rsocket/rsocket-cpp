@@ -4,9 +4,9 @@
 
 #include <folly/ExceptionWrapper.h>
 #include <folly/io/IOBufQueue.h>
-#include <reactive-streams/utilities/AllowanceSemaphore.h>
-#include <reactive-streams/utilities/SmartPointers.h>
+#include "src/AllowanceSemaphore.h"
 #include "src/ReactiveStreamsCompat.h"
+#include "src/SmartPointers.h"
 #include "src/SubscriberBase.h"
 #include "src/SubscriptionBase.h"
 
@@ -19,7 +19,8 @@ class FramedReader : public SubscriberBaseT<std::unique_ptr<folly::IOBuf>>,
   explicit FramedReader(
       std::shared_ptr<reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
           frames)
-      : frames_(std::move(frames)),
+      : ExecutorBase(defaultExecutor()),
+        frames_(std::move(frames)),
         payloadQueue_(folly::IOBufQueue::cacheChainLength()) {}
 
  private:
@@ -42,7 +43,7 @@ class FramedReader : public SubscriberBaseT<std::unique_ptr<folly::IOBuf>>,
       frames_;
   SubscriptionPtr<Subscription> streamSubscription_;
 
-  ::reactivestreams::AllowanceSemaphore allowance_{0};
+  AllowanceSemaphore allowance_{0};
 
   bool streamRequested_{false};
   bool dispatchingFrames_{false};

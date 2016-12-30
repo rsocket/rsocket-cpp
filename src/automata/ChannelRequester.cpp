@@ -1,10 +1,10 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "ChannelRequester.h"
+#include "src/automata/ChannelRequester.h"
 
 namespace reactivesocket {
 
-void ChannelRequesterBase::onSubscribe(
+void ChannelRequester::onSubscribeImpl(
     std::shared_ptr<Subscription> subscription) {
   CHECK(State::NEW == state_);
   Base::onSubscribe(subscription);
@@ -12,7 +12,7 @@ void ChannelRequesterBase::onSubscribe(
   subscription->request(1);
 }
 
-void ChannelRequesterBase::onNext(Payload request) {
+void ChannelRequester::onNextImpl(Payload request) {
   switch (state_) {
     case State::NEW: {
       state_ = State::REQUESTED;
@@ -48,7 +48,8 @@ void ChannelRequesterBase::onNext(Payload request) {
   }
 }
 
-void ChannelRequesterBase::onComplete() {
+// TODO: consolidate code in onCompleteImpl, onErrorImpl, cancelImpl
+void ChannelRequester::onCompleteImpl() {
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;
@@ -66,7 +67,7 @@ void ChannelRequesterBase::onComplete() {
   }
 }
 
-void ChannelRequesterBase::onError(folly::exception_wrapper ex) {
+void ChannelRequester::onErrorImpl(folly::exception_wrapper ex) {
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;
@@ -82,7 +83,7 @@ void ChannelRequesterBase::onError(folly::exception_wrapper ex) {
   }
 }
 
-void ChannelRequesterBase::request(size_t n) {
+void ChannelRequester::requestImpl(size_t n) {
   switch (state_) {
     case State::NEW:
       // The initial request has not been sent out yet, hence we must accumulate
@@ -99,7 +100,7 @@ void ChannelRequesterBase::request(size_t n) {
   }
 }
 
-void ChannelRequesterBase::cancel() {
+void ChannelRequester::cancelImpl() {
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;
@@ -115,7 +116,7 @@ void ChannelRequesterBase::cancel() {
   }
 }
 
-void ChannelRequesterBase::endStream(StreamCompletionSignal signal) {
+void ChannelRequester::endStream(StreamCompletionSignal signal) {
   switch (state_) {
     case State::NEW:
     case State::REQUESTED:
@@ -129,7 +130,7 @@ void ChannelRequesterBase::endStream(StreamCompletionSignal signal) {
   Base::endStream(signal);
 }
 
-void ChannelRequesterBase::onNextFrame(Frame_RESPONSE&& frame) {
+void ChannelRequester::onNextFrame(Frame_RESPONSE&& frame) {
   bool end = false;
   switch (state_) {
     case State::NEW:
@@ -145,13 +146,15 @@ void ChannelRequesterBase::onNextFrame(Frame_RESPONSE&& frame) {
     case State::CLOSED:
       break;
   }
-  Base::onNextFrame(std::move(frame));
+
+  processPayload(std::move(frame));
+
   if (end) {
     connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
   }
 }
 
-void ChannelRequesterBase::onNextFrame(Frame_ERROR&& frame) {
+void ChannelRequester::onNextFrame(Frame_ERROR&& frame) {
   switch (state_) {
     case State::NEW:
       // Cannot receive a frame before sending the initial request.
@@ -159,14 +162,15 @@ void ChannelRequesterBase::onNextFrame(Frame_ERROR&& frame) {
       break;
     case State::REQUESTED:
       state_ = State::CLOSED;
-      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      Base::onError(std::runtime_error(frame.payload_.moveDataToString()));
+      connection_->endStream(streamId_, StreamCompletionSignal::ERROR);
       break;
     case State::CLOSED:
       break;
   }
 }
 
-std::ostream& ChannelRequesterBase::logPrefix(std::ostream& os) {
+std::ostream& ChannelRequester::logPrefix(std::ostream& os) {
   return os << "ChannelRequester(" << &connection_ << ", " << streamId_
             << "): ";
 }

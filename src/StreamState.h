@@ -10,6 +10,10 @@
 #include "src/ResumeCache.h"
 #include "src/ResumeTracker.h"
 
+namespace folly {
+class IOBuf;
+}
+
 namespace reactivesocket {
 
 class AbstractStreamAutomaton;
@@ -26,6 +30,16 @@ class StreamState {
       streams_;
   std::unique_ptr<ResumeTracker> resumeTracker_;
   std::unique_ptr<ResumeCache> resumeCache_;
-  std::deque<std::unique_ptr<folly::IOBuf>> pendingWrites_;
+
+  void enqueueOutputPendingFrame(std::unique_ptr<folly::IOBuf> frame) {
+    outputFrames_.push_back(std::move(frame));
+  }
+
+  std::deque<std::unique_ptr<folly::IOBuf>> moveOutputPendingFrames() {
+    return std::move(outputFrames_);
+  }
+
+ private:
+  std::deque<std::unique_ptr<folly::IOBuf>> outputFrames_;
 };
 }
