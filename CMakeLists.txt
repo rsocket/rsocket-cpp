@@ -323,4 +323,18 @@ target_link_libraries(
 
 add_dependencies(tcpresumeserver gmock)
 
+add_executable(
+  leaked_subscriber
+  test/simple/LeakedSubscriber.cpp
+  )
+
+target_link_libraries(
+  leaked_subscriber
+  ReactiveSocket
+  ${FOLLY_LIBRARIES}
+  ${CMAKE_THREAD_LIBS_INIT}
+  )
+
+add_dependencies(leaked_subscriber ReactiveSocket ReactiveStreams)
+
 # EOF
