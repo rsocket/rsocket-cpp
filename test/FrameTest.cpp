@@ -142,7 +142,7 @@ TEST(FrameTest, Frame_SETUP) {
   uint32_t maxLifetime = std::numeric_limits<uint32_t>::max();
   ResumeIdentificationToken::Data tokenData;
   tokenData.fill(1);
-  auto token = ResumeIdentificationToken::empty();
+  ResumeIdentificationToken token;
   token.set(std::move(tokenData));
   auto data = folly::IOBuf::copyBuffer("424242");
   auto frame = reserialize<Frame_SETUP>(

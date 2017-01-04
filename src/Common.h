@@ -47,7 +47,9 @@ class ResumeIdentificationToken {
  public:
   using Data = std::array<uint8_t, 16>;
 
-  static ResumeIdentificationToken empty();
+  /// Creates an empty token.
+  ResumeIdentificationToken();
+
   static ResumeIdentificationToken generateNew();
   static ResumeIdentificationToken fromString(const std::string& str);
 

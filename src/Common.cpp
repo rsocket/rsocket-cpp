@@ -52,10 +52,10 @@ StreamInterruptedException::StreamInterruptedException(int _terminatingSignal)
     : std::runtime_error(getTerminatingSignalErrorMessage(_terminatingSignal)),
       terminatingSignal(_terminatingSignal) {}
 
-ResumeIdentificationToken ResumeIdentificationToken::empty() {
-  return ResumeIdentificationToken(
-      Data() = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
-}
+ResumeIdentificationToken::ResumeIdentificationToken()
+    : ResumeIdentificationToken(
+          Data() = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}) {}
+
 ResumeIdentificationToken ResumeIdentificationToken::generateNew() {
   // TODO: this will be replaced with a variable length bit array and the value
   // will be generated outside of reactivesocket
@@ -76,7 +76,7 @@ ResumeIdentificationToken ResumeIdentificationToken::generateNew() {
 ResumeIdentificationToken ResumeIdentificationToken::fromString(
     const std::string& /*str*/) {
   CHECK(false) << "not implemented";
-  return empty();
+  return ResumeIdentificationToken();
 }
 
 std::string ResumeIdentificationToken::toString() const {
