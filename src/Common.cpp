@@ -7,6 +7,12 @@
 
 namespace reactivesocket {
 
+namespace {
+
+const char* HEX_CHARS = { "0123456789abcdef" };
+
+}
+
 static const char* getTerminatingSignalErrorMessage(int terminatingSignal) {
   switch ((StreamCompletionSignal)terminatingSignal) {
     case StreamCompletionSignal::CONNECTION_END:
@@ -80,11 +86,12 @@ ResumeIdentificationToken ResumeIdentificationToken::fromString(
 }
 
 std::string ResumeIdentificationToken::toString() const {
-  std::ostringstream str;
-  for (auto& i : bits_) {
-    str << i << " ";
+  std::string str;
+  for (auto b : bits_) {
+    str += HEX_CHARS[(b & 0xF0) >> 4];
+    str += HEX_CHARS[b & 0x0F];
   }
-  return str.str();
+  return str;
 }
 
 } // reactivesocket
