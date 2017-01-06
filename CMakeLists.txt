@@ -204,7 +204,8 @@ add_executable(
   test/folly/FollyKeepaliveTimerTest.cpp
   test/ReactiveSocketResumabilityTest.cpp
   test/SmartPointersTest.cpp
-  test/AllowanceSemaphoreTest.cpp)
+  test/AllowanceSemaphoreTest.cpp
+  test/ResumeIdentificationTokenTest.cpp)
 
 target_link_libraries(
   tests
