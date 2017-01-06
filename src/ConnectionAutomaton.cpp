@@ -504,6 +504,12 @@ void ConnectionAutomaton::useStreamState(
   }
 }
 
+
+const DuplexConnection& ConnectionAutomaton::duplexConnection() {
+  CHECK(connection_);
+  return *connection_;
+}
+
 uint32_t ConnectionAutomaton::getKeepaliveTime() const {
   return keepaliveTimer_ ? keepaliveTimer_->keepaliveTime().count()
                          : std::numeric_limits<uint32_t>::max();

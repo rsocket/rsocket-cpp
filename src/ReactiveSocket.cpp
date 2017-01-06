@@ -473,6 +473,11 @@ void ReactiveSocket::tryClientResume(
   connection_->reconnect(std::move(frameTransport), std::move(resumeCallback));
 }
 
+const DuplexConnection& ReactiveSocket::duplexConnection() {
+  CHECK(connection_);
+  return connection_->duplexConnection();
+}
+
 bool ReactiveSocket::tryResumeServer(
     std::shared_ptr<FrameTransport> frameTransport,
     ResumePosition position) {

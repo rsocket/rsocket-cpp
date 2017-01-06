@@ -117,6 +117,8 @@ class ReactiveSocket {
       std::shared_ptr<FrameTransport> frameTransport,
       ResumePosition position);
 
+  const DuplexConnection& duplexConnection();
+
  private:
   ReactiveSocket(
       bool isServer,

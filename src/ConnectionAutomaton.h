@@ -155,6 +155,8 @@ class ConnectionAutomaton
 
   void outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf> frame);
 
+  const DuplexConnection& duplexConnection();
+
   template <typename TFrame>
   bool deserializeFrameOrError(
       TFrame& frame,
