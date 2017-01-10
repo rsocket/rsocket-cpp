@@ -118,6 +118,23 @@ cpp_library(
     compiler_flags=['-DREACTIVE_SOCKET_EXTERNAL_STACK_TRACE_UTILS'],
 )
 
+cpp_library(
+    name='reactivesocket-inline-conn',
+    headers=[
+        'test/InlineConnection.h',
+    ],
+    srcs=[
+        'test/InlineConnection.cpp',
+    ],
+    deps=[
+        ':reactivesocket',
+        ':reactivesocket-streams-mocks',
+    ],
+    external_deps=[
+        'gmock',
+    ],
+)
+
 cpp_unittest(
     name = 'reactivesocket-tests',
 
