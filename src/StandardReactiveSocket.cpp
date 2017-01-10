@@ -110,7 +110,7 @@ std::unique_ptr<StandardReactiveSocket> StandardReactiveSocket::disconnectedServ
   return socket;
 }
 
-std::shared_ptr<Subscriber<Payload>> ReactiveSocket::requestChannel(
+std::shared_ptr<Subscriber<Payload>> StandardReactiveSocket::requestChannel(
     std::shared_ptr<Subscriber<Payload>> responseSink) {
   checkNotClosed();
   // TODO(stupaq): handle any exceptions
