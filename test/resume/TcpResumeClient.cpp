@@ -7,7 +7,7 @@
 #include "src/ClientResumeStatusCallback.h"
 #include "src/FrameTransport.h"
 #include "src/NullRequestHandler.h"
-#include "src/ReactiveSocket.h"
+#include "src/StandardReactiveSocket.h"
 #include "src/folly/FollyKeepaliveTimer.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/tcp/TcpDuplexConnection.h"
@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
 
   ScopedEventBaseThread eventBaseThread;
 
-  std::unique_ptr<ReactiveSocket> reactiveSocket;
+  std::unique_ptr<StandardReactiveSocket> reactiveSocket;
   Callback callback;
   StatsPrinter stats;
 
@@ -84,20 +84,20 @@ int main(int argc, char* argv[]) {
     std::unique_ptr<RequestHandler> requestHandler =
         folly::make_unique<DefaultRequestHandler>();
 
-    reactiveSocket = ReactiveSocket::disconnectedClient(
+    reactiveSocket = StandardReactiveSocket::disconnectedClient(
         *eventBaseThread.getEventBase(),
         std::move(requestHandler),
         stats,
         folly::make_unique<FollyKeepaliveTimer>(
             *eventBaseThread.getEventBase(), std::chrono::seconds(10)));
 
-    reactiveSocket->onConnected([](ReactiveSocket& socket) {
+    reactiveSocket->onConnected([](StandardReactiveSocket& socket) {
       LOG(INFO) << "socket connected " << &socket;
     });
-    reactiveSocket->onDisconnected([](ReactiveSocket& socket) {
+    reactiveSocket->onDisconnected([](StandardReactiveSocket& socket) {
       LOG(INFO) << "socket disconnect " << &socket;
     });
-    reactiveSocket->onClosed([](ReactiveSocket& socket) {
+    reactiveSocket->onClosed([](StandardReactiveSocket& socket) {
       LOG(INFO) << "socket closed " << &socket;
     });
 

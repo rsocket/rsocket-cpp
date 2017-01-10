@@ -5,7 +5,7 @@
 #include <gmock/gmock.h>
 #include "src/FrameTransport.h"
 #include "src/NullRequestHandler.h"
-#include "src/ReactiveSocket.h"
+#include "src/StandardReactiveSocket.h"
 #include "src/SmartPointers.h"
 #include "src/SubscriptionBase.h"
 #include "src/framed/FramedDuplexConnection.h"
@@ -22,7 +22,7 @@ DEFINE_string(address, "9898", "host:port to listen to");
 namespace {
 
 std::vector<
-    std::pair<std::unique_ptr<ReactiveSocket>, ResumeIdentificationToken>>
+    std::pair<std::unique_ptr<StandardReactiveSocket>, ResumeIdentificationToken>>
     g_reactiveSockets;
 
 class ServerSubscription : public SubscriptionBase {
@@ -171,19 +171,19 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     std::unique_ptr<RequestHandler> requestHandler =
         folly::make_unique<ServerRequestHandler>(streamState_);
 
-    std::unique_ptr<ReactiveSocket> rs = ReactiveSocket::disconnectedServer(
+    std::unique_ptr<StandardReactiveSocket> rs = StandardReactiveSocket::disconnectedServer(
         eventBase_, std::move(requestHandler), stats_);
 
-    rs->onConnected([](ReactiveSocket& socket) {
+    rs->onConnected([](StandardReactiveSocket& socket) {
       LOG(INFO) << "socket connected " << &socket;
     });
-    rs->onDisconnected([](ReactiveSocket& socket) {
+    rs->onDisconnected([](StandardReactiveSocket& socket) {
       LOG(INFO) << "socket disconnect " << &socket;
       // to verify these frames will be queued up
       socket.requestStream(
           Payload("from server resume"), std::make_shared<PrintSubscriber>());
     });
-    rs->onClosed([](ReactiveSocket& socket) {
+    rs->onClosed([](StandardReactiveSocket& socket) {
       LOG(INFO) << "socket closed " << &socket;
     });
 
@@ -203,13 +203,13 @@ class Callback : public AsyncServerSocket::AcceptCallback {
         std::move(rs), ResumeIdentificationToken::generateNew());
   }
 
-  void removeSocket(ReactiveSocket& socket) {
+  void removeSocket(StandardReactiveSocket& socket) {
     if (!shuttingDown) {
       g_reactiveSockets.erase(std::remove_if(
           g_reactiveSockets.begin(),
           g_reactiveSockets.end(),
           [&socket](const std::pair<
-                    std::unique_ptr<ReactiveSocket>,
+                    std::unique_ptr<StandardReactiveSocket>,
                     ResumeIdentificationToken>& kv) {
             return kv.first.get() == &socket;
           }));

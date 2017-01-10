@@ -58,6 +58,7 @@ cpp_library(
         'src/ReactiveSocket.h',
         'src/RequestHandler.h',
         'src/SmartPointers.h', #will be removed soon
+        'src/StandardReactiveSocket.h',
         'src/Stats.h',
         'src/SubscriberBase.h',
         'src/SubscriptionBase.h',

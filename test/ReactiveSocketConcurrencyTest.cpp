@@ -11,7 +11,7 @@
 #include <gmock/gmock.h>
 
 #include "MockStats.h"
-#include "src/ReactiveSocket.h"
+#include "src/StandardReactiveSocket.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "test/InlineConnection.h"
 #include "test/MockRequestHandler.h"
@@ -27,7 +27,7 @@ class ClientSideConcurrencyTest : public testing::Test {
     auto serverConn = folly::make_unique<InlineConnection>();
     clientConn->connectTo(*serverConn);
 
-    clientSock = ReactiveSocket::fromClientConnection(
+    clientSock = StandardReactiveSocket::fromClientConnection(
         *thread2.getEventBase(),
         std::move(clientConn),
         // No interactions on this mock, the client will not accept any
@@ -43,7 +43,7 @@ class ClientSideConcurrencyTest : public testing::Test {
     EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
         .WillRepeatedly(Return(std::make_shared<StreamState>()));
 
-    serverSock = ReactiveSocket::fromServerConnection(
+    serverSock = StandardReactiveSocket::fromServerConnection(
         defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 
     EXPECT_CALL(*clientInput, onSubscribe_(_))
@@ -156,8 +156,8 @@ class ClientSideConcurrencyTest : public testing::Test {
     cv.wait(lock, [&]() { return isDone_; });
   }
 
-  std::unique_ptr<ReactiveSocket> clientSock;
-  std::unique_ptr<ReactiveSocket> serverSock;
+  std::unique_ptr<StandardReactiveSocket> clientSock;
+  std::unique_ptr<StandardReactiveSocket> serverSock;
 
   static std::unique_ptr<folly::IOBuf> originalPayload() {
     return folly::IOBuf::copyBuffer("foo");
@@ -233,7 +233,7 @@ class ServerSideConcurrencyTest : public testing::Test {
     auto serverConn = folly::make_unique<InlineConnection>();
     clientConn->connectTo(*serverConn);
 
-    clientSock = ReactiveSocket::fromClientConnection(
+    clientSock = StandardReactiveSocket::fromClientConnection(
         defaultExecutor(),
         std::move(clientConn),
         // No interactions on this mock, the client will not accept any
@@ -247,7 +247,7 @@ class ServerSideConcurrencyTest : public testing::Test {
     EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
         .WillRepeatedly(Return(std::make_shared<StreamState>()));
 
-    serverSock = ReactiveSocket::fromServerConnection(
+    serverSock = StandardReactiveSocket::fromServerConnection(
         *thread2.getEventBase(),
         std::move(serverConn),
         std::move(serverHandler),
@@ -366,8 +366,8 @@ class ServerSideConcurrencyTest : public testing::Test {
     cv.wait(lock, [&]() { return isDone_; });
   }
 
-  std::unique_ptr<ReactiveSocket> clientSock;
-  std::unique_ptr<ReactiveSocket> serverSock;
+  std::unique_ptr<StandardReactiveSocket> clientSock;
+  std::unique_ptr<StandardReactiveSocket> serverSock;
 
   const std::unique_ptr<folly::IOBuf> originalPayload{
       folly::IOBuf::copyBuffer("foo")};
@@ -513,7 +513,7 @@ class InitialRequestNDeliveredTest : public testing::Test {
               });
             }));
 
-    serverSocket = ReactiveSocket::fromServerConnection(
+    serverSocket = StandardReactiveSocket::fromServerConnection(
         eventBase_,
         folly::make_unique<FramedDuplexConnection>(
             std::move(serverSocketConnection)),
@@ -540,7 +540,7 @@ class InitialRequestNDeliveredTest : public testing::Test {
     }
   }
 
-  std::unique_ptr<ReactiveSocket> serverSocket;
+  std::unique_ptr<StandardReactiveSocket> serverSocket;
   std::shared_ptr<MockSubscription> testInputSubscription;
   std::unique_ptr<DuplexConnection> testConnection;
   std::shared_ptr<MockSubscription> validatingSubscription;

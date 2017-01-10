@@ -3,7 +3,7 @@
 #include "TestInterpreter.h"
 
 #include <glog/logging.h>
-#include <src/ReactiveSocket.h>
+#include <src/StandardReactiveSocket.h>
 #include "TypedCommands.h"
 
 using namespace folly;
@@ -13,7 +13,7 @@ namespace tck {
 
 TestInterpreter::TestInterpreter(
     const Test& test,
-    ReactiveSocket& reactiveSocket)
+    StandardReactiveSocket& reactiveSocket)
     : reactiveSocket_(&reactiveSocket), test_(test) {
   DCHECK(!test.empty());
 }

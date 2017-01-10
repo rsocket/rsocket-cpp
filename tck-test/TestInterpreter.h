@@ -6,7 +6,7 @@
 #include "TestSubscriber.h"
 #include "TestSuite.h"
 #include "src/Payload.h"
-#include "src/ReactiveSocket.h"
+#include "src/StandardReactiveSocket.h"
 #include "src/ReactiveStreamsCompat.h"
 
 namespace folly {
@@ -15,7 +15,7 @@ class EventBase;
 
 namespace reactivesocket {
 
-class ReactiveSocket;
+class StandardReactiveSocket;
 
 namespace tck {
 
@@ -27,7 +27,7 @@ class AssertCommand;
 
 class TestInterpreter {
  public:
-  TestInterpreter(const Test& test, ReactiveSocket& reactiveSocket);
+  TestInterpreter(const Test& test, StandardReactiveSocket& reactiveSocket);
 
   bool run();
 
@@ -41,7 +41,7 @@ class TestInterpreter {
   std::shared_ptr<TestSubscriber> createTestSubscriber(const std::string& id);
   std::shared_ptr<TestSubscriber> getSubscriber(const std::string& id);
 
-  ReactiveSocket* reactiveSocket_;
+  StandardReactiveSocket* reactiveSocket_;
   const Test& test_;
   std::map<std::string, std::string> interactionIdToType_;
   std::map<std::string, std::shared_ptr<TestSubscriber>> testSubscribers_;

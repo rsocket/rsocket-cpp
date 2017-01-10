@@ -4,7 +4,7 @@
 #include <folly/io/async/AsyncServerSocket.h>
 #include <gmock/gmock.h>
 #include "src/NullRequestHandler.h"
-#include "src/ReactiveSocket.h"
+#include "src/StandardReactiveSocket.h"
 #include "src/SmartPointers.h"
 #include "src/SubscriptionBase.h"
 #include "src/framed/FramedDuplexConnection.h"
@@ -113,7 +113,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     std::unique_ptr<RequestHandler> requestHandler =
         folly::make_unique<ServerRequestHandler>();
 
-    auto rs = ReactiveSocket::fromServerConnection(
+    auto rs = StandardReactiveSocket::fromServerConnection(
         eventBase_,
         std::move(framedConnection),
         std::move(requestHandler),
@@ -125,12 +125,12 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     reactiveSockets_.push_back(std::move(rs));
   }
 
-  void removeSocket(ReactiveSocket& socket) {
+  void removeSocket(StandardReactiveSocket& socket) {
     if (!shuttingDown) {
       reactiveSockets_.erase(std::remove_if(
           reactiveSockets_.begin(),
           reactiveSockets_.end(),
-          [&socket](std::unique_ptr<ReactiveSocket>& vecSocket) {
+          [&socket](std::unique_ptr<StandardReactiveSocket>& vecSocket) {
             return vecSocket.get() == &socket;
           }));
     }
@@ -146,7 +146,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
   }
 
  private:
-  std::vector<std::unique_ptr<ReactiveSocket>> reactiveSockets_;
+  std::vector<std::unique_ptr<StandardReactiveSocket>> reactiveSockets_;
   EventBase& eventBase_;
   Stats& stats_;
   bool shuttingDown{false};

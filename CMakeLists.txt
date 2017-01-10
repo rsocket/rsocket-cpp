@@ -144,8 +144,8 @@ add_library(
   src/NullRequestHandler.h
   src/Payload.cpp
   src/Payload.h
-  src/ReactiveSocket.cpp
-  src/ReactiveSocket.h
+        src/StandardReactiveSocket.cpp
+        src/StandardReactiveSocket.h
   src/ReactiveStreamsCompat.h
   src/RequestHandler.h
   src/ResumeCache.cpp
@@ -166,7 +166,7 @@ add_library(
   src/automata/SubscriptionResponder.cpp
   src/FrameTransport.cpp
   src/FrameTransport.h
-  src/FrameProcessor.h)
+  src/FrameProcessor.h src/ReactiveSocket.h)
 
 target_link_libraries(
   ReactiveSocket
@@ -223,8 +223,8 @@ add_executable(
         test/tcp/TcpClient.cpp
         test/simple/PrintSubscriber.cpp
         test/simple/PrintSubscriber.h
-        src/ReactiveSocket.cpp
-        src/ReactiveSocket.h
+        src/StandardReactiveSocket.cpp
+        src/StandardReactiveSocket.h
         test/simple/StatsPrinter.cpp
         test/simple/StatsPrinter.h)
 
@@ -286,8 +286,8 @@ add_executable(
         test/resume/TcpResumeClient.cpp
         test/simple/PrintSubscriber.cpp
         test/simple/PrintSubscriber.h
-        src/ReactiveSocket.cpp
-        src/ReactiveSocket.h
+        src/StandardReactiveSocket.cpp
+        src/StandardReactiveSocket.h
         test/simple/StatsPrinter.cpp
         test/simple/StatsPrinter.h)
 

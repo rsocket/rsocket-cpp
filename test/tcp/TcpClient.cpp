@@ -5,7 +5,7 @@
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <gmock/gmock.h>
 #include "src/NullRequestHandler.h"
-#include "src/ReactiveSocket.h"
+#include "src/StandardReactiveSocket.h"
 #include "src/folly/FollyKeepaliveTimer.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/tcp/TcpDuplexConnection.h"
@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
 
   ScopedEventBaseThread eventBaseThread;
 
-  std::unique_ptr<ReactiveSocket> reactiveSocket;
+  std::unique_ptr<StandardReactiveSocket> reactiveSocket;
   Callback callback;
   StatsPrinter stats;
 
@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
         std::unique_ptr<RequestHandler> requestHandler =
             folly::make_unique<DefaultRequestHandler>();
 
-        reactiveSocket = ReactiveSocket::fromClientConnection(
+        reactiveSocket = StandardReactiveSocket::fromClientConnection(
             *eventBaseThread.getEventBase(),
             std::move(framedConnection),
             std::move(requestHandler),

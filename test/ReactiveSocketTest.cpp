@@ -10,7 +10,7 @@
 
 #include "MockStats.h"
 #include "src/NullRequestHandler.h"
-#include "src/ReactiveSocket.h"
+#include "src/StandardReactiveSocket.h"
 #include "test/InlineConnection.h"
 #include "test/MockKeepaliveTimer.h"
 #include "test/MockRequestHandler.h"
@@ -49,7 +49,7 @@ TEST(ReactiveSocketTest, RequestChannel) {
   std::shared_ptr<Subscription> clientInputSub, serverInputSub;
   std::shared_ptr<Subscriber<Payload>> clientOutput, serverOutput;
 
-  auto clientSock = ReactiveSocket::fromClientConnection(
+  auto clientSock = StandardReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
@@ -63,7 +63,7 @@ TEST(ReactiveSocketTest, RequestChannel) {
       .InSequence(s)
       .WillRepeatedly(Return(std::make_shared<StreamState>()));
 
-  auto serverSock = ReactiveSocket::fromServerConnection(
+  auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
@@ -168,7 +168,7 @@ TEST(ReactiveSocketTest, RequestStreamComplete) {
   std::shared_ptr<Subscription> clientInputSub;
   std::shared_ptr<Subscriber<Payload>> serverOutput;
 
-  auto clientSock = ReactiveSocket::fromClientConnection(
+  auto clientSock = StandardReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
@@ -182,7 +182,7 @@ TEST(ReactiveSocketTest, RequestStreamComplete) {
       .InSequence(s)
       .WillRepeatedly(Return(std::make_shared<StreamState>()));
 
-  auto serverSock = ReactiveSocket::fromServerConnection(
+  auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
@@ -257,7 +257,7 @@ TEST(ReactiveSocketTest, RequestStreamCancel) {
   std::shared_ptr<Subscription> clientInputSub;
   std::shared_ptr<Subscriber<Payload>> serverOutput;
 
-  auto clientSock = ReactiveSocket::fromClientConnection(
+  auto clientSock = StandardReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
@@ -271,7 +271,7 @@ TEST(ReactiveSocketTest, RequestStreamCancel) {
       .InSequence(s)
       .WillRepeatedly(Return(std::make_shared<StreamState>()));
 
-  auto serverSock = ReactiveSocket::fromServerConnection(
+  auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
@@ -343,7 +343,7 @@ TEST(ReactiveSocketTest, RequestSubscription) {
   std::shared_ptr<Subscription> clientInputSub;
   std::shared_ptr<Subscriber<Payload>> serverOutput;
 
-  auto clientSock = ReactiveSocket::fromClientConnection(
+  auto clientSock = StandardReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
@@ -357,7 +357,7 @@ TEST(ReactiveSocketTest, RequestSubscription) {
       .InSequence(s)
       .WillRepeatedly(Return(std::make_shared<StreamState>()));
 
-  auto serverSock = ReactiveSocket::fromServerConnection(
+  auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
@@ -431,7 +431,7 @@ TEST(ReactiveSocketTest, RequestSubscriptionSurplusResponse) {
   std::shared_ptr<Subscription> clientInputSub;
   std::shared_ptr<Subscriber<Payload>> serverOutput;
 
-  auto clientSock = ReactiveSocket::fromClientConnection(
+  auto clientSock = StandardReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
@@ -445,7 +445,7 @@ TEST(ReactiveSocketTest, RequestSubscriptionSurplusResponse) {
       .InSequence(s)
       .WillRepeatedly(Return(std::make_shared<StreamState>()));
 
-  auto serverSock = ReactiveSocket::fromServerConnection(
+  auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
@@ -506,7 +506,7 @@ TEST(ReactiveSocketTest, RequestResponse) {
   std::shared_ptr<Subscription> clientInputSub;
   std::shared_ptr<Subscriber<Payload>> serverOutput;
 
-  auto clientSock = ReactiveSocket::fromClientConnection(
+  auto clientSock = StandardReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
@@ -519,7 +519,7 @@ TEST(ReactiveSocketTest, RequestResponse) {
       .InSequence(s)
       .WillRepeatedly(Return(std::make_shared<StreamState>()));
 
-  auto serverSock = ReactiveSocket::fromServerConnection(
+  auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
@@ -578,7 +578,7 @@ TEST(ReactiveSocketTest, RequestFireAndForget) {
 
   StrictMock<MockSubscriber<Payload>> clientInput;
 
-  auto clientSock = ReactiveSocket::fromClientConnection(
+  auto clientSock = StandardReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
@@ -592,7 +592,7 @@ TEST(ReactiveSocketTest, RequestFireAndForget) {
       .InSequence(s)
       .WillRepeatedly(Return(std::make_shared<StreamState>()));
 
-  auto serverSock = ReactiveSocket::fromServerConnection(
+  auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
@@ -617,7 +617,7 @@ TEST(ReactiveSocketTest, RequestMetadataPush) {
 
   StrictMock<MockSubscriber<Payload>> clientInput;
 
-  auto clientSock = ReactiveSocket::fromClientConnection(
+  auto clientSock = StandardReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
@@ -631,7 +631,7 @@ TEST(ReactiveSocketTest, RequestMetadataPush) {
       .InSequence(s)
       .WillRepeatedly(Return(std::make_shared<StreamState>()));
 
-  auto serverSock = ReactiveSocket::fromServerConnection(
+  auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
@@ -654,7 +654,7 @@ TEST(ReactiveSocketTest, SetupData) {
 
   StrictMock<MockSubscriber<Payload>> clientInput;
 
-  auto clientSock = ReactiveSocket::fromClientConnection(
+  auto clientSock = StandardReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
@@ -669,7 +669,7 @@ TEST(ReactiveSocketTest, SetupData) {
       .InSequence(s)
       .WillRepeatedly(Return(std::make_shared<StreamState>()));
 
-  auto serverSock = ReactiveSocket::fromServerConnection(
+  auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 }
 
@@ -698,7 +698,7 @@ TEST(ReactiveSocketTest, SetupWithKeepaliveAndStats) {
 
   EXPECT_CALL(*clientKeepalive, stop()).InSequence(s);
 
-  auto clientSock = ReactiveSocket::fromClientConnection(
+  auto clientSock = StandardReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
@@ -708,7 +708,7 @@ TEST(ReactiveSocketTest, SetupWithKeepaliveAndStats) {
       clientStats,
       std::move(clientKeepalive));
 
-  auto serverSock = ReactiveSocket::fromServerConnection(
+  auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 }
 
@@ -742,7 +742,7 @@ TEST(ReactiveSocketTest, Destructor) {
   EXPECT_CALL(clientStats, socketClosed()).Times(1);
   EXPECT_CALL(serverStats, socketClosed()).Times(1);
 
-  auto clientSock = ReactiveSocket::fromClientConnection(
+  auto clientSock = StandardReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
@@ -757,7 +757,7 @@ TEST(ReactiveSocketTest, Destructor) {
       .InSequence(s)
       .WillRepeatedly(Return(std::make_shared<StreamState>()));
 
-  auto serverSock = ReactiveSocket::fromServerConnection(
+  auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(),
       std::move(serverConn),
       std::move(serverHandler),
@@ -825,7 +825,7 @@ TEST(ReactiveSocketTest, ReactiveSocketOverInlineConnection) {
   auto serverConn = folly::make_unique<InlineConnection>();
   clientConn->connectTo(*serverConn);
 
-  auto clientSock = ReactiveSocket::fromClientConnection(
+  auto clientSock = StandardReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
@@ -839,7 +839,7 @@ TEST(ReactiveSocketTest, ReactiveSocketOverInlineConnection) {
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .WillRepeatedly(Return(std::make_shared<StreamState>()));
 
-  auto serverSock = ReactiveSocket::fromServerConnection(
+  auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 }
 
@@ -850,7 +850,7 @@ class ReactiveSocketIgnoreRequestTest : public testing::Test {
     auto serverConn = folly::make_unique<InlineConnection>();
     clientConn->connectTo(*serverConn);
 
-    clientSock = ReactiveSocket::fromClientConnection(
+    clientSock = StandardReactiveSocket::fromClientConnection(
         defaultExecutor(),
         std::move(clientConn),
         // No interactions on this mock, the client will not accept any
@@ -858,7 +858,7 @@ class ReactiveSocketIgnoreRequestTest : public testing::Test {
         folly::make_unique<StrictMock<MockRequestHandler>>(),
         ConnectionSetupPayload("", "", Payload()));
 
-    serverSock = ReactiveSocket::fromServerConnection(
+    serverSock = StandardReactiveSocket::fromServerConnection(
         defaultExecutor(),
         std::move(serverConn),
         folly::make_unique<DefaultRequestHandler>());
@@ -885,8 +885,8 @@ class ReactiveSocketIgnoreRequestTest : public testing::Test {
         }));
   }
 
-  std::unique_ptr<ReactiveSocket> clientSock;
-  std::unique_ptr<ReactiveSocket> serverSock;
+  std::unique_ptr<StandardReactiveSocket> clientSock;
+  std::unique_ptr<StandardReactiveSocket> serverSock;
 
   std::shared_ptr<StrictMock<MockSubscriber<Payload>>> clientInput{
       std::make_shared<StrictMock<MockSubscriber<Payload>>>()};
@@ -931,7 +931,7 @@ class ReactiveSocketOnErrorOnShutdownTest : public testing::Test {
     auto serverConn = folly::make_unique<InlineConnection>();
     clientConn->connectTo(*serverConn);
 
-    clientSock = ReactiveSocket::fromClientConnection(
+    clientSock = StandardReactiveSocket::fromClientConnection(
         defaultExecutor(),
         std::move(clientConn),
         // No interactions on this mock, the client will not accept any
@@ -945,7 +945,7 @@ class ReactiveSocketOnErrorOnShutdownTest : public testing::Test {
     EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
         .WillRepeatedly(Return(std::make_shared<StreamState>()));
 
-    serverSock = ReactiveSocket::fromServerConnection(
+    serverSock = StandardReactiveSocket::fromServerConnection(
         defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 
     EXPECT_CALL(*clientInput, onSubscribe_(_))
@@ -1024,8 +1024,8 @@ class ReactiveSocketOnErrorOnShutdownTest : public testing::Test {
         }));
   }
 
-  std::unique_ptr<ReactiveSocket> clientSock;
-  std::unique_ptr<ReactiveSocket> serverSock;
+  std::unique_ptr<StandardReactiveSocket> clientSock;
+  std::unique_ptr<StandardReactiveSocket> serverSock;
 
   const std::unique_ptr<folly::IOBuf> originalPayload{
       folly::IOBuf::copyBuffer("foo")};

@@ -6,7 +6,7 @@
 #include <folly/Format.h>
 #include <folly/io/Cursor.h>
 #include <gmock/gmock.h>
-#include "src/ReactiveSocket.h"
+#include "src/StandardReactiveSocket.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/framed/FramedReader.h"
 #include "test/InlineConnection.h"
@@ -212,7 +212,7 @@ TEST(FramedReaderTest, InvalidDataStream) {
   testConnection->setInput(testOutputSubscriber);
   testConnection->getOutput()->onSubscribe(inputSubscription);
 
-  auto reactiveSocket = ReactiveSocket::fromClientConnection(
+  auto reactiveSocket = StandardReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(framedRsAutomatonConnection),
       // No interactions on this mock, the client will not accept any
