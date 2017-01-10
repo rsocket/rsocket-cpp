@@ -73,9 +73,9 @@ cpp_library(
         'src/FrameTransport.cpp',
         'src/NullRequestHandler.cpp',
         'src/Payload.cpp',
-        'src/ReactiveSocket.cpp',
         'src/RequestHandler.cpp',
         'src/ResumeCache.cpp',
+        'src/StandardReactiveSocket.cpp',
         'src/Stats.cpp',
     ]),
     deps = [

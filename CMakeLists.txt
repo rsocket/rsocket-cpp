@@ -166,7 +166,8 @@ add_library(
   src/automata/SubscriptionResponder.cpp
   src/FrameTransport.cpp
   src/FrameTransport.h
-  src/FrameProcessor.h src/ReactiveSocket.h)
+  src/FrameProcessor.h
+  src/ReactiveSocket.h)
 
 target_link_libraries(
   ReactiveSocket
