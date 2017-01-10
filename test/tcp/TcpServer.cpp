@@ -4,8 +4,8 @@
 #include <folly/io/async/AsyncServerSocket.h>
 #include <gmock/gmock.h>
 #include "src/NullRequestHandler.h"
-#include "src/StandardReactiveSocket.h"
 #include "src/SmartPointers.h"
+#include "src/StandardReactiveSocket.h"
 #include "src/SubscriptionBase.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/tcp/TcpDuplexConnection.h"

@@ -5,8 +5,8 @@
 #include <gmock/gmock.h>
 #include "src/FrameTransport.h"
 #include "src/NullRequestHandler.h"
-#include "src/StandardReactiveSocket.h"
 #include "src/SmartPointers.h"
+#include "src/StandardReactiveSocket.h"
 #include "src/SubscriptionBase.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/tcp/TcpDuplexConnection.h"
@@ -21,8 +21,9 @@ DEFINE_string(address, "9898", "host:port to listen to");
 
 namespace {
 
-std::vector<
-    std::pair<std::unique_ptr<StandardReactiveSocket>, ResumeIdentificationToken>>
+std::vector<std::pair<
+    std::unique_ptr<StandardReactiveSocket>,
+    ResumeIdentificationToken>>
     g_reactiveSockets;
 
 class ServerSubscription : public SubscriptionBase {
@@ -171,8 +172,9 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     std::unique_ptr<RequestHandler> requestHandler =
         folly::make_unique<ServerRequestHandler>(streamState_);
 
-    std::unique_ptr<StandardReactiveSocket> rs = StandardReactiveSocket::disconnectedServer(
-        eventBase_, std::move(requestHandler), stats_);
+    std::unique_ptr<StandardReactiveSocket> rs =
+        StandardReactiveSocket::disconnectedServer(
+            eventBase_, std::move(requestHandler), stats_);
 
     rs->onConnected([](StandardReactiveSocket& socket) {
       LOG(INFO) << "socket connected " << &socket;

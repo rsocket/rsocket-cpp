@@ -6,8 +6,8 @@
 #include "TestSubscriber.h"
 #include "TestSuite.h"
 #include "src/Payload.h"
-#include "src/StandardReactiveSocket.h"
 #include "src/ReactiveStreamsCompat.h"
+#include "src/StandardReactiveSocket.h"
 
 namespace folly {
 class EventBase;

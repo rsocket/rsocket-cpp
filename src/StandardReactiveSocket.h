@@ -36,7 +36,7 @@ folly::Executor& defaultExecutor();
 // that (internally) holds a weak reference (conceptually, not std::weak_ptr)
 // and forbids any interactions with the socket after the shutdown procedure has
 // been initiated.
-class StandardReactiveSocket: public ReactiveSocket {
+class StandardReactiveSocket : public ReactiveSocket {
  public:
   StandardReactiveSocket(StandardReactiveSocket&&) = delete;
   StandardReactiveSocket& operator=(StandardReactiveSocket&&) = delete;

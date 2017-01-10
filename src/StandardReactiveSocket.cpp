@@ -62,7 +62,8 @@ StandardReactiveSocket::StandardReactiveSocket(
   stats.socketCreated();
 }
 
-std::unique_ptr<StandardReactiveSocket> StandardReactiveSocket::fromClientConnection(
+std::unique_ptr<StandardReactiveSocket>
+StandardReactiveSocket::fromClientConnection(
     folly::Executor& executor,
     std::unique_ptr<DuplexConnection> connection,
     std::unique_ptr<RequestHandler> handler,
@@ -77,7 +78,8 @@ std::unique_ptr<StandardReactiveSocket> StandardReactiveSocket::fromClientConnec
   return socket;
 }
 
-std::unique_ptr<StandardReactiveSocket> StandardReactiveSocket::disconnectedClient(
+std::unique_ptr<StandardReactiveSocket>
+StandardReactiveSocket::disconnectedClient(
     folly::Executor& executor,
     std::unique_ptr<RequestHandler> handler,
     Stats& stats,
@@ -87,7 +89,8 @@ std::unique_ptr<StandardReactiveSocket> StandardReactiveSocket::disconnectedClie
   return socket;
 }
 
-std::unique_ptr<StandardReactiveSocket> StandardReactiveSocket::fromServerConnection(
+std::unique_ptr<StandardReactiveSocket>
+StandardReactiveSocket::fromServerConnection(
     folly::Executor& executor,
     std::unique_ptr<DuplexConnection> connection,
     std::unique_ptr<RequestHandler> handler,
@@ -101,12 +104,13 @@ std::unique_ptr<StandardReactiveSocket> StandardReactiveSocket::fromServerConnec
   return socket;
 }
 
-std::unique_ptr<StandardReactiveSocket> StandardReactiveSocket::disconnectedServer(
+std::unique_ptr<StandardReactiveSocket>
+StandardReactiveSocket::disconnectedServer(
     folly::Executor& executor,
     std::unique_ptr<RequestHandler> handler,
     Stats& stats) {
-  std::unique_ptr<StandardReactiveSocket> socket(
-      new StandardReactiveSocket(true, std::move(handler), stats, nullptr, executor));
+  std::unique_ptr<StandardReactiveSocket> socket(new StandardReactiveSocket(
+      true, std::move(handler), stats, nullptr, executor));
   return socket;
 }
 
@@ -183,7 +187,8 @@ void StandardReactiveSocket::requestResponse(
   automaton->start();
 }
 
-void StandardReactiveSocket::metadataPush(std::unique_ptr<folly::IOBuf> metadata) {
+void StandardReactiveSocket::metadataPush(
+    std::unique_ptr<folly::IOBuf> metadata) {
   checkNotClosed();
   connection_->outputFrameOrEnqueue(
       Frame_METADATA_PUSH(std::move(metadata)).serializeOut());
