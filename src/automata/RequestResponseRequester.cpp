@@ -16,16 +16,7 @@ void RequestResponseRequester::subscribe(
   consumingSubscriber_.onSubscribe(SubscriptionBase::shared_from_this());
 }
 
-void RequestResponseRequester::onNext(Payload request) {
-  auto movedPayload = folly::makeMoveWrapper(std::move(request));
-  auto thisPtr =
-      EnableSharedFromThisBase<RequestResponseRequester>::shared_from_this();
-  runInExecutor([thisPtr, movedPayload]() mutable {
-    thisPtr->onNextImpl(movedPayload.move());
-  });
-}
-
-void RequestResponseRequester::onNextImpl(Payload request) {
+void RequestResponseRequester::processInitialPayload(Payload request) {
   switch (state_) {
     case State::NEW: {
       state_ = State::REQUESTED;
@@ -51,8 +42,7 @@ void RequestResponseRequester::requestImpl(size_t n) {
   if (payload_) {
     consumingSubscriber_.onNext(std::move(payload_));
     DCHECK(!payload_);
-    // TODO: only one response is expected so we should close the stream
-    //       after receiving it. Add unit tests for this.
+    connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
   } else {
     waitingForPayload_ = true;
   }
@@ -75,6 +65,10 @@ void RequestResponseRequester::cancelImpl() {
 }
 
 void RequestResponseRequester::endStream(StreamCompletionSignal signal) {
+  // to make sure we don't try to deliver the payload even if we had it
+  // because requestImpl can be called even after endStream
+  payload_.clear();
+
   switch (state_) {
     case State::NEW:
     case State::REQUESTED:
@@ -110,31 +104,35 @@ void RequestResponseRequester::onNextFrame(Frame_ERROR&& frame) {
 }
 
 void RequestResponseRequester::onNextFrame(Frame_RESPONSE&& frame) {
-  bool end = false;
   switch (state_) {
     case State::NEW:
       // Cannot receive a frame before sending the initial request.
       CHECK(false);
       break;
     case State::REQUESTED:
-      // TODO: only one response is expected so we should close the stream
-      //       after receiving it. Add unit tests for this.
-      if (frame.header_.flags_ & FrameFlags_COMPLETE) {
-        state_ = State::CLOSED;
-        end = true;
-      }
+      state_ = State::CLOSED;
       break;
     case State::CLOSED:
+      // should not be receiving frames when closed
+      // if we ended up here, we broke some internal invariant of the class
+      CHECK(false);
       break;
   }
-  if (waitingForPayload_ && frame.payload_) {
-    consumingSubscriber_.onNext(std::move(frame.payload_));
-  } else {
-    payload_ = std::move(frame.payload_);
+
+  if (!frame.payload_) {
+    connection_->closeWithError(
+        Frame_ERROR::invalid(streamId_, "payload expected"));
+    // will call endStream on all streams, including this one
+    return;
   }
 
-  if (end) {
+  if (waitingForPayload_) {
+    consumingSubscriber_.onNext(std::move(frame.payload_));
     connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+  } else {
+    payload_ = std::move(frame.payload_);
+    // we will just remember the payload and return it when request(n) is called
+    // the stream will terminate right after
   }
 }
 

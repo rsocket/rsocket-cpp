@@ -98,4 +98,9 @@ std::string Payload::moveDataToString() {
   return data->moveToFbString().toStdString();
 }
 
+void Payload::clear() {
+  data.reset();
+  metadata.reset();
+}
+
 } // reactivesocket

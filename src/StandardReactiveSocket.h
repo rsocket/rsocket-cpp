@@ -74,19 +74,19 @@ class StandardReactiveSocket: public ReactiveSocket {
       Stats& stats = Stats::noop());
 
   std::shared_ptr<Subscriber<Payload>> requestChannel(
-      const std::shared_ptr<Subscriber<Payload>>& responseSink);
+      std::shared_ptr<Subscriber<Payload>> responseSink) override;
 
   void requestStream(
       Payload payload,
-      const std::shared_ptr<Subscriber<Payload>>& responseSink) override;
+      std::shared_ptr<Subscriber<Payload>> responseSink) override;
 
   void requestSubscription(
       Payload payload,
-      const std::shared_ptr<Subscriber<Payload>>& responseSink) override;
+      std::shared_ptr<Subscriber<Payload>> responseSink) override;
 
   void requestResponse(
       Payload payload,
-      const std::shared_ptr<Subscriber<Payload>>& responseSink) override;
+      std::shared_ptr<Subscriber<Payload>> responseSink) override;
 
   void requestFireAndForget(Payload request) override;
 

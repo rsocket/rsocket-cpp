@@ -26,17 +26,20 @@ namespace reactivesocket {
   public:
     virtual ~ReactiveSocket() = default;
 
+    virtual std::shared_ptr<Subscriber<Payload>> requestChannel(
+        std::shared_ptr<Subscriber<Payload>> responseSink) = 0;
+
     virtual void requestStream(
         Payload payload,
-        const std::shared_ptr<Subscriber<Payload>>& responseSink) = 0;
+        const std::shared_ptr<Subscriber<Payload>> responseSink) = 0;
 
     virtual void requestSubscription(
         Payload payload,
-        const std::shared_ptr<Subscriber<Payload>>& responseSink) = 0;
+        const std::shared_ptr<Subscriber<Payload>> responseSink) = 0;
 
     virtual void requestResponse(
         Payload payload,
-        const std::shared_ptr<Subscriber<Payload>>& responseSink) = 0;
+        const std::shared_ptr<Subscriber<Payload>> responseSink) = 0;
 
     virtual void requestFireAndForget(Payload request) = 0;
 

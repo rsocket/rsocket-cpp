@@ -144,8 +144,8 @@ add_library(
   src/NullRequestHandler.h
   src/Payload.cpp
   src/Payload.h
-        src/StandardReactiveSocket.cpp
-        src/StandardReactiveSocket.h
+  src/StandardReactiveSocket.cpp
+  src/StandardReactiveSocket.h
   src/ReactiveStreamsCompat.h
   src/RequestHandler.h
   src/ResumeCache.cpp
@@ -203,7 +203,8 @@ add_executable(
   test/ReactiveSocketResumabilityTest.cpp
   test/SmartPointersTest.cpp
   test/AllowanceSemaphoreTest.cpp
-  test/ResumeIdentificationTokenTest.cpp)
+  test/ResumeIdentificationTokenTest.cpp
+  test/PayloadTest.cpp)
 
 target_link_libraries(
   tests

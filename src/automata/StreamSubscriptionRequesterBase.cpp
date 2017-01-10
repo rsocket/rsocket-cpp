@@ -5,16 +5,7 @@
 
 namespace reactivesocket {
 
-void StreamSubscriptionRequesterBase::onNext(Payload request) {
-  auto movedPayload = folly::makeMoveWrapper(std::move(request));
-  auto thisPtr = EnableSharedFromThisBase<
-      StreamSubscriptionRequesterBase>::shared_from_this();
-  runInExecutor([thisPtr, movedPayload]() mutable {
-    thisPtr->onNextImpl(movedPayload.move());
-  });
-}
-
-void StreamSubscriptionRequesterBase::onNextImpl(Payload request) {
+void StreamSubscriptionRequesterBase::processInitialPayload(Payload request) {
   switch (state_) {
     case State::NEW: {
       state_ = State::REQUESTED;

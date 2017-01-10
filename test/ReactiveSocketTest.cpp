@@ -560,7 +560,7 @@ TEST(ReactiveSocketTest, RequestResponse) {
   // had COMPELTE flag set
   EXPECT_CALL(*clientInput, onComplete_()).InSequence(s);
 
-  EXPECT_CALL(*serverOutputSub, cancel_()).InSequence(s).WillOnce(Invoke([&]() {
+  EXPECT_CALL(*serverOutputSub, cancel_()).WillOnce(Invoke([&]() {
     serverOutput->onComplete();
   }));
 

@@ -11,23 +11,16 @@
 namespace reactivesocket {
 
 /// Implementation of stream automaton that represents a Subscription requester.
-class StreamSubscriptionRequesterBase
-    : public ConsumerMixin<Frame_RESPONSE>,
-      public EnableSharedFromThisBase<StreamSubscriptionRequesterBase> {
+class StreamSubscriptionRequesterBase : public ConsumerMixin<Frame_RESPONSE> {
   using Base = ConsumerMixin<Frame_RESPONSE>;
 
  public:
   explicit StreamSubscriptionRequesterBase(const Base::Parameters& params)
       : ExecutorBase(params.executor, false), Base(params) {}
 
-  /// Degenerate form of the Subscriber interface -- only one request payload
-  /// will be sent to the server.
-  // TODO(lehecka): rename to avoid confusion
-  void onNext(Payload);
+  void processInitialPayload(Payload);
 
  private:
-  void onNextImpl(Payload);
-
   /// Override in subclass to send the correct type of request frame
   virtual void sendRequestFrame(FrameFlags, size_t, Payload&&) = 0;
 

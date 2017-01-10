@@ -61,6 +61,8 @@ struct Payload {
 
   std::string moveDataToString();
 
+  void clear();
+
   std::unique_ptr<folly::IOBuf> data;
   std::unique_ptr<folly::IOBuf> metadata;
 };
