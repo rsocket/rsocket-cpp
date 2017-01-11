@@ -2,6 +2,7 @@
 
 #include "src/Common.h"
 #include <folly/io/IOBuf.h>
+#include <folly/Random.h>
 #include <random>
 #include "src/AbstractStreamAutomaton.h"
 
@@ -65,15 +66,11 @@ ResumeIdentificationToken ResumeIdentificationToken::generateNew() {
   // TODO: this will be replaced with a variable length bit array and the value
   // will be generated outside of reactivesocket
   // for now we will use temporary number generator
-  std::mt19937 rng;
-  rng.seed(std::random_device()());
-  auto num = rng();
-
-  static_assert(sizeof(num) <= sizeof(Data), "FIXME");
+  folly::ThreadLocalPRNG rng;
 
   Data data;
-  for (size_t i = 0; i < sizeof(num); i++) {
-    data[i] = ((uint8_t*)&num)[i];
+  for (size_t i = 0; i < data.size(); i++) {
+    data[i] = folly::Random::rand32(rng);
   }
   return ResumeIdentificationToken(std::move(data));
 }
