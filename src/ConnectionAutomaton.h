@@ -183,6 +183,7 @@ class ConnectionAutomaton
   /// The call is idempotent and returns false iff a stream has not been found.
   bool endStreamInternal(StreamId streamId, StreamCompletionSignal signal);
 
+  void onReady() override;
   void processFrame(std::unique_ptr<folly::IOBuf>) override;
   void onTerminal(folly::exception_wrapper, StreamCompletionSignal) override;
 

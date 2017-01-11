@@ -119,6 +119,11 @@ void FrameTransport::request(size_t n) {
     return;
   }
 
+  if (!deliveredOnReady_ && frameProcessor_) {
+    deliveredOnReady_ = true;
+    frameProcessor_->onReady();
+  }
+
   if (writeAllowance_.release(n) > 0) {
     // There are no pending wfrites or we already have this method on the
     // stack.
