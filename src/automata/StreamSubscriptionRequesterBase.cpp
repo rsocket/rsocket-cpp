@@ -1,7 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "src/automata/StreamSubscriptionRequesterBase.h"
-#include <folly/MoveWrapper.h>
 
 namespace reactivesocket {
 
