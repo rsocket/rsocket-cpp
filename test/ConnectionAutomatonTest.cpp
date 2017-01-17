@@ -29,15 +29,15 @@ static std::unique_ptr<folly::IOBuf> makeInvalidFrameHeader() {
 }
 
 TEST(ConnectionAutomatonTest, InvalidFrameHeader) {
-  auto automatonConnection = folly::make_unique<InlineConnection>();
-  auto testConnection = folly::make_unique<InlineConnection>();
+  auto automatonConnection = std::make_unique<InlineConnection>();
+  auto testConnection = std::make_unique<InlineConnection>();
 
   automatonConnection->connectTo(*testConnection);
 
-  auto framedAutomatonConnection = folly::make_unique<FramedDuplexConnection>(
+  auto framedAutomatonConnection = std::make_unique<FramedDuplexConnection>(
       std::move(automatonConnection), inlineExecutor());
 
-  auto framedTestConnection = folly::make_unique<FramedDuplexConnection>(
+  auto framedTestConnection = std::make_unique<FramedDuplexConnection>(
       std::move(testConnection), inlineExecutor());
 
   // Dump 1 invalid frame and expect an error
@@ -100,15 +100,15 @@ static void terminateTest(
     bool inOnNext,
     bool inOnComplete,
     bool inRequest) {
-  auto automatonConnection = folly::make_unique<InlineConnection>();
-  auto testConnection = folly::make_unique<InlineConnection>();
+  auto automatonConnection = std::make_unique<InlineConnection>();
+  auto testConnection = std::make_unique<InlineConnection>();
 
   automatonConnection->connectTo(*testConnection);
 
-  auto framedAutomatonConnection = folly::make_unique<FramedDuplexConnection>(
+  auto framedAutomatonConnection = std::make_unique<FramedDuplexConnection>(
       std::move(automatonConnection), inlineExecutor());
 
-  auto framedTestConnection = folly::make_unique<FramedDuplexConnection>(
+  auto framedTestConnection = std::make_unique<FramedDuplexConnection>(
       std::move(testConnection), inlineExecutor());
 
   auto inputSubscription = std::make_shared<MockSubscription>();
@@ -202,15 +202,15 @@ TEST(ConnectionAutomatonTest, CleanTerminateRequest) {
 }
 
 TEST(ConnectionAutomatonTest, RefuseFrame) {
-  auto automatonConnection = folly::make_unique<InlineConnection>();
-  auto testConnection = folly::make_unique<InlineConnection>();
+  auto automatonConnection = std::make_unique<InlineConnection>();
+  auto testConnection = std::make_unique<InlineConnection>();
 
   automatonConnection->connectTo(*testConnection);
 
-  auto framedAutomatonConnection = folly::make_unique<FramedDuplexConnection>(
+  auto framedAutomatonConnection = std::make_unique<FramedDuplexConnection>(
       std::move(automatonConnection), inlineExecutor());
 
-  auto framedTestConnection = folly::make_unique<FramedDuplexConnection>(
+  auto framedTestConnection = std::make_unique<FramedDuplexConnection>(
       std::move(testConnection), inlineExecutor());
 
   // dump 3 frames to ConnectionAutomaton

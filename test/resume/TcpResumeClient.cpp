@@ -101,19 +101,19 @@ int main(int argc, char* argv[]) {
     LOG(INFO) << "attempting connection to " << addr.describe();
 
     std::unique_ptr<DuplexConnection> connection =
-        folly::make_unique<TcpDuplexConnection>(
+        std::make_unique<TcpDuplexConnection>(
             std::move(socket), inlineExecutor(), stats);
     std::unique_ptr<DuplexConnection> framedConnection =
-        folly::make_unique<FramedDuplexConnection>(
+        std::make_unique<FramedDuplexConnection>(
             std::move(connection), *eventBaseThread.getEventBase());
     std::unique_ptr<RequestHandler> requestHandler =
-        folly::make_unique<ClientRequestHandler>();
+        std::make_unique<ClientRequestHandler>();
 
     reactiveSocket = StandardReactiveSocket::disconnectedClient(
         *eventBaseThread.getEventBase(),
         std::move(requestHandler),
         stats,
-        folly::make_unique<FollyKeepaliveTimer>(
+        std::make_unique<FollyKeepaliveTimer>(
             *eventBaseThread.getEventBase(), std::chrono::seconds(10)));
 
     reactiveSocket->onConnected([](ReactiveSocket& socket) {
@@ -159,17 +159,17 @@ int main(int argc, char* argv[]) {
     socketResume->connect(&callback, addr);
 
     std::unique_ptr<DuplexConnection> connectionResume =
-        folly::make_unique<TcpDuplexConnection>(
+        std::make_unique<TcpDuplexConnection>(
             std::move(socketResume), inlineExecutor(), stats);
     std::unique_ptr<DuplexConnection> framedConnectionResume =
-        folly::make_unique<FramedDuplexConnection>(
+        std::make_unique<FramedDuplexConnection>(
             std::move(connectionResume), inlineExecutor());
 
     LOG(INFO) << "try resume ...";
     reactiveSocket->tryClientResume(
         token,
         std::make_shared<FrameTransport>(std::move(framedConnectionResume)),
-        folly::make_unique<ResumeCallback>());
+        std::make_unique<ResumeCallback>());
   });
 
   std::getline(std::cin, input);
