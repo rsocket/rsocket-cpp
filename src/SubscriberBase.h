@@ -84,6 +84,15 @@ class SubscriberBaseT : public Subscriber<T>,
   explicit SubscriberBaseT(folly::Executor& executor = defaultExecutor())
       : ExecutorBase(executor), cancelled_(false) {}
 
+  virtual ~SubscriberBaseT() {
+    if (!cancelled_ && originalSubscription_) {
+      auto subscription = std::move(originalSubscription_);
+      runInExecutor([subscription] {
+        subscription->cancel();
+      });
+    }
+  }
+
   void onSubscribe(std::shared_ptr<Subscription> subscription) override final {
     auto thisPtr = this->shared_from_this();
     runInExecutor([thisPtr, subscription]() {
