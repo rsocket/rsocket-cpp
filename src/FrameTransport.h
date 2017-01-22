@@ -71,6 +71,7 @@ class FrameTransport :
       connectionOutput_;
   reactivestreams::SubscriptionPtr<Subscription> connectionInputSub_;
 
+  bool deliveredOnReady_{false};
   std::deque<std::unique_ptr<folly::IOBuf>> pendingWrites_;
 };
 } // reactivesocekt

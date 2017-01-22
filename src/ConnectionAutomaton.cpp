@@ -64,7 +64,6 @@ void ConnectionAutomaton::connect(
   CHECK(!frameTransport->isClosed());
 
   frameTransport_ = std::move(frameTransport);
-  onConnected_();
 
   // We need to create a hard reference to frameTransport_ to make sure the
   // instance survives until the setFrameProcessor returns. There can be
@@ -257,6 +256,10 @@ void ConnectionAutomaton::closeStreams(StreamCompletionSignal signal) {
     assert(result);
     assert(streamState_->streams_.size() == oldSize - 1);
   }
+}
+
+void ConnectionAutomaton::onReady() {
+  onConnected_();
 }
 
 void ConnectionAutomaton::processFrame(std::unique_ptr<folly::IOBuf> frame) {
