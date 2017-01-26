@@ -86,4 +86,4 @@ void FramedWriter::cancelImpl() noexcept {
   stream_.onComplete();
 }
 
-} // reactive socket
+} // reactivesocket

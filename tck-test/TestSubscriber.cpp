@@ -230,4 +230,4 @@ void TestSubscriber::onError(folly::exception_wrapper ex) noexcept {
 }
 
 } // tck
-} // reactive socket
+} // reactivesocket

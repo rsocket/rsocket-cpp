@@ -26,4 +26,4 @@ class FramedDuplexConnection : public virtual DuplexConnection {
   std::shared_ptr<FramedWriter> outputWriter_;
 };
 
-} // reactive socket
+} // reactivesocket

@@ -89,4 +89,4 @@ class KeepaliveTimer {
   virtual void keepaliveReceived() = 0;
 };
 
-} // reactive socket
+} // reactivesocket

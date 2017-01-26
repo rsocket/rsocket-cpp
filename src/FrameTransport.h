@@ -73,4 +73,4 @@ class FrameTransport :
 
   std::deque<std::unique_ptr<folly::IOBuf>> pendingWrites_;
 };
-} // reactivesocekt
+} // reactivesocket

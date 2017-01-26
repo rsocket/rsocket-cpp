@@ -89,4 +89,4 @@ void FramedReader::cancelImpl() noexcept {
   frames_.onComplete();
 }
 
-} // reactive socket
+} // reactivesocket

@@ -35,4 +35,4 @@ void FramedDuplexConnection::setInput(
   connection_->setInput(inputReader_);
 }
 
-} // reactive socket
+} // reactivesocket

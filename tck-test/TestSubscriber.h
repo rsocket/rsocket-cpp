@@ -64,4 +64,4 @@ class TestSubscriber : public reactivesocket::Subscriber<Payload> {
 };
 
 } // tck
-} // reactive socket
+} // reactivesocket

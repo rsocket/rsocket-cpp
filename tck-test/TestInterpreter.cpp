@@ -142,4 +142,4 @@ std::shared_ptr<TestSubscriber> TestInterpreter::getSubscriber(
 }
 
 } // tck
-} // reactive socket
+} // reactivesocket

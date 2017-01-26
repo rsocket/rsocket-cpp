@@ -52,4 +52,4 @@ class FramedReader : public SubscriberBaseT<std::unique_ptr<folly::IOBuf>>,
   folly::IOBufQueue payloadQueue_;
 };
 
-} // reactive socket
+} // reactivesocket
