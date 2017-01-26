@@ -27,8 +27,8 @@ class Stats {
 
   virtual void bytesWritten(size_t bytes) = 0;
   virtual void bytesRead(size_t bytes) = 0;
-  virtual void frameWritten(const std::string& frameType) = 0;
-  virtual void frameRead(const std::string& frameType) = 0;
+  virtual void frameWritten(FrameType frameType) = 0;
+  virtual void frameRead(FrameType frameType) = 0;
   virtual void resumeBufferChanged(int framesCountDelta, int dataSizeDelta) = 0;
 };
 }

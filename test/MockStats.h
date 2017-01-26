@@ -27,8 +27,8 @@ class MockStats : public Stats {
 
   MOCK_METHOD1(bytesWritten, void(size_t));
   MOCK_METHOD1(bytesRead, void(size_t));
-  MOCK_METHOD1(frameWritten, void(const std::string&));
-  MOCK_METHOD1(frameRead, void(const std::string&));
+  MOCK_METHOD1(frameWritten, void(FrameType));
+  MOCK_METHOD1(frameRead, void(FrameType));
   MOCK_METHOD2(resumeBufferChanged, void(int, int));
 };
 }

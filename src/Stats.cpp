@@ -20,8 +20,8 @@ class NoopStats : public Stats {
 
   void bytesWritten(size_t bytes) override {}
   void bytesRead(size_t bytes) override {}
-  void frameWritten(const std::string& frameType) override {}
-  void frameRead(const std::string& frameType) override {}
+  void frameWritten(FrameType frameType) override {}
+  void frameRead(FrameType frameType) override {}
 
   void resumeBufferChanged(int framesCount, int dataSize) override {}
 
