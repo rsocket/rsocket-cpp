@@ -154,7 +154,7 @@ class ServerRequestHandler : public DefaultRequestHandler {
 class Callback : public AsyncServerSocket::AcceptCallback {
  public:
   Callback(EventBase& eventBase, Stats& stats)
-      : streamState_(std::make_shared<StreamState>()),
+      : streamState_(std::make_shared<StreamState>(Stats::noop())),
         eventBase_(eventBase),
         stats_(stats){};
 
@@ -179,16 +179,16 @@ class Callback : public AsyncServerSocket::AcceptCallback {
         StandardReactiveSocket::disconnectedServer(
             eventBase_, std::move(requestHandler), stats_);
 
-    rs->onConnected([](StandardReactiveSocket& socket) {
+    rs->onConnected([](ReactiveSocket& socket) {
       LOG(INFO) << "socket connected " << &socket;
     });
-    rs->onDisconnected([](StandardReactiveSocket& socket) {
+    rs->onDisconnected([](ReactiveSocket& socket) {
       LOG(INFO) << "socket disconnect " << &socket;
       // to verify these frames will be queued up
       socket.requestStream(
           Payload("from server resume"), std::make_shared<PrintSubscriber>());
     });
-    rs->onClosed([](StandardReactiveSocket& socket) {
+    rs->onClosed([](ReactiveSocket& socket) {
       LOG(INFO) << "socket closed " << &socket;
     });
 
@@ -208,13 +208,13 @@ class Callback : public AsyncServerSocket::AcceptCallback {
         std::move(rs), ResumeIdentificationToken::generateNew());
   }
 
-  void removeSocket(StandardReactiveSocket& socket) {
+  void removeSocket(ReactiveSocket& socket) {
     if (!shuttingDown) {
       g_reactiveSockets.erase(std::remove_if(
           g_reactiveSockets.begin(),
           g_reactiveSockets.end(),
           [&socket](const std::pair<
-                    std::unique_ptr<StandardReactiveSocket>,
+                    std::unique_ptr<ReactiveSocket>,
                     ResumeIdentificationToken>& kv) {
             return kv.first.get() == &socket;
           }));

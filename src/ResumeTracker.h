@@ -28,6 +28,7 @@ class ResumeTracker {
       case FrameType::RESPONSE:
         // TODO(tmont): this could be expensive, find a better way to determine
         // frame length
+        VLOG(6) << "received frame " << frameType;
         implied_position_ += serializedFrame.computeChainDataLength();
         break;
 

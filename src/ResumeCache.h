@@ -13,12 +13,14 @@
 namespace reactivesocket {
 
 class FrameTransport;
+class Stats;
 
 class ResumeCache {
  public:
   using position_t = ResumePosition;
 
-  ResumeCache() : position_(0), resetPosition_(0) {}
+  explicit ResumeCache(Stats& stats)
+      : stats_(stats), position_(0), resetPosition_(0) {}
 
   void trackSentFrame(const folly::IOBuf& serializedFrame);
 
@@ -40,6 +42,7 @@ class ResumeCache {
     return position_;
   }
 
+  Stats& stats_;
   position_t position_;
   position_t resetPosition_;
   std::unordered_map<StreamId, position_t> streamMap_;

@@ -3,6 +3,7 @@
 #include "src/ResumeCache.h"
 #include <algorithm>
 #include "src/FrameTransport.h"
+#include "src/Stats.h"
 
 namespace reactivesocket {
 
@@ -48,15 +49,23 @@ void ResumeCache::resetUpToPosition(const position_t position) {
 
   resetPosition_ = position;
 
-  frames_.erase(
+  auto end = std::upper_bound(
       frames_.begin(),
-      std::upper_bound(
-          frames_.begin(),
-          frames_.end(),
-          position,
-          [](position_t position, decltype(frames_.back())& pair) {
-            return position < pair.first;
-          }));
+      frames_.end(),
+      position,
+      [](position_t position, decltype(frames_.back())& pair) {
+        return position < pair.first;
+      });
+  int dataSize = 0;
+  int framesCount = 0;
+  for (auto begin = frames_.begin(); begin != end; ++begin) {
+    dataSize += begin->second->computeChainDataLength();
+    ++framesCount;
+  }
+
+  frames_.erase(frames_.begin(), end);
+
+  stats_.resumeBufferChanged(-framesCount, -dataSize);
 }
 
 bool ResumeCache::isPositionAvailable(position_t position) const {
@@ -90,6 +99,7 @@ bool ResumeCache::isPositionAvailable(position_t position, StreamId streamId)
 void ResumeCache::addFrame(const folly::IOBuf& frame) {
   // TODO: implement bounds to the buffer
   frames_.emplace_back(position_, frame.clone());
+  stats_.resumeBufferChanged(1, frame.computeChainDataLength());
 }
 
 void ResumeCache::sendFramesFromPosition(

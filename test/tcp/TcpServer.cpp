@@ -85,10 +85,10 @@ class ServerRequestHandler : public DefaultRequestHandler {
   }
 
   std::shared_ptr<StreamState> handleSetupPayload(
-      ReactiveSocket& /*socket*/,
+      ReactiveSocket&,
       ConnectionSetupPayload request) override {
     LOG(INFO) << "ServerRequestHandler.handleSetupPayload " << request;
-    return std::make_shared<StreamState>();
+    return std::make_shared<StreamState>(Stats::noop());
   }
 };
 
@@ -126,7 +126,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     reactiveSockets_.push_back(std::move(rs));
   }
 
-  void removeSocket(StandardReactiveSocket& socket) {
+  void removeSocket(ReactiveSocket& socket) {
     if (!shuttingDown) {
       reactiveSockets_.erase(std::remove_if(
           reactiveSockets_.begin(),
