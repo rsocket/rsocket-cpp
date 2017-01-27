@@ -57,7 +57,7 @@ std::string to_string(StreamCompletionSignal signal) {
       return "SOCKET_CLOSED";
   }
   // this should be never hit because the switch is over all cases
-  LOG(FATAL) << "unknown StreamCompletionSignal=" << (int)signal;
+  LOG(FATAL) << "unknown StreamCompletionSignal=" << static_cast<int>(signal);
 }
   
 std::ostream& operator<<(std::ostream& os, StreamCompletionSignal signal) {
