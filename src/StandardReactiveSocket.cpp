@@ -62,7 +62,7 @@ StandardReactiveSocket::StandardReactiveSocket(
           executeListenersFunc(onConnectListeners_),
           executeListenersFunc(onDisconnectListeners_),
           executeListenersFunc(onCloseListeners_))),
-      nextStreamId_(isServer ? 1 : 2),
+      nextStreamId_(!isServer ? 1 : 2),
       executor_(executor) {
   debugCheckCorrectExecutor();
   stats.socketCreated();
@@ -213,6 +213,8 @@ void StandardReactiveSocket::createResponder(
   debugCheckCorrectExecutor();
 
   if (streamId != 0) {
+// TODO: Remove this: https://github.com/ReactiveSocket/reactivesocket-cpp/issues/243
+#ifndef DONT_VERIFY_STREAM_IDS
     if (nextStreamId_ % 2 == streamId % 2) {
       // if this is an unknown stream to the socket and this socket is
       // generating
@@ -220,6 +222,7 @@ void StandardReactiveSocket::createResponder(
       // exist
       return;
     }
+#endif
     if (streamId <= lastPeerStreamId_) {
       // receiving frame for a stream which no longer exists
       return;
