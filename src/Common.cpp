@@ -37,27 +37,31 @@ static const char* getTerminatingSignalErrorMessage(int terminatingSignal) {
   }
 }
 
-std::ostream& operator<<(std::ostream& os, StreamCompletionSignal signal) {
+std::string to_string(StreamCompletionSignal signal) {
   switch (signal) {
     case StreamCompletionSignal::GRACEFUL:
-      return os << "GRACEFUL";
+      return "GRACEFUL";
     case StreamCompletionSignal::ERROR:
-      return os << "ERROR";
+      return "ERROR";
     case StreamCompletionSignal::INVALID_SETUP:
-      return os << "INVALID_SETUP";
+      return "INVALID_SETUP";
     case StreamCompletionSignal::UNSUPPORTED_SETUP:
-      return os << "UNSUPPORTED_SETUP";
+      return "UNSUPPORTED_SETUP";
     case StreamCompletionSignal::REJECTED_SETUP:
-      return os << "REJECTED_SETUP";
+      return "REJECTED_SETUP";
     case StreamCompletionSignal::CONNECTION_ERROR:
-      return os << "CONNECTION_ERROR";
+      return "CONNECTION_ERROR";
     case StreamCompletionSignal::CONNECTION_END:
-      return os << "CONNECTION_END";
+      return "CONNECTION_END";
     case StreamCompletionSignal::SOCKET_CLOSED:
-      return os << "SOCKET_CLOSED";
+      return "SOCKET_CLOSED";
   }
   // this should be never hit because the switch is over all cases
   LOG(FATAL) << "unknown StreamCompletionSignal=" << static_cast<int>(signal);
+}
+
+std::ostream& operator<<(std::ostream& os, StreamCompletionSignal signal) {
+  return os << to_string(signal);
 }
 
 StreamInterruptedException::StreamInterruptedException(int _terminatingSignal)

@@ -35,6 +35,7 @@ enum class StreamCompletionSignal {
   SOCKET_CLOSED,
 };
 
+std::string to_string(StreamCompletionSignal);
 std::ostream& operator<<(std::ostream&, StreamCompletionSignal);
 
 class StreamInterruptedException : public std::runtime_error {
