@@ -20,7 +20,7 @@ class SubscriptionResponder : public StreamSubscriptionResponderBase {
   std::ostream& logPrefix(std::ostream& os);
 
  private:
-  void onCompleteImpl() override;
+  void onCompleteImpl() noexcept override;
 };
 
 } // reactivesocket

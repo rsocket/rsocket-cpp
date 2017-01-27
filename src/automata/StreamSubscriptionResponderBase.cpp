@@ -5,11 +5,11 @@
 namespace reactivesocket {
 
 void StreamSubscriptionResponderBase::onSubscribeImpl(
-    std::shared_ptr<Subscription> subscription) {
+    std::shared_ptr<Subscription> subscription) noexcept {
   Base::onSubscribe(subscription);
 }
 
-void StreamSubscriptionResponderBase::onNextImpl(Payload response) {
+void StreamSubscriptionResponderBase::onNextImpl(Payload response) noexcept {
   debugCheckOnNextOnCompleteOnError();
   switch (state_) {
     case State::RESPONDING:
@@ -20,7 +20,7 @@ void StreamSubscriptionResponderBase::onNextImpl(Payload response) {
   }
 }
 
-void StreamSubscriptionResponderBase::onCompleteImpl() {
+void StreamSubscriptionResponderBase::onCompleteImpl() noexcept {
   debugCheckOnNextOnCompleteOnError();
   switch (state_) {
     case State::RESPONDING: {
@@ -34,7 +34,8 @@ void StreamSubscriptionResponderBase::onCompleteImpl() {
   }
 }
 
-void StreamSubscriptionResponderBase::onErrorImpl(folly::exception_wrapper ex) {
+void StreamSubscriptionResponderBase::onErrorImpl(
+    folly::exception_wrapper ex) noexcept {
   debugCheckOnNextOnCompleteOnError();
   switch (state_) {
     case State::RESPONDING: {

@@ -25,8 +25,8 @@ void InlineConnection::setInput(
     std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>> inputSink) {
   using namespace ::testing;
 
-  ASSERT_TRUE(other_);
-  ASSERT_FALSE(this_->inputSink_);
+  CHECK(other_);
+  CHECK(!this_->inputSink_);
   this_->inputSink_ = std::move(inputSink);
   // If `other_->outputSubscription_` is not empty, we can provide the
   // subscription to newly registered `inputSink`.
@@ -52,6 +52,8 @@ void InlineConnection::setInput(
 
 std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>>
 InlineConnection::getOutput() {
+  CHECK(other_);
+
   using namespace ::testing;
 
   if (outputSink_) {

@@ -144,6 +144,7 @@ class StandardReactiveSocket : public ReactiveSocket {
       std::shared_ptr<std::list<ReactiveSocketCallback>> listeners);
 
   void checkNotClosed() const;
+  void debugCheckCorrectExecutor() const;
 
   std::shared_ptr<RequestHandler> handler_;
 
@@ -156,6 +157,7 @@ class StandardReactiveSocket : public ReactiveSocket {
 
   std::shared_ptr<ConnectionAutomaton> connection_;
   StreamId nextStreamId_;
+  StreamId lastPeerStreamId_{0};
   folly::Executor& executor_;
 };
 }

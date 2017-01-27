@@ -55,15 +55,6 @@ class PublisherMixin : public Base {
               << this->streamId_ << "): ";
   }
 
-  void onCleanResume() override {
-    Base::requestHandler_->handleCleanResume(producingSubscription_);
-    Base::onCleanResume();
-  }
-  void onDirtyResume() override {
-    Base::requestHandler_->handleDirtyResume(producingSubscription_);
-    Base::onDirtyResume();
-  }
-
   std::shared_ptr<Subscription> subscription() {
     return producingSubscription_;
   }
@@ -84,6 +75,18 @@ class PublisherMixin : public Base {
   void endStream(StreamCompletionSignal signal) override {
     producingSubscription_.cancel();
     Base::endStream(signal);
+  }
+
+  void pauseStream(RequestHandler& requestHandler) override {
+    if (producingSubscription_) {
+      requestHandler.onSubscriptionPaused(producingSubscription_);
+    }
+  }
+
+  void resumeStream(RequestHandler& requestHandler) override {
+    if (producingSubscription_) {
+      requestHandler.onSubscriptionResumed(producingSubscription_);
+    }
   }
 
   using Base::onNextFrame;

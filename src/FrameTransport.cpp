@@ -75,14 +75,15 @@ void FrameTransport::close(folly::exception_wrapper ex) {
   connectionInputSub_.cancel();
 }
 
-void FrameTransport::onSubscribe(std::shared_ptr<Subscription> subscription) {
+void FrameTransport::onSubscribe(
+    std::shared_ptr<Subscription> subscription) noexcept {
   CHECK(!connectionInputSub_);
   CHECK(frameProcessor_);
   connectionInputSub_.reset(std::move(subscription));
   connectionInputSub_.request(std::numeric_limits<size_t>::max());
 }
 
-void FrameTransport::onNext(std::unique_ptr<folly::IOBuf> frame) {
+void FrameTransport::onNext(std::unique_ptr<folly::IOBuf> frame) noexcept {
   if (connection_) {
     CHECK(frameProcessor_); // if *this is not closed and is pulling frames, it
     // should have frameProcessor
@@ -100,19 +101,19 @@ void FrameTransport::terminateFrameProcessor(
   }
 }
 
-void FrameTransport::onComplete() {
+void FrameTransport::onComplete() noexcept {
   VLOG(6) << "onComplete";
   terminateFrameProcessor(
       folly::exception_wrapper(), StreamCompletionSignal::CONNECTION_END);
 }
 
-void FrameTransport::onError(folly::exception_wrapper ex) {
+void FrameTransport::onError(folly::exception_wrapper ex) noexcept {
   VLOG(6) << "onError" << ex.what();
   terminateFrameProcessor(
       std::move(ex), StreamCompletionSignal::CONNECTION_ERROR);
 }
 
-void FrameTransport::request(size_t n) {
+void FrameTransport::request(size_t n) noexcept {
   if (!connection_) {
     // request(n) can be delivered during disconnecting
     // we don't care for it anymore
@@ -127,7 +128,7 @@ void FrameTransport::request(size_t n) {
   drainOutputFramesQueue();
 }
 
-void FrameTransport::cancel() {
+void FrameTransport::cancel() noexcept {
   VLOG(6) << "cancel";
   terminateFrameProcessor(
       folly::exception_wrapper(), StreamCompletionSignal::CONNECTION_END);

@@ -13,7 +13,7 @@
 // TODO(stupaq): get rid of these try-catch blocks
 namespace reactivesocket {
 
-static folly::IOBufQueue createBufferQueue(uint32_t bufferSize) {
+static folly::IOBufQueue createBufferQueue(size_t bufferSize) {
   auto buf = FrameBufferAllocator::allocate(bufferSize);
   folly::IOBufQueue queue(folly::IOBufQueue::cacheChainLength());
   queue.append(std::move(buf));
@@ -324,7 +324,7 @@ bool Frame_RESPONSE::deserializeFrom(std::unique_ptr<folly::IOBuf> in) {
 
 Frame_RESPONSE Frame_RESPONSE::complete(StreamId streamId) {
   return Frame_RESPONSE(streamId, FrameFlags_COMPLETE, Payload());
-};
+}
 
 std::ostream& operator<<(std::ostream& os, const Frame_RESPONSE& frame) {
   return os << frame.header_ << ", (" << frame.payload_;
@@ -430,16 +430,26 @@ std::unique_ptr<folly::IOBuf> Frame_SETUP::serializeOut() {
   appender.writeBE(static_cast<uint32_t>(version_));
   appender.writeBE(static_cast<uint32_t>(keepaliveTime_));
   appender.writeBE(static_cast<uint32_t>(maxLifetime_));
-  appender.push((const uint8_t*)token_.data().data(), token_.data().size());
+
+  // TODO: Remove hack:
+  // https://github.com/ReactiveSocket/reactivesocket-cpp/issues/243
+  if (header_.flags_ & FrameFlags_RESUME_ENABLE) {
+    appender.push(
+        static_cast<const uint8_t*>(token_.data().data()),
+        token_.data().size());
+  }
 
   CHECK(metadataMimeType_.length() <= std::numeric_limits<uint8_t>::max());
   appender.writeBE(static_cast<uint8_t>(metadataMimeType_.length()));
   appender.push(
-      (const uint8_t*)metadataMimeType_.data(), metadataMimeType_.length());
+      reinterpret_cast<const uint8_t*>(metadataMimeType_.data()),
+      metadataMimeType_.length());
 
   CHECK(dataMimeType_.length() <= std::numeric_limits<uint8_t>::max());
   appender.writeBE(static_cast<uint8_t>(dataMimeType_.length()));
-  appender.push((const uint8_t*)dataMimeType_.data(), dataMimeType_.length());
+  appender.push(
+      reinterpret_cast<const uint8_t*>(dataMimeType_.data()),
+      dataMimeType_.length());
 
   payload_.serializeInto(appender);
   return queue.move();
@@ -452,14 +462,21 @@ bool Frame_SETUP::deserializeFrom(std::unique_ptr<folly::IOBuf> in) {
     version_ = cur.readBE<uint32_t>();
     keepaliveTime_ = cur.readBE<uint32_t>();
     maxLifetime_ = cur.readBE<uint32_t>();
-    ResumeIdentificationToken::Data data;
-    cur.pull(data.data(), data.size());
-    token_.set(std::move(data));
 
-    int mdmtLen = cur.readBE<uint8_t>();
+    // TODO: Remove hack:
+    // https://github.com/ReactiveSocket/reactivesocket-cpp/issues/243
+    if (header_.flags_ & FrameFlags_RESUME_ENABLE) {
+      ResumeIdentificationToken::Data data;
+      cur.pull(data.data(), data.size());
+      token_.set(std::move(data));
+    } else {
+      token_ = ResumeIdentificationToken();
+    }
+
+    auto mdmtLen = cur.readBE<uint8_t>();
     metadataMimeType_ = cur.readFixedString(mdmtLen);
 
-    int dmtLen = cur.readBE<uint8_t>();
+    auto dmtLen = cur.readBE<uint8_t>();
     dataMimeType_ = cur.readFixedString(dmtLen);
     payload_.deserializeFrom(cur, header_.flags_);
   } catch (...) {

@@ -19,4 +19,4 @@ class FrameProcessor {
   virtual void onTerminal(folly::exception_wrapper, StreamCompletionSignal) = 0;
 };
 
-} // reactivesocekt
+} // reactivesocket

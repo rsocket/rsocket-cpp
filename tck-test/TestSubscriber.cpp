@@ -120,7 +120,8 @@ void TestSubscriber::assertTerminated() {
   }
 }
 
-void TestSubscriber::onSubscribe(std::shared_ptr<Subscription> subscription) {
+void TestSubscriber::onSubscribe(
+    std::shared_ptr<Subscription> subscription) noexcept {
   subscription_.reset(std::move(subscription));
 
   //  actual.onSubscribe(s);
@@ -139,7 +140,7 @@ void TestSubscriber::onSubscribe(std::shared_ptr<Subscription> subscription) {
   //  }
 }
 
-void TestSubscriber::onNext(Payload element) {
+void TestSubscriber::onNext(Payload element) noexcept {
   LOG(INFO) << "ON NEXT: " << element;
 
   //  if (isEcho) {
@@ -168,7 +169,7 @@ void TestSubscriber::onNext(Payload element) {
   //  actual.onNext(new PayloadImpl(tup.getK(), tup.getV()));
 }
 
-void TestSubscriber::onComplete() {
+void TestSubscriber::onComplete() noexcept {
   LOG(INFO) << "onComplete";
   //  isComplete = true;
   //  if (!checkSubscriptionOnce) {
@@ -195,7 +196,7 @@ void TestSubscriber::onComplete() {
   terminatedCV_.notify_one();
 }
 
-void TestSubscriber::onError(folly::exception_wrapper ex) {
+void TestSubscriber::onError(folly::exception_wrapper ex) noexcept {
   LOG(INFO) << "onError";
   //  if (!checkSubscriptionOnce) {
   //    checkSubscriptionOnce = true;
@@ -229,4 +230,4 @@ void TestSubscriber::onError(folly::exception_wrapper ex) {
 }
 
 } // tck
-} // reactive socket
+} // reactivesocket

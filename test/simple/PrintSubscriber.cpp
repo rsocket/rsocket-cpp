@@ -11,20 +11,21 @@ PrintSubscriber::~PrintSubscriber() {
   LOG(INFO) << "~PrintSubscriber " << this;
 }
 
-void PrintSubscriber::onSubscribe(std::shared_ptr<Subscription> subscription) {
+void PrintSubscriber::onSubscribe(
+    std::shared_ptr<Subscription> subscription) noexcept {
   LOG(INFO) << "PrintSubscriber " << this << " onSubscribe";
   subscription->request(std::numeric_limits<int32_t>::max());
 }
 
-void PrintSubscriber::onNext(Payload element) {
+void PrintSubscriber::onNext(Payload element) noexcept {
   LOG(INFO) << "PrintSubscriber " << this << " onNext " << element;
 }
 
-void PrintSubscriber::onComplete() {
+void PrintSubscriber::onComplete() noexcept {
   LOG(INFO) << "PrintSubscriber " << this << " onComplete";
 }
 
-void PrintSubscriber::onError(folly::exception_wrapper ex) {
+void PrintSubscriber::onError(folly::exception_wrapper ex) noexcept {
   LOG(INFO) << "PrintSubscriber " << this << " onError " << ex.what();
 }
 }

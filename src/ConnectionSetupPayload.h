@@ -21,7 +21,7 @@ class ConnectionSetupPayload {
         dataMimeType(std::move(_dataMimeType)),
         payload(std::move(_payload)),
         token(_token),
-        resumable(_resumable){};
+        resumable(_resumable) {}
 
   std::string metadataMimeType;
   std::string dataMimeType;

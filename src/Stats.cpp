@@ -7,21 +7,21 @@ namespace reactivesocket {
 
 class NoopStats : public Stats {
  public:
-  void socketCreated() override{};
-  void socketDisconnected() override{};
-  void socketClosed(StreamCompletionSignal signal) override{};
+  void socketCreated() override {}
+  void socketDisconnected() override {}
+  void socketClosed(StreamCompletionSignal signal) override {}
 
   void duplexConnectionCreated(
       const std::string& type,
-      reactivesocket::DuplexConnection* connection) override{};
+      reactivesocket::DuplexConnection* connection) override {}
   void duplexConnectionClosed(
       const std::string& type,
-      reactivesocket::DuplexConnection* connection) override{};
+      reactivesocket::DuplexConnection* connection) override {}
 
-  void bytesWritten(size_t bytes) override{};
-  void bytesRead(size_t bytes) override{};
-  void frameWritten(const std::string& frameType) override{};
-  void frameRead(const std::string& frameType) override{};
+  void bytesWritten(size_t bytes) override {}
+  void bytesRead(size_t bytes) override {}
+  void frameWritten(const std::string& frameType) override {}
+  void frameRead(const std::string& frameType) override {}
 
   void resumeBufferChanged(int framesCount, int dataSize) override {}
 
@@ -43,5 +43,5 @@ class NoopStats : public Stats {
 
 Stats& Stats::noop() {
   return NoopStats::instance();
-};
+}
 }

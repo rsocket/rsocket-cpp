@@ -30,7 +30,7 @@ class ServerSubscription : public SubscriptionBase {
 
  private:
   // Subscription methods
-  void requestImpl(size_t n) override {
+  void requestImpl(size_t n) noexcept override {
     for (size_t i = 0; i < numElems_; i++) {
       response_.onNext(Payload("from server " + std::to_string(i)));
     }
@@ -38,7 +38,7 @@ class ServerSubscription : public SubscriptionBase {
     //    response_.onError(std::runtime_error("XXX"));
   }
 
-  void cancelImpl() override {}
+  void cancelImpl() noexcept override {}
 
   SubscriberPtr<Subscriber<Payload>> response_;
   size_t numElems_;
@@ -50,7 +50,7 @@ class ServerRequestHandler : public DefaultRequestHandler {
   void handleRequestSubscription(
       Payload request,
       StreamId streamId,
-      const std::shared_ptr<Subscriber<Payload>>& response) override {
+      const std::shared_ptr<Subscriber<Payload>>& response) noexcept override {
     LOG(INFO) << "ServerRequestHandler.handleRequestSubscription " << request;
 
     response->onSubscribe(std::make_shared<ServerSubscription>(response));
@@ -60,7 +60,7 @@ class ServerRequestHandler : public DefaultRequestHandler {
   void handleRequestStream(
       Payload request,
       StreamId streamId,
-      const std::shared_ptr<Subscriber<Payload>>& response) override {
+      const std::shared_ptr<Subscriber<Payload>>& response) noexcept override {
     LOG(INFO) << "ServerRequestHandler.handleRequestStream " << request;
 
     response->onSubscribe(std::make_shared<ServerSubscription>(response));
@@ -69,24 +69,27 @@ class ServerRequestHandler : public DefaultRequestHandler {
   void handleRequestResponse(
       Payload request,
       StreamId streamId,
-      const std::shared_ptr<Subscriber<Payload>>& response) override {
+      const std::shared_ptr<Subscriber<Payload>>& response) noexcept override {
     LOG(INFO) << "ServerRequestHandler.handleRequestResponse " << request;
 
     response->onSubscribe(std::make_shared<ServerSubscription>(response, 1));
   }
 
-  void handleFireAndForgetRequest(Payload request, StreamId streamId) override {
+  void handleFireAndForgetRequest(
+      Payload request,
+      StreamId streamId) noexcept override {
     LOG(INFO) << "ServerRequestHandler.handleFireAndForgetRequest " << request;
   }
 
-  void handleMetadataPush(std::unique_ptr<folly::IOBuf> request) override {
+  void handleMetadataPush(
+      std::unique_ptr<folly::IOBuf> request) noexcept override {
     LOG(INFO) << "ServerRequestHandler.handleMetadataPush "
               << request->moveToFbString();
   }
 
   std::shared_ptr<StreamState> handleSetupPayload(
       ReactiveSocket&,
-      ConnectionSetupPayload request) override {
+      ConnectionSetupPayload request) noexcept override {
     LOG(INFO) << "ServerRequestHandler.handleSetupPayload " << request;
     return std::make_shared<StreamState>(Stats::noop());
   }
@@ -108,9 +111,11 @@ class Callback : public AsyncServerSocket::AcceptCallback {
         folly::AsyncSocket::UniquePtr(new AsyncSocket(&eventBase_, fd));
 
     std::unique_ptr<DuplexConnection> connection =
-        folly::make_unique<TcpDuplexConnection>(std::move(socket), stats_);
+        folly::make_unique<TcpDuplexConnection>(
+            std::move(socket), inlineExecutor(), stats_);
     std::unique_ptr<DuplexConnection> framedConnection =
-        folly::make_unique<FramedDuplexConnection>(std::move(connection));
+        folly::make_unique<FramedDuplexConnection>(
+            std::move(connection), inlineExecutor());
     std::unique_ptr<RequestHandler> requestHandler =
         folly::make_unique<ServerRequestHandler>();
 

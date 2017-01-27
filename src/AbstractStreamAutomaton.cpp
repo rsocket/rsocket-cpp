@@ -38,6 +38,15 @@ void AbstractStreamAutomaton::onNextFrame(
       deserializeAndDispatch<Frame_ERROR>(std::move(payload));
       return;
     case FrameType::RESERVED:
+
+    case FrameType::SETUP:
+    case FrameType::LEASE:
+    case FrameType::KEEPALIVE:
+    case FrameType::REQUEST_FNF:
+    case FrameType::REQUEST_STREAM:
+    case FrameType::METADATA_PUSH:
+    case FrameType::RESUME:
+    case FrameType::RESUME_OK:
     default:
       onUnknownFrame();
       return;

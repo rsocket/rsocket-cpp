@@ -14,7 +14,7 @@ const char* HEX_CHARS = {"0123456789abcdef"};
 }
 
 static const char* getTerminatingSignalErrorMessage(int terminatingSignal) {
-  switch ((StreamCompletionSignal)terminatingSignal) {
+  switch (static_cast<StreamCompletionSignal>(terminatingSignal)) {
     case StreamCompletionSignal::CONNECTION_END:
       return "connection closed";
     case StreamCompletionSignal::CONNECTION_ERROR:
@@ -23,6 +23,12 @@ static const char* getTerminatingSignalErrorMessage(int terminatingSignal) {
       return "socket error";
     case StreamCompletionSignal::SOCKET_CLOSED:
       return "reactive socket closed";
+    case StreamCompletionSignal::UNSUPPORTED_SETUP:
+      return "unsupported setup";
+    case StreamCompletionSignal::REJECTED_SETUP:
+      return "rejected setup";
+    case StreamCompletionSignal::INVALID_SETUP:
+      return "invalid setup";
     case StreamCompletionSignal::GRACEFUL:
       DCHECK(false) << "throwing exception for GRACEFUL termination?";
       return "graceful termination";
@@ -51,7 +57,7 @@ std::ostream& operator<<(std::ostream& os, StreamCompletionSignal signal) {
       return os << "SOCKET_CLOSED";
   }
   // this should be never hit because the switch is over all cases
-  LOG(FATAL) << "unknown StreamCompletionSignal=" << (int)signal;
+  LOG(FATAL) << "unknown StreamCompletionSignal=" << static_cast<int>(signal);
 }
 
 StreamInterruptedException::StreamInterruptedException(int _terminatingSignal)
@@ -70,7 +76,7 @@ ResumeIdentificationToken ResumeIdentificationToken::generateNew() {
 
   Data data;
   for (size_t i = 0; i < data.size(); i++) {
-    data[i] = folly::Random::rand32(rng);
+    data[i] = static_cast<Data::value_type>(folly::Random::rand32(rng));
   }
   return ResumeIdentificationToken(std::move(data));
 }

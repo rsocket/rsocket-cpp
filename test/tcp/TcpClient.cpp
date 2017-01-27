@@ -5,7 +5,9 @@
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <gmock/gmock.h>
 #include "src/NullRequestHandler.h"
+#include "src/SmartPointers.h"
 #include "src/StandardReactiveSocket.h"
+#include "src/SubscriptionBase.h"
 #include "src/folly/FollyKeepaliveTimer.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/tcp/TcpDuplexConnection.h"
@@ -30,7 +32,83 @@ class Callback : public AsyncSocket::ConnectCallback {
     std::cerr << "connectErr " << ex.what() << " " << ex.getType() << std::endl;
   }
 };
+
+class ClientSubscription : public SubscriptionBase {
+ public:
+  explicit ClientSubscription(
+      std::shared_ptr<Subscriber<Payload>> response,
+      size_t numElems = 2)
+      : ExecutorBase(defaultExecutor()),
+        response_(std::move(response)),
+        numElems_(numElems) {}
+
+ private:
+  // Subscription methods
+  void requestImpl(size_t n) noexcept override {
+    for (size_t i = 0; i < numElems_; i++) {
+      response_.onNext(Payload("from server " + std::to_string(i)));
+    }
+    // response_.onComplete();
+    response_.onError(std::runtime_error("XXX"));
+  }
+
+  void cancelImpl() noexcept override {}
+
+  SubscriberPtr<Subscriber<Payload>> response_;
+  size_t numElems_;
+};
 }
+
+class ClientRequestHandler : public DefaultRequestHandler {
+ public:
+  /// Handles a new inbound Subscription requested by the other end.
+  void handleRequestSubscription(
+      Payload request,
+      StreamId streamId,
+      const std::shared_ptr<Subscriber<Payload>>& response) noexcept override {
+    LOG(INFO) << "ServerRequestHandler.handleRequestSubscription " << request;
+
+    response->onSubscribe(std::make_shared<ClientSubscription>(response));
+  }
+
+  /// Handles a new inbound Stream requested by the other end.
+  void handleRequestStream(
+      Payload request,
+      StreamId streamId,
+      const std::shared_ptr<Subscriber<Payload>>& response) noexcept override {
+    LOG(INFO) << "ServerRequestHandler.handleRequestStream " << request;
+
+    response->onSubscribe(std::make_shared<ClientSubscription>(response));
+  }
+
+  void handleRequestResponse(
+      Payload request,
+      StreamId streamId,
+      const std::shared_ptr<Subscriber<Payload>>& response) noexcept override {
+    LOG(INFO) << "ServerRequestHandler.handleRequestResponse " << request;
+
+    response->onSubscribe(std::make_shared<ClientSubscription>(response, 1));
+  }
+
+  void handleFireAndForgetRequest(
+      Payload request,
+      StreamId streamId) noexcept override {
+    LOG(INFO) << "ServerRequestHandler.handleFireAndForgetRequest " << request;
+  }
+
+  void handleMetadataPush(
+      std::unique_ptr<folly::IOBuf> request) noexcept override {
+    LOG(INFO) << "ServerRequestHandler.handleMetadataPush "
+              << request->moveToFbString();
+  }
+
+  std::shared_ptr<StreamState> handleSetupPayload(
+      ReactiveSocket&,
+      ConnectionSetupPayload request) noexcept override {
+    LOG(INFO) << "ServerRequestHandler.handleSetupPayload " << request;
+    return std::make_shared<StreamState>(Stats::noop());
+  }
+};
 
 int main(int argc, char* argv[]) {
   FLAGS_logtostderr = true;
@@ -59,11 +137,13 @@ int main(int argc, char* argv[]) {
                   << std::endl;
 
         std::unique_ptr<DuplexConnection> connection =
-            folly::make_unique<TcpDuplexConnection>(std::move(socket), stats);
+            folly::make_unique<TcpDuplexConnection>(
+                std::move(socket), inlineExecutor(), stats);
         std::unique_ptr<DuplexConnection> framedConnection =
-            folly::make_unique<FramedDuplexConnection>(std::move(connection));
+            folly::make_unique<FramedDuplexConnection>(
+                std::move(connection), inlineExecutor());
         std::unique_ptr<RequestHandler> requestHandler =
-            folly::make_unique<DefaultRequestHandler>();
+            folly::make_unique<ClientRequestHandler>();
 
         reactiveSocket = StandardReactiveSocket::fromClientConnection(
             *eventBaseThread.getEventBase(),
@@ -76,8 +156,8 @@ int main(int argc, char* argv[]) {
                 *eventBaseThread.getEventBase(),
                 std::chrono::milliseconds(5000)));
 
-        reactiveSocket->requestSubscription(
-            Payload("from client"), std::make_shared<PrintSubscriber>());
+        // reactiveSocket->requestSubscription(
+        //     Payload("from client"), std::make_shared<PrintSubscriber>());
       });
 
   std::string name;

@@ -26,22 +26,26 @@ class RequestResponseRequester : public StreamAutomatonBase,
     folly::Executor& executor;
   };
 
-  explicit RequestResponseRequester(const Parameters& params)
-      : ExecutorBase(params.executor), Base(params) {}
+  explicit RequestResponseRequester(const Parameters& params, Payload payload)
+      : ExecutorBase(params.executor),
+        Base(params),
+        initialPayload_(std::move(payload)) {}
 
   void subscribe(std::shared_ptr<Subscriber<Payload>> subscriber);
-  void processInitialPayload(Payload);
 
   std::ostream& logPrefix(std::ostream& os);
 
  private:
-  void requestImpl(size_t) override;
-  void cancelImpl() override;
+  void requestImpl(size_t) noexcept override;
+  void cancelImpl() noexcept override;
 
   using Base::onNextFrame;
   void onNextFrame(Frame_RESPONSE&&) override;
   void onNextFrame(Frame_ERROR&&) override;
   void endStream(StreamCompletionSignal signal) override;
+
+  void pauseStream(RequestHandler& requestHandler) override;
+  void resumeStream(RequestHandler& requestHandler) override;
 
   /// State of the Subscription requester.
   enum class State : uint8_t {
@@ -59,5 +63,8 @@ class RequestResponseRequester : public StreamAutomatonBase,
   /// This mixin is responsible for delivering a terminal signal to the
   /// Subscriber once the stream ends.
   reactivestreams::SubscriberPtr<Subscriber<Payload>> consumingSubscriber_;
+
+  /// Initial payload which has to be sent with 1st request.
+  Payload initialPayload_;
 };
 }

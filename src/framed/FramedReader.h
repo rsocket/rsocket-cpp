@@ -18,21 +18,23 @@ class FramedReader : public SubscriberBaseT<std::unique_ptr<folly::IOBuf>>,
  public:
   explicit FramedReader(
       std::shared_ptr<reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
-          frames)
-      : ExecutorBase(defaultExecutor()),
+          frames,
+      folly::Executor& executor)
+      : ExecutorBase(executor),
         frames_(std::move(frames)),
         payloadQueue_(folly::IOBufQueue::cacheChainLength()) {}
 
  private:
   // Subscriber methods
-  void onSubscribeImpl(std::shared_ptr<Subscription> subscription) override;
-  void onNextImpl(std::unique_ptr<folly::IOBuf> element) override;
-  void onCompleteImpl() override;
-  void onErrorImpl(folly::exception_wrapper ex) override;
+  void onSubscribeImpl(
+      std::shared_ptr<Subscription> subscription) noexcept override;
+  void onNextImpl(std::unique_ptr<folly::IOBuf> element) noexcept override;
+  void onCompleteImpl() noexcept override;
+  void onErrorImpl(folly::exception_wrapper ex) noexcept override;
 
   // Subscription methods
-  void requestImpl(size_t n) override;
-  void cancelImpl() override;
+  void requestImpl(size_t n) noexcept override;
+  void cancelImpl() noexcept override;
 
   void parseFrames();
   void requestStream();
@@ -51,4 +53,4 @@ class FramedReader : public SubscriberBaseT<std::unique_ptr<folly::IOBuf>>,
   folly::IOBufQueue payloadQueue_;
 };
 
-} // reactive socket
+} // reactivesocket

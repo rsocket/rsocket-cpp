@@ -23,19 +23,19 @@ class SubscriberBaseMock : public SubscriberBaseT<int> {
 
  private:
   void onSubscribeImpl(
-      std::shared_ptr<Subscription> subscription) override final {
+      std::shared_ptr<Subscription> subscription) noexcept override final {
     onSubscribeImpl_(subscription);
   }
 
-  void onNextImpl(int value) override final {
+  void onNextImpl(int value) noexcept override final {
     onNextImpl_(value);
   }
 
-  void onCompleteImpl() override final {
+  void onCompleteImpl() noexcept override final {
     onCompleteImpl_();
   }
 
-  void onErrorImpl(folly::exception_wrapper ex) override final {
+  void onErrorImpl(folly::exception_wrapper ex) noexcept override final {
     onErrorImpl_(std::move(ex));
   }
 };
@@ -111,8 +111,8 @@ TEST(SubscriberBaseTest, CancelStopsOnNext) {
   EXPECT_CALL(*subscriber, onNextImpl_(_))
       .WillOnce(Invoke([&](int) {}))
       .WillOnce(Invoke([&](int) {
-        done = true;
         outSubscription->cancel();
+        done = true;
       }));
   EXPECT_CALL(*subscriber, onCompleteImpl_()).Times(0);
   EXPECT_CALL(*subscriber, onErrorImpl_(_)).Times(0);

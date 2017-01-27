@@ -11,12 +11,10 @@ class PrintSubscriber : public Subscriber<Payload> {
  public:
   ~PrintSubscriber();
 
-  void onSubscribe(std::shared_ptr<Subscription> subscription) override;
-
-  void onNext(Payload element) override;
-
-  void onComplete() override;
-
-  void onError(folly::exception_wrapper ex) override;
+  void onSubscribe(
+      std::shared_ptr<Subscription> subscription) noexcept override;
+  void onNext(Payload element) noexcept override;
+  void onComplete() noexcept override;
+  void onError(folly::exception_wrapper ex) noexcept override;
 };
 }

@@ -15,6 +15,8 @@ class RequestHandler;
 ///
 /// A common base class of all automatons.
 ///
+/// The instances might be destroyed on a different thread than they were
+/// created.
 class StreamAutomatonBase : public AbstractStreamAutomaton {
  public:
   /// A dependent type which encapsulates all parameters needed to initialise
@@ -24,28 +26,19 @@ class StreamAutomatonBase : public AbstractStreamAutomaton {
     Parameters() = default;
     Parameters(
         std::shared_ptr<ConnectionAutomaton> _connection,
-        StreamId _streamId,
-        std::shared_ptr<RequestHandler> _handler)
-        : connection(std::move(_connection)),
-          streamId(_streamId),
-          handler(std::move(_handler)) {}
+        StreamId _streamId)
+        : connection(std::move(_connection)), streamId(_streamId) {}
 
     std::shared_ptr<ConnectionAutomaton> connection;
     StreamId streamId{0};
-    std::shared_ptr<RequestHandler> handler;
   };
 
   explicit StreamAutomatonBase(Parameters params)
-      : connection_(std::move(params.connection)),
-        streamId_(params.streamId),
-        requestHandler_(std::move(params.handler)) {}
+      : connection_(std::move(params.connection)), streamId_(params.streamId) {}
 
   /// Logs an identification string of the automaton.
   std::ostream& logPrefix(std::ostream& os) /* = 0 */;
   /// @}
-
-  void onCleanResume() override {}
-  void onDirtyResume() override {}
 
  protected:
   bool isTerminated() const {
@@ -65,15 +58,13 @@ class StreamAutomatonBase : public AbstractStreamAutomaton {
   void onBadFrame() override;
   void onUnknownFrame() override;
 
- private:
-  void onUnexpectedFrame();
-
  protected:
   /// A partially-owning pointer to the connection, the stream runs on.
+  /// It is declared as const to allow only ctor to initialize it for thread
+  /// safety of the dtor.
   const std::shared_ptr<ConnectionAutomaton> connection_;
   /// An ID of the stream (within the connection) this automaton manages.
   const StreamId streamId_;
   bool isTerminated_{false};
-  std::shared_ptr<RequestHandler> requestHandler_;
 };
 }

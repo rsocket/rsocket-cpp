@@ -36,7 +36,7 @@ TEST(FrameTest, Frame_REQUEST_STREAM) {
   FrameFlags flags =
       FrameFlags_COMPLETE | FrameFlags_REQN_PRESENT | FrameFlags_METADATA;
   uint32_t requestN = 3;
-  auto metadata = folly::IOBuf::copyBuffer("i'm so meta even this acyonym");
+  auto metadata = folly::IOBuf::copyBuffer("i'm so meta even this acronym");
   auto data = folly::IOBuf::copyBuffer("424242");
   auto frame = reserialize<Frame_REQUEST_STREAM>(
       streamId, flags, requestN, Payload(data->clone(), metadata->clone()));
@@ -137,6 +137,37 @@ TEST(FrameTest, Frame_KEEPALIVE) {
 
 TEST(FrameTest, Frame_SETUP) {
   FrameFlags flags = FrameFlags_EMPTY;
+  uint32_t version = 0;
+  uint32_t keepaliveTime = std::numeric_limits<uint32_t>::max();
+  uint32_t maxLifetime = std::numeric_limits<uint32_t>::max();
+  ResumeIdentificationToken::Data tokenData;
+  tokenData.fill(1);
+  ResumeIdentificationToken token;
+  token.set(std::move(tokenData));
+  auto data = folly::IOBuf::copyBuffer("424242");
+  auto frame = reserialize<Frame_SETUP>(
+      flags,
+      version,
+      keepaliveTime,
+      maxLifetime,
+      token,
+      "md",
+      "d",
+      Payload(data->clone()));
+
+  expectHeader(FrameType::SETUP, flags, 0, frame);
+  EXPECT_EQ(version, frame.version_);
+  EXPECT_EQ(keepaliveTime, frame.keepaliveTime_);
+  EXPECT_EQ(maxLifetime, frame.maxLifetime_);
+  // Token should be default constructed
+  EXPECT_EQ(ResumeIdentificationToken(), frame.token_);
+  EXPECT_EQ("md", frame.metadataMimeType_);
+  EXPECT_EQ("d", frame.dataMimeType_);
+  EXPECT_TRUE(folly::IOBufEqual()(*data, *frame.payload_.data));
+}
+
+TEST(FrameTest, Frame_SETUP_resume) {
+  FrameFlags flags = FrameFlags_EMPTY | FrameFlags_RESUME_ENABLE;
   uint32_t version = 0;
   uint32_t keepaliveTime = std::numeric_limits<uint32_t>::max();
   uint32_t maxLifetime = std::numeric_limits<uint32_t>::max();

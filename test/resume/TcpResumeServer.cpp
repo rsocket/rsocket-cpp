@@ -21,9 +21,8 @@ DEFINE_string(address, "9898", "host:port to listen to");
 
 namespace {
 
-std::vector<std::pair<
-    std::unique_ptr<StandardReactiveSocket>,
-    ResumeIdentificationToken>>
+std::vector<
+    std::pair<std::unique_ptr<ReactiveSocket>, ResumeIdentificationToken>>
     g_reactiveSockets;
 
 class ServerSubscription : public SubscriptionBase {
@@ -36,7 +35,7 @@ class ServerSubscription : public SubscriptionBase {
   }
 
   // Subscription methods
-  void requestImpl(size_t n) override {
+  void requestImpl(size_t n) noexcept override {
     LOG(INFO) << "request " << this;
     response_.onNext(Payload("from server"));
     response_.onNext(Payload("from server2"));
@@ -45,7 +44,7 @@ class ServerSubscription : public SubscriptionBase {
     //    response_.onError(std::runtime_error("XXX"));
   }
 
-  void cancelImpl() override {
+  void cancelImpl() noexcept override {
     LOG(INFO) << "cancel " << this;
   }
 
@@ -62,7 +61,7 @@ class ServerRequestHandler : public DefaultRequestHandler {
   void handleRequestSubscription(
       Payload request,
       StreamId streamId,
-      const std::shared_ptr<Subscriber<Payload>>& response) override {
+      const std::shared_ptr<Subscriber<Payload>>& response) noexcept override {
     LOG(INFO) << "ServerRequestHandler.handleRequestSubscription " << request;
     response->onSubscribe(std::make_shared<ServerSubscription>(response));
   }
@@ -71,25 +70,28 @@ class ServerRequestHandler : public DefaultRequestHandler {
   void handleRequestStream(
       Payload request,
       StreamId streamId,
-      const std::shared_ptr<Subscriber<Payload>>& response) override {
+      const std::shared_ptr<Subscriber<Payload>>& response) noexcept override {
     LOG(INFO) << "ServerRequestHandler.handleRequestStream " << request;
 
     response->onSubscribe(std::make_shared<ServerSubscription>(response));
   }
 
-  void handleFireAndForgetRequest(Payload request, StreamId streamId) override {
+  void handleFireAndForgetRequest(
+      Payload request,
+      StreamId streamId) noexcept override {
     LOG(INFO) << "ServerRequestHandler.handleFireAndForgetRequest " << request
               << "\n";
   }
 
-  void handleMetadataPush(std::unique_ptr<folly::IOBuf> request) override {
+  void handleMetadataPush(
+      std::unique_ptr<folly::IOBuf> request) noexcept override {
     LOG(INFO) << "ServerRequestHandler.handleMetadataPush "
               << request->moveToFbString() << "\n";
   }
 
   std::shared_ptr<StreamState> handleSetupPayload(
       ReactiveSocket& socket,
-      ConnectionSetupPayload request) override {
+      ConnectionSetupPayload request) noexcept override {
     std::stringstream str;
 
     str << "ServerRequestHandler.handleSetupPayload " << request
@@ -109,7 +111,7 @@ class ServerRequestHandler : public DefaultRequestHandler {
   bool handleResume(
       ReactiveSocket& socket,
       const ResumeIdentificationToken& token,
-      ResumePosition position) override {
+      ResumePosition position) noexcept override {
     std::stringstream str;
 
     str << "ServerRequestHandler.handleResume resume token <";
@@ -136,14 +138,36 @@ class ServerRequestHandler : public DefaultRequestHandler {
     return false;
   }
 
-  void handleCleanResume(std::shared_ptr<Subscription> response) override {
+  void handleCleanResume(
+      std::shared_ptr<Subscription> response) noexcept override {
     LOG(INFO) << "clean resume stream"
               << "\n";
   }
 
-  void handleDirtyResume(std::shared_ptr<Subscription> response) override {
+  void handleDirtyResume(
+      std::shared_ptr<Subscription> response) noexcept override {
     LOG(INFO) << "dirty resume stream"
               << "\n";
+  }
+
+  void onSubscriptionPaused(
+      const std::shared_ptr<Subscription>& subscription) noexcept override {
+    LOG(INFO) << "subscription paused " << &subscription;
+  }
+
+  void onSubscriptionResumed(
+      const std::shared_ptr<Subscription>& subscription) noexcept override {
+    LOG(INFO) << "subscription resumed " << &subscription;
+  }
+
+  void onSubscriberPaused(const std::shared_ptr<Subscriber<Payload>>&
+                              subscriber) noexcept override {
+    LOG(INFO) << "subscriber paused " << &subscriber;
+  }
+
+  void onSubscriberResumed(const std::shared_ptr<Subscriber<Payload>>&
+                               subscriber) noexcept override {
+    LOG(INFO) << "subscriber resumed " << &subscriber;
   }
 
  private:
@@ -169,9 +193,11 @@ class Callback : public AsyncServerSocket::AcceptCallback {
         folly::AsyncSocket::UniquePtr(new AsyncSocket(&eventBase_, fd));
 
     std::unique_ptr<DuplexConnection> connection =
-        folly::make_unique<TcpDuplexConnection>(std::move(socket), stats_);
+        folly::make_unique<TcpDuplexConnection>(
+            std::move(socket), inlineExecutor(), stats_);
     std::unique_ptr<DuplexConnection> framedConnection =
-        folly::make_unique<FramedDuplexConnection>(std::move(connection));
+        folly::make_unique<FramedDuplexConnection>(
+            std::move(connection), eventBase_);
     std::unique_ptr<RequestHandler> requestHandler =
         folly::make_unique<ServerRequestHandler>(streamState_);
 

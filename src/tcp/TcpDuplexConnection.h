@@ -15,6 +15,7 @@ class TcpDuplexConnection : public DuplexConnection {
  public:
   explicit TcpDuplexConnection(
       folly::AsyncSocket::UniquePtr&& socket,
+      folly::Executor& executor,
       Stats& stats = Stats::noop());
   ~TcpDuplexConnection();
 

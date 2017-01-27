@@ -5,6 +5,7 @@
 #include <folly/MoveWrapper.h>
 #include "src/Common.h"
 #include "src/ConnectionAutomaton.h"
+#include "src/RequestHandler.h"
 
 namespace reactivesocket {
 
@@ -16,27 +17,16 @@ void RequestResponseRequester::subscribe(
   consumingSubscriber_.onSubscribe(SubscriptionBase::shared_from_this());
 }
 
-void RequestResponseRequester::processInitialPayload(Payload request) {
-  switch (state_) {
-    case State::NEW: {
-      state_ = State::REQUESTED;
-      Frame_REQUEST_RESPONSE frame(
-          streamId_, FrameFlags_EMPTY, std::move(std::move(request)));
-      connection_->outputFrameOrEnqueue(frame.serializeOut());
-      break;
-    }
-    case State::REQUESTED:
-      // Cannot receive a request payload twice.
-      CHECK(false);
-      break;
-    case State::CLOSED:
-      break;
-  }
-}
-
-void RequestResponseRequester::requestImpl(size_t n) {
+void RequestResponseRequester::requestImpl(size_t n) noexcept {
   if (n == 0) {
     return;
+  }
+
+  if (state_ == State::NEW) {
+    state_ = State::REQUESTED;
+    Frame_REQUEST_RESPONSE frame(
+        streamId_, FrameFlags_EMPTY, std::move(std::move(initialPayload_)));
+    connection_->outputFrameOrEnqueue(frame.serializeOut());
   }
 
   if (payload_) {
@@ -48,7 +38,7 @@ void RequestResponseRequester::requestImpl(size_t n) {
   }
 }
 
-void RequestResponseRequester::cancelImpl() {
+void RequestResponseRequester::cancelImpl() noexcept {
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;
@@ -82,7 +72,8 @@ void RequestResponseRequester::endStream(StreamCompletionSignal signal) {
   if (signal == StreamCompletionSignal::GRACEFUL) {
     consumingSubscriber_.onComplete();
   } else {
-    consumingSubscriber_.onError(StreamInterruptedException((int)signal));
+    consumingSubscriber_.onError(
+        StreamInterruptedException(static_cast<int>(signal)));
   }
 }
 
@@ -139,5 +130,17 @@ void RequestResponseRequester::onNextFrame(Frame_RESPONSE&& frame) {
 std::ostream& RequestResponseRequester::logPrefix(std::ostream& os) {
   return os << " RequestResponseRequester(" << &connection_ << ", " << streamId_
             << "): ";
+}
+
+void RequestResponseRequester::pauseStream(RequestHandler& requestHandler) {
+  if (consumingSubscriber_) {
+    requestHandler.onSubscriberPaused(consumingSubscriber_);
+  }
+}
+
+void RequestResponseRequester::resumeStream(RequestHandler& requestHandler) {
+  if (consumingSubscriber_) {
+    requestHandler.onSubscriberResumed(consumingSubscriber_);
+  }
 }
 }

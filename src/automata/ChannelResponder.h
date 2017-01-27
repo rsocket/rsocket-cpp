@@ -29,14 +29,14 @@ class ChannelResponder : public PublisherMixin<
   std::ostream& logPrefix(std::ostream& os);
 
  private:
-  void onSubscribeImpl(std::shared_ptr<Subscription>) override;
-  void onNextImpl(Payload) override;
-  void onCompleteImpl() override;
-  void onErrorImpl(folly::exception_wrapper) override;
+  void onSubscribeImpl(std::shared_ptr<Subscription>) noexcept override;
+  void onNextImpl(Payload) noexcept override;
+  void onCompleteImpl() noexcept override;
+  void onErrorImpl(folly::exception_wrapper) noexcept override;
 
   // implementation from ConsumerMixin::SubscriptionBase
-  void requestImpl(size_t n) override;
-  void cancelImpl() override;
+  void requestImpl(size_t n) noexcept override;
+  void cancelImpl() noexcept override;
 
   using Base::onNextFrame;
   void onNextFrame(Frame_REQUEST_CHANNEL&&) override;

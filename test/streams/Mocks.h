@@ -28,7 +28,8 @@ class MockPublisher : public Publisher<T, E> {
       subscribe_,
       void(std::shared_ptr<Subscriber<T, E>> subscriber));
 
-  void subscribe(std::shared_ptr<Subscriber<T, E>> subscriber) override {
+  void subscribe(
+      std::shared_ptr<Subscriber<T, E>> subscriber) noexcept override {
     subscribe_(std::move(subscriber));
   }
 };
@@ -55,11 +56,11 @@ class MockSubscriber : public Subscriber<T, E> {
       VLOG(2) << "dtor SubscriptionShim " << this;
     }
 
-    void request(size_t n) override final {
+    void request(size_t n) noexcept override final {
       originalSubscription_->request(n);
     }
 
-    void cancel() override final {
+    void cancel() noexcept override final {
       checkpoint_->Call();
       originalSubscription_->cancel();
     }
@@ -82,7 +83,8 @@ class MockSubscriber : public Subscriber<T, E> {
   MOCK_METHOD0(onComplete_, void());
   MOCK_METHOD1_T(onError_, void(E ex));
 
-  void onSubscribe(std::shared_ptr<Subscription> subscription) override {
+  void onSubscribe(
+      std::shared_ptr<Subscription> subscription) noexcept override {
     subscription_ = std::make_shared<SubscriptionShim>(
         std::move(subscription), checkpoint_);
     // We allow registering the same subscriber with multiple Publishers.
@@ -90,17 +92,17 @@ class MockSubscriber : public Subscriber<T, E> {
     onSubscribe_(subscription_);
   }
 
-  void onNext(T element) override {
+  void onNext(T element) noexcept override {
     onNext_(element);
   }
 
-  void onComplete() override {
+  void onComplete() noexcept override {
     checkpoint_->Call();
     onComplete_();
     subscription_ = nullptr;
   }
 
-  void onError(E ex) override {
+  void onError(E ex) noexcept override {
     checkpoint_->Call();
     onError_(ex);
     subscription_ = nullptr;
@@ -130,11 +132,11 @@ class MockSubscription : public Subscription {
   MOCK_METHOD1(request_, void(size_t n));
   MOCK_METHOD0(cancel_, void());
 
-  void request(size_t n) override {
+  void request(size_t n) noexcept override {
     request_(n);
   }
 
-  void cancel() override {
+  void cancel() noexcept override {
     cancel_();
   }
 };

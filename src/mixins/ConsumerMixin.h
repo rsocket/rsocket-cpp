@@ -73,9 +73,22 @@ class ConsumerMixin : public StreamAutomatonBase, public SubscriptionBase {
     if (signal == StreamCompletionSignal::GRACEFUL) {
       consumingSubscriber_.onComplete();
     } else {
-      consumingSubscriber_.onError(StreamInterruptedException((int)signal));
+      consumingSubscriber_.onError(
+          StreamInterruptedException(static_cast<int>(signal)));
     }
     Base::endStream(signal);
+  }
+
+  void pauseStream(RequestHandler& requestHandler) override {
+    if (consumingSubscriber_) {
+      requestHandler.onSubscriberPaused(consumingSubscriber_);
+    }
+  }
+
+  void resumeStream(RequestHandler& requestHandler) override {
+    if (consumingSubscriber_) {
+      requestHandler.onSubscriberResumed(consumingSubscriber_);
+    }
   }
 
   void processPayload(Frame&&);
@@ -108,4 +121,4 @@ class ConsumerMixin : public StreamAutomatonBase, public SubscriptionBase {
 };
 }
 
-#include "ConsumerMixin-inl.h"
+#include "src/mixins/ConsumerMixin-inl.h"

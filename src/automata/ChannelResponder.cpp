@@ -5,11 +5,11 @@
 namespace reactivesocket {
 
 void ChannelResponder::onSubscribeImpl(
-    std::shared_ptr<Subscription> subscription) {
+    std::shared_ptr<Subscription> subscription) noexcept {
   Base::onSubscribe(subscription);
 }
 
-void ChannelResponder::onNextImpl(Payload response) {
+void ChannelResponder::onNextImpl(Payload response) noexcept {
   switch (state_) {
     case State::RESPONDING:
       Base::onNext(std::move(response));
@@ -19,7 +19,7 @@ void ChannelResponder::onNextImpl(Payload response) {
   }
 }
 
-void ChannelResponder::onCompleteImpl() {
+void ChannelResponder::onCompleteImpl() noexcept {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
@@ -32,7 +32,7 @@ void ChannelResponder::onCompleteImpl() {
   }
 }
 
-void ChannelResponder::onErrorImpl(folly::exception_wrapper ex) {
+void ChannelResponder::onErrorImpl(folly::exception_wrapper ex) noexcept {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
@@ -46,16 +46,17 @@ void ChannelResponder::onErrorImpl(folly::exception_wrapper ex) {
   }
 }
 
-void ChannelResponder::requestImpl(size_t n) {
+void ChannelResponder::requestImpl(size_t n) noexcept {
   switch (state_) {
     case State::RESPONDING:
       Base::generateRequest(n);
+      break;
     case State::CLOSED:
       break;
   }
 }
 
-void ChannelResponder::cancelImpl() {
+void ChannelResponder::cancelImpl() noexcept {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;

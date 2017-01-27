@@ -5,18 +5,18 @@
 namespace reactivesocket {
 
 void ChannelRequester::onSubscribeImpl(
-    std::shared_ptr<Subscription> subscription) {
+    std::shared_ptr<Subscription> subscription) noexcept {
   CHECK(State::NEW == state_);
   Base::onSubscribe(subscription);
   // Request the first payload immediately.
   subscription->request(1);
 }
 
-void ChannelRequester::onNextImpl(Payload request) {
+void ChannelRequester::onNextImpl(Payload request) noexcept {
   switch (state_) {
     case State::NEW: {
       state_ = State::REQUESTED;
-      // FIXME: find a root cause of this assymetry; the problem here is that
+      // FIXME: find a root cause of this asymmetry; the problem here is that
       // the Base::request might be delivered after the whole thing is shut
       // down, if one uses InlineConnection.
       size_t initialN = initialResponseAllowance_.drainWithLimit(
@@ -49,7 +49,7 @@ void ChannelRequester::onNextImpl(Payload request) {
 }
 
 // TODO: consolidate code in onCompleteImpl, onErrorImpl, cancelImpl
-void ChannelRequester::onCompleteImpl() {
+void ChannelRequester::onCompleteImpl() noexcept {
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;
@@ -67,7 +67,7 @@ void ChannelRequester::onCompleteImpl() {
   }
 }
 
-void ChannelRequester::onErrorImpl(folly::exception_wrapper ex) {
+void ChannelRequester::onErrorImpl(folly::exception_wrapper ex) noexcept {
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;
@@ -83,7 +83,7 @@ void ChannelRequester::onErrorImpl(folly::exception_wrapper ex) {
   }
 }
 
-void ChannelRequester::requestImpl(size_t n) {
+void ChannelRequester::requestImpl(size_t n) noexcept {
   switch (state_) {
     case State::NEW:
       // The initial request has not been sent out yet, hence we must accumulate
@@ -100,7 +100,7 @@ void ChannelRequester::requestImpl(size_t n) {
   }
 }
 
-void ChannelRequester::cancelImpl() {
+void ChannelRequester::cancelImpl() noexcept {
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;

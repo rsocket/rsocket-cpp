@@ -28,12 +28,13 @@ template <typename T>
 class SubscriberBaseT : public Subscriber<T>,
                         public EnableSharedFromThisBase<SubscriberBaseT<T>>,
                         public virtual ExecutorBase {
-  virtual void onSubscribeImpl(std::shared_ptr<Subscription> subscription) = 0;
-  virtual void onNextImpl(T payload) = 0;
-  virtual void onCompleteImpl() = 0;
-  virtual void onErrorImpl(folly::exception_wrapper ex) = 0;
+  virtual void onSubscribeImpl(
+      std::shared_ptr<Subscription> subscription) noexcept = 0;
+  virtual void onNextImpl(T payload) noexcept = 0;
+  virtual void onCompleteImpl() noexcept = 0;
+  virtual void onErrorImpl(folly::exception_wrapper ex) noexcept = 0;
 
-  // used to be able to cancel subscription immediately, making sure we dont
+  // used to be able to cancel subscription immediately, making sure we don't
   // deliver any other signals after that
   // also to break the reference cycle involving storing subscription pointer
   // for the users of the SubscriberBase
@@ -43,7 +44,7 @@ class SubscriberBaseT : public Subscriber<T>,
         std::shared_ptr<SubscriberBaseT<T>> parentSubscriber)
         : parentSubscriber_(std::move(parentSubscriber)) {}
 
-    void request(size_t n) override final {
+    void request(size_t n) noexcept override final {
       if (auto parent = parentSubscriber_.lock()) {
         parent->runInExecutor([parent, n]() {
           if (!parent->cancelled_) {
@@ -53,7 +54,7 @@ class SubscriberBaseT : public Subscriber<T>,
       }
     }
 
-    void cancel() override final {
+    void cancel() noexcept override final {
       if (auto parent = parentSubscriber_.lock()) {
         if (!parent->cancelled_.exchange(true)) {
           parent->runInExecutor([parent]() {
@@ -75,19 +76,17 @@ class SubscriberBaseT : public Subscriber<T>,
   friend class SubscriptionShim;
 
  public:
-  // in c++11 we have to declare this explicitly, instead of
-  // using ExecutorBase::ExecutorBase because of atomic cancelled_ member :(
-  // maybe it is gcc issue
   // initialization of the ExecutorBase will be ignored for any of the
-  // classes deriving from SubscriberBaseT
+  // classes deriving from SubscriberBase
   // providing the default param values just to make the compiler happy
   explicit SubscriberBaseT(folly::Executor& executor = defaultExecutor())
-      : ExecutorBase(executor), cancelled_(false) {}
+      : ExecutorBase(executor) {}
 
-  void onSubscribe(std::shared_ptr<Subscription> subscription) override final {
+  void onSubscribe(
+      std::shared_ptr<Subscription> subscription) noexcept override final {
     auto thisPtr = this->shared_from_this();
     runInExecutor([thisPtr, subscription]() {
-      VLOG(1) << (ExecutorBase*)thisPtr.get() << " onSubscribe";
+      VLOG(1) << static_cast<ExecutorBase*>(thisPtr.get()) << " onSubscribe";
       CHECK(!thisPtr->originalSubscription_);
       thisPtr->originalSubscription_ = std::move(subscription);
       // if the subscription got cancelled in the meantime, we will not try to
@@ -99,21 +98,21 @@ class SubscriberBaseT : public Subscriber<T>,
     });
   }
 
-  void onNext(T payload) override final {
+  void onNext(T payload) noexcept override final {
     auto movedPayload = folly::makeMoveWrapper(std::move(payload));
     auto thisPtr = this->shared_from_this();
     runInExecutor([thisPtr, movedPayload]() mutable {
-      VLOG(1) << (ExecutorBase*)thisPtr.get() << " onNext";
+      VLOG(1) << static_cast<ExecutorBase*>(thisPtr.get()) << " onNext";
       if (!thisPtr->cancelled_) {
         thisPtr->onNextImpl(movedPayload.move());
       }
     });
   }
 
-  void onComplete() override final {
+  void onComplete() noexcept override final {
     auto thisPtr = this->shared_from_this();
     runInExecutor([thisPtr]() {
-      VLOG(1) << (ExecutorBase*)thisPtr.get() << " onComplete";
+      VLOG(1) << static_cast<ExecutorBase*>(thisPtr.get()) << " onComplete";
       if (!thisPtr->cancelled_.exchange(true)) {
         thisPtr->onCompleteImpl();
 
@@ -124,11 +123,11 @@ class SubscriberBaseT : public Subscriber<T>,
     });
   }
 
-  void onError(folly::exception_wrapper ex) override final {
+  void onError(folly::exception_wrapper ex) noexcept override final {
     auto movedEx = folly::makeMoveWrapper(std::move(ex));
     auto thisPtr = this->shared_from_this();
     runInExecutor([thisPtr, movedEx]() mutable {
-      VLOG(1) << (ExecutorBase*)thisPtr.get() << " onError";
+      VLOG(1) << static_cast<ExecutorBase*>(thisPtr.get()) << " onError";
       if (!thisPtr->cancelled_.exchange(true)) {
         thisPtr->onErrorImpl(movedEx.move());
 
@@ -151,7 +150,7 @@ class SubscriberBaseT : public Subscriber<T>,
   // that 2 threads race for sending onNext and onComplete. We need to make sure
   // that once the terminating signal is delivered we no longer try to deliver
   // onNext.
-  std::atomic<bool> cancelled_;
+  std::atomic<bool> cancelled_{false};
 
   std::shared_ptr<Subscription> originalSubscription_;
 };

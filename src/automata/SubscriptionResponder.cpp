@@ -5,7 +5,7 @@
 
 namespace reactivesocket {
 
-void SubscriptionResponder::onCompleteImpl() {
+void SubscriptionResponder::onCompleteImpl() noexcept {
   LOG(FATAL) << "onComplete is not allowed on Subscription iteraction.";
 }
 
