@@ -127,7 +127,7 @@ void ConnectionAutomaton::close(
   closeStreams(signal);
   closeFrameTransport(std::move(ex));
   if (onClosed_) {
-    stats_.socketClosed();
+    stats_.socketClosed(signal);
     auto onClosed = std::move(onClosed_);
     onClosed_ = nullptr;
     onClosed();
@@ -159,8 +159,35 @@ void ConnectionAutomaton::closeWithError(Frame_ERROR&& error) {
   VLOG(4) << "closeWithError "
           << error.payload_.data->cloneAsValue().moveToFbString();
 
+  StreamCompletionSignal signal;
+  switch (error.errorCode_) {
+    case ErrorCode::INVALID_SETUP:
+      signal = StreamCompletionSignal::INVALID_SETUP;
+      break;
+    case ErrorCode::UNSUPPORTED_SETUP:
+      signal = StreamCompletionSignal::UNSUPPORTED_SETUP;
+      break;
+    case ErrorCode::REJECTED_SETUP:
+      signal = StreamCompletionSignal::REJECTED_SETUP;
+      break;
+    case ErrorCode::CONNECTION_ERROR:
+      signal = StreamCompletionSignal::CONNECTION_ERROR;
+      break;
+    case ErrorCode::APPLICATION_ERROR:
+      signal = StreamCompletionSignal::ERROR;
+      break;
+    case ErrorCode::REJECTED:
+      signal = StreamCompletionSignal::ERROR;
+      break;
+    case ErrorCode::INVALID:
+      signal = StreamCompletionSignal::ERROR;
+      break;
+    default:
+      signal = StreamCompletionSignal::ERROR;
+  }
+
   outputFrameOrEnqueue(error.serializeOut());
-  close(folly::exception_wrapper(), StreamCompletionSignal::ERROR);
+  close(folly::exception_wrapper(), signal);
 }
 
 void ConnectionAutomaton::reconnect(
@@ -357,7 +384,8 @@ void ConnectionAutomaton::onConnectionFrame(
         //          }
         //        }
       } else {
-        closeWithError(Frame_ERROR::connectionError("can not resume"));
+        closeWithError(
+            Frame_ERROR::connectionError("RS not resumable. Can not resume"));
       }
       return;
     }
@@ -453,7 +481,8 @@ bool ConnectionAutomaton::resumeFromPositionOrClose(
     resumeFromPosition(position);
     return true;
   } else {
-    closeWithError(Frame_ERROR::connectionError("can not resume"));
+    closeWithError(
+        Frame_ERROR::connectionError("Position not available. Can not resume"));
     return false;
   }
 }

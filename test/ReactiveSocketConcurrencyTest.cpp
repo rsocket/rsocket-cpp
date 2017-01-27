@@ -41,7 +41,7 @@ class ClientSideConcurrencyTest : public testing::Test {
     auto& serverHandlerRef = *serverHandler;
 
     EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
-        .WillRepeatedly(Return(std::make_shared<StreamState>()));
+        .WillRepeatedly(Return(std::make_shared<StreamState>(Stats::noop())));
 
     serverSock = StandardReactiveSocket::fromServerConnection(
         defaultExecutor(), std::move(serverConn), std::move(serverHandler));
@@ -245,7 +245,7 @@ class ServerSideConcurrencyTest : public testing::Test {
     auto& serverHandlerRef = *serverHandler;
 
     EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
-        .WillRepeatedly(Return(std::make_shared<StreamState>()));
+        .WillRepeatedly(Return(std::make_shared<StreamState>(Stats::noop())));
 
     serverSock = StandardReactiveSocket::fromServerConnection(
         *thread2.getEventBase(),
@@ -474,7 +474,7 @@ class InitialRequestNDeliveredTest : public testing::Test {
     auto& serverHandlerRef = *serverHandler;
 
     EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
-        .WillRepeatedly(Return(std::make_shared<StreamState>()));
+        .WillRepeatedly(Return(std::make_shared<StreamState>(Stats::noop())));
 
     EXPECT_CALL(serverHandlerRef, handleRequestSubscription_(_, _, _))
         .Times(AtMost(1))

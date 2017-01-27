@@ -15,7 +15,7 @@ namespace reactivesocket {
 class MockStats : public Stats {
  public:
   MOCK_METHOD0(socketCreated, void());
-  MOCK_METHOD0(socketClosed, void());
+  MOCK_METHOD1(socketClosed, void(StreamCompletionSignal));
   MOCK_METHOD0(socketDisconnected, void());
 
   MOCK_METHOD2(
@@ -29,5 +29,6 @@ class MockStats : public Stats {
   MOCK_METHOD1(bytesRead, void(size_t));
   MOCK_METHOD1(frameWritten, void(const std::string&));
   MOCK_METHOD1(frameRead, void(const std::string&));
+  MOCK_METHOD2(resumeBufferChanged, void(int, int));
 };
 }

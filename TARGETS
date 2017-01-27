@@ -113,7 +113,7 @@ cpp_library(
         ':reactivesocket-tcp-internal',
         '@/lithium/reactive-streams-cpp:reactive-streams',
         '@/lithium/reactivesocket-utils:reactivesocket-external-utils',
-        '//folly/io/async:async',
+        '@/folly/io/async:async',
     ],
     compiler_flags=['-DREACTIVE_SOCKET_EXTERNAL_STACK_TRACE_UTILS'],
 )
@@ -153,7 +153,7 @@ cpp_unittest(
         ':reactivesocket',
         ':reactivesocket-plugins',
         ':reactivesocket-streams-mocks',
-        '//folly/io/async:scoped_event_base_thread',
+        '@/folly/io/async:scoped_event_base_thread',
     ],
     external_deps = [
         'gmock',

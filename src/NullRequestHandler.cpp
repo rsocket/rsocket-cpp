@@ -1,6 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "NullRequestHandler.h"
+#include "src/NullRequestHandler.h"
+#include "src/Stats.h"
 
 #include <folly/ExceptionWrapper.h>
 
@@ -66,7 +67,7 @@ void NullRequestHandler::handleMetadataPush(
 std::shared_ptr<StreamState> NullRequestHandler::handleSetupPayload(
     ReactiveSocket& socket,
     ConnectionSetupPayload /*request*/) {
-  return std::make_shared<StreamState>();
+  return std::make_shared<StreamState>(Stats::noop());
 }
 
 bool NullRequestHandler::handleResume(

@@ -61,7 +61,7 @@ TEST(ReactiveSocketTest, RequestChannel) {
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
       .InSequence(s)
-      .WillRepeatedly(Return(std::make_shared<StreamState>()));
+      .WillRepeatedly(Return(std::make_shared<StreamState>(Stats::noop())));
 
   auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
@@ -180,7 +180,7 @@ TEST(ReactiveSocketTest, RequestStreamComplete) {
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
       .InSequence(s)
-      .WillRepeatedly(Return(std::make_shared<StreamState>()));
+      .WillRepeatedly(Return(std::make_shared<StreamState>(Stats::noop())));
 
   auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
@@ -269,7 +269,7 @@ TEST(ReactiveSocketTest, RequestStreamCancel) {
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
       .InSequence(s)
-      .WillRepeatedly(Return(std::make_shared<StreamState>()));
+      .WillRepeatedly(Return(std::make_shared<StreamState>(Stats::noop())));
 
   auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
@@ -355,7 +355,7 @@ TEST(ReactiveSocketTest, RequestSubscription) {
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
       .InSequence(s)
-      .WillRepeatedly(Return(std::make_shared<StreamState>()));
+      .WillRepeatedly(Return(std::make_shared<StreamState>(Stats::noop())));
 
   auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
@@ -443,7 +443,7 @@ TEST(ReactiveSocketTest, RequestSubscriptionSurplusResponse) {
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
       .InSequence(s)
-      .WillRepeatedly(Return(std::make_shared<StreamState>()));
+      .WillRepeatedly(Return(std::make_shared<StreamState>(Stats::noop())));
 
   auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
@@ -517,7 +517,7 @@ TEST(ReactiveSocketTest, RequestResponse) {
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
       .InSequence(s)
-      .WillRepeatedly(Return(std::make_shared<StreamState>()));
+      .WillRepeatedly(Return(std::make_shared<StreamState>(Stats::noop())));
 
   auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
@@ -590,7 +590,7 @@ TEST(ReactiveSocketTest, RequestFireAndForget) {
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
       .InSequence(s)
-      .WillRepeatedly(Return(std::make_shared<StreamState>()));
+      .WillRepeatedly(Return(std::make_shared<StreamState>(Stats::noop())));
 
   auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
@@ -629,7 +629,7 @@ TEST(ReactiveSocketTest, RequestMetadataPush) {
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
       .InSequence(s)
-      .WillRepeatedly(Return(std::make_shared<StreamState>()));
+      .WillRepeatedly(Return(std::make_shared<StreamState>(Stats::noop())));
 
   auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
@@ -667,7 +667,7 @@ TEST(ReactiveSocketTest, SetupData) {
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
       .InSequence(s)
-      .WillRepeatedly(Return(std::make_shared<StreamState>()));
+      .WillRepeatedly(Return(std::make_shared<StreamState>(Stats::noop())));
 
   auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
@@ -694,7 +694,7 @@ TEST(ReactiveSocketTest, SetupWithKeepaliveAndStats) {
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
       .InSequence(s)
-      .WillRepeatedly(Return(std::make_shared<StreamState>()));
+      .WillRepeatedly(Return(std::make_shared<StreamState>(Stats::noop())));
 
   EXPECT_CALL(*clientKeepalive, stop()).InSequence(s);
 
@@ -739,8 +739,8 @@ TEST(ReactiveSocketTest, Destructor) {
 
   EXPECT_CALL(clientStats, socketCreated()).Times(1);
   EXPECT_CALL(serverStats, socketCreated()).Times(1);
-  EXPECT_CALL(clientStats, socketClosed()).Times(1);
-  EXPECT_CALL(serverStats, socketClosed()).Times(1);
+  EXPECT_CALL(clientStats, socketClosed(_)).Times(1);
+  EXPECT_CALL(serverStats, socketClosed(_)).Times(1);
 
   auto clientSock = StandardReactiveSocket::fromClientConnection(
       defaultExecutor(),
@@ -755,7 +755,7 @@ TEST(ReactiveSocketTest, Destructor) {
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
       .InSequence(s)
-      .WillRepeatedly(Return(std::make_shared<StreamState>()));
+      .WillRepeatedly(Return(std::make_shared<StreamState>(Stats::noop())));
 
   auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(),
@@ -837,7 +837,7 @@ TEST(ReactiveSocketTest, ReactiveSocketOverInlineConnection) {
   auto& serverHandlerRef = *serverHandler;
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
-      .WillRepeatedly(Return(std::make_shared<StreamState>()));
+      .WillRepeatedly(Return(std::make_shared<StreamState>(Stats::noop())));
 
   auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
@@ -943,7 +943,7 @@ class ReactiveSocketOnErrorOnShutdownTest : public testing::Test {
     auto& serverHandlerRef = *serverHandler;
 
     EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
-        .WillRepeatedly(Return(std::make_shared<StreamState>()));
+        .WillRepeatedly(Return(std::make_shared<StreamState>(Stats::noop())));
 
     serverSock = StandardReactiveSocket::fromServerConnection(
         defaultExecutor(), std::move(serverConn), std::move(serverHandler));

@@ -91,13 +91,13 @@ int main(int argc, char* argv[]) {
         folly::make_unique<FollyKeepaliveTimer>(
             *eventBaseThread.getEventBase(), std::chrono::seconds(10)));
 
-    reactiveSocket->onConnected([](StandardReactiveSocket& socket) {
+    reactiveSocket->onConnected([](ReactiveSocket& socket) {
       LOG(INFO) << "socket connected " << &socket;
     });
-    reactiveSocket->onDisconnected([](StandardReactiveSocket& socket) {
+    reactiveSocket->onDisconnected([](ReactiveSocket& socket) {
       LOG(INFO) << "socket disconnect " << &socket;
     });
-    reactiveSocket->onClosed([](StandardReactiveSocket& socket) {
+    reactiveSocket->onClosed([](ReactiveSocket& socket) {
       LOG(INFO) << "socket closed " << &socket;
     });
 

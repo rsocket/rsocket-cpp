@@ -46,7 +46,7 @@ StandardReactiveSocket::StandardReactiveSocket(
             createResponder(
                 handler, connection, streamId, std::move(serializedFrame));
           },
-          std::make_shared<StreamState>(),
+          std::make_shared<StreamState>(stats),
           std::bind(
               &StandardReactiveSocket::resumeListener,
               this,
@@ -446,7 +446,7 @@ bool StandardReactiveSocket::tryResumeServer(
     ResumePosition position) {
   // TODO: verify/assert that the new frameTransport is on the same event base
   checkNotClosed();
-
+  disconnect();
   // TODO: verify, we should not be receiving any frames, not a single one
   connection_->connect(std::move(frameTransport), /*sendPendingFrames=*/false);
   return connection_->resumeFromPositionOrClose(position, true);
