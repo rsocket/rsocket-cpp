@@ -86,7 +86,10 @@ cpp_library(
         '@/folly:exception_wrapper',
         '@/lithium/reactivesocket-utils:reactivesocket-external-utils',
     ],
-    compiler_flags=['-DREACTIVE_SOCKET_EXTERNAL_STACK_TRACE_UTILS'],
+    compiler_flags=[
+        '-DREACTIVE_SOCKET_EXTERNAL_STACK_TRACE_UTILS',
+        '-DHACK_ASSUME_RESUMPTION=1',
+    ],
 )
 
 cpp_library(

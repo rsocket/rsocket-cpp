@@ -465,6 +465,12 @@ bool Frame_SETUP::deserializeFrom(std::unique_ptr<folly::IOBuf> in) {
 
     // TODO: Remove hack:
     // https://github.com/ReactiveSocket/reactivesocket-cpp/issues/243
+#ifdef HACK_ASSUME_RESUMPTION
+    // Old clients didn't properly set the RESUME_ENABLE flag
+    if (version_ == 0) {
+      header_.flags_ |= FrameFlags_RESUME_ENABLE;
+    }
+#endif
     if (header_.flags_ & FrameFlags_RESUME_ENABLE) {
       ResumeIdentificationToken::Data data;
       cur.pull(data.data(), data.size());

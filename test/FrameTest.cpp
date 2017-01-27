@@ -137,7 +137,7 @@ TEST(FrameTest, Frame_KEEPALIVE) {
 
 TEST(FrameTest, Frame_SETUP) {
   FrameFlags flags = FrameFlags_EMPTY;
-  uint32_t version = 0;
+  uint32_t version = 1;
   uint32_t keepaliveTime = std::numeric_limits<uint32_t>::max();
   uint32_t maxLifetime = std::numeric_limits<uint32_t>::max();
   ResumeIdentificationToken::Data tokenData;

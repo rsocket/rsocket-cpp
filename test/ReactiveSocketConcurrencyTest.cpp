@@ -555,7 +555,7 @@ class InitialRequestNDeliveredTest : public testing::Test {
     testConnection->getOutput()->onNext(
         Frame_SETUP(
             FrameFlags_EMPTY,
-            0,
+            1,
             0,
             0,
             ResumeIdentificationToken::generateNew(),
