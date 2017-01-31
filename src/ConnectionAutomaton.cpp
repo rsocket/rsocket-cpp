@@ -119,10 +119,14 @@ void ConnectionAutomaton::disconnect() {
     return;
   }
 
-  closeFrameTransport(folly::exception_wrapper());
-  pauseStreams();
-  stats_.socketDisconnected();
-  onDisconnected_();
+  if (isResumable_) {
+    closeFrameTransport(folly::exception_wrapper());
+    pauseStreams();
+    stats_.socketDisconnected();
+    onDisconnected_();
+  } else {
+    close();
+  }
 }
 
 void ConnectionAutomaton::close() {
