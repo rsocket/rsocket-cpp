@@ -47,6 +47,8 @@ class FrameSink {
  public:
   virtual ~FrameSink() = default;
 
+  virtual void disconnect() = 0;
+
   /// Terminates underlying connection sending the error frame
   /// on the connection.
   ///
@@ -99,7 +101,7 @@ class ConnectionAutomaton
 
   /// Disconnects DuplexConnection from the automaton.
   /// Existing streams will stay intact.
-  void disconnect();
+  void disconnect() override;
 
   std::shared_ptr<FrameTransport> detachFrameTransport();
 
