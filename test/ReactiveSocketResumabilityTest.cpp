@@ -37,7 +37,7 @@ TEST(ReactiveSocketResumabilityTest, Disconnect) {
       defaultExecutor(),
       std::move(socketConnection),
       folly::make_unique<DefaultRequestHandler>(),
-      ConnectionSetupPayload(),
+      ConnectionSetupPayload("", "", Payload(), true),
       stats);
 
   auto responseSubscriber = std::make_shared<MockSubscriber<Payload>>();
