@@ -4,47 +4,26 @@
 #include <folly/Optional.h>
 #include <algorithm>
 #include "src/FrameTransport.h"
+#include "src/ResumeTracker.h"
 #include "src/Stats.h"
 
 namespace reactivesocket {
 
 void ResumeCache::trackSentFrame(const folly::IOBuf& serializedFrame) {
-  auto frameType = FrameHeader::peekType(serializedFrame);
-  auto streamIdPtr = FrameHeader::peekStreamId(serializedFrame);
+  if (ResumeTracker::shouldTrackFrame(serializedFrame)) {
+    // TODO(tmont): this could be expensive, find a better way to determine
+    auto frameDataLength = serializedFrame.computeChainDataLength();
+    addFrame(serializedFrame, frameDataLength);
 
-  switch (frameType) {
-    case FrameType::REQUEST_CHANNEL:
-    case FrameType::REQUEST_STREAM:
-    case FrameType::REQUEST_SUB:
-    case FrameType::REQUEST_RESPONSE:
-    case FrameType::REQUEST_FNF:
-    case FrameType::REQUEST_N:
-    case FrameType::CANCEL:
-    case FrameType::ERROR:
-    case FrameType::RESPONSE: {
-      // TODO(tmont): this could be expensive, find a better way to determine
-      auto frameDataLength = serializedFrame.computeChainDataLength();
-      addFrame(serializedFrame, frameDataLength);
+    position_ += frameDataLength;
 
-      position_ += frameDataLength;
+    // TODO(tmont): this is not ideal, but memory usage is more important
+    auto streamIdPtr = FrameHeader::peekStreamId(serializedFrame);
+    if (streamIdPtr) {
+      const StreamId streamId = *streamIdPtr;
 
-      // TODO(tmont): this is not ideal, but memory usage is more important
-      if (streamIdPtr) {
-        const StreamId streamId = *streamIdPtr;
-
-        streamMap_[streamId] = position_;
-      }
-    } break;
-
-    case FrameType::RESERVED:
-    case FrameType::SETUP:
-    case FrameType::LEASE:
-    case FrameType::KEEPALIVE:
-    case FrameType::METADATA_PUSH:
-    case FrameType::RESUME:
-    case FrameType::RESUME_OK:
-    default:
-      break;
+      streamMap_[streamId] = position_;
+    }
   }
 }
 

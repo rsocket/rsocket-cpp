@@ -15,8 +15,8 @@ using namespace ::reactivesocket;
 template <typename Frame, typename... Args>
 Frame reserialize_resume(bool resumable, Args... args) {
   Frame frame;
-  EXPECT_TRUE(
-      frame.deserializeFrom(resumable, Frame(std::forward<Args>(args)...).serializeOut(resumable)));
+  EXPECT_TRUE(frame.deserializeFrom(
+      resumable, Frame(std::forward<Args>(args)...).serializeOut(resumable)));
   return frame;
 }
 
@@ -135,7 +135,8 @@ TEST(FrameTest, Frame_KEEPALIVE_resume) {
   ResumePosition position = 101;
   auto flags = FrameFlags_KEEPALIVE_RESPOND;
   auto data = folly::IOBuf::copyBuffer("424242");
-  auto frame = reserialize_resume<Frame_KEEPALIVE>(true, flags, position, data->clone());
+  auto frame =
+      reserialize_resume<Frame_KEEPALIVE>(true, flags, position, data->clone());
 
   expectHeader(
       FrameType::KEEPALIVE, FrameFlags_KEEPALIVE_RESPOND, streamId, frame);
@@ -148,7 +149,8 @@ TEST(FrameTest, Frame_KEEPALIVE) {
   ResumePosition position = 101;
   auto flags = FrameFlags_KEEPALIVE_RESPOND;
   auto data = folly::IOBuf::copyBuffer("424242");
-  auto frame = reserialize_resume<Frame_KEEPALIVE>(false, flags, position, data->clone());
+  auto frame = reserialize_resume<Frame_KEEPALIVE>(
+      false, flags, position, data->clone());
 
   expectHeader(
       FrameType::KEEPALIVE, FrameFlags_KEEPALIVE_RESPOND, streamId, frame);
