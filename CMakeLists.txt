@@ -49,23 +49,36 @@ set(GMOCK_LIBS
 ExternalProject_Add(
   ReactiveStreams
   GIT_REPOSITORY ${REACTIVE_STREAMS_GIT_URL}
+  GIT_TAG d2fd61252b51a57a2916ee52fcd54b7f5d563591
   CMAKE_ARGS "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/reactivestreams"
 )
 
 find_package(Threads)
 
 if(APPLE)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
-else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-endif(APPLE)
+  set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl")
+endif()
+
+if(NOT META_CXX_STD)
+  # Defaults to C++14 if not set:
+  set(META_CXX_STD 14)
+endif()
 
 # Common configuration for all build modes.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter -Werror -Woverloaded-virtual")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -momit-leaf-frame-pointer")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++${META_CXX_STD}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter -Woverloaded-virtual")
 
-# Configuration for Debug build mode.
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+  set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Werror -Weverything -pedantic-errors)
+  set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Wno-unreachable-code-break -Wno-covered-switch-default)
+  set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Wno-padded -Wno-weak-vtables -Wno-weak-template-vtables)
+  set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Wno-global-constructors -Wno-exit-time-destructors)
+  set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Wno-unreachable-code-return)
+  set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Wno-c++98-compat -Wno-c++98-compat-pedantic)
+  set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Wno-abstract-vbase-init)
+elseif(CMAKE_COMPILER_IS_GNUCXX)
+  set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Werror -pedantic -pedantic-errors)
+endif()
 
 find_package(Folly REQUIRED)
 find_package(OpenSSL REQUIRED)
@@ -162,12 +175,11 @@ add_library(
   src/Executor.h
   src/automata/StreamAutomatonBase.cpp
   src/automata/StreamAutomatonBase.h
-  src/automata/StreamResponder.cpp
-  src/automata/SubscriptionResponder.cpp
+        src/automata/SubscriptionResponder.cpp
   src/FrameTransport.cpp
   src/FrameTransport.h
   src/FrameProcessor.h
-  src/ReactiveSocket.h)
+  src/ReactiveSocket.h src/StreamsFactory.cpp src/StreamsFactory.h)
 
 target_link_libraries(
   ReactiveSocket
@@ -175,6 +187,10 @@ target_link_libraries(
   ${GLOG_LIBRARY})
 
 add_dependencies(ReactiveSocket ReactiveStreams)
+
+target_compile_options(
+  ReactiveSocket
+  PRIVATE ${EXTRA_CXX_FLAGS})
 
 enable_testing()
 
@@ -204,7 +220,7 @@ add_executable(
   test/SmartPointersTest.cpp
   test/AllowanceSemaphoreTest.cpp
   test/ResumeIdentificationTokenTest.cpp
-  test/PayloadTest.cpp)
+  test/PayloadTest.cpp test/ResumeCacheTest.cpp)
 
 target_link_libraries(
   tests

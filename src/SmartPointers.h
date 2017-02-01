@@ -69,7 +69,7 @@ class SubscriberPtr {
   }
 
   explicit operator bool() const {
-    return (bool)subscriber_;
+    return static_cast<bool>(subscriber_);
   }
 
   operator std::shared_ptr<S>() const {
@@ -165,7 +165,7 @@ class SubscriptionPtr {
   }
 
   explicit operator bool() const {
-    return (bool)subscription_;
+    return static_cast<bool>(subscription_);
   }
 
   operator std::shared_ptr<S>() const {

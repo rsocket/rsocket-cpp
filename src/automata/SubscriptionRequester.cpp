@@ -12,9 +12,4 @@ void SubscriptionRequester::sendRequestFrame(
       streamId_, flags, static_cast<uint32_t>(initialN), std::move(request));
   connection_->outputFrameOrEnqueue(frame.serializeOut());
 }
-
-std::ostream& SubscriptionRequester::logPrefix(std::ostream& os) {
-  return os << "SubscriptionRequester(" << &connection_ << ", " << streamId_
-            << "): ";
-}
 }

@@ -12,10 +12,10 @@ class SubscriptionRequester : public StreamSubscriptionRequesterBase {
   using Base = StreamSubscriptionRequesterBase;
 
  public:
-  explicit SubscriptionRequester(const Base::Parameters& params)
-      : ExecutorBase(params.executor), Base(params) {}
-
-  std::ostream& logPrefix(std::ostream& os);
+  explicit SubscriptionRequester(
+      const Base::Parameters& params,
+      Payload payload)
+      : ExecutorBase(params.executor), Base(params, std::move(payload)) {}
 
  private:
   void sendRequestFrame(FrameFlags, size_t, Payload&&) override;

@@ -27,21 +27,19 @@ class ChannelRequester : public PublisherMixin<
 
  public:
   explicit ChannelRequester(const Base::Parameters& params)
-      : ExecutorBase(params.executor), Base(params) {}
-
-  std::ostream& logPrefix(std::ostream& os);
+      : ExecutorBase(params.executor), Base(0, params) {}
 
  private:
   /// @{
-  void onSubscribeImpl(std::shared_ptr<Subscription>) override;
-  void onNextImpl(Payload) override;
-  void onCompleteImpl() override;
-  void onErrorImpl(folly::exception_wrapper) override;
+  void onSubscribeImpl(std::shared_ptr<Subscription>) noexcept override;
+  void onNextImpl(Payload) noexcept override;
+  void onCompleteImpl() noexcept override;
+  void onErrorImpl(folly::exception_wrapper) noexcept override;
   /// @}
 
   // implementation from ConsumerMixin::SubscriptionBase
-  void requestImpl(size_t) override;
-  void cancelImpl() override;
+  void requestImpl(size_t) noexcept override;
+  void cancelImpl() noexcept override;
 
   using Base::onNextFrame;
   void onNextFrame(Frame_RESPONSE&&) override;

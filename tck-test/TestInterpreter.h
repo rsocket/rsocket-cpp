@@ -48,4 +48,4 @@ class TestInterpreter {
 };
 
 } // tck
-} // reactive socket
+} // reactivesocket

@@ -21,22 +21,23 @@ class FramedWriter : public SubscriberBaseT<std::unique_ptr<folly::IOBuf>>,
  public:
   explicit FramedWriter(
       std::shared_ptr<reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
-          stream)
-      : ExecutorBase(defaultExecutor()), stream_(std::move(stream)) {}
+          stream,
+      folly::Executor& executor)
+      : ExecutorBase(executor), stream_(std::move(stream)) {}
 
   void onNextMultiple(std::vector<std::unique_ptr<folly::IOBuf>> element);
 
  private:
   // Subscriber methods
-  void onSubscribeImpl(
-      std::shared_ptr<reactivesocket::Subscription> subscription) override;
-  void onNextImpl(std::unique_ptr<folly::IOBuf> element) override;
-  void onCompleteImpl() override;
-  void onErrorImpl(folly::exception_wrapper ex) override;
+  void onSubscribeImpl(std::shared_ptr<reactivesocket::Subscription>
+                           subscription) noexcept override;
+  void onNextImpl(std::unique_ptr<folly::IOBuf> element) noexcept override;
+  void onCompleteImpl() noexcept override;
+  void onErrorImpl(folly::exception_wrapper ex) noexcept override;
 
   // Subscription methods
-  void requestImpl(size_t n) override;
-  void cancelImpl() override;
+  void requestImpl(size_t n) noexcept override;
+  void cancelImpl() noexcept override;
 
   using EnableSharedFromThisBase<FramedWriter>::shared_from_this;
 
@@ -45,4 +46,4 @@ class FramedWriter : public SubscriberBaseT<std::unique_ptr<folly::IOBuf>>,
   SubscriptionPtr<::reactivestreams::Subscription> writerSubscription_;
 };
 
-} // reactive socket
+} // reactivesocket

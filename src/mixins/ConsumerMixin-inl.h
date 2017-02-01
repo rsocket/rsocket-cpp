@@ -1,7 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #pragma once
-#include "ConsumerMixin.h"
+#include "src/mixins/ConsumerMixin.h"
 
 #include <glog/logging.h>
 #include <algorithm>
@@ -14,7 +14,7 @@ namespace reactivesocket {
 template <typename Frame>
 void ConsumerMixin<Frame>::onError(folly::exception_wrapper ex) {
   consumingSubscriber_.onError(std::move(ex));
-};
+}
 
 template <typename Frame>
 void ConsumerMixin<Frame>::processPayload(Frame&& frame) {

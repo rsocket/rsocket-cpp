@@ -34,10 +34,11 @@ class TestSubscriber : public reactivesocket::Subscriber<Payload> {
   void assertCanceled();
 
  protected:
-  void onSubscribe(std::shared_ptr<Subscription> subscription) override;
-  void onNext(Payload element) override;
-  void onComplete() override;
-  void onError(folly::exception_wrapper ex) override;
+  void onSubscribe(
+      std::shared_ptr<Subscription> subscription) noexcept override;
+  void onNext(Payload element) noexcept override;
+  void onComplete() noexcept override;
+  void onError(folly::exception_wrapper ex) noexcept override;
 
  private:
   void assertTerminated();
@@ -63,4 +64,4 @@ class TestSubscriber : public reactivesocket::Subscriber<Payload> {
 };
 
 } // tck
-} // reactive socket
+} // reactivesocket

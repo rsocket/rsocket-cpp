@@ -5,13 +5,14 @@
 
 namespace reactivesocket {
 
-void FramedReader::onSubscribeImpl(std::shared_ptr<Subscription> subscription) {
+void FramedReader::onSubscribeImpl(
+    std::shared_ptr<Subscription> subscription) noexcept {
   CHECK(!streamSubscription_);
   streamSubscription_.reset(std::move(subscription));
   frames_.onSubscribe(shared_from_this());
 }
 
-void FramedReader::onNextImpl(std::unique_ptr<folly::IOBuf> payload) {
+void FramedReader::onNextImpl(std::unique_ptr<folly::IOBuf> payload) noexcept {
   streamRequested_ = false;
 
   if (payload) {
@@ -57,19 +58,19 @@ void FramedReader::parseFrames() {
   dispatchingFrames_ = false;
 }
 
-void FramedReader::onCompleteImpl() {
+void FramedReader::onCompleteImpl() noexcept {
   payloadQueue_.move(); // equivalent to clear(), releases the buffers
   frames_.onComplete();
   streamSubscription_.cancel();
 }
 
-void FramedReader::onErrorImpl(folly::exception_wrapper ex) {
+void FramedReader::onErrorImpl(folly::exception_wrapper ex) noexcept {
   payloadQueue_.move(); // equivalent to clear(), releases the buffers
   frames_.onError(std::move(ex));
   streamSubscription_.cancel();
 }
 
-void FramedReader::requestImpl(size_t n) {
+void FramedReader::requestImpl(size_t n) noexcept {
   allowance_.release(n);
   parseFrames();
   requestStream();
@@ -82,10 +83,10 @@ void FramedReader::requestStream() {
   }
 }
 
-void FramedReader::cancelImpl() {
+void FramedReader::cancelImpl() noexcept {
   payloadQueue_.move(); // equivalent to clear(), releases the buffers
   streamSubscription_.cancel();
   frames_.onComplete();
 }
 
-} // reactive socket
+} // reactivesocket

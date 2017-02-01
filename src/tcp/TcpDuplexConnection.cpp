@@ -16,10 +16,9 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
  public:
   explicit TcpReaderWriter(
       folly::AsyncSocket::UniquePtr&& socket,
+      folly::Executor& executor,
       Stats& stats = Stats::noop())
-      : ExecutorBase(defaultExecutor()),
-        socket_(std::move(socket)),
-        stats_(stats) {}
+      : ExecutorBase(executor), socket_(std::move(socket)), stats_(stats) {}
 
   ~TcpReaderWriter() {
     socket_->close();
@@ -36,28 +35,29 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
   }
 
  private:
-  void onSubscribeImpl(std::shared_ptr<Subscription> subscription) override {
+  void onSubscribeImpl(
+      std::shared_ptr<Subscription> subscription) noexcept override {
     // no flow control at tcp level, since we can't know the size of messages
     subscription->request(std::numeric_limits<size_t>::max());
   }
 
-  void onNextImpl(std::unique_ptr<folly::IOBuf> element) override {
+  void onNextImpl(std::unique_ptr<folly::IOBuf> element) noexcept override {
     send(std::move(element));
   }
 
-  void onCompleteImpl() override {
+  void onCompleteImpl() noexcept override {
     closeFromWriter();
   }
 
-  void onErrorImpl(folly::exception_wrapper ex) override {
+  void onErrorImpl(folly::exception_wrapper ex) noexcept override {
     closeFromWriter();
   }
 
-  void requestImpl(size_t n) override {
+  void requestImpl(size_t n) noexcept override {
     // ignored for now, currently flow control is only at higher layers
   }
 
-  void cancelImpl() override {
+  void cancelImpl() noexcept override {
     closeFromReader();
   }
 
@@ -124,9 +124,12 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
 
 TcpDuplexConnection::TcpDuplexConnection(
     folly::AsyncSocket::UniquePtr&& socket,
+    folly::Executor& executor,
     Stats& stats)
-    : tcpReaderWriter_(
-          std::make_shared<TcpReaderWriter>(std::move(socket), stats)),
+    : tcpReaderWriter_(std::make_shared<TcpReaderWriter>(
+          std::move(socket),
+          executor,
+          stats)),
       stats_(stats) {
   stats_.duplexConnectionCreated("tcp", this);
 }

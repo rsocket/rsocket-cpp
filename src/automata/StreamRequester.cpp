@@ -12,8 +12,4 @@ void StreamRequester::sendRequestFrame(
       streamId_, flags, static_cast<uint32_t>(initialN), std::move(request));
   connection_->outputFrameOrEnqueue(frame.serializeOut());
 }
-
-std::ostream& StreamRequester::logPrefix(std::ostream& os) {
-  return os << "StreamRequester(" << &connection_ << ", " << streamId_ << "): ";
-}
 }

@@ -28,7 +28,7 @@ void FollyKeepaliveTimer::schedule() {
           schedule();
         }
       },
-      keepaliveTime().count());
+      static_cast<uint32_t>(keepaliveTime().count()));
 }
 
 void FollyKeepaliveTimer::sendKeepalive() {

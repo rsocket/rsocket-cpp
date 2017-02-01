@@ -34,23 +34,46 @@ class Callback : public AsyncSocket::ConnectCallback {
 };
 
 class ResumeCallback : public ClientResumeStatusCallback {
-  void onResumeOk() override {
+  void onResumeOk() noexcept override {
     LOG(INFO) << "resumeOk";
   }
 
   // Called when an ERROR frame with CONNECTION_ERROR is received during
   // resuming operation
-  void onResumeError(folly::exception_wrapper ex) override {
+  void onResumeError(folly::exception_wrapper ex) noexcept override {
     LOG(INFO) << "resumeError: " << ex.what();
   }
 
   // Called when the resume operation was interrupted due to network
   // the application code may try to resume again.
-  void onConnectionError(folly::exception_wrapper ex) override {
+  void onConnectionError(folly::exception_wrapper ex) noexcept override {
     LOG(INFO) << "connectionError: " << ex.what();
   }
 };
 }
+
+class ClientRequestHandler : public DefaultRequestHandler {
+ public:
+  void onSubscriptionPaused(
+      const std::shared_ptr<Subscription>& subscription) noexcept override {
+    LOG(INFO) << "subscription paused " << &subscription;
+  }
+
+  void onSubscriptionResumed(
+      const std::shared_ptr<Subscription>& subscription) noexcept override {
+    LOG(INFO) << "subscription resumed " << &subscription;
+  }
+
+  void onSubscriberPaused(const std::shared_ptr<Subscriber<Payload>>&
+                              subscriber) noexcept override {
+    LOG(INFO) << "subscriber paused " << &subscriber;
+  }
+
+  void onSubscriberResumed(const std::shared_ptr<Subscriber<Payload>>&
+                               subscriber) noexcept override {
+    LOG(INFO) << "subscriber resumed " << &subscriber;
+  }
+};
 
 int main(int argc, char* argv[]) {
   FLAGS_logtostderr = true;
@@ -78,26 +101,28 @@ int main(int argc, char* argv[]) {
     LOG(INFO) << "attempting connection to " << addr.describe();
 
     std::unique_ptr<DuplexConnection> connection =
-        folly::make_unique<TcpDuplexConnection>(std::move(socket), stats);
+        std::make_unique<TcpDuplexConnection>(
+            std::move(socket), inlineExecutor(), stats);
     std::unique_ptr<DuplexConnection> framedConnection =
-        folly::make_unique<FramedDuplexConnection>(std::move(connection));
+        std::make_unique<FramedDuplexConnection>(
+            std::move(connection), *eventBaseThread.getEventBase());
     std::unique_ptr<RequestHandler> requestHandler =
-        folly::make_unique<DefaultRequestHandler>();
+        std::make_unique<ClientRequestHandler>();
 
     reactiveSocket = StandardReactiveSocket::disconnectedClient(
         *eventBaseThread.getEventBase(),
         std::move(requestHandler),
         stats,
-        folly::make_unique<FollyKeepaliveTimer>(
+        std::make_unique<FollyKeepaliveTimer>(
             *eventBaseThread.getEventBase(), std::chrono::seconds(10)));
 
-    reactiveSocket->onConnected([](StandardReactiveSocket& socket) {
+    reactiveSocket->onConnected([](ReactiveSocket& socket) {
       LOG(INFO) << "socket connected " << &socket;
     });
-    reactiveSocket->onDisconnected([](StandardReactiveSocket& socket) {
+    reactiveSocket->onDisconnected([](ReactiveSocket& socket) {
       LOG(INFO) << "socket disconnect " << &socket;
     });
-    reactiveSocket->onClosed([](StandardReactiveSocket& socket) {
+    reactiveSocket->onClosed([](ReactiveSocket& socket) {
       LOG(INFO) << "socket closed " << &socket;
     });
 
@@ -134,15 +159,17 @@ int main(int argc, char* argv[]) {
     socketResume->connect(&callback, addr);
 
     std::unique_ptr<DuplexConnection> connectionResume =
-        folly::make_unique<TcpDuplexConnection>(std::move(socketResume), stats);
+        std::make_unique<TcpDuplexConnection>(
+            std::move(socketResume), inlineExecutor(), stats);
     std::unique_ptr<DuplexConnection> framedConnectionResume =
-        folly::make_unique<FramedDuplexConnection>(std::move(connectionResume));
+        std::make_unique<FramedDuplexConnection>(
+            std::move(connectionResume), inlineExecutor());
 
     LOG(INFO) << "try resume ...";
     reactiveSocket->tryClientResume(
         token,
         std::make_shared<FrameTransport>(std::move(framedConnectionResume)),
-        folly::make_unique<ResumeCallback>());
+        std::make_unique<ResumeCallback>());
   });
 
   std::getline(std::cin, input);

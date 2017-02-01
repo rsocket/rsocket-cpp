@@ -16,9 +16,9 @@
 
 namespace reactivesocket {
 
-class StandardReactiveSocket;
+class ReactiveSocket;
 
-using ReactiveSocketCallback = std::function<void(StandardReactiveSocket&)>;
+using ReactiveSocketCallback = std::function<void(ReactiveSocket&) noexcept>;
 using StreamId = uint32_t;
 using ResumePosition = int64_t;
 
@@ -35,6 +35,9 @@ enum class StreamCompletionSignal {
   SOCKET_CLOSED,
 };
 
+enum class ReactiveSocketMode { SERVER, CLIENT };
+
+std::string to_string(StreamCompletionSignal);
 std::ostream& operator<<(std::ostream&, StreamCompletionSignal);
 
 class StreamInterruptedException : public std::runtime_error {
@@ -89,4 +92,4 @@ class KeepaliveTimer {
   virtual void keepaliveReceived() = 0;
 };
 
-} // reactive socket
+} // reactivesocket

@@ -81,4 +81,4 @@ class TestSuite {
 };
 
 } // tck
-} // reactive socket
+} // reactivesocket

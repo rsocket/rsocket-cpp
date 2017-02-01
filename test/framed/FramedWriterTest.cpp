@@ -21,7 +21,7 @@ TEST(FramedWriterTest, Subscribe) {
   EXPECT_CALL(*subscriber, onSubscribe_(_)).Times(1);
   EXPECT_CALL(*subscription, cancel_()).Times(1);
 
-  auto writer = std::make_shared<FramedWriter>(subscriber);
+  auto writer = std::make_shared<FramedWriter>(subscriber, inlineExecutor());
   writer->onSubscribe(subscription);
 
   // to delete objects
@@ -34,7 +34,7 @@ TEST(FramedWriterTest, Error) {
       std::make_shared<MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
   auto subscription = std::make_shared<MockSubscription>();
 
-  auto writer = std::make_shared<FramedWriter>(subscriber);
+  auto writer = std::make_shared<FramedWriter>(subscriber, inlineExecutor());
 
   EXPECT_CALL(*subscription, cancel_()).Times(1);
   writer->onSubscribe(subscription);
@@ -51,7 +51,7 @@ TEST(FramedWriterTest, Complete) {
       std::make_shared<MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
   auto subscription = std::make_shared<MockSubscription>();
 
-  auto writer = std::make_shared<FramedWriter>(subscriber);
+  auto writer = std::make_shared<FramedWriter>(subscriber, inlineExecutor());
 
   EXPECT_CALL(*subscription, cancel_()).Times(1);
   writer->onSubscribe(subscription);
@@ -82,7 +82,7 @@ static void nextSingleFrameTest(int headroom) {
             p->moveToFbString().toStdString());
       }));
 
-  auto writer = std::make_shared<FramedWriter>(subscriber);
+  auto writer = std::make_shared<FramedWriter>(subscriber, inlineExecutor());
   writer->onSubscribe(subscription);
   writer->onNext(folly::IOBuf::copyBuffer(msg, headroom));
 
@@ -139,7 +139,7 @@ static void nextTwoFramesTest(int headroom) {
             payloadChain->moveToFbString().toStdString());
       }));
 
-  auto writer = std::make_shared<FramedWriter>(subscriber);
+  auto writer = std::make_shared<FramedWriter>(subscriber, inlineExecutor());
   writer->onSubscribe(subscription);
   writer->onNext(folly::IOBuf::copyBuffer(msg1, headroom));
   writer->onNext(folly::IOBuf::copyBuffer(msg2, headroom));

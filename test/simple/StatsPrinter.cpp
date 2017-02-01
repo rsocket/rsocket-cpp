@@ -7,7 +7,7 @@ void StatsPrinter::socketCreated() {
   LOG(INFO) << "socketCreated";
 }
 
-void StatsPrinter::socketClosed() {
+void StatsPrinter::socketClosed(StreamCompletionSignal /*signal*/) {
   LOG(INFO) << "socketClosed";
 }
 
@@ -41,5 +41,12 @@ void StatsPrinter::frameWritten(const std::string& frameType) {
 
 void StatsPrinter::frameRead(const std::string& frameType) {
   LOG(INFO) << "frameRead " << frameType;
+}
+
+void StatsPrinter::resumeBufferChanged(
+    int framesCountDelta,
+    int dataSizeDelta) {
+  LOG(INFO) << "resumeBufferChanged framesCountDelta=" << framesCountDelta
+            << " dataSizeDelta=" << dataSizeDelta;
 }
 }

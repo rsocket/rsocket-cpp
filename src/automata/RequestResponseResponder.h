@@ -28,18 +28,14 @@ class RequestResponseResponder
   };
 
   explicit RequestResponseResponder(const Parameters& params)
-      : ExecutorBase(params.executor), Base(params, nullptr) {}
-
-  void processInitialFrame(Frame_REQUEST_RESPONSE&&);
-
-  std::ostream& logPrefix(std::ostream& os);
+      : ExecutorBase(params.executor), Base(1, params, nullptr) {}
 
  private:
   /// @{
-  void onSubscribeImpl(std::shared_ptr<Subscription>) override;
-  void onNextImpl(Payload) override;
-  void onCompleteImpl() override;
-  void onErrorImpl(folly::exception_wrapper) override;
+  void onSubscribeImpl(std::shared_ptr<Subscription>) noexcept override;
+  void onNextImpl(Payload) noexcept override;
+  void onCompleteImpl() noexcept override;
+  void onErrorImpl(folly::exception_wrapper) noexcept override;
   /// @}
 
   using Base::onNextFrame;

@@ -12,14 +12,9 @@ class StreamResponder : public StreamSubscriptionResponderBase {
   using Base = StreamSubscriptionResponderBase;
 
  public:
-  explicit StreamResponder(const Base::Parameters& params)
-      : ExecutorBase(params.executor), Base(params) {}
-
-  std::ostream& logPrefix(std::ostream& os) {
-    return os << "StreamResponder(" << &connection_ << ", " << streamId_
-              << "): ";
-  }
-
-  void processInitialFrame(Frame_REQUEST_STREAM&&);
+  explicit StreamResponder(
+      uint32_t initialRequestN,
+      const Base::Parameters& params)
+      : ExecutorBase(params.executor), Base(initialRequestN, params) {}
 };
 } // reactivesocket

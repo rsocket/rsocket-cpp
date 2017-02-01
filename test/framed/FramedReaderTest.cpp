@@ -28,7 +28,8 @@ TEST(FramedReaderTest, Read1Frame) {
   a1.writeBE<int32_t>(msg1.size() + sizeof(int32_t));
   folly::format("{}", msg1.c_str())(a1);
 
-  auto framedReader = std::make_shared<FramedReader>(frameSubscriber);
+  auto framedReader =
+      std::make_shared<FramedReader>(frameSubscriber, inlineExecutor());
 
   EXPECT_CALL(*frameSubscriber, onSubscribe_(_)).Times(1);
 
@@ -82,7 +83,8 @@ TEST(FramedReaderTest, Read3Frames) {
   bufQueue.append(std::move(payload1));
   bufQueue.append(std::move(payload2));
 
-  auto framedReader = std::make_shared<FramedReader>(frameSubscriber);
+  auto framedReader =
+      std::make_shared<FramedReader>(frameSubscriber, inlineExecutor());
 
   EXPECT_CALL(*frameSubscriber, onSubscribe_(_)).Times(1);
 
@@ -124,7 +126,8 @@ TEST(FramedReaderTest, Read1FrameIncomplete) {
   std::string part2("ueXXX");
   std::string msg1 = part1 + part2;
 
-  auto framedReader = std::make_shared<FramedReader>(frameSubscriber);
+  auto framedReader =
+      std::make_shared<FramedReader>(frameSubscriber, inlineExecutor());
   framedReader->onSubscribe(wireSubscription);
 
   EXPECT_CALL(*frameSubscriber, onNext_(_)).Times(0);
@@ -170,13 +173,13 @@ TEST(FramedReaderTest, Read1FrameIncomplete) {
 }
 
 TEST(FramedReaderTest, InvalidDataStream) {
-  auto rsConnection = folly::make_unique<InlineConnection>();
-  auto testConnection = folly::make_unique<InlineConnection>();
+  auto rsConnection = std::make_unique<InlineConnection>();
+  auto testConnection = std::make_unique<InlineConnection>();
 
   rsConnection->connectTo(*testConnection);
 
-  auto framedRsAutomatonConnection =
-      folly::make_unique<FramedDuplexConnection>(std::move(rsConnection));
+  auto framedRsAutomatonConnection = std::make_unique<FramedDuplexConnection>(
+      std::move(rsConnection), inlineExecutor());
 
   // Dump 1 invalid frame and expect an error
   auto inputSubscription = std::make_shared<MockSubscription>();
@@ -217,6 +220,6 @@ TEST(FramedReaderTest, InvalidDataStream) {
       std::move(framedRsAutomatonConnection),
       // No interactions on this mock, the client will not accept any
       // requests.
-      folly::make_unique<StrictMock<MockRequestHandler>>(),
+      std::make_unique<StrictMock<MockRequestHandler>>(),
       ConnectionSetupPayload("", "", Payload("test client payload")));
 }

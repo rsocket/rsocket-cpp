@@ -136,8 +136,6 @@ class FrameBufferAllocator {
 
 class Frame_REQUEST_Base {
  public:
-  static constexpr bool Trait_CarriesAllowance = true;
-
   Frame_REQUEST_Base() = default;
   Frame_REQUEST_Base(
       FrameType frameType,
@@ -231,8 +229,6 @@ class Frame_REQUEST_CHANNEL : public Frame_REQUEST_Base {
 
 class Frame_REQUEST_RESPONSE {
  public:
-  static constexpr bool Trait_CarriesAllowance = false;
-
   Frame_REQUEST_RESPONSE() = default;
   Frame_REQUEST_RESPONSE(StreamId streamId, FrameFlags flags, Payload payload)
       : header_(
@@ -254,8 +250,6 @@ std::ostream& operator<<(std::ostream&, const Frame_REQUEST_RESPONSE&);
 
 class Frame_REQUEST_FNF {
  public:
-  static constexpr bool Trait_CarriesAllowance = false;
-
   Frame_REQUEST_FNF() = default;
   Frame_REQUEST_FNF(StreamId streamId, FrameFlags flags, Payload payload)
       : header_(FrameType::REQUEST_FNF, flags | payload.getFlags(), streamId),
@@ -274,8 +268,6 @@ std::ostream& operator<<(std::ostream&, const Frame_REQUEST_FNF&);
 
 class Frame_REQUEST_N {
  public:
-  static constexpr bool Trait_CarriesAllowance = true;
-
   /*
    * Maximum value for ReactiveSocket Subscription::request.
    * Value is a signed int, however negative values are not allowed.
@@ -299,8 +291,6 @@ std::ostream& operator<<(std::ostream&, const Frame_REQUEST_N&);
 
 class Frame_METADATA_PUSH {
  public:
-  static constexpr bool Trait_CarriesAllowance = false;
-
   Frame_METADATA_PUSH() {}
   explicit Frame_METADATA_PUSH(std::unique_ptr<folly::IOBuf> metadata)
       : header_(FrameType::METADATA_PUSH, FrameFlags_METADATA, 0),
@@ -318,8 +308,6 @@ std::ostream& operator<<(std::ostream&, const Frame_METADATA_PUSH&);
 
 class Frame_CANCEL {
  public:
-  static constexpr bool Trait_CarriesAllowance = false;
-
   Frame_CANCEL() = default;
   explicit Frame_CANCEL(
       StreamId streamId,
@@ -340,8 +328,6 @@ std::ostream& operator<<(std::ostream&, const Frame_CANCEL&);
 
 class Frame_RESPONSE {
  public:
-  static constexpr bool Trait_CarriesAllowance = false;
-
   Frame_RESPONSE() = default;
   Frame_RESPONSE(StreamId streamId, FrameFlags flags, Payload payload)
       : header_(FrameType::RESPONSE, flags | payload.getFlags(), streamId),
@@ -362,8 +348,6 @@ std::ostream& operator<<(std::ostream&, const Frame_RESPONSE&);
 
 class Frame_ERROR {
  public:
-  static constexpr bool Trait_CarriesAllowance = false;
-
   Frame_ERROR() = default;
   Frame_ERROR(StreamId streamId, ErrorCode errorCode, Payload payload)
       : header_(FrameType::ERROR, payload.getFlags(), streamId),
@@ -389,8 +373,6 @@ std::ostream& operator<<(std::ostream&, const Frame_ERROR&);
 
 class Frame_KEEPALIVE {
  public:
-  static constexpr bool Trait_CarriesAllowance = false;
-
   Frame_KEEPALIVE() = default;
   Frame_KEEPALIVE(
       FrameFlags flags,
@@ -402,8 +384,8 @@ class Frame_KEEPALIVE {
     assert(!(flags & FrameFlags_METADATA));
   }
 
-  std::unique_ptr<folly::IOBuf> serializeOut();
-  bool deserializeFrom(std::unique_ptr<folly::IOBuf> in);
+  std::unique_ptr<folly::IOBuf> serializeOut(bool resumable);
+  bool deserializeFrom(bool resumable, std::unique_ptr<folly::IOBuf> in);
 
   FrameHeader header_;
   ResumePosition position_;
@@ -413,8 +395,6 @@ std::ostream& operator<<(std::ostream&, const Frame_KEEPALIVE&);
 
 class Frame_SETUP {
  public:
-  static constexpr bool Trait_CarriesAllowance = false;
-
   Frame_SETUP() = default;
   Frame_SETUP(
       FrameFlags flags,
@@ -454,12 +434,10 @@ std::ostream& operator<<(std::ostream&, const Frame_SETUP&);
 
 class Frame_LEASE {
  public:
-  static constexpr bool Trait_CarriesAllowance = false;
-
   Frame_LEASE() = default;
   Frame_LEASE(
       uint32_t ttl,
-      int32_t numberOfRequests,
+      uint32_t numberOfRequests,
       std::unique_ptr<folly::IOBuf> metadata = std::unique_ptr<folly::IOBuf>())
       : header_(FrameType::LEASE, metadata ? FrameFlags_METADATA : 0, 0),
         ttl_(ttl),
@@ -471,7 +449,7 @@ class Frame_LEASE {
 
   FrameHeader header_;
   uint32_t ttl_;
-  int32_t numberOfRequests_;
+  uint32_t numberOfRequests_;
   std::unique_ptr<folly::IOBuf> metadata_;
 };
 std::ostream& operator<<(std::ostream&, const Frame_LEASE&);
@@ -479,8 +457,6 @@ std::ostream& operator<<(std::ostream&, const Frame_LEASE&);
 
 class Frame_RESUME {
  public:
-  static constexpr bool Trait_CarriesAllowance = false;
-
   Frame_RESUME() = default;
   Frame_RESUME(const ResumeIdentificationToken& token, ResumePosition position)
       : header_(FrameType::RESUME, 0, 0), token_(token), position_(position) {}
@@ -497,8 +473,6 @@ std::ostream& operator<<(std::ostream&, const Frame_RESUME&);
 
 class Frame_RESUME_OK {
  public:
-  static constexpr bool Trait_CarriesAllowance = false;
-
   Frame_RESUME_OK() = default;
   explicit Frame_RESUME_OK(ResumePosition position)
       : header_(FrameType::RESUME_OK, 0, 0), position_(position) {}

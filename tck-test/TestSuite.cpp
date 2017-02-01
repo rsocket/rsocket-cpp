@@ -17,4 +17,4 @@ void Test::addCommand(TestCommand command) {
 }
 
 } // tck
-} // reactive socket
+} // reactivesocket

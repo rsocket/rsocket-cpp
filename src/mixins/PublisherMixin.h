@@ -21,13 +21,18 @@ enum class StreamCompletionSignal;
 template <typename ProducedFrame, typename Base>
 class PublisherMixin : public Base {
  public:
-  explicit PublisherMixin(const typename Base::Parameters& params)
-      : ExecutorBase(params.executor), Base(params) {}
+  explicit PublisherMixin(
+      uint32_t initialRequestN,
+      const typename Base::Parameters& params)
+      : ExecutorBase(params.executor),
+        Base(params),
+        initialRequestN_(initialRequestN) {}
 
   explicit PublisherMixin(
+      uint32_t initialRequestN,
       const typename Base::Parameters& params,
       std::nullptr_t)
-      : Base(params) {}
+      : Base(params), initialRequestN_(initialRequestN) {}
 
   /// @{
   void onSubscribe(std::shared_ptr<Subscription> subscription) {
@@ -49,20 +54,6 @@ class PublisherMixin : public Base {
     Base::connection_->outputFrameOrEnqueue(frame.serializeOut());
   }
   /// @}
-
-  std::ostream& logPrefix(std::ostream& os) {
-    return os << "PublisherMixin(" << &this->connection_ << ", "
-              << this->streamId_ << "): ";
-  }
-
-  void onCleanResume() override {
-    Base::requestHandler_->handleCleanResume(producingSubscription_);
-    Base::onCleanResume();
-  }
-  void onDirtyResume() override {
-    Base::requestHandler_->handleDirtyResume(producingSubscription_);
-    Base::onDirtyResume();
-  }
 
   std::shared_ptr<Subscription> subscription() {
     return producingSubscription_;
@@ -86,33 +77,27 @@ class PublisherMixin : public Base {
     Base::endStream(signal);
   }
 
-  using Base::onNextFrame;
-  void onNextFrame(Frame_REQUEST_N&& frame) override {
-    processRequestN(frame);
-  }
-
-  /// Intercept frames that carry allowance.
-  template <typename Frame>
-  typename std::enable_if<Frame::Trait_CarriesAllowance>::type processRequestN(
-      const Frame& frame) {
-    // if producingSubscription_ == nullptr that means the instance is
-    // new and onSubscribe hasn't been called yet or it is terminated
-    if (size_t n = frame.requestN_) {
-      if (producingSubscription_) {
-        producingSubscription_.request(n);
-      } else {
-        initialRequestN_ += n;
-      }
+  void pauseStream(RequestHandler& requestHandler) override {
+    if (producingSubscription_) {
+      requestHandler.onSubscriptionPaused(producingSubscription_);
     }
   }
 
-  void processRequest1() {
-    // if producingSubscription_ == nullptr that means the instance is
-    // new and onSubscribe hasn't been called yet or it is terminated
+  void resumeStream(RequestHandler& requestHandler) override {
     if (producingSubscription_) {
-      producingSubscription_.request(1);
-    } else {
-      initialRequestN_ = 1;
+      requestHandler.onSubscriptionResumed(producingSubscription_);
+    }
+  }
+
+  using Base::onNextFrame;
+  void onNextFrame(Frame_REQUEST_N&& frame) override {
+    processRequestN(frame.requestN_);
+  }
+
+  void processRequestN(uint32_t requestN) {
+    CHECK(producingSubscription_);
+    if (requestN) {
+      producingSubscription_.request(requestN);
     }
   }
 
@@ -121,6 +106,6 @@ class PublisherMixin : public Base {
   /// This mixin is responsible for delivering a terminal signal to the
   /// Subscription once the stream ends.
   reactivestreams::SubscriptionPtr<Subscription> producingSubscription_;
-  size_t initialRequestN_{0};
+  uint32_t initialRequestN_{0};
 };
 }

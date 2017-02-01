@@ -17,10 +17,13 @@ class IOBuf;
 namespace reactivesocket {
 
 class AbstractStreamAutomaton;
+class Stats;
 using StreamId = uint32_t;
 
 class StreamState {
  public:
+  explicit StreamState(Stats& stats) : resumeCache_(stats) {}
+
   std::unordered_map<StreamId, std::shared_ptr<AbstractStreamAutomaton>>
       streams_;
   ResumeTracker resumeTracker_;

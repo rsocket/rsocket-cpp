@@ -12,15 +12,13 @@ class SubscriptionResponder : public StreamSubscriptionResponderBase {
   using Base = StreamSubscriptionResponderBase;
 
  public:
-  explicit SubscriptionResponder(const Base::Parameters& params)
-      : ExecutorBase(params.executor), Base(params) {}
-
-  void processInitialFrame(Frame_REQUEST_SUB&&);
-
-  std::ostream& logPrefix(std::ostream& os);
+  explicit SubscriptionResponder(
+      uint32_t initialRequestN,
+      const Base::Parameters& params)
+      : ExecutorBase(params.executor), Base(initialRequestN, params) {}
 
  private:
-  void onCompleteImpl() override;
+  void onCompleteImpl() noexcept override;
 };
 
 } // reactivesocket

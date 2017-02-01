@@ -28,18 +28,22 @@ class StreamSubscriptionResponderBase
     folly::Executor& executor;
   };
 
-  explicit StreamSubscriptionResponderBase(const Parameters& params)
-      : ExecutorBase(params.executor), Base(params, nullptr) {}
+  // initialization of the ExecutorBase will be ignored for any of the
+  // derived classes
+  explicit StreamSubscriptionResponderBase(
+      uint32_t initialRequestN,
+      const Parameters& params)
+      : ExecutorBase(params.executor), Base(initialRequestN, params, nullptr) {}
 
  protected:
   using Base::onNextFrame;
   void onNextFrame(Frame_CANCEL&&) override;
 
  private:
-  void onSubscribeImpl(std::shared_ptr<Subscription>) override;
-  void onNextImpl(Payload) override;
-  void onCompleteImpl() override;
-  void onErrorImpl(folly::exception_wrapper) override;
+  void onSubscribeImpl(std::shared_ptr<Subscription>) noexcept override;
+  void onNextImpl(Payload) noexcept override;
+  void onCompleteImpl() noexcept override;
+  void onErrorImpl(folly::exception_wrapper) noexcept override;
 
   void endStream(StreamCompletionSignal) override;
 
