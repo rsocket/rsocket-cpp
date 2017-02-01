@@ -33,9 +33,9 @@ void FollyKeepaliveTimer::schedule() {
 
 void FollyKeepaliveTimer::sendKeepalive() {
   if (pending_) {
-    stop();
     connection_->closeWithError(
         Frame_ERROR::connectionError("no response to keepalive"));
+    stop();
   } else {
     connection_->sendKeepalive();
     pending_ = true;
@@ -46,6 +46,7 @@ void FollyKeepaliveTimer::sendKeepalive() {
 void FollyKeepaliveTimer::stop() {
   *running_ = false;
   pending_ = false;
+  connection_ = nullptr;
 }
 
 // must be called from the same thread as stop
