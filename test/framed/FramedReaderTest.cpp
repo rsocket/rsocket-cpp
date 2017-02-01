@@ -173,12 +173,12 @@ TEST(FramedReaderTest, Read1FrameIncomplete) {
 }
 
 TEST(FramedReaderTest, InvalidDataStream) {
-  auto rsConnection = folly::make_unique<InlineConnection>();
-  auto testConnection = folly::make_unique<InlineConnection>();
+  auto rsConnection = std::make_unique<InlineConnection>();
+  auto testConnection = std::make_unique<InlineConnection>();
 
   rsConnection->connectTo(*testConnection);
 
-  auto framedRsAutomatonConnection = folly::make_unique<FramedDuplexConnection>(
+  auto framedRsAutomatonConnection = std::make_unique<FramedDuplexConnection>(
       std::move(rsConnection), inlineExecutor());
 
   // Dump 1 invalid frame and expect an error
@@ -220,6 +220,6 @@ TEST(FramedReaderTest, InvalidDataStream) {
       std::move(framedRsAutomatonConnection),
       // No interactions on this mock, the client will not accept any
       // requests.
-      folly::make_unique<StrictMock<MockRequestHandler>>(),
+      std::make_unique<StrictMock<MockRequestHandler>>(),
       ConnectionSetupPayload("", "", Payload("test client payload")));
 }

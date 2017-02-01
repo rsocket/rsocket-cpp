@@ -8,7 +8,7 @@ language: cpp
 # Test matrix:
 matrix:
    include:
-    - env: CLANG_VERSION=3.6 BUILD_TYPE=Debug CPP=11 ASAN=On
+    - env: CLANG_VERSION=3.6 BUILD_TYPE=Debug CPP=14 ASAN=On
       os: linux
       addons: &clang36
         apt:

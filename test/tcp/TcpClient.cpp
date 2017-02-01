@@ -137,13 +137,13 @@ int main(int argc, char* argv[]) {
                   << std::endl;
 
         std::unique_ptr<DuplexConnection> connection =
-            folly::make_unique<TcpDuplexConnection>(
+            std::make_unique<TcpDuplexConnection>(
                 std::move(socket), inlineExecutor(), stats);
         std::unique_ptr<DuplexConnection> framedConnection =
-            folly::make_unique<FramedDuplexConnection>(
+            std::make_unique<FramedDuplexConnection>(
                 std::move(connection), inlineExecutor());
         std::unique_ptr<RequestHandler> requestHandler =
-            folly::make_unique<ClientRequestHandler>();
+            std::make_unique<ClientRequestHandler>();
 
         reactiveSocket = StandardReactiveSocket::fromClientConnection(
             *eventBaseThread.getEventBase(),
@@ -152,7 +152,7 @@ int main(int argc, char* argv[]) {
             ConnectionSetupPayload(
                 "text/plain", "text/plain", Payload("meta", "data")),
             stats,
-            folly::make_unique<FollyKeepaliveTimer>(
+            std::make_unique<FollyKeepaliveTimer>(
                 *eventBaseThread.getEventBase(),
                 std::chrono::milliseconds(5000)));
 

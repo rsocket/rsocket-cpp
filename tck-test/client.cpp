@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
 
   evbt.getEventBase()->runInEventBaseThreadAndWait([&]() {
     socket.reset(new folly::AsyncSocket(evbt.getEventBase()));
-    callback = folly::make_unique<SocketConnectCallback>();
+    callback = std::make_unique<SocketConnectCallback>();
     folly::SocketAddress addr(FLAGS_host, FLAGS_port, true);
 
     LOG(INFO) << "attempting connection to " << addr.describe();
@@ -85,13 +85,13 @@ int main(int argc, char* argv[]) {
 
   evbt.getEventBase()->runInEventBaseThreadAndWait([&]() {
     std::unique_ptr<DuplexConnection> connection =
-        folly::make_unique<TcpDuplexConnection>(
+        std::make_unique<TcpDuplexConnection>(
             std::move(socket), inlineExecutor());
     std::unique_ptr<DuplexConnection> framedConnection =
-        folly::make_unique<FramedDuplexConnection>(
+        std::make_unique<FramedDuplexConnection>(
             std::move(connection), inlineExecutor());
     std::unique_ptr<RequestHandler> requestHandler =
-        folly::make_unique<DefaultRequestHandler>();
+        std::make_unique<DefaultRequestHandler>();
 
     reactiveSocket = StandardReactiveSocket::fromClientConnection(
         *evbt.getEventBase(),

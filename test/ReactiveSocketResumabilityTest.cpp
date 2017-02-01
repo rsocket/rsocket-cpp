@@ -13,8 +13,8 @@ using namespace ::testing;
 using namespace ::reactivesocket;
 
 TEST(ReactiveSocketResumabilityTest, Disconnect) {
-  auto socketConnection = folly::make_unique<InlineConnection>();
-  auto testConnection = folly::make_unique<InlineConnection>();
+  auto socketConnection = std::make_unique<InlineConnection>();
+  auto testConnection = std::make_unique<InlineConnection>();
 
   socketConnection->connectTo(*testConnection);
 
@@ -36,7 +36,7 @@ TEST(ReactiveSocketResumabilityTest, Disconnect) {
   auto socket = StandardReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(socketConnection),
-      folly::make_unique<DefaultRequestHandler>(),
+      std::make_unique<DefaultRequestHandler>(),
       ConnectionSetupPayload(),
       stats);
 

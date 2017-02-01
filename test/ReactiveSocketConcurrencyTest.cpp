@@ -24,8 +24,8 @@ using namespace ::reactivesocket;
 class ClientSideConcurrencyTest : public testing::Test {
  public:
   ClientSideConcurrencyTest() {
-    auto clientConn = folly::make_unique<InlineConnection>();
-    auto serverConn = folly::make_unique<InlineConnection>();
+    auto clientConn = std::make_unique<InlineConnection>();
+    auto serverConn = std::make_unique<InlineConnection>();
     clientConn->connectTo(*serverConn);
 
     thread2.getEventBase()->runImmediatelyOrRunInEventBaseThreadAndWait([&] {
@@ -34,13 +34,13 @@ class ClientSideConcurrencyTest : public testing::Test {
           std::move(clientConn),
           // No interactions on this mock, the client will not accept any
           // requests.
-          folly::make_unique<StrictMock<MockRequestHandler>>(),
+          std::make_unique<StrictMock<MockRequestHandler>>(),
           ConnectionSetupPayload("", "", Payload()),
           Stats::noop(),
           nullptr);
     });
 
-    auto serverHandler = folly::make_unique<StrictMock<MockRequestHandler>>();
+    auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
     auto& serverHandlerRef = *serverHandler;
 
     EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
@@ -250,8 +250,8 @@ TEST_F(ClientSideConcurrencyTest, RequestChannelTest) {
 class ServerSideConcurrencyTest : public testing::Test {
  public:
   ServerSideConcurrencyTest() {
-    auto clientConn = folly::make_unique<InlineConnection>();
-    auto serverConn = folly::make_unique<InlineConnection>();
+    auto clientConn = std::make_unique<InlineConnection>();
+    auto serverConn = std::make_unique<InlineConnection>();
     clientConn->connectTo(*serverConn);
 
     clientSock = StandardReactiveSocket::fromClientConnection(
@@ -259,10 +259,10 @@ class ServerSideConcurrencyTest : public testing::Test {
         std::move(clientConn),
         // No interactions on this mock, the client will not accept any
         // requests.
-        folly::make_unique<StrictMock<MockRequestHandler>>(),
+        std::make_unique<StrictMock<MockRequestHandler>>(),
         ConnectionSetupPayload("", "", Payload()));
 
-    auto serverHandler = folly::make_unique<StrictMock<MockRequestHandler>>();
+    auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
     auto& serverHandlerRef = *serverHandler;
 
     EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
@@ -469,12 +469,12 @@ TEST_F(ServerSideConcurrencyTest, RequestChannelTest) {
 class InitialRequestNDeliveredTest : public testing::Test {
  public:
   InitialRequestNDeliveredTest() {
-    auto serverSocketConnection = folly::make_unique<InlineConnection>();
-    auto testInlineConnection = folly::make_unique<InlineConnection>();
+    auto serverSocketConnection = std::make_unique<InlineConnection>();
+    auto testInlineConnection = std::make_unique<InlineConnection>();
 
     serverSocketConnection->connectTo(*testInlineConnection);
 
-    testConnection = folly::make_unique<FramedDuplexConnection>(
+    testConnection = std::make_unique<FramedDuplexConnection>(
         std::move(testInlineConnection), inlineExecutor());
 
     testInputSubscription = std::make_shared<MockSubscription>();
@@ -501,7 +501,7 @@ class InitialRequestNDeliveredTest : public testing::Test {
           serverSocket.reset();
         }));
 
-    auto serverHandler = folly::make_unique<StrictMock<MockRequestHandler>>();
+    auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
     auto& serverHandlerRef = *serverHandler;
 
     EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
@@ -546,7 +546,7 @@ class InitialRequestNDeliveredTest : public testing::Test {
 
     serverSocket = StandardReactiveSocket::fromServerConnection(
         eventBase_,
-        folly::make_unique<FramedDuplexConnection>(
+        std::make_unique<FramedDuplexConnection>(
             std::move(serverSocketConnection), inlineExecutor()),
         std::move(serverHandler),
         Stats::noop(),
