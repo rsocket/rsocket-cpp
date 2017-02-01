@@ -70,7 +70,7 @@ TEST(ResumeCacheTest, OneFrame) {
 
   EXPECT_CALL(transport, outputFrameOrEnqueue_(_))
       .WillOnce(Invoke([=](std::unique_ptr<folly::IOBuf>& buf) {
-          EXPECT_EQ(frame1Size, buf->computeChainDataLength());
+        EXPECT_EQ(frame1Size, buf->computeChainDataLength());
       }));
 
   cache.sendFramesFromPosition(0, transport);
@@ -106,10 +106,10 @@ TEST(ResumeCacheTest, TwoFrames) {
 
   EXPECT_CALL(transport, outputFrameOrEnqueue_(_))
       .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& buf) {
-          EXPECT_EQ(frame1Size, buf->computeChainDataLength());
+        EXPECT_EQ(frame1Size, buf->computeChainDataLength());
       }))
       .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& buf) {
-          EXPECT_EQ(frame2Size, buf->computeChainDataLength());
+        EXPECT_EQ(frame2Size, buf->computeChainDataLength());
       }));
 
   cache.sendFramesFromPosition(0, transport);
@@ -124,7 +124,7 @@ TEST(ResumeCacheTest, TwoFrames) {
 
   EXPECT_CALL(transport, outputFrameOrEnqueue_(_))
       .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& buf) {
-          EXPECT_EQ(frame2Size, buf->computeChainDataLength());
+        EXPECT_EQ(frame2Size, buf->computeChainDataLength());
       }));
 
   cache.sendFramesFromPosition(frame1Size, transport);
