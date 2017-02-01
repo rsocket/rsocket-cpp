@@ -26,13 +26,9 @@ bool ResumeTracker::shouldTrackFrame(const folly::IOBuf& serializedFrame) {
     case FrameType::REQUEST_FNF:
     case FrameType::REQUEST_N:
     case FrameType::CANCEL:
+    case FrameType::ERROR:
     case FrameType::RESPONSE:
       return true;
-
-    case FrameType::ERROR: {
-      auto streamIdPtr = FrameHeader::peekStreamId(serializedFrame);
-      return streamIdPtr && *streamIdPtr != 0;
-    }
 
     case FrameType::RESERVED:
     case FrameType::SETUP:
