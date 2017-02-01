@@ -369,7 +369,8 @@ void ConnectionAutomaton::onConnectionFrame(
   switch (type) {
     case FrameType::KEEPALIVE: {
       Frame_KEEPALIVE frame;
-      if (!deserializeFrameOrError(remoteResumeable_, frame, std::move(payload))) {
+      if (!deserializeFrameOrError(
+              remoteResumeable_, frame, std::move(payload))) {
         return;
       }
       if (mode_ == ReactiveSocketMode::SERVER) {
