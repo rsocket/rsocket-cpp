@@ -85,10 +85,7 @@ TEST(ConnectionAutomatonTest, InvalidFrameHeader) {
       nullptr,
       Stats::noop(),
       nullptr,
-      ReactiveSocketMode::CLIENT,
-      [] {},
-      [] {},
-      [] {});
+      ReactiveSocketMode::CLIENT);
   connectionAutomaton->connect(
       std::make_shared<FrameTransport>(std::move(framedAutomatonConnection)),
       true);
@@ -175,10 +172,7 @@ static void terminateTest(
       nullptr,
       Stats::noop(),
       nullptr,
-      ReactiveSocketMode::CLIENT,
-      [] {},
-      [] {},
-      [] {});
+      ReactiveSocketMode::CLIENT);
   connectionAutomaton->connect(
       std::make_shared<FrameTransport>(std::move(framedAutomatonConnection)),
       true);
@@ -273,10 +267,7 @@ TEST(ConnectionAutomatonTest, RefuseFrame) {
       nullptr,
       Stats::noop(),
       nullptr,
-      ReactiveSocketMode::CLIENT,
-      [] {},
-      [] {},
-      [] {});
+      ReactiveSocketMode::CLIENT);
   connectionAutomaton->connect(
       std::make_shared<FrameTransport>(std::move(framedAutomatonConnection)),
       true);

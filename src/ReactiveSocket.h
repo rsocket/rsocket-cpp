@@ -57,9 +57,9 @@ class ReactiveSocket {
   virtual void disconnect() = 0;
   virtual std::shared_ptr<FrameTransport> detachFrameTransport() = 0;
 
-  virtual void onConnected(ReactiveSocketCallback listener) = 0;
-  virtual void onDisconnected(ReactiveSocketCallback listener) = 0;
-  virtual void onClosed(ReactiveSocketCallback listener) = 0;
+  virtual void onConnected(std::function<void()> listener) = 0;
+  virtual void onDisconnected(ErrorCallback listener) = 0;
+  virtual void onClosed(ErrorCallback listener) = 0;
 
   virtual void tryClientResume(
       const ResumeIdentificationToken& token,

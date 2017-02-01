@@ -20,11 +20,6 @@ StandardReactiveSocket::~StandardReactiveSocket() {
   // Force connection closure, this will trigger terminal signals to be
   // delivered to all stream automata.
   close();
-
-  // no more callbacks after the destructor is executed
-  onConnectListeners_->clear();
-  onDisconnectListeners_->clear();
-  onCloseListeners_->clear();
 }
 
 StandardReactiveSocket::StandardReactiveSocket(
@@ -51,10 +46,7 @@ StandardReactiveSocket::StandardReactiveSocket(
               std::placeholders::_1),
           stats,
           std::move(keepaliveTimer),
-          mode,
-          executeListenersFunc(onConnectListeners_),
-          executeListenersFunc(onDisconnectListeners_),
-          executeListenersFunc(onCloseListeners_))),
+          mode)),
       streamsFactory_(connection_, mode),
       executor_(executor) {
   debugCheckCorrectExecutor();
@@ -374,7 +366,7 @@ void StandardReactiveSocket::close() {
 void StandardReactiveSocket::disconnect() {
   debugCheckCorrectExecutor();
   checkNotClosed();
-  connection_->disconnect();
+  connection_->disconnect(folly::exception_wrapper());
 }
 
 std::shared_ptr<FrameTransport> StandardReactiveSocket::detachFrameTransport() {
@@ -383,25 +375,22 @@ std::shared_ptr<FrameTransport> StandardReactiveSocket::detachFrameTransport() {
   return connection_->detachFrameTransport();
 }
 
-void StandardReactiveSocket::onConnected(ReactiveSocketCallback listener) {
+void StandardReactiveSocket::onConnected(std::function<void()> listener) {
   debugCheckCorrectExecutor();
   checkNotClosed();
-  CHECK(listener);
-  onConnectListeners_->push_back(std::move(listener));
+  connection_->addConnectedListener(std::move(listener));
 }
 
-void StandardReactiveSocket::onDisconnected(ReactiveSocketCallback listener) {
+void StandardReactiveSocket::onDisconnected(ErrorCallback listener) {
   debugCheckCorrectExecutor();
   checkNotClosed();
-  CHECK(listener);
-  onDisconnectListeners_->push_back(std::move(listener));
+  connection_->addDisconnectedListener(std::move(listener));
 }
 
-void StandardReactiveSocket::onClosed(ReactiveSocketCallback listener) {
+void StandardReactiveSocket::onClosed(ErrorCallback listener) {
   debugCheckCorrectExecutor();
   checkNotClosed();
-  CHECK(listener);
-  onCloseListeners_->push_back(std::move(listener));
+  connection_->addClosedListener(std::move(listener));
 }
 
 void StandardReactiveSocket::tryClientResume(
@@ -429,25 +418,6 @@ bool StandardReactiveSocket::tryResumeServer(
   // TODO: verify, we should not be receiving any frames, not a single one
   connection_->connect(std::move(frameTransport), /*sendPendingFrames=*/false);
   return connection_->resumeFromPositionOrClose(position);
-}
-
-std::function<void()> StandardReactiveSocket::executeListenersFunc(
-    std::shared_ptr<std::list<ReactiveSocketCallback>> listeners) {
-  auto* thisPtr = this;
-  return [thisPtr, listeners]() mutable {
-    // we will make a copy of listeners so that destructor won't delete them
-    // when iterating them
-    auto listenersCopy = *listeners;
-    for (auto& listener : listenersCopy) {
-      if (listeners->empty()) {
-        // destructor deleted listeners
-        thisPtr = nullptr;
-      }
-      // TODO: change parameter from reference to pointer to be able send null
-      // when this instance is destroyed in the callback
-      listener(*thisPtr);
-    }
-  };
 }
 
 void StandardReactiveSocket::checkNotClosed() const {

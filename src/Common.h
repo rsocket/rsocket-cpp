@@ -14,11 +14,16 @@
 // this file includes all PUBLIC common types.
 //
 
+namespace folly {
+class exception_wrapper;
+}
+
 namespace reactivesocket {
 
 class ReactiveSocket;
 
-using ReactiveSocketCallback = std::function<void(ReactiveSocket&) noexcept>;
+using ErrorCallback =
+    std::function<void(const folly::exception_wrapper&) noexcept>;
 using StreamId = uint32_t;
 using ResumePosition = int64_t;
 

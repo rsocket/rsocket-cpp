@@ -2,10 +2,7 @@
 
 #pragma once
 
-#include <atomic>
-#include <list>
 #include <memory>
-
 #include "src/Common.h"
 #include "src/ConnectionSetupPayload.h"
 #include "src/Payload.h"
@@ -105,9 +102,9 @@ class StandardReactiveSocket : public ReactiveSocket {
   void disconnect() override;
   std::shared_ptr<FrameTransport> detachFrameTransport() override;
 
-  void onConnected(ReactiveSocketCallback listener) override;
-  void onDisconnected(ReactiveSocketCallback listener) override;
-  void onClosed(ReactiveSocketCallback listener) override;
+  void onConnected(std::function<void()> listener) override;
+  void onDisconnected(ErrorCallback listener) override;
+  void onClosed(ErrorCallback listener) override;
 
   void tryClientResume(
       const ResumeIdentificationToken& token,
@@ -141,20 +138,10 @@ class StandardReactiveSocket : public ReactiveSocket {
   std::shared_ptr<StreamState> resumeListener(
       const ResumeIdentificationToken& token);
 
-  std::function<void()> executeListenersFunc(
-      std::shared_ptr<std::list<ReactiveSocketCallback>> listeners);
-
   void checkNotClosed() const;
   void debugCheckCorrectExecutor() const;
 
   std::shared_ptr<RequestHandler> handler_;
-
-  std::shared_ptr<std::list<ReactiveSocketCallback>> onConnectListeners_{
-      std::make_shared<std::list<ReactiveSocketCallback>>()};
-  std::shared_ptr<std::list<ReactiveSocketCallback>> onDisconnectListeners_{
-      std::make_shared<std::list<ReactiveSocketCallback>>()};
-  std::shared_ptr<std::list<ReactiveSocketCallback>> onCloseListeners_{
-      std::make_shared<std::list<ReactiveSocketCallback>>()};
 
   std::shared_ptr<ConnectionAutomaton> connection_;
   StreamsFactory streamsFactory_;

@@ -53,6 +53,7 @@ TEST(ReactiveSocketResumabilityTest, Disconnect) {
   socket->requestResponse(Payload(), responseSubscriber);
 
   EXPECT_CALL(*testOutputSubscriber, onComplete_()).Times(1);
+  EXPECT_CALL(*testOutputSubscriber, onError_(_)).Times(0);
   EXPECT_CALL(*testInputSubscription, cancel_()).Times(1);
   EXPECT_CALL(stats, socketDisconnected()).Times(1);
   EXPECT_CALL(stats, socketClosed(_)).Times(0);
