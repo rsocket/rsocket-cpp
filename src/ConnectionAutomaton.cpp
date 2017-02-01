@@ -77,7 +77,6 @@ void ConnectionAutomaton::connect(
   CHECK(!frameTransport->isClosed());
 
   frameTransport_ = std::move(frameTransport);
-  onConnected_();
 
   // We need to create a hard reference to frameTransport_ to make sure the
   // instance survives until the setFrameProcessor returns. There can be
@@ -100,6 +99,7 @@ void ConnectionAutomaton::connect(
       keepaliveTimer_->start(shared_from_this());
     }
   }
+  onConnected_();
 }
 
 std::shared_ptr<FrameTransport> ConnectionAutomaton::detachFrameTransport() {
