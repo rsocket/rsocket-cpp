@@ -325,7 +325,6 @@ class ServerSideConcurrencyTest : public testing::Test {
                     thread1.getEventBase()->runInEventBaseThreadAndWait(
                         [&]() { sub->request(2); });
                   }));
-              EXPECT_CALL(*serverInput, onNext_(_)).Times(1);
               // because we cancel the stream in onSubscribe
               EXPECT_CALL(*serverInput, onComplete_()).WillOnce(Invoke([&]() {
                 EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
