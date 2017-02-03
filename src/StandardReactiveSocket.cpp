@@ -406,6 +406,7 @@ void StandardReactiveSocket::tryClientResume(
   frameTransport->outputFrameOrEnqueue(
       connection_->createResumeFrame(token).serializeOut());
 
+  connection_->setResumable(true);
   connection_->reconnect(std::move(frameTransport), std::move(resumeCallback));
 }
 
