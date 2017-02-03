@@ -415,7 +415,10 @@ bool Frame_KEEPALIVE::deserializeFrom(
   folly::io::Cursor cur(in.get());
   try {
     header_.deserializeFrom(cur);
-    assert((header_.flags_ & FrameFlags_METADATA) == 0);
+    if (header_.flags_ & FrameFlags_METADATA) {
+      return false;
+    }
+
     // TODO: Remove hack:
     // https://github.com/ReactiveSocket/reactivesocket-cpp/issues/243
     if (resumeable) {
