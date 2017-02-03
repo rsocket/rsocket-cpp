@@ -20,11 +20,11 @@ std::chrono::milliseconds FollyKeepaliveTimer::keepaliveTime() {
 }
 
 void FollyKeepaliveTimer::schedule() {
-  auto scheduledState = *generation_;
-  auto currentState = generation_;
+  auto scheduledGeneration = *generation_;
+  auto generation = generation_;
   eventBase_.runAfterDelay(
-      [this, currentState, scheduledState]() {
-        if (*currentState == scheduledState) {
+      [this, generation, scheduledGeneration]() {
+        if (*generation == scheduledGeneration) {
           sendKeepalive();
           schedule();
         }

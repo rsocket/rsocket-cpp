@@ -253,5 +253,7 @@ class ConnectionAutomaton
   const std::unique_ptr<KeepaliveTimer> keepaliveTimer_;
 
   std::unique_ptr<ClientResumeStatusCallback> resumeCallback_;
+  // TODO: this is a temporary hack before stats_ is turned into shared_ptr
+  bool isClosing_{false};
 };
 }

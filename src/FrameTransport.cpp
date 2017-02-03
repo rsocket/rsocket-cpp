@@ -1,9 +1,9 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "src/FrameTransport.h"
-
 #include <folly/ExceptionWrapper.h>
 #include "src/DuplexConnection.h"
+#include "src/Frame.h"
 
 namespace reactivesocket {
 
@@ -44,7 +44,10 @@ void FrameTransport::connect() {
 
 void FrameTransport::setFrameProcessor(
     std::shared_ptr<FrameProcessor> frameProcessor) {
-  frameProcessor_ = std::move(frameProcessor);
+  {
+    std::lock_guard<std::mutex> lock(frameProcessorLock_);
+    frameProcessor_ = std::move(frameProcessor);
+  }
 
   if (frameProcessor_) {
     CHECK(!isClosed());
@@ -56,7 +59,10 @@ void FrameTransport::setFrameProcessor(
 
 void FrameTransport::close(folly::exception_wrapper ex) {
   // just making sure we will never try to call back onto the processor
-  frameProcessor_ = nullptr;
+  {
+    std::lock_guard<std::mutex> lock(frameProcessorLock_);
+    frameProcessor_ = nullptr;
+  }
 
   if (!connection_) {
     return;
@@ -78,24 +84,32 @@ void FrameTransport::close(folly::exception_wrapper ex) {
 void FrameTransport::onSubscribe(
     std::shared_ptr<Subscription> subscription) noexcept {
   CHECK(!connectionInputSub_);
-  CHECK(frameProcessor_);
+  CHECK(getFrameProcessor());
   connectionInputSub_.reset(std::move(subscription));
   connectionInputSub_.request(std::numeric_limits<size_t>::max());
 }
 
 void FrameTransport::onNext(std::unique_ptr<folly::IOBuf> frame) noexcept {
   if (connection_) {
-    CHECK(frameProcessor_); // if *this is not closed and is pulling frames, it
+    CHECK(getFrameProcessor()); // if *this is not closed and is pulling frames,
+                                // it
     // should have frameProcessor
-    frameProcessor_->processFrame(std::move(frame));
+    getFrameProcessor()->processFrame(std::move(frame));
   }
 }
 
 void FrameTransport::terminateFrameProcessor(folly::exception_wrapper ex) {
   // this method can be executed multiple times during terminating
-  if (frameProcessor_) {
-    frameProcessor_->onTerminal(std::move(ex));
-    frameProcessor_ = nullptr;
+
+  std::shared_ptr<FrameProcessor> frameProcessor;
+  {
+    std::lock_guard<std::mutex> lock(frameProcessorLock_);
+    frameProcessor = std::move(frameProcessor_);
+  }
+
+  if (frameProcessor) {
+    VLOG(3) << this << " terminating frame processor ex=" << ex.what();
+    frameProcessor->onTerminal(std::move(ex));
   }
 }
 
@@ -132,13 +146,15 @@ void FrameTransport::cancel() noexcept {
 void FrameTransport::outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf> frame) {
   // we don't want to be sending frames when frameProcessor_ is not set because
   // we wont have a way to process error/terminating signals
-  if (connection_ && frameProcessor_) {
+  if (connection_ && getFrameProcessor()) {
     drainOutputFramesQueue();
     if (pendingWrites_.empty() && writeAllowance_.tryAcquire()) {
+      VLOG(3) << this << " writing frame " << FrameHeader::peekType(*frame);
       connectionOutput_.onNext(std::move(frame));
       return;
     }
   }
+  VLOG(3) << this << " queuing frame " << FrameHeader::peekType(*frame);
   // We either have no allowance to perform the operation, or the queue has
   // not been drained (e.g. we're looping in ::request).
   // or we are disconnected
@@ -146,10 +162,11 @@ void FrameTransport::outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf> frame) {
 }
 
 void FrameTransport::drainOutputFramesQueue() {
-  if (connection_ && frameProcessor_) {
+  if (connection_ && getFrameProcessor()) {
     // Drain the queue or the allowance.
     while (!pendingWrites_.empty() && writeAllowance_.tryAcquire()) {
       auto frame = std::move(pendingWrites_.front());
+      VLOG(3) << this << " flushing frame " << FrameHeader::peekType(*frame);
       pendingWrites_.pop_front();
       connectionOutput_.onNext(std::move(frame));
     }
@@ -158,6 +175,11 @@ void FrameTransport::drainOutputFramesQueue() {
 
 DuplexConnection* FrameTransport::duplexConnection() const {
   return connection_.get();
+}
+
+std::shared_ptr<FrameProcessor> FrameTransport::getFrameProcessor() const {
+  std::lock_guard<std::mutex> lock(frameProcessorLock_);
+  return frameProcessor_;
 }
 
 } // reactivesocket

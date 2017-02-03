@@ -73,5 +73,7 @@ class ReactiveSocket {
   virtual folly::Executor& executor() = 0;
 
   virtual DuplexConnection* duplexConnection() const = 0;
+
+  virtual bool isClosed() = 0;
 };
 }

@@ -120,6 +120,7 @@ class StandardReactiveSocket : public ReactiveSocket {
   }
 
   DuplexConnection* duplexConnection() const override;
+  bool isClosed() override;
 
  private:
   StandardReactiveSocket(

@@ -193,7 +193,9 @@ void ConnectionAutomaton::disconnectOrCloseWithError(Frame_ERROR&& errorFrame) {
 
 void ConnectionAutomaton::closeWithError(Frame_ERROR&& error) {
   debugCheckCorrectExecutor();
-  VLOG(4) << "closeWithError "
+  // TODO: this is a temporary hack before stats_ is turned into shared_ptr
+  isClosing_ = true;
+  VLOG(3) << "closeWithError "
           << error.payload_.data->cloneAsValue().moveToFbString();
 
   StreamCompletionSignal signal;
@@ -208,8 +210,7 @@ void ConnectionAutomaton::closeWithError(Frame_ERROR&& error) {
       signal = StreamCompletionSignal::REJECTED_SETUP;
       break;
 
-    case ErrorCode::
-        CONNECTION_ERROR:
+    case ErrorCode::CONNECTION_ERROR:
     // StreamCompletionSignal::CONNECTION_ERROR is reserved for
     // frameTransport errors
     // ErrorCode::CONNECTION_ERROR is a normal Frame_ERROR error code which has
@@ -317,6 +318,10 @@ void ConnectionAutomaton::processFrame(std::unique_ptr<folly::IOBuf> frame) {
   auto thisPtr = this->shared_from_this();
   auto movedFrame = folly::makeMoveWrapper(frame);
   runInExecutor([thisPtr, movedFrame]() mutable {
+    // TODO: this is a temporary hack before stats_ is turned into shared_ptr
+    if (thisPtr->isClosing_) {
+      return;
+    }
     thisPtr->processFrameImpl(movedFrame.move());
   });
 }
@@ -482,7 +487,10 @@ void ConnectionAutomaton::onConnectionFrame(
           resumeCallback_.reset();
           resumeFromPosition(frame.position_);
         } else {
-          closeWithError(Frame_ERROR::connectionError("can not resume"));
+          closeWithError(Frame_ERROR::connectionError(folly::to<std::string>(
+              "Client cannot resume, server position ",
+              frame.position_,
+              " is not available.")));
         }
       } else {
         closeWithError(Frame_ERROR::invalidFrame());
@@ -560,6 +568,7 @@ bool ConnectionAutomaton::resumeFromPositionOrClose(ResumePosition position) {
   debugCheckCorrectExecutor();
   DCHECK(!resumeCallback_);
   DCHECK(!isDisconnectedOrClosed());
+  DCHECK(mode_ == ReactiveSocketMode::SERVER);
 
   if (streamState_->resumeCache_.isPositionAvailable(position)) {
     frameTransport_->outputFrameOrEnqueue(
@@ -568,8 +577,11 @@ bool ConnectionAutomaton::resumeFromPositionOrClose(ResumePosition position) {
     resumeFromPosition(position);
     return true;
   } else {
-    closeWithError(
-        Frame_ERROR::connectionError("Position not available. Can not resume"));
+    closeWithError(Frame_ERROR::connectionError(folly::to<std::string>(
+        "Cannot resume server, client position ",
+        position,
+        " is not available. Last reset position is ",
+        streamState_->resumeCache_.lastResetPosition())));
     return false;
   }
 }

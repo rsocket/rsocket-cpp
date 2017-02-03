@@ -436,4 +436,9 @@ void StandardReactiveSocket::debugCheckCorrectExecutor() const {
       dynamic_cast<folly::EventBase*>(&executor_)->isInEventBaseThread());
 }
 
+bool StandardReactiveSocket::isClosed() {
+  debugCheckCorrectExecutor();
+  return !static_cast<bool>(connection_);
+}
+
 } // reactivesocket
