@@ -195,14 +195,10 @@ void StandardReactiveSocket::createResponder(
         //          disconnect();
       }
 
-      auto streamState = handler->handleSetupPayload(
-          *this,
-          ConnectionSetupPayload(
-              std::move(frame.metadataMimeType_),
-              std::move(frame.dataMimeType_),
-              std::move(frame.payload_),
-              false, // TODO: resumable flag should be received in SETUP frame
-              frame.token_));
+      ConnectionSetupPayload setupPayload;
+      frame.moveToSetupPayload(setupPayload);
+      auto streamState =
+          handler->handleSetupPayload(*this, std::move(setupPayload));
 
       // TODO(lehecka): use again
       // connection.useStreamState(streamState);

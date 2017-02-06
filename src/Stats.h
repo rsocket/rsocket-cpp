@@ -7,6 +7,10 @@
 #include "src/DuplexConnection.h"
 #include "src/Frame.h"
 
+namespace folly {
+class exception_wrapper;
+}
+
 namespace reactivesocket {
 class Stats {
  public:
@@ -30,5 +34,8 @@ class Stats {
   virtual void frameWritten(const std::string& frameType) = 0;
   virtual void frameRead(const std::string& frameType) = 0;
   virtual void resumeBufferChanged(int framesCountDelta, int dataSizeDelta) = 0;
+
+  virtual void connectionClosedInServerConnectionAcceptor(
+      const folly::exception_wrapper& ex) = 0;
 };
 }

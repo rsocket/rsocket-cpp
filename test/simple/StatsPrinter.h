@@ -24,5 +24,8 @@ class StatsPrinter : public Stats {
   void frameWritten(const std::string& frameType) override;
   void frameRead(const std::string& frameType) override;
   void resumeBufferChanged(int framesCountDelta, int dataSizeDelta) override;
+
+  void connectionClosedInServerConnectionAcceptor(
+      const folly::exception_wrapper& ex) override;
 };
 }

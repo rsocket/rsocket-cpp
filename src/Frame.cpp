@@ -1,12 +1,11 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "src/Frame.h"
-
-#include <bitset>
-
 #include <folly/Memory.h>
 #include <folly/Optional.h>
 #include <folly/io/Cursor.h>
+#include <bitset>
+#include "src/ConnectionSetupPayload.h"
 
 // TODO(stupaq): strict enum validation
 // TODO(stupaq): verify whether frames contain extra data
@@ -507,6 +506,15 @@ bool Frame_SETUP::deserializeFrom(std::unique_ptr<folly::IOBuf> in) {
 std::ostream& operator<<(std::ostream& os, const Frame_SETUP& frame) {
   return os << frame.header_ << ", (" << frame.payload_;
 }
+
+void Frame_SETUP::moveToSetupPayload(ConnectionSetupPayload& setupPayload) {
+  setupPayload.metadataMimeType = std::move(metadataMimeType_);
+  setupPayload.dataMimeType = std::move(dataMimeType_);
+  setupPayload.payload = std::move(payload_);
+  setupPayload.token = std::move(token_);
+  setupPayload.resumable = header_.flags_ & FrameFlags_RESUME_ENABLE;
+}
+
 /// @}
 
 /// @{

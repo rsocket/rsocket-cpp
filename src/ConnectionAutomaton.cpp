@@ -208,8 +208,7 @@ void ConnectionAutomaton::closeWithError(Frame_ERROR&& error) {
       signal = StreamCompletionSignal::REJECTED_SETUP;
       break;
 
-    case ErrorCode::
-        CONNECTION_ERROR:
+    case ErrorCode::CONNECTION_ERROR:
     // StreamCompletionSignal::CONNECTION_ERROR is reserved for
     // frameTransport errors
     // ErrorCode::CONNECTION_ERROR is a normal Frame_ERROR error code which has

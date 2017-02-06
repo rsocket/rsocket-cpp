@@ -394,6 +394,8 @@ class Frame_KEEPALIVE {
 };
 std::ostream& operator<<(std::ostream&, const Frame_KEEPALIVE&);
 
+class ConnectionSetupPayload;
+
 class Frame_SETUP {
  public:
   Frame_SETUP() = default;
@@ -420,6 +422,8 @@ class Frame_SETUP {
 
   std::unique_ptr<folly::IOBuf> serializeOut();
   bool deserializeFrom(std::unique_ptr<folly::IOBuf> in);
+
+  void moveToSetupPayload(ConnectionSetupPayload& setupPayload);
 
   FrameHeader header_;
   uint32_t version_;

@@ -5,6 +5,7 @@
 #include <gmock/gmock.h>
 #include "src/FrameTransport.h"
 #include "src/NullRequestHandler.h"
+#include "src/ServerConnectionAcceptor.h"
 #include "src/SmartPointers.h"
 #include "src/StandardReactiveSocket.h"
 #include "src/SubscriptionBase.h"
@@ -92,49 +93,15 @@ class ServerRequestHandler : public DefaultRequestHandler {
   std::shared_ptr<StreamState> handleSetupPayload(
       ReactiveSocket& socket,
       ConnectionSetupPayload request) noexcept override {
-    std::stringstream str;
-
-    str << "ServerRequestHandler.handleSetupPayload " << request
-        << " setup token <";
-    for (uint8_t byte : request.token.data()) {
-      str << (int)byte;
-    }
-    str << "> " << streamState_.get() << " " << streamState_->streams_.size()
-        << "\n";
-    LOG(INFO) << str.str();
-    // TODO: we need to get ReactiveSocket pointer somehow
-    g_reactiveSockets[0].second = request.token;
-    // TODO: the return value is not used now
-    return streamState_;
+    CHECK(false) << "unexpected call";
+    return nullptr;
   }
 
   bool handleResume(
       ReactiveSocket& socket,
       const ResumeIdentificationToken& token,
       ResumePosition position) noexcept override {
-    std::stringstream str;
-
-    str << "ServerRequestHandler.handleResume resume token <";
-    for (uint8_t byte : token.data()) {
-      str << (int)byte;
-    }
-    str << "> " << streamState_.get() << " " << streamState_->streams_.size()
-        << "\n";
-
-    LOG(INFO) << str.str();
-
-    CHECK(g_reactiveSockets.size() == 2);
-    CHECK(g_reactiveSockets[0].second == token);
-
-    LOG(INFO) << "detaching frame transport";
-    auto frameTransport = g_reactiveSockets[1].first->detachFrameTransport();
-    LOG(INFO) << "tryResumeServer...";
-    auto result =
-        g_reactiveSockets[0].first->tryResumeServer(frameTransport, position);
-    LOG(INFO) << "resume " << (result ? "SUCCEEDED" : "FAILED");
-
-    // TODO(lehecka): unused, make it used again
-    // return streamState_;
+    CHECK(false) << "unexpected call";
     return false;
   }
 
@@ -175,35 +142,23 @@ class ServerRequestHandler : public DefaultRequestHandler {
   std::shared_ptr<StreamState> streamState_;
 };
 
-class Callback : public AsyncServerSocket::AcceptCallback {
+class MyServerConnectionAcceptor : public ServerConnectionAcceptor {
  public:
-  Callback(EventBase& eventBase, Stats& stats)
-      : streamState_(std::make_shared<StreamState>(Stats::noop())),
-        eventBase_(eventBase),
-        stats_(stats){};
+  MyServerConnectionAcceptor(EventBase& eventBase, Stats& stats)
+      : ServerConnectionAcceptor(stats), eventBase_(eventBase) {}
 
-  virtual ~Callback() = default;
+  void setupNewSocket(
+      std::shared_ptr<FrameTransport> frameTransport,
+      ConnectionSetupPayload setupPayload) override {
+    CHECK(setupPayload.resumable);
+    LOG(INFO) << "MyServerConnectionAcceptor::setupNewSocket " << setupPayload;
 
-  virtual void connectionAccepted(
-      int fd,
-      const SocketAddress& clientAddr) noexcept override {
-    LOG(INFO) << "connectionAccepted" << clientAddr.describe();
-
-    auto socket =
-        folly::AsyncSocket::UniquePtr(new AsyncSocket(&eventBase_, fd));
-
-    std::unique_ptr<DuplexConnection> connection =
-        std::make_unique<TcpDuplexConnection>(
-            std::move(socket), inlineExecutor(), stats_);
-    std::unique_ptr<DuplexConnection> framedConnection =
-        std::make_unique<FramedDuplexConnection>(
-            std::move(connection), eventBase_);
     std::unique_ptr<RequestHandler> requestHandler =
-        std::make_unique<ServerRequestHandler>(streamState_);
+        std::make_unique<ServerRequestHandler>(nullptr);
 
     std::unique_ptr<StandardReactiveSocket> rs =
         StandardReactiveSocket::disconnectedServer(
-            eventBase_, std::move(requestHandler), stats_);
+            eventBase_, std::move(requestHandler), stats());
 
     rs->onConnected([]() { LOG(INFO) << "socket connected"; });
     rs->onDisconnected([rs = rs.get()](const folly::exception_wrapper& ex) {
@@ -223,26 +178,57 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     }
 
     LOG(INFO) << "serverConnecting ...";
-    rs->serverConnect(
-        std::make_shared<FrameTransport>(std::move(framedConnection)), true);
+    rs->serverConnect(std::move(frameTransport), true);
 
     LOG(INFO) << "RS " << rs.get();
 
-    g_reactiveSockets.emplace_back(
-        std::move(rs), ResumeIdentificationToken::generateNew());
+    g_reactiveSockets.emplace_back(std::move(rs), setupPayload.token);
   }
 
-  void removeSocket(ReactiveSocket& socket) {
-    if (!shuttingDown) {
-      g_reactiveSockets.erase(std::remove_if(
-          g_reactiveSockets.begin(),
-          g_reactiveSockets.end(),
-          [&socket](const std::pair<
-                    std::unique_ptr<ReactiveSocket>,
-                    ResumeIdentificationToken>& kv) {
-            return kv.first.get() == &socket;
-          }));
-    }
+  void resumeSocket(
+      std::shared_ptr<FrameTransport> frameTransport,
+      ResumeIdentificationToken token,
+      ResumePosition position) override {
+    LOG(INFO) << "MyServerConnectionAcceptor::resumeSocket resume token "
+              << token.toString();
+
+    CHECK(g_reactiveSockets.size() == 1);
+    CHECK(g_reactiveSockets[0].second == token);
+
+    LOG(INFO) << "tryResumeServer...";
+    auto result =
+        g_reactiveSockets[0].first->tryResumeServer(frameTransport, position);
+    LOG(INFO) << "resume " << (result ? "SUCCEEDED" : "FAILED");
+  }
+
+ private:
+  EventBase& eventBase_;
+};
+
+class Callback : public AsyncServerSocket::AcceptCallback {
+ public:
+  Callback(EventBase& eventBase, Stats& stats)
+      : streamState_(std::make_shared<StreamState>(Stats::noop())),
+        eventBase_(eventBase),
+        stats_(stats),
+        connectionAcceptor_(eventBase, stats) {}
+
+  virtual void connectionAccepted(
+      int fd,
+      const SocketAddress& clientAddr) noexcept override {
+    LOG(INFO) << "connectionAccepted" << clientAddr.describe();
+
+    auto socket =
+        folly::AsyncSocket::UniquePtr(new AsyncSocket(&eventBase_, fd));
+
+    std::unique_ptr<DuplexConnection> connection =
+        std::make_unique<TcpDuplexConnection>(
+            std::move(socket), inlineExecutor(), stats_);
+    std::unique_ptr<DuplexConnection> framedConnection =
+        std::make_unique<FramedDuplexConnection>(
+            std::move(connection), eventBase_);
+
+    connectionAcceptor_.acceptConnection(std::move(framedConnection));
   }
 
   virtual void acceptError(const std::exception& ex) noexcept override {
@@ -260,6 +246,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
   EventBase& eventBase_;
   Stats& stats_;
   bool shuttingDown{false};
+  MyServerConnectionAcceptor connectionAcceptor_;
 };
 }
 

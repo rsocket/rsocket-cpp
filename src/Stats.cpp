@@ -25,6 +25,9 @@ class NoopStats : public Stats {
 
   void resumeBufferChanged(int framesCount, int dataSize) override {}
 
+  void connectionClosedInServerConnectionAcceptor(
+      const folly::exception_wrapper& ex) override {}
+
   static NoopStats& instance(void) {
     static NoopStats singleton;
     return singleton;

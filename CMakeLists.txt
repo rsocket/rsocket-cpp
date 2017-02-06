@@ -180,7 +180,7 @@ add_library(
   src/FrameTransport.cpp
   src/FrameTransport.h
   src/FrameProcessor.h
-  src/ReactiveSocket.h src/StreamsFactory.cpp src/StreamsFactory.h)
+  src/ReactiveSocket.h src/StreamsFactory.cpp src/StreamsFactory.h src/ServerConnectionAcceptor.cpp src/ServerConnectionAcceptor.h)
 
 target_link_libraries(
   ReactiveSocket

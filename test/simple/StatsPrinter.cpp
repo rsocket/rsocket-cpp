@@ -1,6 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "StatsPrinter.h"
+#include "test/simple/StatsPrinter.h"
+#include <folly/ExceptionWrapper.h>
 
 namespace reactivesocket {
 void StatsPrinter::socketCreated() {
@@ -48,5 +49,10 @@ void StatsPrinter::resumeBufferChanged(
     int dataSizeDelta) {
   LOG(INFO) << "resumeBufferChanged framesCountDelta=" << framesCountDelta
             << " dataSizeDelta=" << dataSizeDelta;
+}
+
+void StatsPrinter::connectionClosedInServerConnectionAcceptor(
+    const folly::exception_wrapper& ex) {
+  LOG(ERROR) << "connectionClosedInServerConnectionAcceptor ex=" << ex.what();
 }
 }
