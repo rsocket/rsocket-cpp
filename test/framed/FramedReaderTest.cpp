@@ -223,3 +223,27 @@ TEST(FramedReaderTest, InvalidDataStream) {
       std::make_unique<StrictMock<MockRequestHandler>>(),
       ConnectionSetupPayload("", "", Payload("test client payload")));
 }
+
+TEST(FramedReaderTest, ReadEmptyPayload) {
+  auto frameSubscriber = std::make_shared<
+      NiceMock<MockSubscriber<std::unique_ptr<folly::IOBuf>>>>();
+
+  auto payload = folly::IOBuf::create(0);
+  auto frameSize = sizeof(int32_t);
+  folly::io::Appender a(payload.get(), frameSize);
+  a.writeBE<int32_t>(frameSize);
+
+  auto framedReader =
+      std::make_shared<FramedReader>(frameSubscriber, inlineExecutor());
+
+  framedReader->onSubscribe(std::make_shared<NiceMock<MockSubscription>>());
+  framedReader->onNext(std::move(payload));
+
+  EXPECT_CALL(*frameSubscriber, onNext_(_))
+      .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& p) {
+        ASSERT_EQ("", p->moveToFbString().toStdString());
+      }));
+
+  frameSubscriber->subscription()->request(1);
+  framedReader->onComplete();
+}
