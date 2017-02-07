@@ -17,24 +17,20 @@ using namespace ::reactivesocket;
 namespace {
 class MockConnectionAutomaton : public FrameSink {
  public:
-  MOCK_METHOD0(sendKeepalive_, void());
-  MOCK_METHOD1(closeWithError_, void(Frame_ERROR&));
+  MOCK_METHOD0(sendKeepalive, void());
+  MOCK_METHOD1(disconnectOrCloseWithError_, void(Frame_ERROR&));
 
-  void sendKeepalive() override {
-    sendKeepalive_();
-  }
-
-  void closeWithError(Frame_ERROR&& error) override {
-    closeWithError_(error);
+  void disconnectOrCloseWithError(Frame_ERROR&& error) override {
+    disconnectOrCloseWithError_(error);
   }
 };
 }
 
 TEST(FollyKeepaliveTimerTest, StartStopWithResponse) {
   auto connectionAutomaton =
-      std::make_shared<StrictMock<MockConnectionAutomaton>>();
+      std::make_shared<NiceMock<MockConnectionAutomaton>>();
 
-  EXPECT_CALL(*connectionAutomaton, sendKeepalive_()).Times(2);
+  EXPECT_CALL(*connectionAutomaton, sendKeepalive()).Times(2);
 
   folly::EventBase eventBase;
 
@@ -55,8 +51,8 @@ TEST(FollyKeepaliveTimerTest, NoResponse) {
   auto connectionAutomaton =
       std::make_shared<StrictMock<MockConnectionAutomaton>>();
 
-  EXPECT_CALL(*connectionAutomaton, sendKeepalive_()).Times(1);
-  EXPECT_CALL(*connectionAutomaton, closeWithError_(_)).Times(1);
+  EXPECT_CALL(*connectionAutomaton, sendKeepalive()).Times(1);
+  EXPECT_CALL(*connectionAutomaton, disconnectOrCloseWithError_(_)).Times(1);
 
   folly::EventBase eventBase;
 

@@ -19,19 +19,7 @@ matrix:
             - ubuntu-toolchain-r-test
             - llvm-toolchain-precise-3.6
 
-    - env: CLANG_VERSION=3.7 BUILD_TYPE=Debug CPP=14 ASAN=Off
-      os: linux
-      addons: &clang37
-        apt:
-          packages:
-            - util-linux
-            - clang-3.7
-            - valgrind
-          sources:
-            - ubuntu-toolchain-r-test
-            - llvm-toolchain-precise-3.7
-
-    - env: GCC_VERSION=4.9 BUILD_TYPE=Debug CPP=14 ASAN=Off
+    - env: GCC_VERSION=4.9 BUILD_TYPE=Debug CPP=14 ASAN=On
       os: linux
       addons: &gcc49
         apt:

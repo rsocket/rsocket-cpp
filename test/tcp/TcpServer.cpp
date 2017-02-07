@@ -125,8 +125,9 @@ class Callback : public AsyncServerSocket::AcceptCallback {
         std::move(requestHandler),
         stats_);
 
-    rs->onClosed(
-        std::bind(&Callback::removeSocket, this, std::placeholders::_1));
+    rs->onClosed([ this, rs = rs.get() ](const folly::exception_wrapper& ex) {
+      removeSocket(*rs);
+    });
 
     reactiveSockets_.push_back(std::move(rs));
   }

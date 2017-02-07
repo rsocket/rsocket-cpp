@@ -2,7 +2,6 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <limits>
 #include "src/AllowanceSemaphore.h"
 
 using namespace ::testing;

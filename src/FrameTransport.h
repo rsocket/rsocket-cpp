@@ -4,6 +4,7 @@
 
 #include <deque>
 #include <memory>
+#include <mutex>
 #include "src/AllowanceSemaphore.h"
 #include "src/Common.h"
 #include "src/FrameProcessor.h"
@@ -57,10 +58,11 @@ class FrameTransport :
 
   void drainOutputFramesQueue();
 
-  void terminateFrameProcessor(
-      folly::exception_wrapper,
-      StreamCompletionSignal);
+  void terminateFrameProcessor(folly::exception_wrapper);
 
+  std::shared_ptr<FrameProcessor> getFrameProcessor() const;
+
+  mutable std::mutex frameProcessorLock_;
   std::shared_ptr<FrameProcessor> frameProcessor_;
 
   AllowanceSemaphore writeAllowance_;

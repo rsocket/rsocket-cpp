@@ -15,8 +15,7 @@ using namespace ::reactivesocket;
 
 class FrameTransportMock : public FrameTransport {
  public:
-  FrameTransportMock()
-      : FrameTransport(std::make_unique<InlineConnection>()) {}
+  FrameTransportMock() : FrameTransport(std::make_unique<InlineConnection>()) {}
 
   MOCK_METHOD1(outputFrameOrEnqueue_, void(std::unique_ptr<folly::IOBuf>&));
 
@@ -56,14 +55,14 @@ TEST(ResumeCacheTest, OneFrame) {
   cache.trackSentFrame(*frame1);
 
   EXPECT_EQ(0, cache.lastResetPosition());
-  EXPECT_EQ(frame1Size, cache.position());
+  EXPECT_EQ((ResumePosition)frame1Size, cache.position());
   EXPECT_TRUE(cache.isPositionAvailable(0));
   EXPECT_TRUE(cache.isPositionAvailable(frame1Size));
 
   cache.resetUpToPosition(0);
 
   EXPECT_EQ(0, cache.lastResetPosition());
-  EXPECT_EQ(frame1Size, cache.position());
+  EXPECT_EQ((ResumePosition)frame1Size, cache.position());
   EXPECT_TRUE(cache.isPositionAvailable(0));
   EXPECT_TRUE(cache.isPositionAvailable(frame1Size));
 
@@ -79,8 +78,8 @@ TEST(ResumeCacheTest, OneFrame) {
 
   cache.resetUpToPosition(frame1Size);
 
-  EXPECT_EQ(frame1Size, cache.lastResetPosition());
-  EXPECT_EQ(frame1Size, cache.position());
+  EXPECT_EQ((ResumePosition)frame1Size, cache.lastResetPosition());
+  EXPECT_EQ((ResumePosition)frame1Size, cache.position());
   EXPECT_FALSE(cache.isPositionAvailable(0));
   EXPECT_TRUE(cache.isPositionAvailable(frame1Size));
 
@@ -100,7 +99,7 @@ TEST(ResumeCacheTest, TwoFrames) {
   cache.trackSentFrame(*frame2);
 
   EXPECT_EQ(0, cache.lastResetPosition());
-  EXPECT_EQ(frame1Size + frame2Size, cache.position());
+  EXPECT_EQ((ResumePosition)(frame1Size + frame2Size), cache.position());
   EXPECT_TRUE(cache.isPositionAvailable(0));
   EXPECT_TRUE(cache.isPositionAvailable(frame1Size));
   EXPECT_TRUE(cache.isPositionAvailable(frame1Size + frame2Size));
@@ -117,8 +116,8 @@ TEST(ResumeCacheTest, TwoFrames) {
 
   cache.resetUpToPosition(frame1Size);
 
-  EXPECT_EQ(frame1Size, cache.lastResetPosition());
-  EXPECT_EQ(frame1Size + frame2Size, cache.position());
+  EXPECT_EQ((ResumePosition)frame1Size, cache.lastResetPosition());
+  EXPECT_EQ((ResumePosition)(frame1Size + frame2Size), cache.position());
   EXPECT_FALSE(cache.isPositionAvailable(0));
   EXPECT_TRUE(cache.isPositionAvailable(frame1Size));
   EXPECT_TRUE(cache.isPositionAvailable(frame1Size + frame2Size));

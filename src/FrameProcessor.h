@@ -16,7 +16,7 @@ class FrameProcessor {
   virtual ~FrameProcessor() = default;
 
   virtual void processFrame(std::unique_ptr<folly::IOBuf>) = 0;
-  virtual void onTerminal(folly::exception_wrapper, StreamCompletionSignal) = 0;
+  virtual void onTerminal(folly::exception_wrapper) = 0;
 };
 
 } // reactivesocket

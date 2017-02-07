@@ -205,17 +205,15 @@ class Callback : public AsyncServerSocket::AcceptCallback {
         StandardReactiveSocket::disconnectedServer(
             eventBase_, std::move(requestHandler), stats_);
 
-    rs->onConnected([](ReactiveSocket& socket) {
-      LOG(INFO) << "socket connected " << &socket;
-    });
-    rs->onDisconnected([](ReactiveSocket& socket) {
-      LOG(INFO) << "socket disconnect " << &socket;
+    rs->onConnected([]() { LOG(INFO) << "socket connected"; });
+    rs->onDisconnected([rs = rs.get()](const folly::exception_wrapper& ex) {
+      LOG(INFO) << "socket disconnect: " << ex.what();
       // to verify these frames will be queued up
-      socket.requestStream(
+      rs->requestStream(
           Payload("from server resume"), std::make_shared<PrintSubscriber>());
     });
-    rs->onClosed([](ReactiveSocket& socket) {
-      LOG(INFO) << "socket closed " << &socket;
+    rs->onClosed([](const folly::exception_wrapper& ex) {
+      LOG(INFO) << "socket closed: " << ex.what();
     });
 
     if (g_reactiveSockets.empty()) {

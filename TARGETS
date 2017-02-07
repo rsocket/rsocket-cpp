@@ -57,9 +57,11 @@ cpp_library(
         'src/Payload.h',
         'src/ReactiveSocket.h',
         'src/RequestHandler.h',
+        'src/ResumeTracker.h',
         'src/SmartPointers.h', #will be removed soon
         'src/StandardReactiveSocket.h',
         'src/Stats.h',
+        'src/StreamsFactory.h',
         'src/SubscriberBase.h',
         'src/SubscriptionBase.h',
     ],
@@ -75,8 +77,10 @@ cpp_library(
         'src/Payload.cpp',
         'src/RequestHandler.cpp',
         'src/ResumeCache.cpp',
+        'src/ResumeTracker.cpp',
         'src/StandardReactiveSocket.cpp',
         'src/Stats.cpp',
+        'src/StreamsFactory.cpp',
     ]),
     deps = [
         ':reactivesocket-internal',

@@ -20,11 +20,6 @@ StandardReactiveSocket::~StandardReactiveSocket() {
   // Force connection closure, this will trigger terminal signals to be
   // delivered to all stream automata.
   close();
-
-  // no more callbacks after the destructor is executed
-  onConnectListeners_->clear();
-  onDisconnectListeners_->clear();
-  onCloseListeners_->clear();
 }
 
 StandardReactiveSocket::StandardReactiveSocket(
@@ -51,10 +46,7 @@ StandardReactiveSocket::StandardReactiveSocket(
               std::placeholders::_1),
           stats,
           std::move(keepaliveTimer),
-          mode,
-          executeListenersFunc(onConnectListeners_),
-          executeListenersFunc(onDisconnectListeners_),
-          executeListenersFunc(onCloseListeners_))),
+          mode)),
       streamsFactory_(connection_, mode),
       executor_(executor) {
   debugCheckCorrectExecutor();
@@ -367,14 +359,15 @@ void StandardReactiveSocket::serverConnect(
 void StandardReactiveSocket::close() {
   debugCheckCorrectExecutor();
   if (auto connectionCopy = std::move(connection_)) {
-    connectionCopy->close();
+    connectionCopy->close(
+        folly::exception_wrapper(), StreamCompletionSignal::SOCKET_CLOSED);
   }
 }
 
 void StandardReactiveSocket::disconnect() {
   debugCheckCorrectExecutor();
   checkNotClosed();
-  connection_->disconnect();
+  connection_->disconnect(folly::exception_wrapper());
 }
 
 std::shared_ptr<FrameTransport> StandardReactiveSocket::detachFrameTransport() {
@@ -383,25 +376,22 @@ std::shared_ptr<FrameTransport> StandardReactiveSocket::detachFrameTransport() {
   return connection_->detachFrameTransport();
 }
 
-void StandardReactiveSocket::onConnected(ReactiveSocketCallback listener) {
+void StandardReactiveSocket::onConnected(std::function<void()> listener) {
   debugCheckCorrectExecutor();
   checkNotClosed();
-  CHECK(listener);
-  onConnectListeners_->push_back(std::move(listener));
+  connection_->addConnectedListener(std::move(listener));
 }
 
-void StandardReactiveSocket::onDisconnected(ReactiveSocketCallback listener) {
+void StandardReactiveSocket::onDisconnected(ErrorCallback listener) {
   debugCheckCorrectExecutor();
   checkNotClosed();
-  CHECK(listener);
-  onDisconnectListeners_->push_back(std::move(listener));
+  connection_->addDisconnectedListener(std::move(listener));
 }
 
-void StandardReactiveSocket::onClosed(ReactiveSocketCallback listener) {
+void StandardReactiveSocket::onClosed(ErrorCallback listener) {
   debugCheckCorrectExecutor();
   checkNotClosed();
-  CHECK(listener);
-  onCloseListeners_->push_back(std::move(listener));
+  connection_->addClosedListener(std::move(listener));
 }
 
 void StandardReactiveSocket::tryClientResume(
@@ -416,6 +406,7 @@ void StandardReactiveSocket::tryClientResume(
   frameTransport->outputFrameOrEnqueue(
       connection_->createResumeFrame(token).serializeOut());
 
+  connection_->setResumable(true);
   connection_->reconnect(std::move(frameTransport), std::move(resumeCallback));
 }
 
@@ -431,25 +422,6 @@ bool StandardReactiveSocket::tryResumeServer(
   return connection_->resumeFromPositionOrClose(position);
 }
 
-std::function<void()> StandardReactiveSocket::executeListenersFunc(
-    std::shared_ptr<std::list<ReactiveSocketCallback>> listeners) {
-  auto* thisPtr = this;
-  return [thisPtr, listeners]() mutable {
-    // we will make a copy of listeners so that destructor won't delete them
-    // when iterating them
-    auto listenersCopy = *listeners;
-    for (auto& listener : listenersCopy) {
-      if (listeners->empty()) {
-        // destructor deleted listeners
-        thisPtr = nullptr;
-      }
-      // TODO: change parameter from reference to pointer to be able send null
-      // when this instance is destroyed in the callback
-      listener(*thisPtr);
-    }
-  };
-}
-
 void StandardReactiveSocket::checkNotClosed() const {
   CHECK(connection_) << "ReactiveSocket already closed";
 }
@@ -463,6 +435,11 @@ void StandardReactiveSocket::debugCheckCorrectExecutor() const {
   DCHECK(
       !dynamic_cast<folly::EventBase*>(&executor_) ||
       dynamic_cast<folly::EventBase*>(&executor_)->isInEventBaseThread());
+}
+
+bool StandardReactiveSocket::isClosed() {
+  debugCheckCorrectExecutor();
+  return !static_cast<bool>(connection_);
 }
 
 } // reactivesocket

@@ -5,6 +5,7 @@
 #include <glog/logging.h>
 #include <iostream>
 #include <type_traits>
+#include "src/AllowanceSemaphore.h"
 #include "src/ConnectionAutomaton.h"
 #include "src/Executor.h"
 #include "src/Frame.h"
@@ -44,7 +45,7 @@ class PublisherMixin : public Base {
     debugCheckOnSubscribe();
     producingSubscription_.reset(std::move(subscription));
     if (initialRequestN_) {
-      producingSubscription_.request(initialRequestN_);
+      producingSubscription_.request(initialRequestN_.drain());
     }
   }
 
@@ -95,9 +96,16 @@ class PublisherMixin : public Base {
   }
 
   void processRequestN(uint32_t requestN) {
-    CHECK(producingSubscription_);
-    if (requestN) {
+    if (!requestN) {
+      return;
+    }
+
+    // we might not have the subscription set yet as there can be REQUEST_N
+    // frames scheduled on the executor before onSubscribe method
+    if (producingSubscription_) {
       producingSubscription_.request(requestN);
+    } else {
+      initialRequestN_.release(requestN);
     }
   }
 
@@ -106,6 +114,6 @@ class PublisherMixin : public Base {
   /// This mixin is responsible for delivering a terminal signal to the
   /// Subscription once the stream ends.
   reactivestreams::SubscriptionPtr<Subscription> producingSubscription_;
-  uint32_t initialRequestN_{0};
+  AllowanceSemaphore initialRequestN_;
 };
 }

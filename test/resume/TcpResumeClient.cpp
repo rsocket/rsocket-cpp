@@ -116,14 +116,12 @@ int main(int argc, char* argv[]) {
         std::make_unique<FollyKeepaliveTimer>(
             *eventBaseThread.getEventBase(), std::chrono::seconds(10)));
 
-    reactiveSocket->onConnected([](ReactiveSocket& socket) {
-      LOG(INFO) << "socket connected " << &socket;
+    reactiveSocket->onConnected([]() { LOG(INFO) << "socket connected"; });
+    reactiveSocket->onDisconnected([](const folly::exception_wrapper& ex) {
+      LOG(INFO) << "socket disconnect: " << ex.what();
     });
-    reactiveSocket->onDisconnected([](ReactiveSocket& socket) {
-      LOG(INFO) << "socket disconnect " << &socket;
-    });
-    reactiveSocket->onClosed([](ReactiveSocket& socket) {
-      LOG(INFO) << "socket closed " << &socket;
+    reactiveSocket->onClosed([](const folly::exception_wrapper& ex) {
+      LOG(INFO) << "socket closed: " << ex.what();
     });
 
     LOG(INFO) << "requestStream:";

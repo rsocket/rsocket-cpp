@@ -358,6 +358,7 @@ class Frame_ERROR {
   bool deserializeFrom(std::unique_ptr<folly::IOBuf> in);
 
   static Frame_ERROR unexpectedFrame();
+  static Frame_ERROR invalidFrame();
   static Frame_ERROR badSetupFrame(const std::string& message);
   static Frame_ERROR connectionError(const std::string& message);
   static Frame_ERROR invalid(StreamId streamId, const std::string& message);

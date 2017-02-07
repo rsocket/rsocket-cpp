@@ -164,6 +164,7 @@ add_library(
   src/ResumeCache.cpp
   src/ResumeCache.h
   src/ResumeTracker.h
+  src/ResumeTracker.cpp
   src/Stats.cpp
   src/Stats.h
   src/StreamState.h

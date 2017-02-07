@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <list>
 #include <memory>
 #include "src/AllowanceSemaphore.h"
 #include "src/Common.h"
@@ -52,7 +53,7 @@ class FrameSink {
   ///
   /// This may synchronously deliver terminal signals to all
   /// AbstractStreamAutomaton attached to this ConnectionAutomaton.
-  virtual void closeWithError(Frame_ERROR&& error) = 0;
+  virtual void disconnectOrCloseWithError(Frame_ERROR&& error) = 0;
 
   virtual void sendKeepalive() = 0;
 };
@@ -78,12 +79,10 @@ class ConnectionAutomaton
       ResumeListener resumeListener,
       Stats& stats,
       std::unique_ptr<KeepaliveTimer> keepaliveTimer_,
-      ReactiveSocketMode mode,
-      std::function<void()> onConnected,
-      std::function<void()> onDisconnected,
-      std::function<void()> onClosed);
+      ReactiveSocketMode mode);
 
-  void closeWithError(Frame_ERROR&& error) override;
+  void closeWithError(Frame_ERROR&& error);
+  void disconnectOrCloseWithError(Frame_ERROR&& error) override;
 
   /// Kicks off connection procedure.
   ///
@@ -91,15 +90,15 @@ class ConnectionAutomaton
   /// processing of one or more frames.
   void connect(std::shared_ptr<FrameTransport>, bool sendingPendingFrames);
 
+  /// Disconnects DuplexConnection from the automaton.
+  /// Existing streams will stay intact.
+  void disconnect(folly::exception_wrapper ex);
+
   /// Terminates underlying connection.
   ///
   /// This may synchronously deliver terminal signals to all
   /// AbstractStreamAutomaton attached to this ConnectionAutomaton.
-  void close();
-
-  /// Disconnects DuplexConnection from the automaton.
-  /// Existing streams will stay intact.
-  void disconnect();
+  void close(folly::exception_wrapper, StreamCompletionSignal);
 
   std::shared_ptr<FrameTransport> detachFrameTransport();
 
@@ -166,7 +165,7 @@ class ConnectionAutomaton
     if (frame.deserializeFrom(std::move(payload))) {
       return true;
     } else {
-      closeWithError(Frame_ERROR::unexpectedFrame());
+      closeWithError(Frame_ERROR::invalidFrame());
       return false;
     }
   }
@@ -179,15 +178,20 @@ class ConnectionAutomaton
     if (frame.deserializeFrom(resumable, std::move(payload))) {
       return true;
     } else {
-      closeWithError(Frame_ERROR::unexpectedFrame());
+      closeWithError(Frame_ERROR::invalidFrame());
       return false;
     }
   }
 
   bool resumeFromPositionOrClose(ResumePosition position);
 
+  void addConnectedListener(std::function<void()> listener);
+  void addDisconnectedListener(ErrorCallback listener);
+  void addClosedListener(ErrorCallback listener);
+
   uint32_t getKeepaliveTime() const;
   bool isDisconnectedOrClosed() const;
+  bool isClosed() const;
 
   DuplexConnection* duplexConnection() const;
 
@@ -205,10 +209,10 @@ class ConnectionAutomaton
   /// executor
   /// and calling into ConnectionAutomaton.
   void processFrame(std::unique_ptr<folly::IOBuf>) override;
-  void onTerminal(folly::exception_wrapper, StreamCompletionSignal) override;
+  void onTerminal(folly::exception_wrapper) override;
 
   void processFrameImpl(std::unique_ptr<folly::IOBuf>);
-  void onTerminalImpl(folly::exception_wrapper, StreamCompletionSignal);
+  void onTerminalImpl(folly::exception_wrapper);
   /// @}
 
   void onConnectionFrame(std::unique_ptr<folly::IOBuf>);
@@ -216,9 +220,10 @@ class ConnectionAutomaton
       StreamId streamId,
       std::unique_ptr<folly::IOBuf> frame);
 
-  void close(folly::exception_wrapper, StreamCompletionSignal);
   void closeStreams(StreamCompletionSignal);
-  void closeFrameTransport(folly::exception_wrapper);
+  void closeFrameTransport(
+      folly::exception_wrapper,
+      StreamCompletionSignal signal);
 
   void resumeFromPosition(ResumePosition position);
   void outputFrame(std::unique_ptr<folly::IOBuf>);
@@ -238,14 +243,17 @@ class ConnectionAutomaton
   ReactiveSocketMode mode_;
   bool isResumable_{false};
   bool remoteResumeable_{false};
+  bool isClosed_{false};
 
-  std::function<void()> onConnected_;
-  std::function<void()> onDisconnected_;
-  std::function<void()> onClosed_;
+  std::list<std::function<void()>> onConnectListeners_;
+  std::list<ErrorCallback> onDisconnectListeners_;
+  std::list<ErrorCallback> onCloseListeners_;
 
   ResumeListener resumeListener_;
   const std::unique_ptr<KeepaliveTimer> keepaliveTimer_;
 
   std::unique_ptr<ClientResumeStatusCallback> resumeCallback_;
+  // TODO: this is a temporary hack before stats_ is turned into shared_ptr
+  bool isClosing_{false};
 };
 }

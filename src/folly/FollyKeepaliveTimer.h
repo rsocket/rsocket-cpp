@@ -30,7 +30,7 @@ class FollyKeepaliveTimer : public KeepaliveTimer {
  private:
   std::shared_ptr<FrameSink> connection_;
   folly::EventBase& eventBase_;
-  std::shared_ptr<bool> running_;
+  std::shared_ptr<uint32_t> generation_;
   std::chrono::milliseconds period_;
   std::atomic<bool> pending_{false};
 };
