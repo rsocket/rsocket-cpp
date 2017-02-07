@@ -61,8 +61,6 @@ class ResumeIdentificationToken {
   static ResumeIdentificationToken generateNew();
   static ResumeIdentificationToken fromString(const std::string& str);
 
-  std::string toString() const;
-
   const Data& data() const {
     return bits_;
   }
@@ -84,6 +82,8 @@ class ResumeIdentificationToken {
 
   Data bits_;
 };
+
+std::ostream& operator<<(std::ostream&, const ResumeIdentificationToken&);
 
 class FrameSink;
 // Client Side Keepalive Timer

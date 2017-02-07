@@ -10,7 +10,7 @@ namespace reactivesocket {
 
 namespace {
 
-const char* HEX_CHARS = {"0123456789abcdef"};
+constexpr static const char* HEX_CHARS = {"0123456789abcdef"};
 }
 
 static const char* getTerminatingSignalErrorMessage(int terminatingSignal) {
@@ -91,13 +91,14 @@ ResumeIdentificationToken ResumeIdentificationToken::fromString(
   return ResumeIdentificationToken();
 }
 
-std::string ResumeIdentificationToken::toString() const {
-  std::string str;
-  for (auto b : bits_) {
-    str += HEX_CHARS[(b & 0xF0) >> 4];
-    str += HEX_CHARS[b & 0x0F];
+std::ostream& operator<<(
+    std::ostream& out,
+    const ResumeIdentificationToken& token) {
+  for (auto b : token.data()) {
+    out << HEX_CHARS[(b & 0xF0) >> 4];
+    out << HEX_CHARS[b & 0x0F];
   }
-  return str;
+  return out;
 }
 
 } // reactivesocket

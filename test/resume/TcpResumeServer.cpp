@@ -150,7 +150,6 @@ class MyServerConnectionAcceptor : public ServerConnectionAcceptor {
   void setupNewSocket(
       std::shared_ptr<FrameTransport> frameTransport,
       ConnectionSetupPayload setupPayload) override {
-    CHECK(setupPayload.resumable);
     LOG(INFO) << "MyServerConnectionAcceptor::setupNewSocket " << setupPayload;
 
     std::unique_ptr<RequestHandler> requestHandler =
@@ -189,8 +188,8 @@ class MyServerConnectionAcceptor : public ServerConnectionAcceptor {
       std::shared_ptr<FrameTransport> frameTransport,
       ResumeIdentificationToken token,
       ResumePosition position) override {
-    LOG(INFO) << "MyServerConnectionAcceptor::resumeSocket resume token "
-              << token.toString();
+    LOG(INFO) << "MyServerConnectionAcceptor::resumeSocket resume token ["
+              << token << "]";
 
     CHECK(g_reactiveSockets.size() == 1);
     CHECK(g_reactiveSockets[0].second == token);
