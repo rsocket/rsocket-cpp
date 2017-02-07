@@ -15,9 +15,9 @@ namespace reactivesocket {
 /// Implementation of stream automaton that represents a Stream/Subscription
 /// responder.
 class StreamSubscriptionResponderBase
-    : public PublisherMixin<Frame_RESPONSE, StreamAutomatonBase>,
+    : public PublisherMixin<StreamAutomatonBase>,
       public SubscriberBase {
-  using Base = PublisherMixin<Frame_RESPONSE, StreamAutomatonBase>;
+  using Base = PublisherMixin<StreamAutomatonBase>;
 
  public:
   struct Parameters : Base::Parameters {

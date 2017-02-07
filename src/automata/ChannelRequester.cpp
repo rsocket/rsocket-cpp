@@ -40,9 +40,16 @@ void ChannelRequester::onNextImpl(Payload request) noexcept {
         Base::generateRequest(remainingN);
       }
     } break;
-    case State::REQUESTED:
-      Base::onNext(std::move(request));
+    case State::REQUESTED: {
+      debugCheckOnNextOnCompleteOnError();
+      Frame_REQUEST_CHANNEL frame(
+          ConsumerMixin<Frame_RESPONSE>::streamId_,
+          FrameFlags_EMPTY,
+          std::move(request));
+      ConsumerMixin<Frame_RESPONSE>::connection_->outputFrameOrEnqueue(
+          frame.serializeOut());
       break;
+    }
     case State::CLOSED:
       break;
   }

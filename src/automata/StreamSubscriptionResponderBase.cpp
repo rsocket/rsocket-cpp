@@ -12,9 +12,16 @@ void StreamSubscriptionResponderBase::onSubscribeImpl(
 void StreamSubscriptionResponderBase::onNextImpl(Payload response) noexcept {
   debugCheckOnNextOnCompleteOnError();
   switch (state_) {
-    case State::RESPONDING:
-      Base::onNext(std::move(response));
+    case State::RESPONDING: {
+      debugCheckOnNextOnCompleteOnError();
+      Frame_RESPONSE frame(
+          StreamAutomatonBase::streamId_,
+          FrameFlags_EMPTY,
+          std::move(response));
+      StreamAutomatonBase::connection_->outputFrameOrEnqueue(
+          frame.serializeOut());
       break;
+    }
     case State::CLOSED:
       break;
   }

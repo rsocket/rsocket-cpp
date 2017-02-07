@@ -19,7 +19,7 @@ namespace reactivesocket {
 enum class StreamCompletionSignal;
 
 /// A mixin that represents a flow-control-aware producer of data.
-template <typename ProducedFrame, typename Base>
+template <typename Base>
 class PublisherMixin : public Base {
  public:
   explicit PublisherMixin(
@@ -49,11 +49,6 @@ class PublisherMixin : public Base {
     }
   }
 
-  void onNext(Payload payload, FrameFlags flags = FrameFlags_EMPTY) {
-    debugCheckOnNextOnCompleteOnError();
-    ProducedFrame frame(Base::streamId_, flags, std::move(payload));
-    Base::connection_->outputFrameOrEnqueue(frame.serializeOut());
-  }
   /// @}
 
   std::shared_ptr<Subscription> subscription() {
