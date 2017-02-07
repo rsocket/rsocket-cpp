@@ -14,12 +14,8 @@ void StreamSubscriptionResponderBase::onNextImpl(Payload response) noexcept {
   switch (state_) {
     case State::RESPONDING: {
       debugCheckOnNextOnCompleteOnError();
-      Frame_RESPONSE frame(
-          StreamAutomatonBase::streamId_,
-          FrameFlags_EMPTY,
-          std::move(response));
-      StreamAutomatonBase::connection_->outputFrameOrEnqueue(
-          frame.serializeOut());
+      Frame_RESPONSE frame(streamId_, FrameFlags_EMPTY, std::move(response));
+      connection_->outputFrameOrEnqueue(frame.serializeOut());
       break;
     }
     case State::CLOSED:

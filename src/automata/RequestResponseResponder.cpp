@@ -16,11 +16,10 @@ void RequestResponseResponder::onNextImpl(Payload response) noexcept {
       state_ = State::CLOSED;
       debugCheckOnNextOnCompleteOnError();
       Frame_RESPONSE frame(
-          StreamAutomatonBase::streamId_,
+          streamId_,
           FrameFlags_EMPTY,
           std::move(response));
-      StreamAutomatonBase::connection_->outputFrameOrEnqueue(
-          frame.serializeOut());
+      connection_->outputFrameOrEnqueue(frame.serializeOut());
       connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
       break;
     }

@@ -13,12 +13,8 @@ void ChannelResponder::onNextImpl(Payload response) noexcept {
   switch (state_) {
     case State::RESPONDING: {
       debugCheckOnNextOnCompleteOnError();
-      Frame_RESPONSE frame(
-          ConsumerMixin<Frame_REQUEST_CHANNEL>::streamId_,
-          FrameFlags_EMPTY,
-          std::move(response));
-      ConsumerMixin<Frame_REQUEST_CHANNEL>::connection_->outputFrameOrEnqueue(
-          frame.serializeOut());
+      Frame_RESPONSE frame(streamId_, FrameFlags_EMPTY, std::move(response));
+      connection_->outputFrameOrEnqueue(frame.serializeOut());
       break;
     }
     case State::CLOSED:

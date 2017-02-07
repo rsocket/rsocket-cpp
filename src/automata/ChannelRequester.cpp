@@ -43,11 +43,8 @@ void ChannelRequester::onNextImpl(Payload request) noexcept {
     case State::REQUESTED: {
       debugCheckOnNextOnCompleteOnError();
       Frame_REQUEST_CHANNEL frame(
-          ConsumerMixin<Frame_RESPONSE>::streamId_,
-          FrameFlags_EMPTY,
-          std::move(request));
-      ConsumerMixin<Frame_RESPONSE>::connection_->outputFrameOrEnqueue(
-          frame.serializeOut());
+          streamId_, FrameFlags_EMPTY, std::move(request));
+      connection_->outputFrameOrEnqueue(frame.serializeOut());
       break;
     }
     case State::CLOSED:
