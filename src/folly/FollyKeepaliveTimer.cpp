@@ -26,7 +26,6 @@ void FollyKeepaliveTimer::schedule() {
       [this, generation, scheduledGeneration]() {
         if (*generation == scheduledGeneration) {
           sendKeepalive();
-          schedule();
         }
       },
       static_cast<uint32_t>(keepaliveTime().count()));
@@ -40,6 +39,7 @@ void FollyKeepaliveTimer::sendKeepalive() {
   } else {
     connection_->sendKeepalive();
     pending_ = true;
+    schedule();
   }
 }
 
