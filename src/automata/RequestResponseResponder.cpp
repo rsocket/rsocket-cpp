@@ -15,10 +15,7 @@ void RequestResponseResponder::onNextImpl(Payload response) noexcept {
     case State::RESPONDING: {
       state_ = State::CLOSED;
       debugCheckOnNextOnCompleteOnError();
-      Frame_RESPONSE frame(
-          streamId_,
-          FrameFlags_EMPTY,
-          std::move(response));
+      Frame_RESPONSE frame(streamId_, FrameFlags_COMPLETE, std::move(response));
       connection_->outputFrameOrEnqueue(frame.serializeOut());
       connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
       break;
