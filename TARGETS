@@ -148,7 +148,6 @@ cpp_unittest(
     ]),
     srcs = glob([
         'test/*.cpp',
-        'test/concurrent/*.cpp',
         'test/framed/*.cpp',
         'test/simple/*.cpp',
         ]),

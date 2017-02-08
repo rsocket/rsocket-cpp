@@ -134,9 +134,6 @@ add_library(
   src/ClientResumeStatusCallback.h
   src/Common.cpp
   src/Common.h
-  src/concurrent/atomic64.h
-  src/concurrent/atomic64_gcc_x86_64.h
-  src/concurrent/OneToOneRingBuffer.h
   src/ConnectionAutomaton.cpp
   src/ConnectionAutomaton.h
   src/ConnectionSetupPayload.cpp
@@ -204,7 +201,6 @@ enable_testing()
 
 add_executable(
   tests
-  test/concurrent/OneToOneRingBufferTest.cpp
   test/ConnectionAutomatonTest.cpp
   test/framed/FramedReaderTest.cpp
   test/framed/FramedWriterTest.cpp
