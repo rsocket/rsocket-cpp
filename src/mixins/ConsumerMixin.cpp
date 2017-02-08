@@ -10,6 +10,46 @@
 
 namespace reactivesocket {
 
+void ConsumerMixin::subscribe(std::shared_ptr<Subscriber<Payload>> subscriber) {
+  if (Base::isTerminated()) {
+    subscriber->onSubscribe(std::make_shared<NullSubscription>());
+    subscriber->onComplete();
+    return;
+  }
+
+  DCHECK(!consumingSubscriber_);
+  consumingSubscriber_.reset(std::move(subscriber));
+  consumingSubscriber_.onSubscribe(shared_from_this());
+}
+
+void ConsumerMixin::generateRequest(size_t n) {
+  allowance_.release(n);
+  pendingAllowance_.release(n);
+  sendRequests();
+}
+
+void ConsumerMixin::endStream(StreamCompletionSignal signal) {
+  if (signal == StreamCompletionSignal::GRACEFUL) {
+    consumingSubscriber_.onComplete();
+  } else {
+    consumingSubscriber_.onError(
+        StreamInterruptedException(static_cast<int>(signal)));
+  }
+  Base::endStream(signal);
+}
+
+void ConsumerMixin::pauseStream(RequestHandler& requestHandler) {
+  if (consumingSubscriber_) {
+    requestHandler.onSubscriberPaused(consumingSubscriber_);
+  }
+}
+
+void ConsumerMixin::resumeStream(RequestHandler& requestHandler) {
+  if (consumingSubscriber_) {
+    requestHandler.onSubscriberResumed(consumingSubscriber_);
+  }
+}
+
 void ConsumerMixin::processPayload(Payload&& payload) {
   if (payload) {
     // Frames carry application-level payloads are taken into account when
