@@ -158,7 +158,7 @@ add_library(
   src/FrameProcessor.h
   src/FrameTransport.cpp
   src/FrameTransport.h
-  src/mixins/ConsumerMixin-inl.h
+  src/mixins/ConsumerMixin.cpp
   src/mixins/ConsumerMixin.h
   src/mixins/PublisherMixin.h
   src/NullRequestHandler.cpp

@@ -18,9 +18,9 @@ class exception_wrapper;
 namespace reactivesocket {
 
 /// Implementation of stream automaton that represents a Channel requester.
-class ChannelRequester : public PublisherMixin<ConsumerMixin<Frame_RESPONSE>>,
+class ChannelRequester : public PublisherMixin<ConsumerMixin>,
                          public SubscriberBase {
-  using Base = PublisherMixin<ConsumerMixin<Frame_RESPONSE>>;
+  using Base = PublisherMixin<ConsumerMixin>;
 
  public:
   explicit ChannelRequester(const Base::Parameters& params)

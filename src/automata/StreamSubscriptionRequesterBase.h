@@ -11,8 +11,8 @@
 namespace reactivesocket {
 
 /// Implementation of stream automaton that represents a Subscription requester.
-class StreamSubscriptionRequesterBase : public ConsumerMixin<Frame_RESPONSE> {
-  using Base = ConsumerMixin<Frame_RESPONSE>;
+class StreamSubscriptionRequesterBase : public ConsumerMixin {
+  using Base = ConsumerMixin;
 
  public:
   // initialization of the ExecutorBase will be ignored for any of the

@@ -103,7 +103,7 @@ void ChannelResponder::onNextFrame(Frame_REQUEST_CHANNEL&& frame) {
   }
 
   processRequestN(frame.requestN_);
-  processPayload(std::move(frame));
+  processPayload(std::move(frame.payload_));
 
   if (end) {
     connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);

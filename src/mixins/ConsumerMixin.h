@@ -7,10 +7,12 @@
 #include <iostream>
 #include "src/AllowanceSemaphore.h"
 #include "src/Common.h"
+#include "src/ConnectionAutomaton.h"
 #include "src/NullRequestHandler.h"
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
 #include "src/SmartPointers.h"
+#include "src/SubscriptionBase.h"
 #include "src/automata/StreamAutomatonBase.h"
 
 namespace reactivesocket {
@@ -18,7 +20,6 @@ namespace reactivesocket {
 enum class StreamCompletionSignal;
 
 /// A mixin that represents a flow-control-aware consumer of data.
-template <typename Frame>
 class ConsumerMixin : public StreamAutomatonBase, public SubscriptionBase {
   using Base = StreamAutomatonBase;
 
@@ -86,7 +87,7 @@ class ConsumerMixin : public StreamAutomatonBase, public SubscriptionBase {
     }
   }
 
-  void processPayload(Frame&&);
+  void processPayload(Payload&&);
 
   void onError(folly::exception_wrapper ex);
   /// @}
@@ -115,5 +116,3 @@ class ConsumerMixin : public StreamAutomatonBase, public SubscriptionBase {
   AllowanceSemaphore pendingAllowance_;
 };
 }
-
-#include "src/mixins/ConsumerMixin-inl.h"

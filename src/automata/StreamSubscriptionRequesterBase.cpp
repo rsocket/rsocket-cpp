@@ -92,7 +92,7 @@ void StreamSubscriptionRequesterBase::onNextFrame(Frame_RESPONSE&& frame) {
       break;
   }
 
-  processPayload(std::move(frame));
+  processPayload(std::move(frame.payload_));
 
   if (end) {
     connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
