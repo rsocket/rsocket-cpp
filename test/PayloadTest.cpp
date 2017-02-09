@@ -31,6 +31,6 @@ TEST(PayloadTest, GiantMetadata) {
   folly::io::Cursor cur(metadata.get());
 
   EXPECT_THROW(
-    Payload::deserializeMetadataFrom(cur, FrameFlags_METADATA),
-    std::runtime_error);
+      Payload::deserializeMetadataFrom(cur, FrameFlags_METADATA),
+      std::runtime_error);
 }

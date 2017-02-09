@@ -181,7 +181,14 @@ add_library(
   src/SubscriberBase.h
   src/SubscriptionBase.h
   src/tcp/TcpDuplexConnection.cpp
-  src/tcp/TcpDuplexConnection.h)
+  src/tcp/TcpDuplexConnection.h
+  src/src/FrameSerializer.cpp
+  src/src/FrameSerializer.h
+  src/versions/FrameSerializer_v0.cpp
+  src/versions/FrameSerializer_v0.h
+  src/versions/FrameSerializer_v0_1.h
+  src/versions/FrameSerializer_v1_0.cpp
+  src/versions/FrameSerializer_v1_0.h)
 
 target_link_libraries(
   ReactiveSocket

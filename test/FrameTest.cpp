@@ -161,7 +161,8 @@ TEST(FrameTest, Frame_KEEPALIVE) {
 
 TEST(FrameTest, Frame_SETUP) {
   FrameFlags flags = FrameFlags_EMPTY;
-  uint32_t version = 0;
+  uint16_t versionMajor = 4;
+  uint16_t versionMinor = 5;
   uint32_t keepaliveTime = std::numeric_limits<uint32_t>::max();
   uint32_t maxLifetime = std::numeric_limits<uint32_t>::max();
   ResumeIdentificationToken::Data tokenData;
@@ -171,7 +172,8 @@ TEST(FrameTest, Frame_SETUP) {
   auto data = folly::IOBuf::copyBuffer("424242");
   auto frame = reserialize<Frame_SETUP>(
       flags,
-      version,
+      versionMajor,
+      versionMinor,
       keepaliveTime,
       maxLifetime,
       token,
@@ -180,7 +182,8 @@ TEST(FrameTest, Frame_SETUP) {
       Payload(data->clone()));
 
   expectHeader(FrameType::SETUP, flags, 0, frame);
-  EXPECT_EQ(version, frame.version_);
+  EXPECT_EQ(versionMajor, frame.versionMajor_);
+  EXPECT_EQ(versionMinor, frame.versionMinor_);
   EXPECT_EQ(keepaliveTime, frame.keepaliveTime_);
   EXPECT_EQ(maxLifetime, frame.maxLifetime_);
   // Token should be default constructed
@@ -192,7 +195,8 @@ TEST(FrameTest, Frame_SETUP) {
 
 TEST(FrameTest, Frame_SETUP_resume) {
   FrameFlags flags = FrameFlags_EMPTY | FrameFlags_RESUME_ENABLE;
-  uint32_t version = 0;
+  uint16_t versionMajor = 0;
+  uint16_t versionMinor = 0;
   uint32_t keepaliveTime = std::numeric_limits<uint32_t>::max();
   uint32_t maxLifetime = std::numeric_limits<uint32_t>::max();
   ResumeIdentificationToken::Data tokenData;
@@ -202,7 +206,8 @@ TEST(FrameTest, Frame_SETUP_resume) {
   auto data = folly::IOBuf::copyBuffer("424242");
   auto frame = reserialize<Frame_SETUP>(
       flags,
-      version,
+      versionMajor,
+      versionMinor,
       keepaliveTime,
       maxLifetime,
       token,
@@ -211,7 +216,8 @@ TEST(FrameTest, Frame_SETUP_resume) {
       Payload(data->clone()));
 
   expectHeader(FrameType::SETUP, flags, 0, frame);
-  EXPECT_EQ(version, frame.version_);
+  EXPECT_EQ(versionMajor, frame.versionMajor_);
+  EXPECT_EQ(versionMinor, frame.versionMinor_);
   EXPECT_EQ(keepaliveTime, frame.keepaliveTime_);
   EXPECT_EQ(maxLifetime, frame.maxLifetime_);
   EXPECT_EQ(token, frame.token_);

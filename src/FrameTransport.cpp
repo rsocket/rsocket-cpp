@@ -92,7 +92,7 @@ void FrameTransport::onSubscribe(
 void FrameTransport::onNext(std::unique_ptr<folly::IOBuf> frame) noexcept {
   if (connection_) {
     CHECK(getFrameProcessor()); // if *this is not closed and is pulling frames,
-                                // it
+    // it
     // should have frameProcessor
     getFrameProcessor()->processFrame(std::move(frame));
   }

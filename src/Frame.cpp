@@ -448,7 +448,8 @@ std::unique_ptr<folly::IOBuf> Frame_SETUP::serializeOut() {
   folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
 
   header_.serializeInto(appender);
-  appender.writeBE(static_cast<uint32_t>(version_));
+  appender.writeBE(static_cast<uint16_t>(versionMajor_));
+  appender.writeBE(static_cast<uint16_t>(versionMinor_));
   appender.writeBE(static_cast<uint32_t>(keepaliveTime_));
   appender.writeBE(static_cast<uint32_t>(maxLifetime_));
 
@@ -480,7 +481,8 @@ bool Frame_SETUP::deserializeFrom(std::unique_ptr<folly::IOBuf> in) {
   folly::io::Cursor cur(in.get());
   try {
     header_.deserializeFrom(cur);
-    version_ = cur.readBE<uint32_t>();
+    versionMajor_ = cur.readBE<uint16_t>();
+    versionMinor_ = cur.readBE<uint16_t>();
     keepaliveTime_ = cur.readBE<uint32_t>();
     maxLifetime_ = cur.readBE<uint32_t>();
 

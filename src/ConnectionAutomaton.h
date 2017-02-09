@@ -10,6 +10,7 @@
 #include "src/Executor.h"
 #include "src/Frame.h"
 #include "src/FrameProcessor.h"
+#include "src/FrameSerializer.h"
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
 
@@ -195,6 +196,9 @@ class ConnectionAutomaton
 
   DuplexConnection* duplexConnection() const;
 
+  FrameSerializer& frameSerializer() const;
+  void setFrameSerializer(std::unique_ptr<FrameSerializer>);
+
  private:
   /// Performs the same actions as ::endStream without propagating closure
   /// signal to the underlying connection.
@@ -238,6 +242,7 @@ class ConnectionAutomaton
   std::shared_ptr<StreamState> streamState_;
   std::shared_ptr<RequestHandler> requestHandler_;
   std::shared_ptr<FrameTransport> frameTransport_;
+  std::unique_ptr<FrameSerializer> frameSerializer_;
 
   Stats& stats_;
   ReactiveSocketMode mode_;

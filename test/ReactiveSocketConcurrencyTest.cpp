@@ -556,6 +556,7 @@ class InitialRequestNDeliveredTest : public testing::Test {
         Frame_SETUP(
             FrameFlags_EMPTY,
             0,
+            1,
             0,
             0,
             ResumeIdentificationToken::generateNew(),

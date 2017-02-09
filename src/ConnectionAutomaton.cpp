@@ -674,4 +674,14 @@ void ConnectionAutomaton::addClosedListener(ErrorCallback listener) {
   onCloseListeners_.push_back(std::move(listener));
 }
 
+void ConnectionAutomaton::setFrameSerializer(
+    std::unique_ptr<FrameSerializer> frameSerializer) {
+  frameSerializer_ = std::move(frameSerializer);
+}
+
+FrameSerializer& ConnectionAutomaton::frameSerializer() const {
+  CHECK(frameSerializer_);
+  return *frameSerializer_;
+}
+
 } // reactivesocket

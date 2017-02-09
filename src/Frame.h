@@ -401,7 +401,8 @@ class Frame_SETUP {
   Frame_SETUP() = default;
   Frame_SETUP(
       FrameFlags flags,
-      uint32_t version,
+      uint16_t versionMajor,
+      uint16_t versionMinor,
       uint32_t keepaliveTime,
       uint32_t maxLifetime,
       const ResumeIdentificationToken& token,
@@ -409,7 +410,8 @@ class Frame_SETUP {
       std::string dataMimeType,
       Payload payload)
       : header_(FrameType::SETUP, flags | payload.getFlags(), 0),
-        version_(version),
+        versionMajor_(versionMajor),
+        versionMinor_(versionMinor),
         keepaliveTime_(keepaliveTime),
         maxLifetime_(maxLifetime),
         token_(token),
@@ -426,7 +428,8 @@ class Frame_SETUP {
   void moveToSetupPayload(ConnectionSetupPayload& setupPayload);
 
   FrameHeader header_;
-  uint32_t version_;
+  uint16_t versionMajor_;
+  uint16_t versionMinor_;
   uint32_t keepaliveTime_;
   uint32_t maxLifetime_;
   ResumeIdentificationToken token_;

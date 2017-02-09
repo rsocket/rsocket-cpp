@@ -15,12 +15,11 @@ Payload::Payload(
     : data(std::move(_data)), metadata(std::move(_metadata)) {}
 
 Payload::Payload(const std::string& _data, const std::string& _metadata)
-  : data(folly::IOBuf::copyBuffer(_data)) {
+    : data(folly::IOBuf::copyBuffer(_data)) {
   if (!_metadata.empty()) {
     metadata = folly::IOBuf::copyBuffer(_metadata);
   }
 }
-
 
 void Payload::checkFlags(FrameFlags flags) const {
   assert(bool(flags & FrameFlags_METADATA) == bool(metadata));
@@ -39,7 +38,7 @@ void Payload::serializeMetadataInto(
   }
 
   appender.writeBE<uint32_t>(
-    static_cast<uint32_t>(metadata->length() + sizeof(uint32_t)));
+      static_cast<uint32_t>(metadata->length() + sizeof(uint32_t)));
   appender.insert(std::move(metadata));
 }
 
@@ -68,7 +67,7 @@ std::unique_ptr<folly::IOBuf> Payload::deserializeMetadataFrom(
   }
 
   const auto metadataPayloadLength =
-    length - static_cast<uint32_t>(sizeof(uint32_t));
+      length - static_cast<uint32_t>(sizeof(uint32_t));
 
   // TODO: Check if metadataPayloadLength exceeds frame length minus frame
   // header size.

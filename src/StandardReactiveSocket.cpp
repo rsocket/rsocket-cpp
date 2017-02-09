@@ -1,7 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "src/StandardReactiveSocket.h"
-
+#include <folly/Conv.h>
 #include <folly/ExceptionWrapper.h>
 #include <folly/Memory.h>
 #include <folly/MoveWrapper.h>
@@ -13,6 +13,10 @@
 #include "src/automata/ChannelResponder.h"
 
 namespace reactivesocket {
+
+constexpr static const char* kPROTOCOL_VERSION = "0.1";
+constexpr static const uint16_t kPROTOCOL_VERSION_MAJOR = 0;
+constexpr static const uint16_t kPROTOCOL_VERSION_MINOR = 1;
 
 StandardReactiveSocket::~StandardReactiveSocket() {
   debugCheckCorrectExecutor();
@@ -81,6 +85,8 @@ StandardReactiveSocket::disconnectedClient(
       stats,
       std::move(keepaliveTimer),
       executor));
+  socket->connection_->setFrameSerializer(
+      FrameSerializer::createFrameSerializer(kPROTOCOL_VERSION));
   return socket;
 }
 
@@ -173,7 +179,9 @@ void StandardReactiveSocket::createResponder(
     std::unique_ptr<folly::IOBuf> serializedFrame) {
   debugCheckCorrectExecutor();
 
-  if (streamId != 0 && !streamsFactory_.registerNewPeerStreamId(streamId)) {
+  if (streamId != 0 &&
+      connection_->frameSerializer().protocolVersion() > "0.0" &&
+      !streamsFactory_.registerNewPeerStreamId(streamId)) {
     return;
   }
 
@@ -194,6 +202,10 @@ void StandardReactiveSocket::createResponder(
         //                  .serializeOut());
         //          disconnect();
       }
+
+      connection_->setFrameSerializer(
+          FrameSerializer::createFrameSerializer(folly::to<std::string>(
+              frame.versionMajor_, ".", frame.versionMinor_)));
 
       ConnectionSetupPayload setupPayload;
       frame.moveToSetupPayload(setupPayload);
@@ -327,7 +339,8 @@ void StandardReactiveSocket::clientConnect(
   // TODO set correct version
   Frame_SETUP frame(
       setupPayload.resumable ? FrameFlags_RESUME_ENABLE : FrameFlags_EMPTY,
-      /*version=*/0,
+      kPROTOCOL_VERSION_MAJOR,
+      kPROTOCOL_VERSION_MINOR,
       connection_->getKeepaliveTime(),
       std::numeric_limits<uint32_t>::max(),
       setupPayload.token,

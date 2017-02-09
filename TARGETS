@@ -68,12 +68,15 @@ cpp_library(
     srcs = glob([
         'src/AbstractStreamAutomaton.cpp',
         'src/automata/*.cpp',
+        'src/versions/*.cpp',
         'src/Common.cpp',
         'src/ConnectionAutomaton.cpp',
         'src/ConnectionSetupPayload.cpp',
         'src/Frame.cpp',
+        'src/FrameSerializer.cpp',
         'src/FrameTransport.cpp',
         'src/NullRequestHandler.cpp',
+        'src/mixins/*.cpp', # temporarily
         'src/Payload.cpp',
         'src/RequestHandler.cpp',
         'src/ResumeCache.cpp',
