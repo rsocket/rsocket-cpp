@@ -99,6 +99,10 @@ class SubscriberBaseT : public Subscriber<T>,
   }
 
   void onNext(T payload) noexcept override final {
+    // this is a temporary trap set to catch free-after-use-bug
+    // will be removed
+    trap_ = ~trap_;
+
     auto movedPayload = folly::makeMoveWrapper(std::move(payload));
     auto thisPtr = this->shared_from_this();
     runInExecutor([thisPtr, movedPayload]() mutable {
@@ -110,6 +114,10 @@ class SubscriberBaseT : public Subscriber<T>,
   }
 
   void onComplete() noexcept override final {
+    // this is a temporary trap set to catch free-after-use-bug
+    // will be removed
+    trap_ = ~trap_;
+
     auto thisPtr = this->shared_from_this();
     runInExecutor([thisPtr]() {
       VLOG(1) << static_cast<ExecutorBase*>(thisPtr.get()) << " onComplete";
@@ -124,6 +132,10 @@ class SubscriberBaseT : public Subscriber<T>,
   }
 
   void onError(folly::exception_wrapper ex) noexcept override final {
+    // this is a temporary trap set to catch free-after-use-bug
+    // will be removed
+    trap_ = ~trap_;
+
     auto movedEx = folly::makeMoveWrapper(std::move(ex));
     auto thisPtr = this->shared_from_this();
     runInExecutor([thisPtr, movedEx]() mutable {
@@ -153,6 +165,9 @@ class SubscriberBaseT : public Subscriber<T>,
   std::atomic<bool> cancelled_{false};
 
   std::shared_ptr<Subscription> originalSubscription_;
+
+  //TODO: remove once we catch the use-after-free bug
+  uint64_t trap_{1};
 };
 
 extern template class SubscriberBaseT<Payload>;
