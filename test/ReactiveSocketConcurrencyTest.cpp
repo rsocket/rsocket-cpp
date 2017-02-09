@@ -580,7 +580,7 @@ class InitialRequestNDeliveredTest : public testing::Test {
   std::unique_ptr<DuplexConnection> testConnection;
   std::shared_ptr<MockSubscription> validatingSubscription;
 
-  const size_t kStreamId{2};
+  const size_t kStreamId{1};
   const size_t kRequestN{500};
 
   std::atomic<bool> done{false};

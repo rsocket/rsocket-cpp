@@ -17,7 +17,13 @@ StreamsFactory::StreamsFactory(
     std::shared_ptr<ConnectionAutomaton> connection,
     ReactiveSocketMode mode)
     : connection_(std::move(connection)),
-      nextStreamId_(mode == ReactiveSocketMode::SERVER ? 1 : 2) {}
+      nextStreamId_(
+          mode == ReactiveSocketMode::CLIENT
+              ? 1 /*Streams initiated by a client MUST use
+                    odd-numbered stream identifiers*/
+              : 2 /*streams initiated by the server MUST use
+                    even-numbered stream identifiers*/) {
+}
 
 std::shared_ptr<Subscriber<Payload>> StreamsFactory::createChannelRequester(
     std::shared_ptr<Subscriber<Payload>> responseSink,
