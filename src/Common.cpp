@@ -59,6 +59,10 @@ std::string to_string(StreamCompletionSignal signal) {
   // this should be never hit because the switch is over all cases
   LOG(FATAL) << "unknown StreamCompletionSignal=" << static_cast<int>(signal);
 }
+  
+std::ostream& operator<<(std::ostream& os, StreamCompletionSignal signal) {
+  return os << to_string(signal);
+}
 
 std::ostream& operator<<(std::ostream& os, StreamCompletionSignal signal) {
   return os << to_string(signal);
