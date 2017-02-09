@@ -182,8 +182,8 @@ add_library(
   src/SubscriptionBase.h
   src/tcp/TcpDuplexConnection.cpp
   src/tcp/TcpDuplexConnection.h
-  src/src/FrameSerializer.cpp
-  src/src/FrameSerializer.h
+  src/FrameSerializer.cpp
+  src/FrameSerializer.h
   src/versions/FrameSerializer_v0.cpp
   src/versions/FrameSerializer_v0.h
   src/versions/FrameSerializer_v0_1.h
