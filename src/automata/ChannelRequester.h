@@ -40,6 +40,7 @@ class ChannelRequester : public ConsumerMixin,
   void cancelImpl() noexcept override;
 
   using PublisherMixin::onNextFrame;
+  using ConsumerMixin::onNextFrame;
   void onNextFrame(Frame_RESPONSE&&) override;
   void onNextFrame(Frame_ERROR&&) override;
   void onNextFrame(Frame_REQUEST_N&&) override;

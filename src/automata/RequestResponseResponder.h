@@ -39,6 +39,7 @@ class RequestResponseResponder : public StreamAutomatonBase,
   /// @}
 
   using PublisherMixin::onNextFrame;
+  using StreamAutomatonBase::onNextFrame;
   void onNextFrame(Frame_CANCEL&&) override;
   void onNextFrame(Frame_REQUEST_N&&) override;
 

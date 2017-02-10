@@ -37,6 +37,7 @@ class ChannelResponder : public ConsumerMixin,
   void cancelImpl() noexcept override;
 
   using PublisherMixin::onNextFrame;
+  using ConsumerMixin::onNextFrame;
   void onNextFrame(Frame_REQUEST_CHANNEL&&) override;
   void onNextFrame(Frame_CANCEL&&) override;
   void onNextFrame(Frame_REQUEST_N&&) override;
