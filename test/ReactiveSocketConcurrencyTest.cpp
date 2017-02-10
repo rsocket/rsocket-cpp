@@ -24,11 +24,11 @@ using namespace ::reactivesocket;
 class ClientSideConcurrencyTest : public testing::Test {
  public:
   ClientSideConcurrencyTest() {
-    auto clientConn = std::make_unique<InlineConnection>();
     auto serverConn = std::make_unique<InlineConnection>();
-    clientConn->connectTo(*serverConn);
 
     thread2.getEventBase()->runImmediatelyOrRunInEventBaseThreadAndWait([&] {
+      auto clientConn = std::make_unique<InlineConnection>();
+      clientConn->connectTo(*serverConn);
       clientSock = StandardReactiveSocket::fromClientConnection(
           *thread2.getEventBase(),
           std::move(clientConn),
