@@ -14,34 +14,20 @@
 #include "src/RequestHandler.h"
 #include "src/SmartPointers.h"
 
+#include "src/mixins/ConsumerMixin.h"
+
 namespace reactivesocket {
 
 enum class StreamCompletionSignal;
 
 /// A mixin that represents a flow-control-aware producer of data.
-template <typename Base>
-class PublisherMixin : public Base {
+class PublisherMixin {
  public:
-  explicit PublisherMixin(
-      uint32_t initialRequestN,
-      const typename Base::Parameters& params)
-      : ExecutorBase(params.executor),
-        Base(params),
-        initialRequestN_(initialRequestN) {}
-
-  explicit PublisherMixin(
-      uint32_t initialRequestN,
-      const typename Base::Parameters& params,
-      std::nullptr_t)
-      : Base(params), initialRequestN_(initialRequestN) {}
+  explicit PublisherMixin(uint32_t initialRequestN)
+      : initialRequestN_(initialRequestN) {}
 
   /// @{
   void onSubscribe(std::shared_ptr<Subscription> subscription) {
-    if (Base::isTerminated()) {
-      subscription->cancel();
-      return;
-    }
-
     debugCheckOnSubscribe();
     producingSubscription_.reset(std::move(subscription));
     if (initialRequestN_) {
@@ -62,31 +48,27 @@ class PublisherMixin : public Base {
 
   void debugCheckOnNextOnCompleteOnError() {
     DCHECK(producingSubscription_);
-    // the previous DCHECK should also cover !Base::isTerminated()
-    // but we will make sure that invariant is not broken as well
-    DCHECK(!Base::isTerminated());
   }
 
   /// @{
-  void endStream(StreamCompletionSignal signal) override {
+
+  void endStream(StreamCompletionSignal signal) {
     producingSubscription_.cancel();
-    Base::endStream(signal);
   }
 
-  void pauseStream(RequestHandler& requestHandler) override {
+  void pauseStream(RequestHandler& requestHandler) {
     if (producingSubscription_) {
       requestHandler.onSubscriptionPaused(producingSubscription_);
     }
   }
 
-  void resumeStream(RequestHandler& requestHandler) override {
+  void resumeStream(RequestHandler& requestHandler) {
     if (producingSubscription_) {
       requestHandler.onSubscriptionResumed(producingSubscription_);
     }
   }
 
-  using Base::onNextFrame;
-  void onNextFrame(Frame_REQUEST_N&& frame) override {
+  void onNextFrame(Frame_REQUEST_N&& frame) {
     processRequestN(frame.requestN_);
   }
 

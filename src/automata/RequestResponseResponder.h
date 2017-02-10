@@ -13,21 +13,22 @@ namespace reactivesocket {
 
 /// Implementation of stream automaton that represents a RequestResponse
 /// responder
-class RequestResponseResponder : public PublisherMixin<StreamAutomatonBase>,
+class RequestResponseResponder : public StreamAutomatonBase,
+                                 public PublisherMixin,
                                  public SubscriberBase {
-  using Base = PublisherMixin<StreamAutomatonBase>;
-
  public:
-  struct Parameters : Base::Parameters {
+  struct Parameters : StreamAutomatonBase::Parameters {
     Parameters(
-        const typename Base::Parameters& baseParams,
+        const typename StreamAutomatonBase::Parameters& baseParams,
         folly::Executor& _executor)
-        : Base::Parameters(baseParams), executor(_executor) {}
+        : StreamAutomatonBase::Parameters(baseParams), executor(_executor) {}
     folly::Executor& executor;
   };
 
   explicit RequestResponseResponder(const Parameters& params)
-      : ExecutorBase(params.executor), Base(1, params, nullptr) {}
+      : ExecutorBase(params.executor),
+        StreamAutomatonBase(params),
+        PublisherMixin(1) {}
 
  private:
   /// @{
@@ -37,9 +38,12 @@ class RequestResponseResponder : public PublisherMixin<StreamAutomatonBase>,
   void onErrorImpl(folly::exception_wrapper) noexcept override;
   /// @}
 
-  using Base::onNextFrame;
+  using PublisherMixin::onNextFrame;
   void onNextFrame(Frame_CANCEL&&) override;
+  void onNextFrame(Frame_REQUEST_N&&) override;
 
+  void pauseStream(RequestHandler&) override;
+  void resumeStream(RequestHandler&) override;
   void endStream(StreamCompletionSignal) override;
 
   /// State of the Subscription responder.

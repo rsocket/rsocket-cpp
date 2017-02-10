@@ -6,7 +6,11 @@ namespace reactivesocket {
 
 void StreamSubscriptionResponderBase::onSubscribeImpl(
     std::shared_ptr<Subscription> subscription) noexcept {
-  Base::onSubscribe(subscription);
+  if (StreamAutomatonBase::isTerminated()) {
+    subscription->cancel();
+    return;
+  }
+  PublisherMixin::onSubscribe(subscription);
 }
 
 void StreamSubscriptionResponderBase::onNextImpl(Payload response) noexcept {
@@ -53,6 +57,16 @@ void StreamSubscriptionResponderBase::onErrorImpl(
   }
 }
 
+void StreamSubscriptionResponderBase::pauseStream(
+    RequestHandler& requestHandler) {
+  PublisherMixin::pauseStream(requestHandler);
+}
+
+void StreamSubscriptionResponderBase::resumeStream(
+    RequestHandler& requestHandler) {
+  PublisherMixin::resumeStream(requestHandler);
+}
+
 void StreamSubscriptionResponderBase::endStream(StreamCompletionSignal signal) {
   switch (state_) {
     case State::RESPONDING:
@@ -63,7 +77,8 @@ void StreamSubscriptionResponderBase::endStream(StreamCompletionSignal signal) {
     case State::CLOSED:
       break;
   }
-  Base::endStream(signal);
+  PublisherMixin::endStream(signal);
+  StreamAutomatonBase::endStream(signal);
 }
 
 void StreamSubscriptionResponderBase::onNextFrame(Frame_CANCEL&& frame) {
@@ -75,5 +90,9 @@ void StreamSubscriptionResponderBase::onNextFrame(Frame_CANCEL&& frame) {
     case State::CLOSED:
       break;
   }
+}
+
+void StreamSubscriptionResponderBase::onNextFrame(Frame_REQUEST_N&& frame) {
+  PublisherMixin::onNextFrame(std::move(frame));
 }
 }

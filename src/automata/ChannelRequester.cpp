@@ -7,7 +7,11 @@ namespace reactivesocket {
 void ChannelRequester::onSubscribeImpl(
     std::shared_ptr<Subscription> subscription) noexcept {
   CHECK(State::NEW == state_);
-  Base::onSubscribe(subscription);
+  if (ConsumerMixin::isTerminated()) {
+    subscription->cancel();
+    return;
+  }
+  PublisherMixin::onSubscribe(subscription);
   // Request the first payload immediately.
   subscription->request(1);
 }
@@ -17,8 +21,8 @@ void ChannelRequester::onNextImpl(Payload request) noexcept {
     case State::NEW: {
       state_ = State::REQUESTED;
       // FIXME: find a root cause of this asymmetry; the problem here is that
-      // the Base::request might be delivered after the whole thing is shut
-      // down, if one uses InlineConnection.
+      // the ConsumerMixin::request might be delivered after the whole thing is
+      // shut down, if one uses InlineConnection.
       size_t initialN = initialResponseAllowance_.drainWithLimit(
           Frame_REQUEST_N::kMaxRequestN);
       size_t remainingN = initialResponseAllowance_.drain();
@@ -32,12 +36,12 @@ void ChannelRequester::onNextImpl(Payload request) noexcept {
           std::move(request));
       // We must inform ConsumerMixin about an implicit allowance we have
       // requested from the remote end.
-      addImplicitAllowance(initialN);
+      ConsumerMixin::addImplicitAllowance(initialN);
       connection_->outputFrameOrEnqueue(frame.serializeOut());
       // Pump the remaining allowance into the ConsumerMixin _after_ sending the
       // initial request.
       if (remainingN) {
-        Base::generateRequest(remainingN);
+        ConsumerMixin::generateRequest(remainingN);
       }
     } break;
     case State::REQUESTED: {
@@ -93,11 +97,11 @@ void ChannelRequester::requestImpl(size_t n) noexcept {
       // The initial request has not been sent out yet, hence we must accumulate
       // the unsynchronised allowance, portion of which will be sent out with
       // the initial request frame, and the rest will be dispatched via
-      // Base:request (ultimately by sending REQUEST_N frames).
+      // ConsumerMixin::request (ultimately by sending REQUEST_N frames).
       initialResponseAllowance_.release(n);
       break;
     case State::REQUESTED:
-      Base::generateRequest(n);
+      ConsumerMixin::generateRequest(n);
       break;
     case State::CLOSED:
       break;
@@ -131,7 +135,8 @@ void ChannelRequester::endStream(StreamCompletionSignal signal) {
     case State::CLOSED:
       break;
   }
-  Base::endStream(signal);
+  PublisherMixin::endStream(signal);
+  ConsumerMixin::endStream(signal);
 }
 
 void ChannelRequester::onNextFrame(Frame_RESPONSE&& frame) {
@@ -166,12 +171,17 @@ void ChannelRequester::onNextFrame(Frame_ERROR&& frame) {
       break;
     case State::REQUESTED:
       state_ = State::CLOSED;
-      Base::onError(std::runtime_error(frame.payload_.moveDataToString()));
+      ConsumerMixin::onError(
+          std::runtime_error(frame.payload_.moveDataToString()));
       connection_->endStream(streamId_, StreamCompletionSignal::ERROR);
       break;
     case State::CLOSED:
       break;
   }
+}
+
+void ChannelRequester::onNextFrame(Frame_REQUEST_N&& frame) {
+  PublisherMixin::onNextFrame(std::move(frame));
 }
 
 } // reactivesocket

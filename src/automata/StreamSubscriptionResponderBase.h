@@ -14,17 +14,15 @@ namespace reactivesocket {
 
 /// Implementation of stream automaton that represents a Stream/Subscription
 /// responder.
-class StreamSubscriptionResponderBase
-    : public PublisherMixin<StreamAutomatonBase>,
-      public SubscriberBase {
-  using Base = PublisherMixin<StreamAutomatonBase>;
-
+class StreamSubscriptionResponderBase : public StreamAutomatonBase,
+                                        public PublisherMixin,
+                                        public SubscriberBase {
  public:
-  struct Parameters : Base::Parameters {
+  struct Parameters : StreamAutomatonBase::Parameters {
     Parameters(
-        const typename Base::Parameters& baseParams,
+        const typename StreamAutomatonBase::Parameters& baseParams,
         folly::Executor& _executor)
-        : Base::Parameters(baseParams), executor(_executor) {}
+        : StreamAutomatonBase::Parameters(baseParams), executor(_executor) {}
     folly::Executor& executor;
   };
 
@@ -33,11 +31,15 @@ class StreamSubscriptionResponderBase
   explicit StreamSubscriptionResponderBase(
       uint32_t initialRequestN,
       const Parameters& params)
-      : ExecutorBase(params.executor), Base(initialRequestN, params, nullptr) {}
+      : ExecutorBase(params.executor),
+        StreamAutomatonBase(params),
+        PublisherMixin(initialRequestN) {}
 
  protected:
-  using Base::onNextFrame;
+  using PublisherMixin::onNextFrame;
+
   void onNextFrame(Frame_CANCEL&&) override;
+  void onNextFrame(Frame_REQUEST_N&&) override;
 
  private:
   void onSubscribeImpl(std::shared_ptr<Subscription>) noexcept override;
@@ -45,6 +47,8 @@ class StreamSubscriptionResponderBase
   void onCompleteImpl() noexcept override;
   void onErrorImpl(folly::exception_wrapper) noexcept override;
 
+  void pauseStream(RequestHandler&) override;
+  void resumeStream(RequestHandler&) override;
   void endStream(StreamCompletionSignal) override;
 
   /// State of the Subscription responder.

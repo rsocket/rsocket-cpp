@@ -13,15 +13,16 @@
 namespace reactivesocket {
 
 /// Implementation of stream automaton that represents a Channel responder.
-class ChannelResponder : public PublisherMixin<ConsumerMixin>,
+class ChannelResponder : public ConsumerMixin,
+                         public PublisherMixin,
                          public SubscriberBase {
-  using Base = PublisherMixin<ConsumerMixin>;
-
  public:
   explicit ChannelResponder(
       uint32_t initialRequestN,
-      const Base::Parameters& params)
-      : ExecutorBase(params.executor), Base(initialRequestN, params) {}
+      const ConsumerMixin::Parameters& params)
+      : ExecutorBase(params.executor),
+        ConsumerMixin(params),
+        PublisherMixin(initialRequestN) {}
 
   void processInitialFrame(Frame_REQUEST_CHANNEL&&);
 
@@ -35,9 +36,10 @@ class ChannelResponder : public PublisherMixin<ConsumerMixin>,
   void requestImpl(size_t n) noexcept override;
   void cancelImpl() noexcept override;
 
-  using Base::onNextFrame;
+  using PublisherMixin::onNextFrame;
   void onNextFrame(Frame_REQUEST_CHANNEL&&) override;
   void onNextFrame(Frame_CANCEL&&) override;
+  void onNextFrame(Frame_REQUEST_N&&) override;
 
   void endStream(StreamCompletionSignal) override;
 

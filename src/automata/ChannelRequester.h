@@ -18,13 +18,14 @@ class exception_wrapper;
 namespace reactivesocket {
 
 /// Implementation of stream automaton that represents a Channel requester.
-class ChannelRequester : public PublisherMixin<ConsumerMixin>,
+class ChannelRequester : public ConsumerMixin,
+                         public PublisherMixin,
                          public SubscriberBase {
-  using Base = PublisherMixin<ConsumerMixin>;
-
  public:
-  explicit ChannelRequester(const Base::Parameters& params)
-      : ExecutorBase(params.executor), Base(0, params) {}
+  explicit ChannelRequester(const ConsumerMixin::Parameters& params)
+      : ExecutorBase(params.executor),
+        ConsumerMixin(params),
+        PublisherMixin(0) {}
 
  private:
   /// @{
@@ -38,9 +39,10 @@ class ChannelRequester : public PublisherMixin<ConsumerMixin>,
   void requestImpl(size_t) noexcept override;
   void cancelImpl() noexcept override;
 
-  using Base::onNextFrame;
+  using PublisherMixin::onNextFrame;
   void onNextFrame(Frame_RESPONSE&&) override;
   void onNextFrame(Frame_ERROR&&) override;
+  void onNextFrame(Frame_REQUEST_N&&) override;
 
   void endStream(StreamCompletionSignal) override;
 
