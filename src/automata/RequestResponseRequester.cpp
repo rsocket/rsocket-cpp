@@ -2,7 +2,6 @@
 
 #include "src/automata/RequestResponseRequester.h"
 #include <folly/ExceptionWrapper.h>
-#include <folly/MoveWrapper.h>
 #include "src/Common.h"
 #include "src/ConnectionAutomaton.h"
 #include "src/RequestHandler.h"
