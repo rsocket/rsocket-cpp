@@ -344,4 +344,65 @@ target_link_libraries(
 
 add_dependencies(tcpresumeserver gmock)
 
+########################################
+# Examples
+########################################
+
+add_library(
+        reactivesocket_examples_util
+        examples/util/ExampleSubscriber.cpp
+        examples/util/ExampleSubscriber.h
+        examples/util/RSocket.cpp
+        examples/util/RSocket.h
+        examples/util/TcpConnectionFactory.cpp
+        examples/util/TcpConnectionFactory.h
+)
+
+target_link_libraries(
+        reactivesocket_examples_util
+        ReactiveSocket
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT}
+)
+
+# tcp-basic-stream
+
+add_executable(
+        example_tcp-basic-stream_server
+        examples/tcp-basic-stream/TCP-Stream_Server.cpp
+        examples/tcp-basic-stream/IntStreamSubscription.cpp
+        examples/tcp-basic-stream/IntStreamSubscription.h
+        examples/tcp-basic-stream/ServerRequestHandler.cpp
+        examples/tcp-basic-stream/ServerRequestHandler.h)
+
+target_link_libraries(
+        example_tcp-basic-stream_server
+        ReactiveSocket
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
+
+add_executable(
+        example_tcp-basic-stream_client
+        examples/tcp-basic-stream/TCP-Stream_Client.cpp
+)
+
+target_link_libraries(
+        example_tcp-basic-stream_client
+        ReactiveSocket
+        reactivesocket_examples_util
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
+
+
+
+########################################
+# End Examples
+########################################
+
 # EOF
