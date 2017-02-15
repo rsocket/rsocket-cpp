@@ -1,6 +1,6 @@
 # reactivesocket-cpp
 
-C++ implementation of [ReactiveSocket](https://reactivesocket.io).
+C++ implementation of [ReactiveSocket](https://reactivesocket.io)
 
 NOTE: This is a work in progress. It is not feature complete.
 
