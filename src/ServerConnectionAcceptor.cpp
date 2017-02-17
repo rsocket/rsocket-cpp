@@ -100,7 +100,6 @@ class OneFrameProcessor
   }
 
   void onTerminal(folly::exception_wrapper ex) override {
-    acceptor_.stats().connectionClosedInServerConnectionAcceptor(ex);
     acceptor_.removeConnection(transport_);
     transport_->close(std::move(ex));
     // no more code here as the instance might be gone by now

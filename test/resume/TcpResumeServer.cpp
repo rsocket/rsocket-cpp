@@ -145,7 +145,7 @@ class ServerRequestHandler : public DefaultRequestHandler {
 class MyServerConnectionAcceptor : public ServerConnectionAcceptor {
  public:
   MyServerConnectionAcceptor(EventBase& eventBase, Stats& stats)
-      : ServerConnectionAcceptor(stats), eventBase_(eventBase) {}
+      : eventBase_(eventBase), stats_(stats) {}
 
   void setupNewSocket(
       std::shared_ptr<FrameTransport> frameTransport,
@@ -157,7 +157,7 @@ class MyServerConnectionAcceptor : public ServerConnectionAcceptor {
 
     std::unique_ptr<StandardReactiveSocket> rs =
         StandardReactiveSocket::disconnectedServer(
-            eventBase_, std::move(requestHandler), stats());
+            eventBase_, std::move(requestHandler), stats_);
 
     rs->onConnected([]() { LOG(INFO) << "socket connected"; });
     rs->onDisconnected([rs = rs.get()](const folly::exception_wrapper& ex) {
@@ -202,6 +202,7 @@ class MyServerConnectionAcceptor : public ServerConnectionAcceptor {
 
  private:
   EventBase& eventBase_;
+  Stats& stats_;
 };
 
 class Callback : public AsyncServerSocket::AcceptCallback {

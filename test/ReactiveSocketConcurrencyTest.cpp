@@ -417,8 +417,8 @@ class ServerSideConcurrencyTest : public testing::Test {
   std::shared_ptr<StrictMock<MockSubscription>> serverOutputSub{
       std::make_shared<StrictMock<MockSubscription>>()};
 
-  std::shared_ptr<StrictMock<MockSubscriber<Payload>>> serverInput{
-      std::make_shared<StrictMock<MockSubscriber<Payload>>>()};
+  std::shared_ptr<NiceMock<MockSubscriber<Payload>>> serverInput{
+      std::make_shared<NiceMock<MockSubscriber<Payload>>>()};
   std::shared_ptr<Subscription> serverInputSub;
 
   bool clientTerminatesInteraction_{true};

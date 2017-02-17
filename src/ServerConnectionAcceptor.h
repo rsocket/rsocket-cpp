@@ -25,7 +25,6 @@ class Stats;
 // is received. Then either onNewSocket or onResumeSocket is invoked.
 class ServerConnectionAcceptor {
  public:
-  explicit ServerConnectionAcceptor(Stats& stats) : stats_(stats) {}
   virtual ~ServerConnectionAcceptor();
 
   /// Called when we've received a setup frame on the connection and are ready
@@ -53,13 +52,8 @@ class ServerConnectionAcceptor {
       std::shared_ptr<FrameTransport> transport,
       std::unique_ptr<folly::IOBuf> frame);
 
-  Stats& stats() {
-    return stats_;
-  }
-
  private:
   std::unordered_set<std::shared_ptr<FrameTransport>> connections_;
-  Stats& stats_;
   FrameSerializerV0_1 frameSerializer_;
 };
 
