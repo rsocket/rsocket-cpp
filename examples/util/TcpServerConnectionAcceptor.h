@@ -17,7 +17,8 @@ using namespace ::reactivesocket;
 using namespace ::folly;
 
 namespace rsocket {
-using OnAccept = std::function<void(std::unique_ptr<DuplexConnection>, EventBase&)>;
+using OnAccept =
+    std::function<void(std::unique_ptr<DuplexConnection>, EventBase&)>;
 
 class ServerConnectionAcceptor : public AsyncServerSocket::AcceptCallback {
  public:
@@ -38,6 +39,8 @@ class ServerConnectionAcceptor : public AsyncServerSocket::AcceptCallback {
   void start(OnAccept onAccept);
 
  private:
+  // TODO this is single-threaded right now
+  // TODO need to tell it how many threads to run on
   EventBase eventBase;
   std::thread thread;
   folly::SocketAddress addr;

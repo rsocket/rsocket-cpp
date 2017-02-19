@@ -21,6 +21,7 @@ void ServerConnectionAcceptor::start(OnAccept acceptor) {
   // TODO needs to blow up if called more than once
   LOG(INFO) << "ServerConnectionAcceptor => start";
   onAccept = std::move(acceptor);
+  // TODO need to support more than 1 thread
   serverSocket = AsyncServerSocket::newSocket(&eventBase);
   thread = std::thread([this]() { eventBase.loopForever(); });
   thread.detach();
