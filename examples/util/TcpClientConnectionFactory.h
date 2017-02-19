@@ -14,20 +14,17 @@
 using namespace ::reactivesocket;
 using namespace ::folly;
 
-/**
- * Simplified API for client/server
- */
 namespace rsocket {
 
 using OnConnect = std::function<void(std::unique_ptr<DuplexConnection>)>;
 
-class ConnectionFactory : public AsyncSocket::ConnectCallback {
+class ClientConnectionFactory : public AsyncSocket::ConnectCallback {
  public:
-  ConnectionFactory(std::string host, int port) : addr(host, port, true) {}
+  ClientConnectionFactory(std::string host, int port) : addr(host, port, true) {}
 
-  ~ConnectionFactory();
+  ~ClientConnectionFactory();
 
-  static std::unique_ptr<ConnectionFactory> tcpClient(
+  static std::unique_ptr<ClientConnectionFactory> tcpClient(
       std::string host,
       int port);
 

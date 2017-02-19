@@ -16,7 +16,7 @@ void ServerRequestHandler::handleRequestStream(
 }
 
 std::shared_ptr<StreamState> ServerRequestHandler::handleSetupPayload(
-    ReactiveSocket&,
+    ReactiveSocket& socket,
     ConnectionSetupPayload request) noexcept {
   LOG(INFO) << "ServerRequestHandler.handleSetupPayload " << request;
   return std::make_shared<StreamState>(Stats::noop());

@@ -4,33 +4,43 @@
 
 #include <folly/ExceptionWrapper.h>
 #include <folly/futures/Future.h>
-#include "examples/util/TcpConnectionFactory.h"
+#include "RSocketClient.h"
+#include "RSocketServer.h"
+#include "examples/util/TcpClientConnectionFactory.h"
+#include "examples/util/TcpServerConnectionAcceptor.h"
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
 #include "src/StandardReactiveSocket.h"
 
 using namespace ::reactivesocket;
 
-/**
- * Simplified API for client/server
- */
 namespace rsocket {
 
+/**
+ * Main entry to creating RSocket clients and servers.
+ */
 class RSocket {
  public:
-  static std::unique_ptr<RSocket> createClientFactory(
-      std::unique_ptr<ConnectionFactory> connection);
-  RSocket(std::unique_ptr<ConnectionFactory> connection);
-  ~RSocket();
-  /*
-   * Connect asynchronously and return a Future
-   * which will deliver the RSocket
+  /**
+   * Create an RSocketClient that can be used to open RSocket connections.
+   * @param connectionFactory factory of DuplexConnections on the desired
+   * transport, such as TcpClientConnectionFactory
+   * @return RSocketClient which can then make RSocket connections.
    */
-  Future<std::shared_ptr<StandardReactiveSocket>> connect(
-      ScopedEventBaseThread& eventBaseThread);
+  static std::unique_ptr<RSocketClient> createClientFactory(
+      std::unique_ptr<ClientConnectionFactory>);
 
- private:
-  std::unique_ptr<ConnectionFactory> lazyConnection;
-  std::shared_ptr<StandardReactiveSocket> rs;
+  /**
+   * Create an RSocketServer that will accept connections.
+   * @param connectionAcceptor acceptor of DuplexConnections on the desired
+   * transport, such as TcpServerConnectionAcceptor
+   * @return RSocketServer which can then accept RSocket connections.
+   */
+  static std::unique_ptr<RSocketServer> createServer(
+      std::unique_ptr<ServerConnectionAcceptor>,
+      HandlerFactory);
+
+  RSocket() = delete;
+  ~RSocket() = delete;
 };
 }

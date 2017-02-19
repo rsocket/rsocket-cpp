@@ -19,7 +19,7 @@ using namespace ::rsocket_example;
 using namespace ::rsocket;
 
 DEFINE_string(host, "localhost", "host to connect to");
-DEFINE_int32(port, 9898, "host:port to connect to");
+    DEFINE_int32(port, 9898, "host:port to connect to");
 
 int main(int argc, char* argv[]) {
   FLAGS_logtostderr = true;
@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
 
   ScopedEventBaseThread eventBaseThread;
   auto rsf = RSocket::createClientFactory(
-      ConnectionFactory::tcpClient(FLAGS_host, FLAGS_port));
+      ClientConnectionFactory::tcpClient(FLAGS_host, FLAGS_port));
   rsf->connect(eventBaseThread)
       .then([](std::shared_ptr<StandardReactiveSocket> rs) {
         rs->requestStream(
