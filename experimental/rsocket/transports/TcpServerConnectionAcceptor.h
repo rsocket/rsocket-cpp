@@ -3,7 +3,7 @@
 #pragma once
 
 #include <folly/io/async/AsyncServerSocket.h>
-#include "experimental/include-rsocket/ServerConnectionAcceptor.h"
+#include "rsocket/ServerConnectionAcceptor.h"
 
 using namespace ::reactivesocket;
 using namespace ::folly;

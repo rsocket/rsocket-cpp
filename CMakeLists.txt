@@ -355,24 +355,29 @@ add_library(
 )
 
 add_library(
-        reactivesocket_experimentation_rsocket
-        examples/util/ExampleSubscriber.cpp
-        examples/util/ExampleSubscriber.h
-        experimental/include-rsocket/RSocket.h
-        experimental/include-rsocket/RSocketServer.h
-        experimental/include-rsocket/RSocketClient.h
-        experimental/include-rsocket/ServerConnectionAcceptor.h
-        experimental/include-rsocket/ClientConnectionFactory.h
+        rsocket_experimental
+        experimental/rsocket/RSocket.h
+        experimental/rsocket/RSocketServer.h
+        experimental/rsocket/RSocketClient.h
+        experimental/rsocket/ServerConnectionAcceptor.h
+        experimental/rsocket/ClientConnectionFactory.h
+        experimental/rsocket/transports/TcpServerConnectionAcceptor.h
+        experimental/rsocket/transports/TcpClientConnectionFactory.h
+
         experimental/rsocket-src/RSocket.cpp
         experimental/rsocket-src/TcpClientConnectionFactory.cpp
-        experimental/rsocket-src/TcpClientConnectionFactory.h
         experimental/rsocket-src/TcpServerConnectionAcceptor.cpp
-        experimental/rsocket-src/TcpServerConnectionAcceptor.h
+
 )
+
+# include the experimental includes for usage
+ target_include_directories(rsocket_experimental PUBLIC "${PROJECT_SOURCE_DIR}/experimental")
+#include_directories(${CMAKE_CURRENT_BINARY_DIR}/experimental)
+
 
 target_link_libraries(
         reactivesocket_examples_util
-        reactivesocket_experimentation_rsocket
+        rsocket_experimental
         ReactiveSocket
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
@@ -393,7 +398,7 @@ add_executable(
 target_link_libraries(
         example_tcp-basic-stream_server
         ReactiveSocket
-        reactivesocket_experimentation_rsocket
+        rsocket_experimental
         reactivesocket_examples_util
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
@@ -408,7 +413,7 @@ add_executable(
 target_link_libraries(
         example_tcp-basic-stream_client
         ReactiveSocket
-        reactivesocket_experimentation_rsocket
+        rsocket_experimental
         reactivesocket_examples_util
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}

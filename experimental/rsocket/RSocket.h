@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include "RSocketClient.h"
-#include "RSocketServer.h"
+#include "rsocket/RSocketClient.h"
+#include "rsocket/RSocketServer.h"
 
 using namespace ::reactivesocket;
 
@@ -33,7 +33,7 @@ class RSocket {
       std::unique_ptr<ServerConnectionAcceptor>,
       HandlerFactory);
 
-  RSocket() = delete;
-  ~RSocket() = delete;
+ protected:
+  RSocket() = default;
 };
 }

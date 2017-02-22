@@ -2,8 +2,8 @@
 
 #include <iostream>
 #include "ServerRequestHandler.h"
-#include "experimental/include-rsocket/RSocket.h"
-#include "experimental/rsocket-src/TcpServerConnectionAcceptor.h"
+#include "rsocket/RSocket.h"
+#include "rsocket/transports/TcpServerConnectionAcceptor.h"
 
 using namespace ::reactivesocket;
 using namespace ::folly;

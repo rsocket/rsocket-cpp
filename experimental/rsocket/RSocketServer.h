@@ -17,7 +17,6 @@ using HandlerFactory = std::function<std::unique_ptr<RequestHandler>()>;
 class RSocketServer {
  public:
   RSocketServer(std::unique_ptr<ServerConnectionAcceptor>, HandlerFactory);
-  ~RSocketServer() = default;
 
   void start();
   void shutdown();

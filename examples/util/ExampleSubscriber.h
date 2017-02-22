@@ -14,14 +14,6 @@ using namespace ::reactivesocket;
  */
 namespace rsocket_example {
 class ExampleSubscriber : public Subscriber<Payload> {
- private:
-  int initialRequest;
-  int thresholdForRequest;
-  int numToTake;
-  int requested;
-  int received;
-  std::shared_ptr<Subscription> subscription_;
-
  public:
   ~ExampleSubscriber();
   ExampleSubscriber(int initialRequest, int numToTake);
@@ -31,5 +23,13 @@ class ExampleSubscriber : public Subscriber<Payload> {
   void onNext(Payload element) noexcept override;
   void onComplete() noexcept override;
   void onError(folly::exception_wrapper ex) noexcept override;
+
+ private:
+  int initialRequest;
+  int thresholdForRequest;
+  int numToTake;
+  int requested;
+  int received;
+  std::shared_ptr<Subscription> subscription_;
 };
 }

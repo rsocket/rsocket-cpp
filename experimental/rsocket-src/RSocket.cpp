@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "experimental/include-rsocket/RSocket.h"
+#include "experimental/rsocket/RSocket.h"
 #include <src/NullRequestHandler.h>
 #include "src/folly/FollyKeepaliveTimer.h"
 

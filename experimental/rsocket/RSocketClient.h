@@ -3,7 +3,7 @@
 #pragma once
 
 #include <folly/futures/Future.h>
-#include "ClientConnectionFactory.h"
+#include "rsocket/ClientConnectionFactory.h"
 #include "src/StandardReactiveSocket.h"
 
 using namespace ::reactivesocket;

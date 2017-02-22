@@ -3,8 +3,8 @@
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <iostream>
 #include "examples/util/ExampleSubscriber.h"
-#include "experimental/include-rsocket/RSocket.h"
-#include "experimental/rsocket-src/TcpClientConnectionFactory.h"
+#include "rsocket/RSocket.h"
+#include "rsocket/transports/TcpClientConnectionFactory.h"
 
 using namespace ::reactivesocket;
 using namespace ::folly;

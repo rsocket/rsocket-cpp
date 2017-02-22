@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "TcpServerConnectionAcceptor.h"
+#include <rsocket/transports/TcpServerConnectionAcceptor.h>
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/tcp/TcpDuplexConnection.h"
 
