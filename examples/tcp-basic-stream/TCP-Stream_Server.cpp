@@ -23,10 +23,27 @@ int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
 
+  //    auto a = ServerConnectionAcceptor::tcpServer(FLAGS_port);
+  //    a->start([](auto c, auto eb) {
+  //        return new RSocket(std::move(c), std::move(eb));
+  //    });
+
   auto rs = RSocket::createServer(
-      ServerConnectionAcceptor::tcpServer(FLAGS_port),
+      TcpServerConnectionAcceptor::create(FLAGS_port),
       []() { return std::make_unique<ServerRequestHandler>(); });
   rs->start();
+
+  //    auto rs = RSocket::startServer(
+  //            ServerConnectionAcceptor::tcpServer(FLAGS_port),
+  //            [](SetupPayload setup, RSocket socket) {
+  //                if(setup ... ) {
+  //                    socket->requestResponse(...);
+  //                    return std::make_unique<ServerRequestHandler>();
+  //                } else {
+  //                    return std::make_unique<ServerRequestHandler>();
+  //                }
+  //            });
+  //
 
   // TODO should we instead have a ConnectionSetupHandler that decides what
   // RequestHandler to return?

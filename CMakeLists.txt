@@ -356,7 +356,7 @@ add_library(
         examples/util/RSocket.h
         examples/util/TcpClientConnectionFactory.cpp
         examples/util/TcpClientConnectionFactory.h
-        examples/util/TcpServerConnectionAcceptor.cpp examples/util/TcpServerConnectionAcceptor.h examples/util/RSocketServer.h examples/util/RSocketClient.h)
+        examples/util/TcpServerConnectionAcceptor.cpp examples/util/TcpServerConnectionAcceptor.h examples/util/RSocketServer.h examples/util/RSocketClient.h examples/util/ServerConnectionAcceptor.h examples/util/ClientConnectionFactory.h)
 
 target_link_libraries(
         reactivesocket_examples_util

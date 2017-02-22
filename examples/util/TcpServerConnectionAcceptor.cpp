@@ -1,9 +1,6 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "TcpServerConnectionAcceptor.h"
-#include <iostream>
-#include "src/StandardReactiveSocket.h"
-#include "src/SubscriptionBase.h"
-#include "src/folly/FollyKeepaliveTimer.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/tcp/TcpDuplexConnection.h"
 
@@ -12,12 +9,12 @@ using namespace ::folly;
 
 namespace rsocket {
 
-std::unique_ptr<ServerConnectionAcceptor> ServerConnectionAcceptor::tcpServer(
+std::unique_ptr<ServerConnectionAcceptor> TcpServerConnectionAcceptor::create(
     int port) {
-  return std::make_unique<ServerConnectionAcceptor>(port);
+  return std::make_unique<TcpServerConnectionAcceptor>(port);
 }
 
-void ServerConnectionAcceptor::start(OnAccept acceptor) {
+void TcpServerConnectionAcceptor::start(OnAccept acceptor) {
   // TODO needs to blow up if called more than once
   LOG(INFO) << "ServerConnectionAcceptor => start";
   onAccept = std::move(acceptor);
@@ -42,7 +39,7 @@ void ServerConnectionAcceptor::start(OnAccept acceptor) {
   LOG(INFO) << "ServerConnectionAcceptor => leave start";
 }
 
-void ServerConnectionAcceptor::connectionAccepted(
+void TcpServerConnectionAcceptor::connectionAccepted(
     int fd,
     const SocketAddress& clientAddr) noexcept {
   LOG(INFO) << "ServerConnectionAcceptor => accept connection " << fd;
@@ -58,11 +55,12 @@ void ServerConnectionAcceptor::connectionAccepted(
   onAccept(std::move(framedConnection), eventBase);
 }
 
-void ServerConnectionAcceptor::acceptError(const std::exception& ex) noexcept {
+void TcpServerConnectionAcceptor::acceptError(
+    const std::exception& ex) noexcept {
   LOG(INFO) << "ServerConnectionAcceptor => error => " << ex.what();
 }
 
-ServerConnectionAcceptor::~ServerConnectionAcceptor() {
+TcpServerConnectionAcceptor::~TcpServerConnectionAcceptor() {
   LOG(INFO) << "ServerConnectionAcceptor => destroy";
 }
 }

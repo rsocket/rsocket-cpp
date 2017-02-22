@@ -1,9 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "examples/util/ExampleSubscriber.h"
-#include <folly/Memory.h>
-#include <folly/io/IOBufQueue.h>
-#include <glog/logging.h>
 
 using namespace ::reactivesocket;
 

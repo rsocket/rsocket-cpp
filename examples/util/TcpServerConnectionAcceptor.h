@@ -2,33 +2,24 @@
 
 #pragma once
 
-#include <folly/ExceptionWrapper.h>
 #include <folly/io/async/AsyncServerSocket.h>
-#include <folly/io/async/EventBaseManager.h>
-#include <folly/io/async/ScopedEventBaseThread.h>
-#include <string>
-#include "src/Payload.h"
-#include "src/ReactiveStreamsCompat.h"
-#include "src/StandardReactiveSocket.h"
-#include "src/framed/FramedDuplexConnection.h"
-#include "src/tcp/TcpDuplexConnection.h"
+#include "ServerConnectionAcceptor.h"
 
 using namespace ::reactivesocket;
 using namespace ::folly;
 
 namespace rsocket {
-using OnAccept =
-    std::function<void(std::unique_ptr<DuplexConnection>, EventBase&)>;
 
-class ServerConnectionAcceptor : public AsyncServerSocket::AcceptCallback {
+class TcpServerConnectionAcceptor : public ServerConnectionAcceptor,
+                                    public AsyncServerSocket::AcceptCallback {
  public:
-  static std::unique_ptr<ServerConnectionAcceptor> tcpServer(int port);
+  static std::unique_ptr<ServerConnectionAcceptor> create(int port);
 
-  ServerConnectionAcceptor(int port) {
+  TcpServerConnectionAcceptor(int port) {
     addr.setFromLocalPort(port);
   }
 
-  ~ServerConnectionAcceptor();
+  ~TcpServerConnectionAcceptor();
 
   /**
    * Create an EventBase, Thread, and AsyncServerSocket. Bind to the given port
@@ -36,7 +27,7 @@ class ServerConnectionAcceptor : public AsyncServerSocket::AcceptCallback {
    *
    * @param onAccept
    */
-  void start(OnAccept onAccept);
+  void start(OnAccept onAccept) override;
 
  private:
   // TODO this is single-threaded right now

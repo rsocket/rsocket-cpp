@@ -2,14 +2,10 @@
 
 #pragma once
 
-#include <folly/ExceptionWrapper.h>
-#include <folly/io/async/EventBaseManager.h>
+#include <folly/io/async/AsyncSocket.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
-#include <string>
-#include "src/Payload.h"
-#include "src/ReactiveStreamsCompat.h"
-#include "src/framed/FramedDuplexConnection.h"
-#include "src/tcp/TcpDuplexConnection.h"
+#include "ClientConnectionFactory.h"
+#include "src/DuplexConnection.h"
 
 using namespace ::reactivesocket;
 using namespace ::folly;
@@ -18,17 +14,20 @@ namespace rsocket {
 
 using OnConnect = std::function<void(std::unique_ptr<DuplexConnection>)>;
 
-class ClientConnectionFactory : public AsyncSocket::ConnectCallback {
+class TcpClientConnectionFactory : public ClientConnectionFactory,
+                                   public AsyncSocket::ConnectCallback {
  public:
-  ClientConnectionFactory(std::string host, int port) : addr(host, port, true) {}
+  TcpClientConnectionFactory(std::string host, int port)
+      : addr(host, port, true) {}
 
-  ~ClientConnectionFactory();
+  ~TcpClientConnectionFactory();
 
-  static std::unique_ptr<ClientConnectionFactory> tcpClient(
-      std::string host,
-      int port);
+  static std::unique_ptr<ClientConnectionFactory> create(
+          std::string host,
+          int port);
 
-  void connect(OnConnect onConnect, ScopedEventBaseThread& eventBaseThread);
+  void connect(OnConnect onConnect, ScopedEventBaseThread& eventBaseThread)
+      override;
 
  private:
   folly::SocketAddress addr;

@@ -2,11 +2,8 @@
 
 #pragma once
 
-#include <folly/ExceptionWrapper.h>
 #include <folly/futures/Future.h>
 #include "examples/util/TcpClientConnectionFactory.h"
-#include "src/Payload.h"
-#include "src/ReactiveStreamsCompat.h"
 #include "src/StandardReactiveSocket.h"
 
 using namespace ::reactivesocket;

@@ -2,11 +2,7 @@
 
 #pragma once
 
-#include <folly/ExceptionWrapper.h>
-#include "examples/util/TcpServerConnectionAcceptor.h"
-#include "src/Payload.h"
-#include "src/ReactiveStreamsCompat.h"
-#include "src/StandardReactiveSocket.h"
+#include "ServerConnectionAcceptor.h"
 
 using namespace ::reactivesocket;
 

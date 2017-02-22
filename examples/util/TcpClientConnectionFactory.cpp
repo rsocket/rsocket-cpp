@@ -1,10 +1,5 @@
 
 #include "TcpClientConnectionFactory.h"
-
-#include <iostream>
-#include "src/StandardReactiveSocket.h"
-#include "src/SubscriptionBase.h"
-#include "src/folly/FollyKeepaliveTimer.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/tcp/TcpDuplexConnection.h"
 
@@ -13,24 +8,27 @@ using namespace ::folly;
 
 namespace rsocket {
 
-void ClientConnectionFactory::connect(OnConnect oc, ScopedEventBaseThread& eventBaseThread) {
+void TcpClientConnectionFactory::connect(
+    OnConnect oc,
+    ScopedEventBaseThread& eventBaseThread) {
   // TODO not happy with this being copied here
   onConnect = oc;
   // now start the connection asynchronously
-  eventBaseThread.getEventBase()->runInEventBaseThreadAndWait([this, &eventBaseThread]() {
-    LOG(INFO) << "ClientConnectionFactory => starting socket";
-    socket.reset(new folly::AsyncSocket(eventBaseThread.getEventBase()));
+  eventBaseThread.getEventBase()->runInEventBaseThreadAndWait(
+      [this, &eventBaseThread]() {
+        LOG(INFO) << "ClientConnectionFactory => starting socket";
+        socket.reset(new folly::AsyncSocket(eventBaseThread.getEventBase()));
 
-    LOG(INFO) << "ClientConnectionFactory => attempting connection to "
-              << addr.describe() << std::endl;
+        LOG(INFO) << "ClientConnectionFactory => attempting connection to "
+                  << addr.describe() << std::endl;
 
-    socket->connect(this, addr);
+        socket->connect(this, addr);
 
-    LOG(INFO) << "ClientConnectionFactory  => DONE connect";
-  });
+        LOG(INFO) << "ClientConnectionFactory  => DONE connect";
+      });
 }
 
-void ClientConnectionFactory::connectSuccess() noexcept {
+void TcpClientConnectionFactory::connectSuccess() noexcept {
   LOG(INFO) << "ClientConnectionFactory => socketCallback => Success";
 
   std::unique_ptr<DuplexConnection> connection =
@@ -44,19 +42,21 @@ void ClientConnectionFactory::connectSuccess() noexcept {
   onConnect(std::move(framedConnection));
 }
 
-void ClientConnectionFactory::connectErr(const AsyncSocketException& ex) noexcept {
-  LOG(INFO) << "ClientConnectionFactory => socketCallback => ERROR => " << ex.what()
-            << " " << ex.getType() << std::endl;
+void TcpClientConnectionFactory::connectErr(
+    const AsyncSocketException& ex) noexcept {
+  LOG(INFO) << "ClientConnectionFactory => socketCallback => ERROR => "
+            << ex.what() << " " << ex.getType() << std::endl;
 }
 
-std::unique_ptr<ClientConnectionFactory> ClientConnectionFactory::tcpClient(
-    std::string host,
-    int port) {
-  LOG(INFO) << "ClientConnectionFactory creation => host: " << host << " port: " << port;
-  return std::make_unique<ClientConnectionFactory>(host, port);
+std::unique_ptr<ClientConnectionFactory> TcpClientConnectionFactory::create(
+        std::string host,
+        int port) {
+  LOG(INFO) << "ClientConnectionFactory creation => host: " << host
+            << " port: " << port;
+  return std::make_unique<TcpClientConnectionFactory>(host, port);
 }
 
-ClientConnectionFactory::~ClientConnectionFactory() {
+TcpClientConnectionFactory::~TcpClientConnectionFactory() {
   LOG(INFO) << "ClientConnectionFactory => destroy";
 }
 }

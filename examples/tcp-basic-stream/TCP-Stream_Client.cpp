@@ -19,7 +19,7 @@ using namespace ::rsocket_example;
 using namespace ::rsocket;
 
 DEFINE_string(host, "localhost", "host to connect to");
-    DEFINE_int32(port, 9898, "host:port to connect to");
+DEFINE_int32(port, 9898, "host:port to connect to");
 
 int main(int argc, char* argv[]) {
   FLAGS_logtostderr = true;
@@ -30,14 +30,15 @@ int main(int argc, char* argv[]) {
 
   ScopedEventBaseThread eventBaseThread;
   auto rsf = RSocket::createClientFactory(
-      ClientConnectionFactory::tcpClient(FLAGS_host, FLAGS_port));
+      TcpClientConnectionFactory::create(FLAGS_host, FLAGS_port));
   rsf->connect(eventBaseThread)
       .then([](std::shared_ptr<StandardReactiveSocket> rs) {
         rs->requestStream(
             Payload("args-here"), std::make_shared<ExampleSubscriber>(5, 6));
       });
 
-  // TODO the following should work, but has eventbase issues (rs should use the correct one)
+  // TODO the following should work, but has eventbase issues (rs should use the
+  // correct one)
   //  auto rs = rsf->connect(eventBaseThread).get();
   //  rs->requestStream(
   //      Payload("args-here"), std::make_shared<ExampleSubscriber>(5, 6));
