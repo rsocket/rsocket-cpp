@@ -3,6 +3,7 @@
 #pragma once
 
 #include "ServerConnectionAcceptor.h"
+#include "src/StandardReactiveSocket.h"
 
 using namespace ::reactivesocket;
 

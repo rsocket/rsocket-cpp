@@ -4,7 +4,7 @@
 
 #include <folly/io/async/AsyncSocket.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
-#include "ClientConnectionFactory.h"
+#include "experimental/include-rsocket/ClientConnectionFactory.h"
 #include "src/DuplexConnection.h"
 
 using namespace ::reactivesocket;

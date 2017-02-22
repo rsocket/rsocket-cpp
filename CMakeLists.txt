@@ -352,14 +352,27 @@ add_library(
         reactivesocket_examples_util
         examples/util/ExampleSubscriber.cpp
         examples/util/ExampleSubscriber.h
-        examples/util/RSocket.cpp
-        examples/util/RSocket.h
-        examples/util/TcpClientConnectionFactory.cpp
-        examples/util/TcpClientConnectionFactory.h
-        examples/util/TcpServerConnectionAcceptor.cpp examples/util/TcpServerConnectionAcceptor.h examples/util/RSocketServer.h examples/util/RSocketClient.h examples/util/ServerConnectionAcceptor.h examples/util/ClientConnectionFactory.h)
+)
+
+add_library(
+        reactivesocket_experimentation_rsocket
+        examples/util/ExampleSubscriber.cpp
+        examples/util/ExampleSubscriber.h
+        experimental/include-rsocket/RSocket.h
+        experimental/include-rsocket/RSocketServer.h
+        experimental/include-rsocket/RSocketClient.h
+        experimental/include-rsocket/ServerConnectionAcceptor.h
+        experimental/include-rsocket/ClientConnectionFactory.h
+        experimental/rsocket-src/RSocket.cpp
+        experimental/rsocket-src/TcpClientConnectionFactory.cpp
+        experimental/rsocket-src/TcpClientConnectionFactory.h
+        experimental/rsocket-src/TcpServerConnectionAcceptor.cpp
+        experimental/rsocket-src/TcpServerConnectionAcceptor.h
+)
 
 target_link_libraries(
         reactivesocket_examples_util
+        reactivesocket_experimentation_rsocket
         ReactiveSocket
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
@@ -380,6 +393,7 @@ add_executable(
 target_link_libraries(
         example_tcp-basic-stream_server
         ReactiveSocket
+        reactivesocket_experimentation_rsocket
         reactivesocket_examples_util
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
@@ -394,6 +408,7 @@ add_executable(
 target_link_libraries(
         example_tcp-basic-stream_client
         ReactiveSocket
+        reactivesocket_experimentation_rsocket
         reactivesocket_examples_util
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
