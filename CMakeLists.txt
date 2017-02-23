@@ -343,4 +343,86 @@ target_link_libraries(
 
 add_dependencies(tcpresumeserver gmock)
 
+########################################
+# Examples
+########################################
+
+add_library(
+        reactivesocket_examples_util
+        examples/util/ExampleSubscriber.cpp
+        examples/util/ExampleSubscriber.h
+)
+
+add_library(
+        rsocket_experimental
+        experimental/rsocket/RSocket.h
+        experimental/rsocket/RSocketServer.h
+        experimental/rsocket/RSocketClient.h
+        experimental/rsocket/ServerConnectionAcceptor.h
+        experimental/rsocket/ClientConnectionFactory.h
+        experimental/rsocket/transports/TcpServerConnectionAcceptor.h
+        experimental/rsocket/transports/TcpClientConnectionFactory.h
+
+        experimental/rsocket-src/RSocket.cpp
+        experimental/rsocket-src/TcpClientConnectionFactory.cpp
+        experimental/rsocket-src/TcpServerConnectionAcceptor.cpp
+
+)
+
+# include the experimental includes for usage
+ target_include_directories(rsocket_experimental PUBLIC "${PROJECT_SOURCE_DIR}/experimental")
+#include_directories(${CMAKE_CURRENT_BINARY_DIR}/experimental)
+
+
+target_link_libraries(
+        reactivesocket_examples_util
+        rsocket_experimental
+        ReactiveSocket
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT}
+)
+
+# tcp-basic-stream
+
+add_executable(
+        example_tcp-basic-stream_server
+        examples/tcp-basic-stream/TCP-Stream_Server.cpp
+        examples/tcp-basic-stream/IntStreamSubscription.cpp
+        examples/tcp-basic-stream/IntStreamSubscription.h
+        examples/tcp-basic-stream/ServerRequestHandler.cpp
+        examples/tcp-basic-stream/ServerRequestHandler.h)
+
+target_link_libraries(
+        example_tcp-basic-stream_server
+        ReactiveSocket
+        rsocket_experimental
+        reactivesocket_examples_util
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
+
+add_executable(
+        example_tcp-basic-stream_client
+        examples/tcp-basic-stream/TCP-Stream_Client.cpp
+)
+
+target_link_libraries(
+        example_tcp-basic-stream_client
+        ReactiveSocket
+        rsocket_experimental
+        reactivesocket_examples_util
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
+
+
+
+########################################
+# End Examples
+########################################
+
 # EOF
