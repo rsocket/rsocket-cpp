@@ -106,7 +106,7 @@ StandardReactiveSocket::fromServerConnection(
 std::unique_ptr<StandardReactiveSocket>
 StandardReactiveSocket::disconnectedServer(
     folly::Executor& executor,
-    std::unique_ptr<RequestHandler> handler,
+    std::shared_ptr<RequestHandler> handler,
     Stats& stats) {
   std::unique_ptr<StandardReactiveSocket> socket(new StandardReactiveSocket(
       ReactiveSocketMode::SERVER,

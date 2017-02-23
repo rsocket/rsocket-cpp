@@ -1,5 +1,5 @@
 
-#include <rsocket/transports/TcpClientConnectionFactory.h>
+#include <rsocket/transports/TcpConnectionFactory.h>
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/tcp/TcpDuplexConnection.h"
 
@@ -8,7 +8,7 @@ using namespace ::folly;
 
 namespace rsocket {
 
-void TcpClientConnectionFactory::connect(
+void TcpConnectionFactory::connect(
     OnConnect oc,
     ScopedEventBaseThread& eventBaseThread) {
   // TODO not happy with this being copied here
@@ -16,20 +16,20 @@ void TcpClientConnectionFactory::connect(
   // now start the connection asynchronously
   eventBaseThread.getEventBase()->runInEventBaseThreadAndWait(
       [this, &eventBaseThread]() {
-        LOG(INFO) << "ClientConnectionFactory => starting socket";
+        LOG(INFO) << "ConnectionFactory => starting socket";
         socket.reset(new folly::AsyncSocket(eventBaseThread.getEventBase()));
 
-        LOG(INFO) << "ClientConnectionFactory => attempting connection to "
+        LOG(INFO) << "ConnectionFactory => attempting connection to "
                   << addr.describe() << std::endl;
 
         socket->connect(this, addr);
 
-        LOG(INFO) << "ClientConnectionFactory  => DONE connect";
+        LOG(INFO) << "ConnectionFactory  => DONE connect";
       });
 }
 
-void TcpClientConnectionFactory::connectSuccess() noexcept {
-  LOG(INFO) << "ClientConnectionFactory => socketCallback => Success";
+void TcpConnectionFactory::connectSuccess() noexcept {
+  LOG(INFO) << "ConnectionFactory => socketCallback => Success";
 
   std::unique_ptr<DuplexConnection> connection =
       std::make_unique<TcpDuplexConnection>(
@@ -42,21 +42,21 @@ void TcpClientConnectionFactory::connectSuccess() noexcept {
   onConnect(std::move(framedConnection));
 }
 
-void TcpClientConnectionFactory::connectErr(
+void TcpConnectionFactory::connectErr(
     const AsyncSocketException& ex) noexcept {
-  LOG(INFO) << "ClientConnectionFactory => socketCallback => ERROR => "
+  LOG(INFO) << "ConnectionFactory => socketCallback => ERROR => "
             << ex.what() << " " << ex.getType() << std::endl;
 }
 
-std::unique_ptr<ClientConnectionFactory> TcpClientConnectionFactory::create(
+std::unique_ptr<ConnectionFactory> TcpConnectionFactory::create(
         std::string host,
         int port) {
-  LOG(INFO) << "ClientConnectionFactory creation => host: " << host
+  LOG(INFO) << "ConnectionFactory creation => host: " << host
             << " port: " << port;
-  return std::make_unique<TcpClientConnectionFactory>(host, port);
+  return std::make_unique<TcpConnectionFactory>(host, port);
 }
 
-TcpClientConnectionFactory::~TcpClientConnectionFactory() {
-  LOG(INFO) << "ClientConnectionFactory => destroy";
+TcpConnectionFactory::~TcpConnectionFactory() {
+  LOG(INFO) << "ConnectionFactory => destroy";
 }
 }

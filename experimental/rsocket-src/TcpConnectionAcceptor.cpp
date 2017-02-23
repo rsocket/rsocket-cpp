@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include <rsocket/transports/TcpServerConnectionAcceptor.h>
+#include <rsocket/transports/TcpConnectionAcceptor.h>
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/tcp/TcpDuplexConnection.h"
 
@@ -9,21 +9,21 @@ using namespace ::folly;
 
 namespace rsocket {
 
-std::unique_ptr<ServerConnectionAcceptor> TcpServerConnectionAcceptor::create(
+std::unique_ptr<ConnectionAcceptor> TcpConnectionAcceptor::create(
     int port) {
-  return std::make_unique<TcpServerConnectionAcceptor>(port);
+  return std::make_unique<TcpConnectionAcceptor>(port);
 }
 
-void TcpServerConnectionAcceptor::start(OnAccept acceptor) {
+void TcpConnectionAcceptor::start(std::function<void(std::unique_ptr<DuplexConnection>, EventBase&)> acceptor) {
   // TODO needs to blow up if called more than once
-  LOG(INFO) << "ServerConnectionAcceptor => start";
+  LOG(INFO) << "ConnectionAcceptor => start";
   onAccept = std::move(acceptor);
   // TODO need to support more than 1 thread
   serverSocket = AsyncServerSocket::newSocket(&eventBase);
   thread = std::thread([this]() { eventBase.loopForever(); });
   thread.detach();
   eventBase.runInEventBaseThread([this]() {
-    LOG(INFO) << "ServerConnectionAcceptor => start in loop";
+    LOG(INFO) << "ConnectionAcceptor => start in loop";
     serverSocket->setReusePortEnabled(true);
     serverSocket->bind(addr);
     serverSocket->addAcceptCallback(this, &eventBase);
@@ -31,18 +31,18 @@ void TcpServerConnectionAcceptor::start(OnAccept acceptor) {
     serverSocket->startAccepting();
 
     for (auto i : serverSocket->getAddresses()) {
-      LOG(INFO) << "ServerConnectionAcceptor => listening on => "
+      LOG(INFO) << "ConnectionAcceptor => listening on => "
                 << i.describe();
     }
   });
 
-  LOG(INFO) << "ServerConnectionAcceptor => leave start";
+  LOG(INFO) << "ConnectionAcceptor => leave start";
 }
 
-void TcpServerConnectionAcceptor::connectionAccepted(
+void TcpConnectionAcceptor::connectionAccepted(
     int fd,
     const SocketAddress& clientAddr) noexcept {
-  LOG(INFO) << "ServerConnectionAcceptor => accept connection " << fd;
+  LOG(INFO) << "ConnectionAcceptor => accept connection " << fd;
   auto socket = folly::AsyncSocket::UniquePtr(new AsyncSocket(&eventBase, fd));
 
   std::unique_ptr<DuplexConnection> connection =
@@ -55,12 +55,12 @@ void TcpServerConnectionAcceptor::connectionAccepted(
   onAccept(std::move(framedConnection), eventBase);
 }
 
-void TcpServerConnectionAcceptor::acceptError(
+void TcpConnectionAcceptor::acceptError(
     const std::exception& ex) noexcept {
-  LOG(INFO) << "ServerConnectionAcceptor => error => " << ex.what();
+  LOG(INFO) << "ConnectionAcceptor => error => " << ex.what();
 }
 
-TcpServerConnectionAcceptor::~TcpServerConnectionAcceptor() {
-  LOG(INFO) << "ServerConnectionAcceptor => destroy";
+TcpConnectionAcceptor::~TcpConnectionAcceptor() {
+  LOG(INFO) << "ConnectionAcceptor => destroy";
 }
 }

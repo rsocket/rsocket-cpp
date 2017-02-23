@@ -2,31 +2,42 @@
 
 #pragma once
 
-#include "ServerConnectionAcceptor.h"
+#include "rsocket/ConnectionAcceptor.h"
+#include "rsocket/ConnectionRequest.h"
+#include "src/RequestHandler.h"
+#include "src/ServerConnectionAcceptor.h"
 #include "src/StandardReactiveSocket.h"
 
 using namespace ::reactivesocket;
 
 namespace rsocket {
 
-// TODO why does we need to create a new RequestHandler for each RSocket?
-// TODO can we instead make there be a "ConnectionSetupHandler" which
-// TODO returns a RequestHandler that can be shared across many?
-using HandlerFactory = std::function<std::unique_ptr<RequestHandler>()>;
+using OnSetupNewSocket = std::function<void(
+    std::shared_ptr<FrameTransport> frameTransport,
+    ConnectionSetupPayload setupPayload,
+    folly::EventBase&)>;
 
+/**
+ * API for starting an RSocket server. Returned from RSocket::createServer.
+ */
 class RSocketServer {
- public:
-  RSocketServer(std::unique_ptr<ServerConnectionAcceptor>, HandlerFactory);
+  // TODO resumability
+  // TODO concurrency (number of threads)
 
-  void start();
+ public:
+  RSocketServer(std::unique_ptr<ConnectionAcceptor>);
+
+  void start(std::function<std::shared_ptr<RequestHandler>(
+                 std::unique_ptr<ConnectionRequest>)>);
   void shutdown();
 
  private:
-  std::unique_ptr<ServerConnectionAcceptor> lazyAcceptor;
-  HandlerFactory handlerFactory;
-  std::vector<std::unique_ptr<StandardReactiveSocket>> reactiveSockets_;
+  std::unique_ptr<ConnectionAcceptor> lazyAcceptor;
+  std::unique_ptr<reactivesocket::ServerConnectionAcceptor> acceptor_;
+  std::vector<std::unique_ptr<ReactiveSocket>> reactiveSockets_;
   bool shuttingDown{false};
 
   void removeSocket(ReactiveSocket& socket);
+  void addSocket(std::unique_ptr<ReactiveSocket> socket);
 };
 }

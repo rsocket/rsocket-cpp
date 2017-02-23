@@ -149,7 +149,8 @@ class MyServerConnectionAcceptor : public ServerConnectionAcceptor {
 
   void setupNewSocket(
       std::shared_ptr<FrameTransport> frameTransport,
-      ConnectionSetupPayload setupPayload) override {
+      ConnectionSetupPayload setupPayload,
+      folly::EventBase& eventBase) override {
     LOG(INFO) << "MyServerConnectionAcceptor::setupNewSocket " << setupPayload;
 
     std::unique_ptr<RequestHandler> requestHandler =
@@ -187,7 +188,8 @@ class MyServerConnectionAcceptor : public ServerConnectionAcceptor {
   void resumeSocket(
       std::shared_ptr<FrameTransport> frameTransport,
       ResumeIdentificationToken token,
-      ResumePosition position) override {
+      ResumePosition position,
+      folly::EventBase& eventBase) override {
     LOG(INFO) << "MyServerConnectionAcceptor::resumeSocket resume token ["
               << token << "]";
 
@@ -228,7 +230,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
         std::make_unique<FramedDuplexConnection>(
             std::move(connection), eventBase_);
 
-    connectionAcceptor_.acceptConnection(std::move(framedConnection));
+    connectionAcceptor_.acceptConnection(std::move(framedConnection), eventBase_);
   }
 
   virtual void acceptError(const std::exception& ex) noexcept override {

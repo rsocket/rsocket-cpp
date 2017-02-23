@@ -13,9 +13,9 @@ namespace rsocket {
 
 using OnConnect = std::function<void(std::unique_ptr<DuplexConnection>)>;
 
-class ClientConnectionFactory {
+class ConnectionFactory {
  public:
-  virtual ~ClientConnectionFactory() = default;
+  virtual ~ConnectionFactory() = default;
   virtual void connect(
       OnConnect onConnect,
       ScopedEventBaseThread& eventBaseThread) = 0;

@@ -3,7 +3,7 @@
 #pragma once
 
 #include <folly/futures/Future.h>
-#include "rsocket/ClientConnectionFactory.h"
+#include "rsocket/ConnectionFactory.h"
 #include "src/StandardReactiveSocket.h"
 
 using namespace ::reactivesocket;
@@ -15,8 +15,13 @@ namespace rsocket {
 
 class RSocketClient {
  public:
-  RSocketClient(std::unique_ptr<ClientConnectionFactory>);
+  RSocketClient(std::unique_ptr<ConnectionFactory>);
   ~RSocketClient();
+
+    // TODO ConnectionSetupPayload
+    // TODO keepalive timer
+    // TODO duplex with RequestHandler
+    // TODO constructor with normal EventBase, not just ScopedEventBaseThread
 
   /*
  * Connect asynchronously and return a Future
@@ -26,7 +31,7 @@ class RSocketClient {
       ScopedEventBaseThread& eventBaseThread);
 
  private:
-  std::unique_ptr<ClientConnectionFactory> lazyConnection;
+  std::unique_ptr<ConnectionFactory> lazyConnection;
   std::shared_ptr<StandardReactiveSocket> rs;
 };
 }

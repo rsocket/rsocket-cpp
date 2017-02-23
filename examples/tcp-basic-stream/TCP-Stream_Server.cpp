@@ -3,7 +3,7 @@
 #include <iostream>
 #include "ServerRequestHandler.h"
 #include "rsocket/RSocket.h"
-#include "rsocket/transports/TcpServerConnectionAcceptor.h"
+#include "rsocket/transports/TcpConnectionAcceptor.h"
 
 using namespace ::reactivesocket;
 using namespace ::folly;
@@ -19,35 +19,18 @@ int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
 
-  //    auto a = ServerConnectionAcceptor::tcpServer(FLAGS_port);
-  //    a->start([](auto c, auto eb) {
-  //        return new RSocket(std::move(c), std::move(eb));
-  //    });
-
-  auto rs = RSocket::createServer(
-      TcpServerConnectionAcceptor::create(FLAGS_port),
-      []() { return std::make_unique<ServerRequestHandler>(); });
-  rs->start();
-
-  //    auto rs = RSocket::startServer(
-  //            ServerConnectionAcceptor::tcpServer(FLAGS_port),
-  //            [](SetupPayload setup, RSocket socket) {
-  //                if(setup ... ) {
-  //                    socket->requestResponse(...);
-  //                    return std::make_unique<ServerRequestHandler>();
-  //                } else {
-  //                    return std::make_unique<ServerRequestHandler>();
-  //                }
-  //            });
-  //
-
-  // TODO should we instead have a ConnectionSetupHandler that decides what
-  // RequestHandler to return?
-  // example from java
-  //    StartedServer s = ReactiveSocketServer
-  //            .create(TcpTransportServer.create(port))
-  //            .start((ConnectionSetupPayload setup, ReactiveSocket
-  //            reactiveSocket) -> {
+  // RSocket server accepting on TCP
+  auto rs = RSocket::createServer(TcpConnectionAcceptor::create(FLAGS_port));
+  // global request handler
+  auto requestHandler = std::make_shared<ServerRequestHandler>();
+  // start accepting connections
+  rs->start([requestHandler](auto connectionRequest) {
+    if (!connectionRequest->isResumptionAttempt()) {
+      return requestHandler;
+    } else {
+      throw std::runtime_error("Unable to handle these SETUP params");
+    }
+  });
 
   std::string name;
   std::getline(std::cin, name);

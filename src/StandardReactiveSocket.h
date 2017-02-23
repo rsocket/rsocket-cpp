@@ -67,7 +67,7 @@ class StandardReactiveSocket : public ReactiveSocket {
 
   static std::unique_ptr<StandardReactiveSocket> disconnectedServer(
       folly::Executor& executor,
-      std::unique_ptr<RequestHandler> handler,
+      std::shared_ptr<RequestHandler> handler,
       Stats& stats = Stats::noop());
 
   std::shared_ptr<Subscriber<Payload>> requestChannel(

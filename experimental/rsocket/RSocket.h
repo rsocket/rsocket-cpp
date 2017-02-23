@@ -5,7 +5,6 @@
 #include "rsocket/RSocketClient.h"
 #include "rsocket/RSocketServer.h"
 
-using namespace ::reactivesocket;
 
 namespace rsocket {
 
@@ -21,7 +20,7 @@ class RSocket {
    * @return RSocketClient which can then make RSocket connections.
    */
   static std::unique_ptr<RSocketClient> createClientFactory(
-      std::unique_ptr<ClientConnectionFactory>);
+      std::unique_ptr<ConnectionFactory>);
 
   /**
    * Create an RSocketServer that will accept connections.
@@ -30,8 +29,9 @@ class RSocket {
    * @return RSocketServer which can then accept RSocket connections.
    */
   static std::unique_ptr<RSocketServer> createServer(
-      std::unique_ptr<ServerConnectionAcceptor>,
-      HandlerFactory);
+      std::unique_ptr<ConnectionAcceptor> ca);
+
+    // TODO createResumeServer
 
  protected:
   RSocket() = default;

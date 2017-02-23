@@ -167,7 +167,7 @@ add_library(
   src/ResumeCache.h
   src/ResumeTracker.cpp
   src/ResumeTracker.h
-  src/ServerConnectionAcceptor.cpp
+        src/ConnectionAcceptor.cpp
   src/ServerConnectionAcceptor.h
   src/StandardReactiveSocket.cpp
   src/StandardReactiveSocket.h
@@ -359,15 +359,17 @@ add_library(
         experimental/rsocket/RSocket.h
         experimental/rsocket/RSocketServer.h
         experimental/rsocket/RSocketClient.h
-        experimental/rsocket/ServerConnectionAcceptor.h
-        experimental/rsocket/ClientConnectionFactory.h
-        experimental/rsocket/transports/TcpServerConnectionAcceptor.h
-        experimental/rsocket/transports/TcpClientConnectionFactory.h
-
+        experimental/rsocket/ConnectionAcceptor.h
+        experimental/rsocket/ConnectionFactory.h
+        experimental/rsocket/ConnectionRequest.h
+        experimental/rsocket/transports/TcpConnectionAcceptor.h
+        experimental/rsocket/transports/TcpConnectionFactory.h
         experimental/rsocket-src/RSocket.cpp
-        experimental/rsocket-src/TcpClientConnectionFactory.cpp
-        experimental/rsocket-src/TcpServerConnectionAcceptor.cpp
-
+        experimental/rsocket-src/RSocketServer.cpp
+        experimental/rsocket-src/RSocketClient.cpp
+        experimental/rsocket-src/ConnectionRequest.cpp
+        experimental/rsocket-src/TcpConnectionFactory.cpp
+        experimental/rsocket-src/TcpConnectionAcceptor.cpp
 )
 
 # include the experimental includes for usage

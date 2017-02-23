@@ -12,13 +12,14 @@ namespace reactivesocket {
 
 ServerConnectionAcceptor::~ServerConnectionAcceptor() {
   for (auto& connection : connections_) {
-    connection->close(std::runtime_error("ServerConnectionAcceptor closed"));
+    connection->close(std::runtime_error("ConnectionAcceptor closed"));
   }
 }
 
 void ServerConnectionAcceptor::processFrame(
     std::shared_ptr<FrameTransport> transport,
-    std::unique_ptr<folly::IOBuf> frame) {
+    std::unique_ptr<folly::IOBuf> frame,
+    folly::EventBase& eventBase) {
   removeConnection(transport);
 
   switch (FrameHeader::peekType(*frame)) {
@@ -35,7 +36,7 @@ void ServerConnectionAcceptor::processFrame(
       setupFrame.moveToSetupPayload(setupPayload);
 
       transport->setFrameProcessor(nullptr);
-      setupNewSocket(std::move(transport), std::move(setupPayload));
+      setupNewSocket(std::move(transport), std::move(setupPayload), eventBase);
       break;
     }
 
@@ -52,7 +53,8 @@ void ServerConnectionAcceptor::processFrame(
       resumeSocket(
           std::move(transport),
           std::move(resumeFrame.token_),
-          resumeFrame.position_);
+          resumeFrame.position_,
+          eventBase);
     } break;
 
     case FrameType::CANCEL:
@@ -89,13 +91,16 @@ class OneFrameProcessor
  public:
   OneFrameProcessor(
       ServerConnectionAcceptor& acceptor,
-      std::shared_ptr<FrameTransport> transport)
-      : acceptor_(acceptor), transport_(std::move(transport)) {
+      std::shared_ptr<FrameTransport> transport,
+      folly::EventBase& eventBase)
+      : acceptor_(acceptor),
+        transport_(std::move(transport)),
+        eventBase_(eventBase){
     DCHECK(transport_);
   }
 
   void processFrame(std::unique_ptr<folly::IOBuf> buf) override {
-    acceptor_.processFrame(transport_, std::move(buf));
+    acceptor_.processFrame(transport_, std::move(buf), eventBase_);
     // no more code here as the instance might be gone by now
   }
 
@@ -108,12 +113,13 @@ class OneFrameProcessor
  private:
   ServerConnectionAcceptor& acceptor_;
   std::shared_ptr<FrameTransport> transport_;
+  folly::EventBase& eventBase_;
 };
 
 void ServerConnectionAcceptor::acceptConnection(
-    std::unique_ptr<DuplexConnection> connection) {
+    std::unique_ptr<DuplexConnection> connection, folly::EventBase& eventBase) {
   auto transport = std::make_shared<FrameTransport>(std::move(connection));
-  auto processor = std::make_shared<OneFrameProcessor>(*this, transport);
+  auto processor = std::make_shared<OneFrameProcessor>(*this, transport, eventBase);
   connections_.insert(transport);
   // transport can receive frames right away
   transport->setFrameProcessor(processor);

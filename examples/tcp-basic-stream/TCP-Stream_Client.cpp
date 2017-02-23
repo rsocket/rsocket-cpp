@@ -4,7 +4,7 @@
 #include <iostream>
 #include "examples/util/ExampleSubscriber.h"
 #include "rsocket/RSocket.h"
-#include "rsocket/transports/TcpClientConnectionFactory.h"
+#include "rsocket/transports/TcpConnectionFactory.h"
 
 using namespace ::reactivesocket;
 using namespace ::folly;
@@ -23,11 +23,15 @@ int main(int argc, char* argv[]) {
 
   ScopedEventBaseThread eventBaseThread;
   auto rsf = RSocket::createClientFactory(
-      TcpClientConnectionFactory::create(FLAGS_host, FLAGS_port));
+      TcpConnectionFactory::create(FLAGS_host, FLAGS_port));
   rsf->connect(eventBaseThread)
       .then([](std::shared_ptr<StandardReactiveSocket> rs) {
         rs->requestStream(
             Payload("args-here"), std::make_shared<ExampleSubscriber>(5, 6));
+
+        //        auto flowable = rs->requestStream(Payload("args-here"));
+        //        flowable->subscribe(std::make_shared<ExampleSubscriber>(5,
+        //        6));
       });
 
   // TODO the following should work, but has eventbase issues (rs should use the
