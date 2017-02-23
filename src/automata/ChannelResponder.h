@@ -36,6 +36,7 @@ class ChannelResponder : public ConsumerMixin,
   void requestImpl(size_t n) noexcept override;
   void cancelImpl() noexcept override;
 
+  using StreamAutomatonBase::onNextFrame;
   void onNextFrame(Frame_REQUEST_CHANNEL&&) override;
   void onNextFrame(Frame_CANCEL&&) override;
   void onNextFrame(Frame_REQUEST_N&&) override;

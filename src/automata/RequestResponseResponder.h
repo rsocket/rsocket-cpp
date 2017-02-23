@@ -38,6 +38,7 @@ class RequestResponseResponder : public StreamAutomatonBase,
   void onErrorImpl(folly::exception_wrapper) noexcept override;
   /// @}
 
+  using StreamAutomatonBase::onNextFrame;
   void onNextFrame(Frame_CANCEL&&) override;
   void onNextFrame(Frame_REQUEST_N&&) override;
 
