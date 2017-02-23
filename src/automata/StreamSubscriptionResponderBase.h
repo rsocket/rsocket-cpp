@@ -35,6 +35,7 @@ class StreamSubscriptionResponderBase : public StreamAutomatonBase,
         PublisherMixin(initialRequestN) {}
 
  protected:
+  using StreamAutomatonBase::onNextFrame;
   void onNextFrame(Frame_CANCEL&&) override;
   void onNextFrame(Frame_REQUEST_N&&) override;
 
