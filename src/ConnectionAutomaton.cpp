@@ -331,11 +331,7 @@ void ConnectionAutomaton::processFrame(std::unique_ptr<folly::IOBuf> frame) {
 void ConnectionAutomaton::processFrameImpl(
     std::unique_ptr<folly::IOBuf> frame) {
   auto frameType = FrameHeader::peekType(*frame);
-
-  std::stringstream ss;
-  ss << frameType;
-
-  stats_.frameRead(ss.str());
+  stats_.frameRead(frameType);
 
   // TODO(tmont): If a frame is invalid, it will still be tracked. However, we
   // actually want that. We want to keep
@@ -701,9 +697,8 @@ void ConnectionAutomaton::outputFrameOrEnqueue(
 void ConnectionAutomaton::outputFrame(std::unique_ptr<folly::IOBuf> frame) {
   DCHECK(!isDisconnectedOrClosed());
 
-  std::stringstream ss;
-  ss << FrameHeader::peekType(*frame);
-  stats_.frameWritten(ss.str());
+  auto frameType = FrameHeader::peekType(*frame);
+  stats_.frameWritten(frameType);
 
   if (isResumable_) {
     streamState_->resumeCache_.trackSentFrame(*frame);
