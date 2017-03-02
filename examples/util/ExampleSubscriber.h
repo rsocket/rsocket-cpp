@@ -3,6 +3,7 @@
 #pragma once
 
 #include <mutex>
+#include <condition_variable>
 #include <folly/ExceptionWrapper.h>
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
