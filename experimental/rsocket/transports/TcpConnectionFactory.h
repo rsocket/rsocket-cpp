@@ -13,14 +13,14 @@ namespace rsocket {
 
 class TcpConnectionFactory : public ConnectionFactory {
  public:
-  TcpConnectionFactory(std::string host, int port);
+  TcpConnectionFactory(std::string host, uint16_t port);
   virtual ~TcpConnectionFactory();
   TcpConnectionFactory(const TcpConnectionFactory&) = delete; // copy
   TcpConnectionFactory(TcpConnectionFactory&&) = delete; // move
   TcpConnectionFactory& operator=(const TcpConnectionFactory&) = delete; // copy
   TcpConnectionFactory& operator=(TcpConnectionFactory&&) = delete; // move
 
-  static std::unique_ptr<ConnectionFactory> create(std::string host, int port);
+  static std::unique_ptr<ConnectionFactory> create(std::string host, uint16_t port);
 
   /**
    * Connect to server on a new EventBase & Thread.
@@ -29,7 +29,6 @@ class TcpConnectionFactory : public ConnectionFactory {
   void connect(OnConnect onConnect) override;
 
  private:
-  folly::SocketAddress addr;
-  std::vector<std::unique_ptr<AsyncSocket::ConnectCallback>> connections_;
+  folly::SocketAddress addr_;
 };
 }

@@ -364,6 +364,8 @@ add_library(
         experimental/rsocket-src/RSocketServer.cpp
         experimental/rsocket/RSocketClient.h
         experimental/rsocket-src/RSocketClient.cpp
+        experimental/rsocket/RSocketRequester.h
+        experimental/rsocket-src/RSocketRequester.cpp
         experimental/rsocket/RSocketErrors.h
         experimental/rsocket/ConnectionAcceptor.h
         experimental/rsocket/ConnectionFactory.h

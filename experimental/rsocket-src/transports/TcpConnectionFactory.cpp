@@ -12,10 +12,49 @@ using namespace ::folly;
 
 namespace rsocket {
 
-class TcpConnectionInstance : public AsyncSocket::ConnectCallback {
+// carry the thread/eventbase with the DuplexConnection
+class FramedDuplexConnectionOnThread : public DuplexConnection {
  public:
-  TcpConnectionInstance(OnConnect onConnect, SocketAddress& addr)
-      : addr_(addr), onConnect_(onConnect) {}
+  FramedDuplexConnectionOnThread(
+      std::unique_ptr<FramedDuplexConnection> fd,
+      std::unique_ptr<ScopedEventBaseThread> eventBaseThread)
+      : fd_(std::move(fd)), eventBaseThread_(std::move(eventBaseThread)) {}
+
+  ~FramedDuplexConnectionOnThread() {
+    LOG(INFO) << "FramedDuplexConnectionOnThread => destroy";
+  }
+
+  void setInput(
+      std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>> framesSink) {
+    fd_->setInput(std::move(framesSink));
+  }
+
+  std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>> getOutput() {
+    return fd_->getOutput();
+  }
+
+ private:
+  std::unique_ptr<FramedDuplexConnection> fd_;
+  std::unique_ptr<ScopedEventBaseThread> eventBaseThread_;
+  EventBase* eventBase_{eventBaseThread_->getEventBase()};
+};
+
+// create new ScopedEventBaseThread
+// create new EventBase from it
+// create new AsyncSocket
+// connect
+// create FramedDuplexConnection
+// TODO create variant that takes an existing EventBase
+class SocketConnectorAndCallback : public AsyncSocket::ConnectCallback {
+ public:
+  SocketConnectorAndCallback(OnConnect onConnect, SocketAddress addr)
+      : addr_(addr),
+        onConnect_(onConnect),
+        eventBaseThread_(std::make_unique<ScopedEventBaseThread>()) {}
+
+  ~SocketConnectorAndCallback() {
+    LOG(INFO) << "SocketConnectorAndCallback => destroy";
+  }
 
   void connect() {
     // now start the connection asynchronously
@@ -33,44 +72,52 @@ class TcpConnectionInstance : public AsyncSocket::ConnectCallback {
   }
 
  private:
-  SocketAddress& addr_;
+  SocketAddress addr_;
   folly::AsyncSocket::UniquePtr socket_;
   OnConnect onConnect_;
-  ScopedEventBaseThread eventBaseThread_;
-  EventBase* eventBase_{eventBaseThread_.getEventBase()};
+  std::unique_ptr<ScopedEventBaseThread> eventBaseThread_;
+  EventBase* eventBase_{eventBaseThread_->getEventBase()};
 
   void connectSuccess() noexcept {
     LOG(INFO) << "ConnectionFactory => socketCallback => Success";
 
-    std::unique_ptr<DuplexConnection> connection =
-        std::make_unique<TcpDuplexConnection>(
-            std::move(socket_), inlineExecutor(), Stats::noop());
-    std::unique_ptr<DuplexConnection> framedConnection =
-        std::make_unique<FramedDuplexConnection>(
-            std::move(connection), inlineExecutor());
+    // safe way to call 'delete this'
+    auto uThis = std::unique_ptr<SocketConnectorAndCallback>(this);
+
+    auto connection = std::make_unique<TcpDuplexConnection>(
+        std::move(socket_), inlineExecutor(), Stats::noop());
+    auto framedConnection = std::make_unique<FramedDuplexConnection>(
+        std::move(connection), inlineExecutor());
+
+    auto framedConnectionOnThread =
+        std::make_unique<FramedDuplexConnectionOnThread>(
+            std::move(framedConnection), std::move(eventBaseThread_));
 
     // callback with the connection now that we have it
-    onConnect_(std::move(framedConnection), *eventBase_);
+    onConnect_(std::move(framedConnectionOnThread), *eventBase_);
   }
 
   void connectErr(const AsyncSocketException& ex) noexcept {
     LOG(INFO) << "ConnectionFactory => socketCallback => ERROR => " << ex.what()
               << " " << ex.getType() << std::endl;
+
+    delete this;
   }
 };
 
-TcpConnectionFactory::TcpConnectionFactory(std::string host, int port)
-    : addr(host, port, true) {}
+TcpConnectionFactory::TcpConnectionFactory(std::string host, uint16_t port)
+    : addr_(host, port, true) {}
 
 void TcpConnectionFactory::connect(OnConnect oc) {
-  auto c = std::make_unique<TcpConnectionInstance>(std::move(oc), addr);
+  // uses 'new' here since it needs to live while doing work asynchronously
+  // it is deleted in the connectSuccess/connectErr methods in the class
+  auto c = new SocketConnectorAndCallback(std::move(oc), addr_);
   c->connect();
-  connections_.push_back(std::move(c));
 }
 
 std::unique_ptr<ConnectionFactory> TcpConnectionFactory::create(
     std::string host,
-    int port) {
+    uint16_t port) {
   LOG(INFO) << "ConnectionFactory creation => host: " << host
             << " port: " << port;
   return std::make_unique<TcpConnectionFactory>(host, port);

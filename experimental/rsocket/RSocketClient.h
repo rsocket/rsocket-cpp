@@ -4,6 +4,7 @@
 
 #include <folly/futures/Future.h>
 #include "rsocket/ConnectionFactory.h"
+#include "rsocket/RSocketRequester.h"
 #include "src/StandardReactiveSocket.h"
 
 using namespace ::reactivesocket;
@@ -32,12 +33,26 @@ class RSocketClient {
    * Each time this is called:
    * - a new thread and EventBase is created
    * - a new connection is created
-   * - a new client is created
+   * - a new StandardReactiveSocket is created
    */
-  Future<std::shared_ptr<StandardReactiveSocket>> connect();
+  Future<std::shared_ptr<RSocketRequester>> connect();
+
+  /*
+   * Connect asynchronously and return a Future which will deliver the RSocket
+   *
+   * Each time this is called:
+   * - a new StandardReactiveSocket is created using the provided EventBase
+   */
+  // TODO implement overload that allows injecting an EventBase
+  //  Future<std::shared_ptr<StandardReactiveSocket>> connect(Executor&);
+
+  // TODO implement version supporting fast start (send SETUP and requests
+  // without waiting for transport to connect and ack)
+  //  std::shared_ptr<StandardReactiveSocket> fastConnect();
+  //  std::shared_ptr<StandardReactiveSocket> fastConnect(Executor&);
 
  private:
   std::unique_ptr<ConnectionFactory> lazyConnection;
-  std::shared_ptr<StandardReactiveSocket> rs;
+  std::vector<std::shared_ptr<RSocketRequester>> rsockets_;
 };
 }

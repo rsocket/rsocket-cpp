@@ -21,22 +21,19 @@ int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
 
-  auto s = std::make_shared<ExampleSubscriber>(5, 6);
   auto rsf = RSocket::createClient(
       TcpConnectionFactory::create(FLAGS_host, FLAGS_port));
+  auto rs = rsf->connect().get();
 
-  rsf->connect().then([s](std::shared_ptr<StandardReactiveSocket> rs) {
-      // TODO create the RSocket APIs instead of StandardReactiveSocket
-    rs->requestStream(Payload("Bob"), s);
-  });
-  s->awaitTerminalEvent();
+  LOG(INFO) << "------------------ Hello Bob!";
+  auto s1 = std::make_shared<ExampleSubscriber>(5, 6);
+  rs->requestStream(Payload("Bob"), s1);
+  s1->awaitTerminalEvent();
 
-  //  auto rs = rsf->connect().get();
-  //  rs->requestStream(Payload("Bob"), s);
-  //  s->awaitTerminalEvent();
-
-  //  std::string name;
-  //  std::getline(std::cin, name);
+  LOG(INFO) << "------------------ Hello Jane!";
+  auto s2 = std::make_shared<ExampleSubscriber>(5, 6);
+  rs->requestStream(Payload("Jane"), s2);
+  s2->awaitTerminalEvent();
 
   return 0;
 }

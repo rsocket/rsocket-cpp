@@ -60,9 +60,11 @@ void ExampleSubscriber::onError(folly::exception_wrapper ex) noexcept {
 }
 
 void ExampleSubscriber::awaitTerminalEvent() {
+  LOG(INFO) << "ExampleSubscriber " << this << " block thread";
   // now block this thread
   std::unique_lock<std::mutex> lk(m);
   // if shutdown gets implemented this would then be released by it
   terminalEventCV_.wait(lk, [this] { return terminated; });
+  LOG(INFO) << "ExampleSubscriber " << this << " unblocked";
 }
 }

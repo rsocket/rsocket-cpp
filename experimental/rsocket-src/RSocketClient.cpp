@@ -1,4 +1,5 @@
 #include "rsocket/RSocketClient.h"
+#include "rsocket/RSocketRequester.h"
 #include "src/NullRequestHandler.h"
 #include "src/StandardReactiveSocket.h"
 #include "src/folly/FollyKeepaliveTimer.h"
@@ -11,19 +12,18 @@ RSocketClient::RSocketClient(std::unique_ptr<ConnectionFactory> connection)
     : lazyConnection(std::move(connection)) {
   LOG(INFO) << "RSocketClient => created";
 }
-// TODO make unique_ptr
-Future<std::shared_ptr<StandardReactiveSocket>> RSocketClient::connect() {
+
+Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect() {
   LOG(INFO) << "RSocketClient => start connection with Future";
 
-  auto promise =
-      std::make_shared<Promise<std::shared_ptr<StandardReactiveSocket>>>();
+  auto promise = std::make_shared<Promise<std::shared_ptr<RSocketRequester>>>();
 
   lazyConnection->connect([this, promise](
       std::unique_ptr<DuplexConnection> framedConnection,
       EventBase& eventBase) {
     LOG(INFO) << "RSocketClient => onConnect received DuplexConnection";
 
-    rs = StandardReactiveSocket::fromClientConnection(
+    auto r = StandardReactiveSocket::fromClientConnection(
         eventBase,
         std::move(framedConnection),
         // TODO need to optionally allow this being passed in for a duplex
@@ -37,7 +37,10 @@ Future<std::shared_ptr<StandardReactiveSocket>> RSocketClient::connect() {
         std::make_unique<FollyKeepaliveTimer>(
             eventBase, std::chrono::milliseconds(5000)));
 
-    promise->setValue(rs);
+    auto rsocket = RSocketRequester::create(std::move(r), eventBase);
+    // store it so it lives as long as the RSocketClient
+    rsockets_.push_back(rsocket);
+    promise->setValue(rsocket);
   });
 
   return promise->getFuture();

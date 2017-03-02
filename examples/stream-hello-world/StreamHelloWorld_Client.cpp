@@ -23,19 +23,23 @@ int main(int argc, char* argv[]) {
 
   auto rsf = RSocket::createClient(
       TcpConnectionFactory::create(FLAGS_host, FLAGS_port));
-  rsf->connect().then([](std::shared_ptr<StandardReactiveSocket> rs) {
-    rs->requestStream(
-        Payload("Bob"), std::make_shared<ExampleSubscriber>(5, 6));
-  });
 
-  // TODO the following should work, but has eventbase issues (rs should use the
-  // correct one)
-  //  auto rs = rsf->connect().get();
-  //  rs->requestStream(
-  //      Payload("args-here"), std::make_shared<ExampleSubscriber>(5, 6));
+  {
+    LOG(INFO) << "------------------ Run in future.then";
+    auto s = std::make_shared<ExampleSubscriber>(5, 6);
+    rsf->connect().then([s](std::shared_ptr<RSocketRequester> rs) {
+      rs->requestStream(Payload("Bob"), s);
+    });
+    s->awaitTerminalEvent();
+  }
 
-  std::string name;
-  std::getline(std::cin, name);
-
+  {
+    LOG(INFO) << "------------------ Run after future.get";
+    auto s = std::make_shared<ExampleSubscriber>(5, 6);
+    auto rs = rsf->connect().get();
+    rs->requestStream(Payload("Jane"), s);
+    s->awaitTerminalEvent();
+  }
+  LOG(INFO) << "------------- main() terminating -----------------";
   return 0;
 }
