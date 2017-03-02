@@ -9,11 +9,13 @@
 
 using namespace ::reactivesocket;
 
-/**
- * Simplified API for client/server
- */
 namespace rsocket {
 
+/**
+ * API for connecting to an RSocket server. Returned from RSocket::createClient.
+ *
+ * This connects using a transport from the provided ConnectionFactory.
+ */
 class RSocketClient {
  public:
   RSocketClient(std::unique_ptr<ConnectionFactory>);
@@ -31,25 +33,21 @@ class RSocketClient {
    * Connect asynchronously and return a Future which will deliver the RSocket
    *
    * Each time this is called:
-   * - a new thread and EventBase is created
-   * - a new connection is created
+   * - a new connection is created using a ConnectionFactory
    * - a new StandardReactiveSocket is created
+   *
+   * The returned RSocketRequester is retained by the RSocketClient instance
+   * so that it lives for the life of RSocketClient, as opposed to the scope
+   * of the Future (such as when used with Future.then(...)).
+   *
+   * To destruct a single RSocketRequester sooner than the RSocketClient
+   * call RSocketRequester.close().
    */
   Future<std::shared_ptr<RSocketRequester>> connect();
 
-  /*
-   * Connect asynchronously and return a Future which will deliver the RSocket
-   *
-   * Each time this is called:
-   * - a new StandardReactiveSocket is created using the provided EventBase
-   */
-  // TODO implement overload that allows injecting an EventBase
-  //  Future<std::shared_ptr<StandardReactiveSocket>> connect(Executor&);
-
   // TODO implement version supporting fast start (send SETUP and requests
   // without waiting for transport to connect and ack)
-  //  std::shared_ptr<StandardReactiveSocket> fastConnect();
-  //  std::shared_ptr<StandardReactiveSocket> fastConnect(Executor&);
+  //  std::shared_ptr<RSocketRequester> fastConnect();
 
  private:
   std::unique_ptr<ConnectionFactory> lazyConnection;

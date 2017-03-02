@@ -10,6 +10,11 @@ namespace rsocket {
 
 /**
  * Represents a new connection SETUP request from a client.
+ *
+ * Is passed to the RSocketServer setup callback for acceptance or rejection.
+ *
+ * This provides access to the SETUP Data/Metadata, MimeTypes, and other such information
+ * to allow conditional connection handling.
  */
 class ConnectionSetupRequest {
  public:

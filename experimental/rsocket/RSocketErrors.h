@@ -5,11 +5,11 @@
 #include <string>
 
 namespace rsocket {
+
 /*
  * Error Codes from
  * https://github.com/ReactiveSocket/reactivesocket/blob/master/Protocol.md#error-codes
  */
-
 class RSocketError : public std::runtime_error {
  public:
   explicit RSocketError(const std::string& s)

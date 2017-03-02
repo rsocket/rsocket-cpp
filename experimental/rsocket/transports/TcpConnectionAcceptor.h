@@ -10,6 +10,15 @@ using namespace ::folly;
 
 namespace rsocket {
 
+/**
+ * TCP implementation of ConnectionAcceptor for use with RSocket::createServer
+ *
+ * Creation of this does nothing. The 'start' method kicks off work.
+ *
+ * When started it will create a Thread, EventBase, and AsyncServerSocket.
+ *
+ * Destruction will shut down the thread(s) and socket.
+ */
 class TcpConnectionAcceptor : public ConnectionAcceptor,
                               public AsyncServerSocket::AcceptCallback {
  public:
@@ -26,6 +35,8 @@ class TcpConnectionAcceptor : public ConnectionAcceptor,
   /**
    * Create an EventBase, Thread, and AsyncServerSocket. Bind to the given port
    * and start accepting TCP connections.
+   *
+   * This can only be called once.
    *
    * @param onAccept
    */

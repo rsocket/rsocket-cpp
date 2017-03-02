@@ -35,5 +35,7 @@ int main(int argc, char* argv[]) {
   rs->requestStream(Payload("Jane"), s2);
   s2->awaitTerminalEvent();
 
+  // TODO on shutdown the destruction of
+  // ScopedEventBaseThread spits out a stacktrace
   return 0;
 }

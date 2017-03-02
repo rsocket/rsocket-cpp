@@ -21,10 +21,12 @@ int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
 
+  // create a client which can then make connections below
   auto rsf = RSocket::createClient(
       TcpConnectionFactory::create(FLAGS_host, FLAGS_port));
 
   {
+    // this example runs inside the Future.then lambda
     LOG(INFO) << "------------------ Run in future.then";
     auto s = std::make_shared<ExampleSubscriber>(5, 6);
     rsf->connect().then([s](std::shared_ptr<RSocketRequester> rs) {
@@ -34,6 +36,7 @@ int main(int argc, char* argv[]) {
   }
 
   {
+    // this example extracts from the Future.get and runs in the main thread
     LOG(INFO) << "------------------ Run after future.get";
     auto s = std::make_shared<ExampleSubscriber>(5, 6);
     auto rs = rsf->connect().get();
@@ -41,5 +44,8 @@ int main(int argc, char* argv[]) {
     s->awaitTerminalEvent();
   }
   LOG(INFO) << "------------- main() terminating -----------------";
+
+  // TODO on shutdown the destruction of
+  // ScopedEventBaseThread spits out a stacktrace
   return 0;
 }

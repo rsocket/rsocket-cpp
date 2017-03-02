@@ -24,6 +24,9 @@ using OnAccept = std::function<std::shared_ptr<RequestHandler>(
     std::unique_ptr<ConnectionSetupRequest>)>;
 /**
  * API for starting an RSocket server. Returned from RSocket::createServer.
+ *
+ * This listens for connections using a transport from the provided
+ * ConnectionAcceptor.
  */
 class RSocketServer {
   // TODO resumability
@@ -38,19 +41,20 @@ class RSocketServer {
   RSocketServer& operator=(RSocketServer&&) = delete; // move
 
   /**
-   * Start the ConnectionAcceptor and begin handling connection.
+   * Start the ConnectionAcceptor and begin handling connections.
    *
    * This method is asynchronous.
    */
   void start(OnAccept);
 
   /**
-   * Start the ConnectionAcceptor and begin handling connection.
+   * Start the ConnectionAcceptor and begin handling connections.
    *
    * This method will block the calling thread.
    */
   void startAndPark(OnAccept);
 
+  // TODO version supporting RESUME
   //  void start(
   //      std::function<std::shared_ptr<RequestHandler>(
   //          std::unique_ptr<ConnectionSetupRequest>)>,

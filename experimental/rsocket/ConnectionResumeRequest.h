@@ -10,6 +10,8 @@ namespace rsocket {
 
 /**
  * Represents a new connection RESUME request from a client.
+ *
+ * Is passed to the RSocketServer resume callback for acceptance or rejection.
  */
 class ConnectionResumeRequest {
  public:
@@ -21,6 +23,8 @@ class ConnectionResumeRequest {
       delete; // copy
   ConnectionResumeRequest& operator=(ConnectionResumeRequest&&) =
       delete; // move
+
+  // TODO still just a placeholder, not implemented yet
 
  private:
 };

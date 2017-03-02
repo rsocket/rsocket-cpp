@@ -19,7 +19,10 @@ class RSocket {
    * @return RSocketClient which can then make RSocket connections.
    */
   static std::unique_ptr<RSocketClient> createClient(
-          std::unique_ptr<ConnectionFactory>);
+      std::unique_ptr<ConnectionFactory>);
+
+  // TODO duplex client that takes a requestHandler
+  // TODO ConnectionSetupPayload arguments such as MimeTypes, Keepalive, etc
 
   /**
    * Create an RSocketServer that will accept connections.

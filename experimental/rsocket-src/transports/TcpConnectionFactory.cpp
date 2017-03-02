@@ -36,7 +36,6 @@ class FramedDuplexConnectionOnThread : public DuplexConnection {
  private:
   std::unique_ptr<FramedDuplexConnection> fd_;
   std::unique_ptr<ScopedEventBaseThread> eventBaseThread_;
-  EventBase* eventBase_{eventBaseThread_->getEventBase()};
 };
 
 // create new ScopedEventBaseThread
