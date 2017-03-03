@@ -79,7 +79,12 @@ int main(int argc, char* argv[]) {
   FLAGS_logtostderr = true;
   FLAGS_minloglevel = 0;
 
+#ifdef OSS
+  google::ParseCommandLineFlags(&argc, &argv, true);
+#else
   gflags::ParseCommandLineFlags(&argc, &argv, true);
+#endif
+
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
 

@@ -10,6 +10,10 @@ int main(int argc, char** argv) {
 
   google::InitGoogleLogging(argv[0]);
   ::testing::InitGoogleMock(&argc, argv);
+#ifdef OSS
+  google::ParseCommandLineFlags(&argc, &argv, true);
+#else
   gflags::ParseCommandLineFlags(&argc, &argv, true);
+#endif
   return RUN_ALL_TESTS();
 }

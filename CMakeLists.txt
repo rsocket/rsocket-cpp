@@ -25,6 +25,9 @@ endif(NOT REACTIVE_STREAMS_GIT_URL)
 
 enable_testing()
 
+# Add a OSS macro.  This is mainly to get gflags working with travis.
+add_definitions(-DOSS)
+
 include(ExternalProject)
 include(CTest)
 
