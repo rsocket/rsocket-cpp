@@ -1,0 +1,15 @@
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeLists-local.txt
+CMakeLists.txt.user
+cmake_install.cmake
+
+# CMake Build
+/build
+
+# Miscellaneous
+*~
+.#*
+.DS_Store
+core
