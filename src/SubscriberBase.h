@@ -13,7 +13,7 @@
 namespace reactivesocket {
 
 class SubscriptionShim {
-public:
+ public:
   virtual ~SubscriptionShim() = default;
   virtual std::shared_ptr<Subscription> getParentSubscription() = 0;
 };
@@ -106,8 +106,8 @@ class SubscriberBaseT : public Subscriber<T>,
       // if the subscription got cancelled in the meantime, we will not try to
       // subscribe. Instead we will let the instance die when released.
       if (!thisPtr->cancelled_) {
-        thisPtr->onSubscribeImpl(
-            std::make_shared<SubscriptionShimImpl>(thisPtr->shared_from_this()));
+        thisPtr->onSubscribeImpl(std::make_shared<SubscriptionShimImpl>(
+            thisPtr->shared_from_this()));
       }
     });
   }

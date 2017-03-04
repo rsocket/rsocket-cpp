@@ -1,8 +1,8 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/mixins/PublisherMixin.h"
-#include "src/SubscriberBase.h"
 #include "src/StandardReactiveSocket.h"
+#include "src/SubscriberBase.h"
+#include "src/mixins/PublisherMixin.h"
 #include "test/MockRequestHandler.h"
 
 #include <gmock/gmock.h>
@@ -14,28 +14,28 @@ using namespace ::reactivesocket;
 namespace {
 
 class UserSubscriber : public SubscriberBase, private PublisherMixin {
-public:
+ public:
   UserSubscriber() : ExecutorBase(inlineExecutor()), PublisherMixin(5) {}
   using PublisherMixin::pausePublisherStream;
   using PublisherMixin::publisherSubscribe;
-protected:
+
+ protected:
   void onSubscribeImpl(
       std::shared_ptr<Subscription> subscription) noexcept override {
     publisherSubscribe(std::move(subscription));
   }
 
- void onNextImpl(::reactivesocket::Payload element) noexcept override {
-   FAIL();
- }
+  void onNextImpl(::reactivesocket::Payload element) noexcept override {
+    FAIL();
+  }
 
- void onCompleteImpl() noexcept override {
-   FAIL();
- }
+  void onCompleteImpl() noexcept override {
+    FAIL();
+  }
 
- void onErrorImpl(folly::exception_wrapper ex) noexcept override {
-   FAIL();
- }
-
+  void onErrorImpl(folly::exception_wrapper ex) noexcept override {
+    FAIL();
+  }
 };
 
 class UserSubscription : public Subscription {
@@ -47,7 +47,6 @@ class UserSubscription : public Subscription {
     FAIL();
   }
 };
-
 }
 
 TEST(PublisherMixinTest, GetsPassedOriginalSubscription) {
