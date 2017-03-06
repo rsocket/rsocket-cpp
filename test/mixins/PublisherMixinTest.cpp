@@ -40,7 +40,7 @@ class UserSubscriber : public SubscriberBase, private PublisherMixin {
 
 class UserSubscription : public Subscription {
   void request(size_t n) noexcept override {
-    EXPECT_EQ(5, n);
+    EXPECT_EQ(5ul, n);
   }
 
   void cancel() noexcept override {
