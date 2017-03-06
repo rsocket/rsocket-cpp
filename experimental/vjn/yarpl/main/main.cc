@@ -19,13 +19,12 @@ auto make_subscriber(int state) {
       [](const std::exception& error) {
         std::cout << "  exception: " << error.what() << std::endl;
       },
-      []() {
-        std::cout << "  complete." << std::endl;
-      });
+      []() { std::cout << "  complete." << std::endl; });
 }
 
 class Scheduler : public yarpl::Scheduler {
-public:
+ public:
+  virtual ~Scheduler() = default;
   virtual void schedule(std::function<void()>&& action) {
     std::thread(action).detach();
   }
@@ -33,41 +32,39 @@ public:
 
 }  // namespace
 
-
-int main(int argc, char* argv[]) {
+int main(int, char* []) {
   using yarpl::Flowable;
 
   std::cout << "@ do nothing." << std::endl;
-  Flowable<int>::create([=](Subscriber<int>& subscriber) {
+  Flowable<int>::create([=](Subscriber<int>&) {
   })->subscribe(make_subscriber(1000));
 
   std::cout << "@ throw an error." << std::endl;
-  Flowable<int>::create([=](Subscriber<int>& subscriber) {
+  Flowable<int>::create([=](Subscriber<int>&) {
     throw std::runtime_error("Don't do that.");
   })->subscribe(make_subscriber(1000));
 
   std::cout << "@ multiple next calls." << std::endl;
   Flowable<int>::create([=](Subscriber<int>& subscriber) {
-    for (int i = 0; i < 3; ++i)
-      subscriber.on_next(100+i);
+    for (int i = 0; i < 3; ++i) subscriber.on_next(100 + i);
   })->subscribe(make_subscriber(500));
 
   std::cout << "@ table of squares of squares." << std::endl;
   Flowable<int>::create([=](Subscriber<int>& subscriber) {
-    for (int i = 0; i < 5; ++i)
-      subscriber.on_next(i);
-  })->map([](int x) -> int { return x*x; })
-      ->map([](int x) -> int { return x*x; })
-      ->subscribe(make_subscriber(600));
+    for (int i = 0; i < 5; ++i) subscriber.on_next(i);
+  })->map([](int x) { return x * x; })
+    ->map([](int x) { return x * x; })
+    ->subscribe(make_subscriber(600));
 
-  auto scheduler = Scheduler();
+  Scheduler scheduler;
 
-  auto background = Flowable<int>::create([=](Subscriber<int>& subscriber) {
-    for (int i = 0; i < 5; ++i) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(200));
-      subscriber.on_next(100+i);
-    }
-  });
+  auto background =
+      Flowable<int>::create([=](Subscriber<int>& subscriber) {
+        for (int i = 0; i < 5; ++i) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(200));
+          subscriber.on_next(i);
+        }
+      })->map([](int x) { return x * x * x; });
 
   background->subscribe_on(make_subscriber(500), scheduler);
   std::cout << "@ asynchronous, background flowable started." << std::endl;

@@ -1,27 +1,28 @@
 #pragma once
 
 #include <atomic>
+#include <memory>
 #include <type_traits>
 #include <utility>
 
+#include "subscriber.h"
+
 namespace reactivestreams {
 
-template<typename T>
+template <typename T>
 class Subscription {
-public:
+ public:
   virtual ~Subscription() = default;
   virtual void request(long n) = 0;
   virtual void cancel() = 0;
 };
 
-template<typename T, typename Next>
+template <typename T, typename Next>
 class DeletingSubscription : public Subscription<T> {
-public:
-  DeletingSubscription(
-      std::shared_ptr<Next> function,
-      std::unique_ptr<Subscriber<T>> subscriber)
-        : function_(function),
-          subscriber_(std::move(subscriber)) {}
+ public:
+  DeletingSubscription(std::shared_ptr<Next> function,
+                       std::unique_ptr<Subscriber<T>> subscriber)
+      : function_(function), subscriber_(std::move(subscriber)) {}
 
   void start() {
     subscriber_->on_subscribe(this);
@@ -36,10 +37,10 @@ public:
     delete this;
   }
 
-  void request(long n) {}
+  void request(long) {}
   void cancel() {}
 
-private:
+ private:
   std::shared_ptr<Next> function_;
   std::unique_ptr<Subscriber<T>> subscriber_;
 };

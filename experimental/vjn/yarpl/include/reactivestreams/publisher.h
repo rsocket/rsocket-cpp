@@ -4,12 +4,12 @@
 
 namespace reactivestreams {
 
-template<typename T>
+template <typename T>
 class Subscriber;
 
-template<typename T>
+template <typename T>
 class Publisher {
-public:
+ public:
   virtual ~Publisher() = default;
   virtual void subscribe(std::unique_ptr<Subscriber<T>> subscriber) = 0;
 };
