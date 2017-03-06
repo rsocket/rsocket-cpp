@@ -7,104 +7,86 @@
 
 namespace reactivestreams {
 
-template<typename T>
+template <typename T>
 class Subscription;
 
-template<typename T>
+template <typename T>
 class Subscriber {
-public:
+ public:
   virtual ~Subscriber() = default;
 
-  virtual void on_next(const T& value) {}
+  virtual void on_next(const T&) {}
   virtual void on_next(T&& value) { on_next(value); }
   virtual void on_error(const std::exception& error) { throw error; }
   virtual void on_complete() {}
-  virtual void on_subscribe(Subscription<T>* subscription) {}
+  virtual void on_subscribe(Subscription<T>*) {}
 
-  template<
-      typename Next,
-      typename = typename std::enable_if<
-          std::is_callable<Next(const T&), void>::value
-          >::type>
+  template <typename Next,
+            typename = typename std::enable_if<
+                std::is_callable<Next(const T&), void>::value>::type>
   static std::unique_ptr<Subscriber<T>> create(Next&& next) {
     return std::unique_ptr<Subscriber<T>>(
         new Derived1<Next>(std::forward<Next>(next)));
   }
 
-  template<
-      typename Next,
-      typename Error,
+  template <
+      typename Next, typename Error,
       typename = typename std::enable_if<
           std::is_callable<Next(const T&), void>::value &&
-          std::is_callable<Error(const std::exception&), void>::value
-          >::type>
+          std::is_callable<Error(const std::exception&), void>::value>::type>
   static std::unique_ptr<Subscriber<T>> create(Next&& next, Error&& error) {
-    return std::unique_ptr<Subscriber<T>>(
-        new Derived2<Next, Error>(
-            std::forward<Next>(next),
-            std::forward<Error>(error)));
+    return std::unique_ptr<Subscriber<T>>(new Derived2<Next, Error>(
+        std::forward<Next>(next), std::forward<Error>(error)));
   }
 
-  template<
-      typename Next,
-      typename Error,
-      typename Complete,
-      typename = typename std::enable_if<
-          std::is_callable<Next(const T&), void>::value &&
-          std::is_callable<Error(const std::exception&), void>::value &&
-          std::is_callable<Complete(), void>::value
-          >::type>
-  static std::unique_ptr<Subscriber<T>> create(
-      Next&& next, Error&& error, Complete&& complete) {
-    return std::unique_ptr<Subscriber<T>>(
-        new Derived3<Next, Error, Complete>(
-            std::forward<Next>(next),
-            std::forward<Error>(error),
-            std::forward<Complete>(complete)));
+  template <typename Next, typename Error, typename Complete,
+            typename = typename std::enable_if<
+                std::is_callable<Next(const T&), void>::value &&
+                std::is_callable<Error(const std::exception&), void>::value &&
+                std::is_callable<Complete(), void>::value>::type>
+  static std::unique_ptr<Subscriber<T>> create(Next&& next, Error&& error,
+                                               Complete&& complete) {
+    return std::unique_ptr<Subscriber<T>>(new Derived3<Next, Error, Complete>(
+        std::forward<Next>(next), std::forward<Error>(error),
+        std::forward<Complete>(complete)));
   }
 
-private:
-  template<typename Next>
+ private:
+  template <typename Next>
   class Derived1 : public Subscriber {
-  public:
+   public:
     Derived1(Next&& next) : next_(std::forward<Next>(next)) {}
 
-    virtual void on_next(const T& value) {
-      next_(value);
-    }
+    virtual void on_next(const T& value) { next_(value); }
 
-  private:
+   private:
     Next next_;
   };
 
-  template<typename Next, typename Error>
+  template <typename Next, typename Error>
   class Derived2 : public Derived1<Next> {
-  public:
+   public:
     Derived2(Next&& next, Error&& error)
-      : Derived1<Next>(std::forward<Next>(next)),
-        error_(std::forward<Error>(error)) {}
+        : Derived1<Next>(std::forward<Next>(next)),
+          error_(std::forward<Error>(error)) {}
 
-    virtual void on_error(const std::exception &error) {
-      error_(error);
-    }
+    virtual void on_error(const std::exception& error) { error_(error); }
 
-  private:
+   private:
     Error error_;
   };
 
-  template<typename Next, typename Error, typename Complete>
+  template <typename Next, typename Error, typename Complete>
   class Derived3 : public Derived2<Next, Error> {
-  public:
+   public:
     Derived3(Next&& next, Error&& error, Complete&& complete)
-      : Derived2<Next, Error>(
-          std::forward<Next>(next), std::forward<Error>(error)),
-        complete_(std::forward<Complete>(complete)) {}
+        : Derived2<Next, Error>(std::forward<Next>(next),
+                                std::forward<Error>(error)),
+          complete_(std::forward<Complete>(complete)) {}
 
-    virtual void on_complete() {
-      complete_();
-    }
+    virtual void on_complete() { complete_(); }
 
-  private:
+   private:
     Complete complete_;
   };
 };
