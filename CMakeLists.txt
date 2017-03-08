@@ -87,7 +87,6 @@ find_library(DOUBLE-CONVERSION double-conversion)
 
 find_package(Folly REQUIRED)
 find_package(OpenSSL REQUIRED)
-find_package(Boost REQUIRED COMPONENTS system thread)
 
 # Find glog and gflags libraries specifically
 find_path(GLOG_INCLUDE_DIR glog/logging.h)
