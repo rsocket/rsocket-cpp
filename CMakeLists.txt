@@ -367,4 +367,130 @@ add_dependencies(tcpresumeserver gmock)
 
 #add_subdirectory(experimental/yarpl)
 
+########################################
+# Examples
+########################################
+
+add_library(
+        reactivesocket_examples_util
+        examples/util/ExampleSubscriber.cpp
+        examples/util/ExampleSubscriber.h
+)
+
+add_library(
+        rsocket_experimental
+        experimental/rsocket/RSocket.h
+        experimental/rsocket-src/RSocket.cpp
+        experimental/rsocket/RSocketServer.h
+        experimental/rsocket-src/RSocketServer.cpp
+        experimental/rsocket/RSocketClient.h
+        experimental/rsocket-src/RSocketClient.cpp
+        experimental/rsocket/RSocketRequester.h
+        experimental/rsocket-src/RSocketRequester.cpp
+        experimental/rsocket/RSocketErrors.h
+        experimental/rsocket/ConnectionAcceptor.h
+        experimental/rsocket/ConnectionFactory.h
+        experimental/rsocket/ConnectionSetupRequest.h
+        experimental/rsocket-src/ConnectionSetupRequest.cpp
+        experimental/rsocket/ConnectionResumeRequest.h
+        experimental/rsocket-src/ConnectionResumeRequest.cpp
+        experimental/rsocket/transports/TcpConnectionAcceptor.h
+        experimental/rsocket-src/transports/TcpConnectionAcceptor.cpp
+        experimental/rsocket/transports/TcpConnectionFactory.h
+        experimental/rsocket-src/transports/TcpConnectionFactory.cpp
+        )
+
+add_dependencies(rsocket_experimental ReactiveStreams)
+
+# include the experimental includes for usage
+ target_include_directories(rsocket_experimental PUBLIC "${PROJECT_SOURCE_DIR}/experimental")
+#include_directories(${CMAKE_CURRENT_BINARY_DIR}/experimental)
+
+
+target_link_libraries(
+        reactivesocket_examples_util
+        rsocket_experimental
+        ReactiveSocket
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT}
+)
+
+# stream-hello-world
+
+add_executable(
+        example_stream-hello-world-server
+        examples/stream-hello-world/StreamHelloWorld_Server.cpp
+        examples/stream-hello-world/HelloStreamSubscription.cpp
+        examples/stream-hello-world/HelloStreamSubscription.h
+        examples/stream-hello-world/HelloStreamRequestHandler.cpp
+        examples/stream-hello-world/HelloStreamRequestHandler.h)
+
+target_link_libraries(
+        example_stream-hello-world-server
+        ReactiveSocket
+        rsocket_experimental
+        reactivesocket_examples_util
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
+
+add_executable(
+        example_stream-hello-world-client
+        examples/stream-hello-world/StreamHelloWorld_Client.cpp
+)
+
+target_link_libraries(
+        example_stream-hello-world-client
+        ReactiveSocket
+        rsocket_experimental
+        reactivesocket_examples_util
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
+
+# conditional-request-handling
+
+add_executable(
+        example_conditional-request-handling-server
+        examples/conditional-request-handling/ConditionalRequestHandling_Server.cpp
+        examples/conditional-request-handling/TextRequestHandler.h
+        examples/conditional-request-handling/TextRequestHandler.cpp
+        examples/conditional-request-handling/ConditionalRequestSubscription.h
+        examples/conditional-request-handling/ConditionalRequestSubscription.cpp
+        examples/conditional-request-handling/JsonRequestHandler.cpp examples/conditional-request-handling/JsonRequestHandler.h)
+
+target_link_libraries(
+        example_conditional-request-handling-server
+        ReactiveSocket
+        rsocket_experimental
+        reactivesocket_examples_util
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
+
+add_executable(
+        example_conditional-request-handling-client
+        examples/conditional-request-handling/ConditionalRequestHandling_Client.cpp
+)
+
+target_link_libraries(
+        example_conditional-request-handling-client
+        ReactiveSocket
+        rsocket_experimental
+        reactivesocket_examples_util
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
+
+
+########################################
+# End Examples
+########################################
+
 # EOF
