@@ -14,11 +14,11 @@ void TextRequestHandler::handleRequestStream(
   LOG(INFO) << "TextRequestHandler.handleRequestStream " << request;
 
   // string from payload data
-  const char* p = reinterpret_cast<const char*>(request.data->data());
-  auto requestString = std::string(p, request.data->length());
+  auto pds = request.moveDataToString();
+  auto requestString = std::string(pds, request.data->length());
 
-  response->onSubscribe(
-      std::make_shared<ConditionalRequestSubscription>(response, requestString, 10));
+  response->onSubscribe(std::make_shared<ConditionalRequestSubscription>(
+      response, requestString, 10));
 }
 
 std::shared_ptr<StreamState> TextRequestHandler::handleSetupPayload(

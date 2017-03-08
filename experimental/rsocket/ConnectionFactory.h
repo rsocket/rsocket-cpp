@@ -4,16 +4,14 @@
 
 #include "src/DuplexConnection.h"
 
-using namespace reactivesocket;
-
 namespace folly {
 class EventBase;
 }
 
 namespace rsocket {
 
-using OnConnect =
-    std::function<void(std::unique_ptr<DuplexConnection>, folly::EventBase&)>;
+using OnConnect = std::function<
+    void(std::unique_ptr<reactivesocket::DuplexConnection>, folly::EventBase&)>;
 
 /**
  * Common interface for a client to create connections and turn them into

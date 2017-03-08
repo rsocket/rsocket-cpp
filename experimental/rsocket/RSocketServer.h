@@ -11,16 +11,14 @@
 #include "src/ServerConnectionAcceptor.h"
 #include "src/StandardReactiveSocket.h"
 
-using namespace reactivesocket;
-
 namespace rsocket {
 
 using OnSetupNewSocket = std::function<void(
-    std::shared_ptr<FrameTransport> frameTransport,
-    ConnectionSetupPayload setupPayload,
+    std::shared_ptr<reactivesocket::FrameTransport> frameTransport,
+    reactivesocket::ConnectionSetupPayload setupPayload,
     folly::Executor&)>;
 
-using OnAccept = std::function<std::shared_ptr<RequestHandler>(
+using OnAccept = std::function<std::shared_ptr<reactivesocket::RequestHandler>(
     std::unique_ptr<ConnectionSetupRequest>)>;
 /**
  * API for starting an RSocket server. Returned from RSocket::createServer.
@@ -33,7 +31,7 @@ class RSocketServer {
   // TODO concurrency (number of threads)
 
  public:
-  RSocketServer(std::unique_ptr<ConnectionAcceptor>);
+  explicit RSocketServer(std::unique_ptr<ConnectionAcceptor>);
   RSocketServer(const RSocketServer&) = delete; // copy
   RSocketServer(RSocketServer&&) = delete; // move
   RSocketServer& operator=(const RSocketServer&) = delete; // copy
@@ -67,11 +65,11 @@ class RSocketServer {
  private:
   std::unique_ptr<ConnectionAcceptor> lazyAcceptor_;
   std::unique_ptr<reactivesocket::ServerConnectionAcceptor> acceptor_;
-  std::vector<std::unique_ptr<ReactiveSocket>> reactiveSockets_;
+  std::vector<std::unique_ptr<reactivesocket::ReactiveSocket>> reactiveSockets_;
   std::mutex m_;
   std::condition_variable cv_;
 
-  void removeSocket(ReactiveSocket& socket);
-  void addSocket(std::unique_ptr<ReactiveSocket> socket);
+  void removeSocket(reactivesocket::ReactiveSocket& socket);
+  void addSocket(std::unique_ptr<reactivesocket::ReactiveSocket> socket);
 };
 }

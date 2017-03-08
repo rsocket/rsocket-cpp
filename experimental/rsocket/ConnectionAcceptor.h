@@ -5,9 +5,6 @@
 #include <folly/io/async/EventBase.h>
 #include "src/DuplexConnection.h"
 
-using namespace reactivesocket;
-using namespace folly;
-
 namespace rsocket {
 
 /**
@@ -36,9 +33,9 @@ class ConnectionAcceptor {
    *
    *@param onAccept
    */
-  virtual void start(
-      std::function<void(std::unique_ptr<DuplexConnection>, EventBase&)>
-          onAccept) = 0;
+  virtual void start(std::function<void(
+                         std::unique_ptr<reactivesocket::DuplexConnection>,
+                         folly::EventBase&)> onAccept) = 0;
   // TODO need to add numThreads option (either overload or arg with default=1)
 };
 }

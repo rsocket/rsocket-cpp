@@ -4,8 +4,6 @@
 
 #include "src/StandardReactiveSocket.h"
 
-using namespace reactivesocket;
-
 namespace rsocket {
 
 /**

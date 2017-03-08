@@ -4,6 +4,4 @@
 
 using namespace reactivesocket;
 
-namespace rsocket {
-
-}
+namespace rsocket {}

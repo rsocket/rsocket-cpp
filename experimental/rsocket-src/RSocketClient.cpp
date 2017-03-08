@@ -1,3 +1,5 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
 #include "rsocket/RSocketClient.h"
 #include "rsocket/RSocketRequester.h"
 #include "src/NullRequestHandler.h"

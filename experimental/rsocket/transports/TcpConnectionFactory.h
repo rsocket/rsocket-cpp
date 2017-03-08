@@ -6,9 +6,6 @@
 #include "rsocket/ConnectionFactory.h"
 #include "src/DuplexConnection.h"
 
-using namespace reactivesocket;
-using namespace folly;
-
 namespace rsocket {
 
 /**

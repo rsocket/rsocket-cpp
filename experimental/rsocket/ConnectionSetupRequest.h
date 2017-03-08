@@ -4,8 +4,6 @@
 
 #include "src/StandardReactiveSocket.h"
 
-using namespace reactivesocket;
-
 namespace rsocket {
 
 /**
@@ -19,7 +17,8 @@ namespace rsocket {
  */
 class ConnectionSetupRequest {
  public:
-  explicit ConnectionSetupRequest(ConnectionSetupPayload setupPayload);
+  explicit ConnectionSetupRequest(
+      reactivesocket::ConnectionSetupPayload setupPayload);
   ConnectionSetupRequest(const ConnectionSetupRequest&) = delete; // copy
   ConnectionSetupRequest(ConnectionSetupRequest&&) = default; // move
   ConnectionSetupRequest& operator=(const ConnectionSetupRequest&) =
@@ -28,12 +27,13 @@ class ConnectionSetupRequest {
 
   const std::string& getMetadataMimeType() const;
   const std::string& getDataMimeType() const;
-  const Payload& getPayload() const;
+  const reactivesocket::Payload& getPayload() const;
   bool clientRequestsResumability() const;
-  const ResumeIdentificationToken& getResumeIdentificationToken() const;
+  const reactivesocket::ResumeIdentificationToken&
+  getResumeIdentificationToken() const;
   bool willHonorLease() const;
 
  private:
-  ConnectionSetupPayload setupPayload_;
+  reactivesocket::ConnectionSetupPayload setupPayload_;
 };
 }

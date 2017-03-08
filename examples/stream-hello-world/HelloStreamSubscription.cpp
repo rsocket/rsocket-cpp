@@ -1,3 +1,4 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "HelloStreamSubscription.h"
 #include <string>

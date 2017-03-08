@@ -7,8 +7,6 @@
 #include "rsocket/RSocketRequester.h"
 #include "src/StandardReactiveSocket.h"
 
-using namespace reactivesocket;
-
 namespace rsocket {
 
 /**
@@ -19,7 +17,7 @@ namespace rsocket {
 class RSocketClient {
  public:
   explicit RSocketClient(std::unique_ptr<ConnectionFactory>);
-  ~RSocketClient();
+  ~RSocketClient(); // implementing for logging right now
   RSocketClient(const RSocketClient&) = delete; // copy
   RSocketClient(RSocketClient&&) = delete; // move
   RSocketClient& operator=(const RSocketClient&) = delete; // copy

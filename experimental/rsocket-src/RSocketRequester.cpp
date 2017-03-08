@@ -2,6 +2,7 @@
 
 #include "rsocket/RSocketRequester.h"
 
+using namespace reactivesocket;
 using namespace folly;
 
 namespace rsocket {

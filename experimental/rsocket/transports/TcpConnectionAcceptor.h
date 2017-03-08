@@ -5,8 +5,8 @@
 #include <folly/io/async/AsyncServerSocket.h>
 #include "rsocket/ConnectionAcceptor.h"
 
-using namespace reactivesocket;
 using namespace folly;
+using namespace reactivesocket;
 
 namespace rsocket {
 

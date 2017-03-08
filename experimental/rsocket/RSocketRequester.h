@@ -6,8 +6,6 @@
 #include "src/ReactiveStreamsCompat.h"
 #include "src/StandardReactiveSocket.h"
 
-using namespace reactivesocket;
-
 namespace rsocket {
 
 /**
@@ -19,11 +17,11 @@ namespace rsocket {
 class RSocketRequester {
  public:
   static std::shared_ptr<RSocketRequester> create(
-      std::unique_ptr<StandardReactiveSocket> srs,
+      std::unique_ptr<reactivesocket::StandardReactiveSocket> srs,
       folly::EventBase& executor);
-    // TODO figure out how to use folly::Executor instead of EventBase
+  // TODO figure out how to use folly::Executor instead of EventBase
 
-  ~RSocketRequester();
+  ~RSocketRequester(); // implementing for logging right now
   RSocketRequester(const RSocketRequester&) = delete; // copy
   RSocketRequester(RSocketRequester&&) = delete; // move
   RSocketRequester& operator=(const RSocketRequester&) = delete; // copy
@@ -41,8 +39,9 @@ class RSocketRequester {
    * @param responseSink
    */
   void requestStream(
-      Payload payload,
-      std::shared_ptr<Subscriber<Payload>> responseSink);
+      reactivesocket::Payload payload,
+      std::shared_ptr<reactivesocket::Subscriber<reactivesocket::Payload>>
+          responseSink);
 
   /**
     * Start a channel (streams in both directions).
@@ -53,8 +52,10 @@ class RSocketRequester {
     * @param responseSink
     * @return
     */
-  std::shared_ptr<Subscriber<Payload>> requestChannel(
-      std::shared_ptr<Subscriber<Payload>> responseSink);
+  std::shared_ptr<reactivesocket::Subscriber<reactivesocket::Payload>>
+  requestChannel(
+      std::shared_ptr<reactivesocket::Subscriber<reactivesocket::Payload>>
+          responseSink);
 
   /**
    * Send a single request and get a single response.
@@ -66,8 +67,9 @@ class RSocketRequester {
    * @param responseSink
    */
   void requestResponse(
-      Payload payload,
-      std::shared_ptr<Subscriber<Payload>> responseSink);
+      reactivesocket::Payload payload,
+      std::shared_ptr<reactivesocket::Subscriber<reactivesocket::Payload>>
+          responseSink);
 
   /**
    * Send a single Payload with no response.
@@ -77,7 +79,7 @@ class RSocketRequester {
    *
    * @param payload
    */
-  void requestFireAndForget(Payload payload);
+  void requestFireAndForget(reactivesocket::Payload payload);
 
   /**
    * Send metadata without response.
@@ -93,9 +95,10 @@ class RSocketRequester {
 
  private:
   RSocketRequester(
-      std::unique_ptr<StandardReactiveSocket> srs,
+      std::unique_ptr<reactivesocket::StandardReactiveSocket> srs,
       folly::EventBase& eventBase);
-  std::shared_ptr<StandardReactiveSocket> standardReactiveSocket_;
+  std::shared_ptr<reactivesocket::StandardReactiveSocket>
+      standardReactiveSocket_;
   folly::EventBase& eventBase_;
 };
 }

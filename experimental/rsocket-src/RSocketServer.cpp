@@ -1,3 +1,4 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "rsocket/RSocketServer.h"
 #include <folly/ExceptionWrapper.h>
@@ -5,11 +6,15 @@
 #include "rsocket/RSocketErrors.h"
 #include "src/FrameTransport.h"
 
+using namespace folly;
+using namespace reactivesocket;
+
 namespace rsocket {
 
 class RSocketConnection : public reactivesocket::ServerConnectionAcceptor {
  public:
-  explicit RSocketConnection(OnSetupNewSocket onSetup) : onSetup_(std::move(onSetup)) {}
+  explicit RSocketConnection(OnSetupNewSocket onSetup)
+      : onSetup_(std::move(onSetup)) {}
   ~RSocketConnection() {
     LOG(INFO) << "RSocketServer => destroy the connection acceptor";
   }
