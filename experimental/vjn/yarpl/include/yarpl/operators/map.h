@@ -46,7 +46,7 @@ class Mapper : public Flowable<T>, public ::reactivestreams::Subscriber<T> {
       subscriber_->on_next(transform_(value));
     }
 
-    virtual void on_error(const std::exception& error) override {
+    virtual void on_error(const std::exception_ptr error) override {
       subscriber_->on_error(error);
     }
 

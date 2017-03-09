@@ -30,8 +30,8 @@ class DeletingSubscription : public Subscription<T> {
     try {
       (*function_)(*subscriber_);
       subscriber_->on_complete();
-    } catch (std::exception& error) {
-      subscriber_->on_error(error);
+    } catch (...) {
+      subscriber_->on_error(std::current_exception());
     }
 
     delete this;
