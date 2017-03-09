@@ -8,7 +8,7 @@ language: cpp
 # Test matrix:
 matrix:
    include:
-    - env: CLANG_VERSION=3.6 BUILD_TYPE=Debug CPP=14 ASAN=On
+    - env: CLANG_VERSION=3.6 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
       os: linux
       addons: &clang36
         apt:
@@ -19,7 +19,7 @@ matrix:
             - ubuntu-toolchain-r-test
             - llvm-toolchain-precise-3.6
 
-    - env: GCC_VERSION=4.9 BUILD_TYPE=Debug CPP=14 ASAN=On
+    - env: GCC_VERSION=4.9 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
       os: linux
       addons: &gcc49
         apt:
@@ -29,7 +29,7 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
 
-    - env: GCC_VERSION=5 BUILD_TYPE=Debug CPP=14 ASAN=On
+    - env: GCC_VERSION=5 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
       os: linux
       addons: &gcc5
         apt:
@@ -39,7 +39,7 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
 
-    - env: GCC_VERSION=6 BUILD_TYPE=Debug CPP=14 ASAN=On
+    - env: GCC_VERSION=6 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
       os: linux
       addons: &gcc6
         apt:
@@ -50,8 +50,7 @@ matrix:
             - ubuntu-toolchain-r-test
 
 before_script:
-  - ./scripts/fetch_folly_ubuntu_trusty.sh
-  - ./scripts/prepare_ubuntu_trusty.sh
+  - ./scripts/build_folly.sh
   - if [ -n "$GCC_VERSION" ]; then export CXX="g++-${GCC_VERSION}" CC="gcc-${GCC_VERSION}"; fi
   - if [ -n "$CLANG_VERSION" ]; then export CXX="clang++-${CLANG_VERSION}" CC="clang-${CLANG_VERSION}"; fi
   - which $CXX
@@ -60,12 +59,12 @@ before_script:
   - $CXX --version
 
 script:
-  - mkdir build
+  - mkdir -p build
   - cd build
   - if [ -n "$CLANG_VERSION" -a "$ASAN" == "On" ]; then echo "turning on ASAN sanitize=address,undefined,integer no-sanitize=unsigned-integer-overflow"; fi
   - if [ -n "$CLANG_VERSION" -a "$ASAN" == "On" ]; then CXX_FLAGS="${CXX_FLAGS} -fsanitize=address,undefined,integer -fno-sanitize=unsigned-integer-overflow"; fi
   - if [ -n "$GCC_VERSION" -a "$ASAN" == "On" ]; then echo "turning on ASAN sanitize=address,undefined"; fi
   - if [ -n "$GCC_VERSION" -a "$ASAN" == "On" ]; then CXX_FLAGS="${CXX_FLAGS} -fsanitize=address,undefined -fuse-ld=gold"; fi
-  - cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_FLAGS="${CXX_FLAGS}" -DCMAKE_EXE_LINKER_FLAGS="${CXX_LINKER_FLAGS}" -DMETA_CXX_STD=$CPP
+  - cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_FLAGS="${CXX_FLAGS}" -DCMAKE_EXE_LINKER_FLAGS="${CXX_LINKER_FLAGS}" -DMETA_CXX_STD=$CPP_VERSION
   - make -j8
   - ./tests
