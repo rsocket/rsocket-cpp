@@ -17,7 +17,7 @@ class Subscriber {
 
   virtual void on_next(const T&) {}
   virtual void on_next(T&& value) { on_next(value); }
-  virtual void on_error(const std::exception& error) { throw error; }
+  virtual void on_error(const std::exception_ptr error) { throw error; }
   virtual void on_complete() {}
   virtual void on_subscribe(Subscription<T>*) {}
 
@@ -33,7 +33,7 @@ class Subscriber {
       typename Next, typename Error,
       typename = typename std::enable_if<
           std::is_callable<Next(const T&), void>::value &&
-          std::is_callable<Error(const std::exception&), void>::value>::type>
+          std::is_callable<Error(const std::exception_ptr), void>::value>::type>
   static std::unique_ptr<Subscriber<T>> create(Next&& next, Error&& error) {
     return std::unique_ptr<Subscriber<T>>(new Derived2<Next, Error>(
         std::forward<Next>(next), std::forward<Error>(error)));
@@ -42,7 +42,7 @@ class Subscriber {
   template <typename Next, typename Error, typename Complete,
             typename = typename std::enable_if<
                 std::is_callable<Next(const T&), void>::value &&
-                std::is_callable<Error(const std::exception&), void>::value &&
+                std::is_callable<Error(const std::exception_ptr), void>::value &&
                 std::is_callable<Complete(), void>::value>::type>
   static std::unique_ptr<Subscriber<T>> create(Next&& next, Error&& error,
                                                Complete&& complete) {
@@ -70,7 +70,7 @@ class Subscriber {
         : Derived1<Next>(std::forward<Next>(next)),
           error_(std::forward<Error>(error)) {}
 
-    virtual void on_error(const std::exception& error) { error_(error); }
+    virtual void on_error(const std::exception_ptr error) { error_(error); }
 
    private:
     Error error_;

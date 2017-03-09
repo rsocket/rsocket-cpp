@@ -16,8 +16,14 @@ auto make_subscriber(int state) {
       [state](int i) mutable {
         std::cout << "  state: " << ++state << ", i = " << i << std::endl;
       },
-      [](const std::exception& error) {
-        std::cout << "  exception: " << error.what() << std::endl;
+      [](const std::exception_ptr eptr) {
+        try {
+          std::rethrow_exception(eptr);
+        } catch (const std::exception& exception) {
+          std::cerr << "  exception: " << exception.what() << std::endl;
+        } catch (...) {
+          std::cerr << "  !unknown exception!" << std::endl;
+        }
       },
       []() { std::cout << "  complete." << std::endl; });
 }
