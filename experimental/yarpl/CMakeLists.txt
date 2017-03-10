@@ -19,30 +19,54 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 
 include_directories(${CMAKE_SOURCE_DIR})
 
+
 # library source
 add_library(
         yarpl
+        # public API
+        include/yarpl/Scheduler.h
+        include/yarpl/Disposable.h
+        # Observable public API
         include/yarpl/Observable.h
         include/yarpl/Observable_Observer.h
         include/yarpl/Observable_Subscription.h
-        src/Observable_Subscription.cpp
+        src/yarpl/observable/Observable_Subscription.cpp
+        # Flowable public API
         include/yarpl/Flowable.h
         include/yarpl/Flowable_Subscriber.h
         include/yarpl/Flowable_Subscription.h
-        src/Flowable_Subscription.cpp
+        include/yarpl/Flowable_TestSubscriber.h
+        # flowable sources
+        src/yarpl/flowable/sources/Flowable_RangeSubscription.h
+        src/yarpl/flowable/sources/Flowable_RangeSubscription.cpp
+        # flowable operators
+        src/yarpl/flowable/operators/Flowable_Map.h
+        src/yarpl/flowable/operators/Flowable_Take.h
+        src/yarpl/flowable/operators/Flowable_SubscribeOn.h
+        # flowable utils
+        src/yarpl/flowable/utils/SubscriptionHelper.h
+        src/yarpl/flowable/utils/SubscriptionHelper.cpp
+        # utils
+        src/yarpl/utils/type_traits.h
+        # Scheduler
+        src/yarpl/ThreadScheduler.cpp
+        src/yarpl/ThreadScheduler.h
+        # move this out at some point
+        include/reactivestreams/ReactiveStreams.h
 )
 
 target_include_directories(
         yarpl
-        PUBLIC "${PROJECT_SOURCE_DIR}/include" # allow include paths such as "yarpl/observable.h" can be used
+        PUBLIC "${PROJECT_SOURCE_DIR}/include" # allow include paths such as "yarpl/observable.h"
+        PUBLIC "${PROJECT_SOURCE_DIR}/src" # allow include paths such as "yarpl/flowable/FlowableRange.h"
 )
-
 
 # Executable for Experimenting
 add_executable(
         yarpl-playground
         examples/yarpl-playground.cpp
-        examples/ObservableExamples.h
+        examples/ObservableExamples.cpp
+        examples/FlowableExamples.cpp
 )
 
 target_link_libraries(
@@ -59,8 +83,16 @@ add_executable(
         yarpl-tests
         test/yarpl-tests.cpp
         test/Observable_test.cpp
-        test/Flowable_test.cpp
+        test/FlowableCreateSubscribe_test.cpp
         test/Subscription_test.cpp
+        test/Flowable_range_test.cpp
+        test/FlowableSubscriptionHelper_test.cpp
+        test/Flowable_lifecycle.cpp
+        test/FlowableChaining_test.cpp
+        test/flowable_operators/Flowable_Map_test.cpp
+        test/flowable_operators/Flowable_Take_test.cpp
+        test/flowable_operators/Flowable_SubscribeOn_test.cpp
+        test/Scheduler_test.cpp
 )
 
 target_link_libraries(

@@ -364,7 +364,7 @@ target_link_libraries(
 
 add_dependencies(tcpresumeserver gmock)
 
-#add_subdirectory(experimental/yarpl)
+add_subdirectory(experimental/yarpl)
 
 ########################################
 # Examples
@@ -402,7 +402,10 @@ add_library(
 add_dependencies(rsocket_experimental ReactiveStreams)
 
 # include the experimental includes for usage
- target_include_directories(rsocket_experimental PUBLIC "${PROJECT_SOURCE_DIR}/experimental")
+target_include_directories(rsocket_experimental PUBLIC "${PROJECT_SOURCE_DIR}/experimental")
+# yarpl in its current experimental paths
+target_include_directories(rsocket_experimental PUBLIC "${PROJECT_SOURCE_DIR}/experimental/yarpl/include")
+target_include_directories(rsocket_experimental PUBLIC "${PROJECT_SOURCE_DIR}/experimental/yarpl/src")
 #include_directories(${CMAKE_CURRENT_BINARY_DIR}/experimental)
 
 
@@ -410,6 +413,7 @@ target_link_libraries(
         reactivesocket_examples_util
         rsocket_experimental
         ReactiveSocket
+        yarpl
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
         ${GLOG_LIBRARY}
