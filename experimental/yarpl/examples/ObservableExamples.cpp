@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "examples/ObservableExamples.h"
+#include "ObservableExamples.h"
 #include <iostream>
 #include <string>
 #include "yarpl/Observable.h"

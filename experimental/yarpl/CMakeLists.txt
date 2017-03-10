@@ -19,6 +19,13 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 
 include_directories(${CMAKE_SOURCE_DIR})
 
+
+# temp home for ReactiveStreams.h until we agree and extract it
+add_library(reactive_streams_yarpl INTERFACE)
+target_include_directories(reactive_streams_yarpl INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/reactivestreams>
+        )
+
 # library source
 add_library(
         yarpl
@@ -37,12 +44,12 @@ target_include_directories(
         PUBLIC "${PROJECT_SOURCE_DIR}/include" # allow include paths such as "yarpl/observable.h" can be used
 )
 
-
 # Executable for Experimenting
 add_executable(
         yarpl-playground
         examples/yarpl-playground.cpp
-        examples/ObservableExamples.h
+        examples/ObservableExamples.cpp
+        examples/FlowableExamples.cpp
 )
 
 target_link_libraries(
