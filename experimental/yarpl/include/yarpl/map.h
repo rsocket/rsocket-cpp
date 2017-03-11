@@ -1,18 +1,19 @@
 #pragma once
 
-#include <reactivestreams/subscriber.h>
 #include <yarpl/flowable.h>
+#include "reactivestreams/ReactiveStreams.h"
 
 namespace yarpl {
 namespace operators {
 
-using ::reactivestreams::Subscriber;
+using reactivestreams_yarpl::Subscriber;
 
 template <typename T, typename Transform>
-class Mapper : public Flowable<T>, public ::reactivestreams::Subscriber<T> {
-  using Flowable = ::yarpl::Flowable<T>;
-  using Subscriber = ::reactivestreams::Subscriber<T>;
-  using Subscription = ::reactivestreams::Subscription<T>;
+class Mapper : public flowable::Flowable<T>,
+               public reactivestreams_yarpl::Subscriber<T> {
+  using Flowable = flowable::Flowable<T>;
+  using Subscriber = reactivestreams_yarpl::Subscriber<T>;
+  using Subscription = reactivestreams_yarpl::Subscription<T>;
 
  public:
   Mapper(Transform&& transform, std::shared_ptr<Flowable> upstream)
@@ -26,12 +27,6 @@ class Mapper : public Flowable<T>, public ::reactivestreams::Subscriber<T> {
     upstream_->subscribe(std::move(forwarder_));
   }
 
-  virtual void subscribe_on(std::unique_ptr<Subscriber> subscriber,
-                            Scheduler& scheduler) override {
-    forwarder_->set_subscriber(std::move(subscriber));
-    scheduler.schedule([this] { upstream_->subscribe(std::move(forwarder_)); });
-  }
-
  private:
   class Forwarder : public Subscriber {
    public:
@@ -42,18 +37,16 @@ class Mapper : public Flowable<T>, public ::reactivestreams::Subscriber<T> {
       subscriber_ = std::move(subscriber);
     }
 
-    virtual void on_next(const T& value) override {
-      subscriber_->on_next(transform_(value));
+    void onSubscribe(Subscription* subscription) override {
+      subscriber_->onSubscribe(subscription);
     }
 
-    virtual void on_error(const std::exception_ptr error) override {
-      subscriber_->on_error(error);
+    virtual void onComplete() override {
+      subscriber_->onComplete();
     }
 
-    virtual void on_complete() override { subscriber_->on_complete(); }
-
-    virtual void on_subscribe(Subscription* subscription) override {
-      subscriber_->on_subscribe(subscription);
+    void onError(const std::exception_ptr error) override {
+      subscriber_->onError(error);
     }
 
    private:
@@ -65,5 +58,5 @@ class Mapper : public Flowable<T>, public ::reactivestreams::Subscriber<T> {
   const std::shared_ptr<Flowable> upstream_;
 };
 
-}  // operators
-}  // yarpl
+} // operators
+} // yarpl

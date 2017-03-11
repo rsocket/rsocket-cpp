@@ -20,12 +20,6 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 include_directories(${CMAKE_SOURCE_DIR})
 
 
-# temp home for ReactiveStreams.h until we agree and extract it
-add_library(reactive_streams_yarpl INTERFACE)
-target_include_directories(reactive_streams_yarpl INTERFACE
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/reactivestreams>
-        )
-
 # library source
 add_library(
         yarpl
@@ -33,10 +27,11 @@ add_library(
         include/yarpl/Observable_Observer.h
         include/yarpl/Observable_Subscription.h
         src/Observable_Subscription.cpp
-        include/yarpl/Flowable.h
-        include/yarpl/Flowable_Subscriber.h
-        include/yarpl/Flowable_Subscription.h
-        src/Flowable_Subscription.cpp
+        include/yarpl/flowable.h
+        include/yarpl/map.h
+        include/yarpl/type_traits.h
+        # move this out at some point
+        include/reactivestreams/ReactiveStreams.h
 )
 
 target_include_directories(
