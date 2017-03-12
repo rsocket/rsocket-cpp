@@ -13,7 +13,7 @@ class Mapper : public flowable::Flowable<T>,
                public reactivestreams_yarpl::Subscriber<T> {
   using Flowable = flowable::Flowable<T>;
   using Subscriber = reactivestreams_yarpl::Subscriber<T>;
-  using Subscription = reactivestreams_yarpl::Subscription<T>;
+  using Subscription = reactivestreams_yarpl::Subscription;
 
  public:
   Mapper(Transform&& transform, std::shared_ptr<Flowable> upstream)

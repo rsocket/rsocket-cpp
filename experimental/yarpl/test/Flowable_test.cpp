@@ -17,7 +17,7 @@ using namespace reactivestreams_yarpl;
  */
 TEST(Flowable, SubscribeRequestAndCancel) {
   // Subscription that emits integers forever as long as requested
-  class InfiniteIntegersSource : public Subscription<int> {
+  class InfiniteIntegersSource : public Subscription {
     std::unique_ptr<Subscriber<int>> subscriber_;
     std::atomic_bool isCancelled{false};
 
@@ -57,7 +57,7 @@ TEST(Flowable, SubscribeRequestAndCancel) {
 
   // Subscriber that requests 10 items, then cancels after receiving 6
   class MySubscriber : public Subscriber<int> {
-    Subscription<int>* subscription;
+    Subscription* subscription;
 
    public:
     void onNext(const int& value) override {
@@ -68,7 +68,7 @@ TEST(Flowable, SubscribeRequestAndCancel) {
     }
     void onError(const std::exception_ptr e) override {}
     void onComplete() override {}
-    void onSubscribe(Subscription<int>* s) override {
+    void onSubscribe(Subscription* s) override {
       std::cout << "onSubscribe in subscriber" << std::endl;
       subscription = s;
       subscription->request((long)10);
@@ -86,12 +86,11 @@ TEST(Flowable, SubscribeRequestAndCancel) {
   ts->awaitTerminalEvent();
   ts->assertValueCount(6);
 }
-//
+
 // TEST(Flowable, OnError) {
 //  // Subscription that fails
 //  class Source : public Subscription {
 //    std::unique_ptr<Subscriber<int>> subscriber;
-//    std::atomic_bool isCancelled{false};
 //
 //   public:
 //    Source(std::unique_ptr<Subscriber<int>> subscriber)

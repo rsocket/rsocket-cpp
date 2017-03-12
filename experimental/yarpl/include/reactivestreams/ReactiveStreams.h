@@ -8,7 +8,6 @@
 namespace reactivestreams_yarpl {
 // TODO remove 'yarpl' if we agree on this usage elsewhere
 
-template <typename T>
 class Subscription {
  public:
   virtual ~Subscription() = default;
@@ -20,7 +19,7 @@ template <typename T>
 class Subscriber {
  public:
   virtual ~Subscriber() = default;
-  virtual void onSubscribe(Subscription<T>*) = 0;
+  virtual void onSubscribe(Subscription*) = 0;
   virtual void onNext(const T&) = 0;
   virtual void onNext(T&& value) {
     onNext(value);

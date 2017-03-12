@@ -34,7 +34,7 @@ namespace flowable {
 template <typename T>
 class TestSubscriber : public reactivestreams_yarpl::Subscriber<T>,
                        public std::enable_shared_from_this<TestSubscriber<T>> {
-  using Subscription = reactivestreams_yarpl::Subscription<T>;
+  using Subscription = reactivestreams_yarpl::Subscription;
   using Subscriber = reactivestreams_yarpl::Subscriber<T>;
 
  public:
@@ -200,7 +200,7 @@ TestSubscriber<T>::unique_subscriber() {
     ~USubscriber() {
       std::cout << "USubscriber destroyed" << std::endl;
     }
-    void onSubscribe(reactivestreams_yarpl::Subscription<T>* s) override {
+    void onSubscribe(reactivestreams_yarpl::Subscription* s) override {
       ts_->onSubscribe(s);
     }
     void onNext(const T& t) override {

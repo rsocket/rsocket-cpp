@@ -16,7 +16,7 @@ template <typename T>
 class Flowable : public reactivestreams_yarpl::Publisher<T>,
                  public std::enable_shared_from_this<Flowable<T>> {
   using Subscriber = reactivestreams_yarpl::Subscriber<T>;
-  using Subscription = reactivestreams_yarpl::Subscription<T>;
+  using Subscription = reactivestreams_yarpl::Subscription;
 
  public:
   template <
