@@ -29,6 +29,7 @@ add_library(
         src/Observable_Subscription.cpp
         include/yarpl/flowable.h
         include/yarpl/map.h
+        include/yarpl/Flowable_TestSubscriber.h
         include/yarpl/type_traits.h
         # move this out at some point
         include/reactivestreams/ReactiveStreams.h

@@ -5,6 +5,7 @@
 #include <thread>
 #include "reactivestreams/ReactiveStreams.h"
 #include "yarpl/Flowable.h"
+#include "yarpl/Flowable_TestSubscriber.h"
 
 using namespace yarpl::flowable;
 using namespace reactivestreams_yarpl;
@@ -13,13 +14,8 @@ using namespace reactivestreams_yarpl;
  * Verbose usage of interfaces with inline class implementations.
  *
  * - Demonstrating subscribe, onSubscribe, request, onNext, cancel.
- * - Shows use of unique_ptr and std::move to pass around the Subscriber and
- * Subscription.
  */
 TEST(Flowable, SubscribeRequestAndCancel) {
-  std::cout << "----------------------------- ************** HERE1"
-            << std::endl;
-
   // Subscription that emits integers forever as long as requested
   class InfiniteIntegersSource : public Subscription<int> {
     std::unique_ptr<Subscriber<int>> subscriber_;
@@ -36,10 +32,15 @@ TEST(Flowable, SubscribeRequestAndCancel) {
 
     void cancel() override {
       isCancelled = true;
+      // complete downstream like take(...) would
+      subscriber_->onComplete();
     }
     void request(long n) override {
-      std::cout << "source 1 " << std::endl;
-      for (auto i = 0; i < n; i++) {
+      // NOTE: Do not implement real code like this
+      // This is NOT safe at all since request(n) can be called concurrently
+      // This assumes synchronous execution which this unit test does
+      // just to test the most basic wiring of all the types together.
+      for (auto i = 1; i < n; i++) {
         if (isCancelled) {
           return;
         }
@@ -53,9 +54,6 @@ TEST(Flowable, SubscribeRequestAndCancel) {
       subscriber_->onSubscribe(this);
     }
   };
-
-  std::cout << "----------------------------- ************** HERE2"
-            << std::endl;
 
   // Subscriber that requests 10 items, then cancels after receiving 6
   class MySubscriber : public Subscriber<int> {
@@ -77,18 +75,16 @@ TEST(Flowable, SubscribeRequestAndCancel) {
     }
   };
 
-  std::cout << "----------------------------- ************** HERE3"
-            << std::endl;
-
   // create Flowable around InfiniteIntegersSource
   auto a =
       Flowable<int>::create([](std::unique_ptr<Subscriber<int>> subscriber) {
         InfiniteIntegersSource::subscribe(std::move(subscriber));
       });
 
-  a->subscribe(std::make_unique<MySubscriber>());
-  std::cout << "----------------------------- ************** HERE4"
-            << std::endl;
+  auto ts = TestSubscriber<int>::create(std::make_unique<MySubscriber>());
+  a->subscribe(ts->unique_subscriber());
+  ts->awaitTerminalEvent();
+  ts->assertValueCount(6);
 }
 //
 // TEST(Flowable, OnError) {

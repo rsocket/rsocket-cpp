@@ -75,7 +75,6 @@ class Flowable : public reactivestreams_yarpl::Publisher<T>,
               std::make_shared<Function>(std::forward<Function>(function))) {}
 
     void subscribe(std::unique_ptr<Subscriber> subscriber) override {
-      std::cout << "onSubscribe" << std::endl;
       (*function_)(std::move(subscriber));
     }
 

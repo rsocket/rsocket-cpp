@@ -1,13 +1,18 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "FlowableExamples.h"
+#include "reactivestreams/ReactiveStreams.h"
+#include "yarpl/flowable.h"
+
+using namespace reactivestreams_yarpl;
+using namespace yarpl::flowable;
 
 void FlowableExamples::run() {
   std::cout << "---------------FlowableExamples::run-----------------"
             << std::endl;
 
-  class MySubscriber : public ASubscriber<int> {
-    std::unique_ptr<ASubscription> theSubscription;
+  class MySubscriber : public Subscriber<int> {
+    Subscription<int>* theSubscription_;
 
    public:
     MySubscriber() {
@@ -17,34 +22,37 @@ void FlowableExamples::run() {
       std::cout << "MySubscriber DESTROYED" << std::endl;
     }
     void onNext(const int& value) {
-      std::cout << "  onNext received " << value << std::endl;
+      std::cout << " MySubscriber onNext& received " << value << std::endl;
     }
-    void onError(const std::exception& e) {}
+    void onNext(int&& value) {
+      std::cout << " MySubscriber onNext&& received " << value << std::endl;
+    }
+    void onError(const std::exception_ptr e) {}
     void onComplete() {}
-    void onSubscribe(std::unique_ptr<ASubscription> s) {
-      theSubscription = std::move(s);
-      theSubscription->request(10);
+    void onSubscribe(Subscription<int>* s) {
+      theSubscription_ = s;
+      theSubscription_->request(10);
     }
   };
 
-  class MySubscription : public ASubscription {
-    std::weak_ptr<ASubscriber<int>> s;
-
+  class MySubscription : public Subscription<int> {
    public:
+    MySubscription(std::unique_ptr<Subscriber<int>> s) : s_(std::move(s)) {
+      std::cout << "MySubscription CREATED" << std::endl;
+    };
     ~MySubscription() {
       std::cout << "MySubscription DESTROYED" << std::endl;
     }
-    MySubscription(std::weak_ptr<ASubscriber<int>> _s) : s(std::move(_s)) {
-      std::cout << "MySubscription CREATED" << std::endl;
-    };
     void cancel() {}
-    void request(uint64_t n) {
-      auto sp = s.lock();
-      if (sp) {
-        // do stuff
-        sp->onNext(1);
-      }
+    void request(long n) {
+      s_->onNext(1);
     }
+    void start() {
+      s_->onSubscribe(this);
+    }
+
+   private:
+    std::unique_ptr<Subscriber<int>> s_;
   };
 
   {
@@ -55,14 +63,14 @@ void FlowableExamples::run() {
   std::cout << "--------- MySubscriber? " << std::endl;
 
   {
-    AFlowable<int>::create([](std::unique_ptr<ASubscriber<int>> s) {
-      std::cout << "AFlowable onSubscribe START" << std::endl;
-      std::shared_ptr<ASubscriber<int>> sharedSubscriber = std::move(s);
-      std::weak_ptr<ASubscriber<int>> wp = sharedSubscriber;
-      sharedSubscriber->onSubscribe(
-          std::make_unique<MySubscription>(std::move(wp)));
-      std::cout << "AFlowable onSubscribe END" << std::endl;
-    })->subscribe(std::make_unique<MySubscriber>());
+    auto f = Flowable<int>::create([](std::unique_ptr<Subscriber<int>> s) {
+      std::cout << "Flowable onSubscribe START" << std::endl;
+      auto subscription = std::make_unique<MySubscription>(std::move(s));
+      subscription->start();
+      std::cout << "Flowable onSubscribe END" << std::endl;
+    });
+
+    f->subscribe(std::make_unique<MySubscriber>());
   }
   std::cout << "--------- All destroyed? " << std::endl;
 
