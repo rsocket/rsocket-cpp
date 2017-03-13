@@ -1,3 +1,5 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
 #pragma once
 
 #include <folly/Baton.h>
@@ -97,10 +99,17 @@ class TestSubscriber : public reactivestreams_yarpl::Subscriber<T>,
    */
   void assertValueCount(size_t count);
 
+  /**
+   * If the onError exception_ptr points to an error containing
+   * the given msg, complete successfully, otherwise throw a runtime_error
+   */
+  void assertOnErrorMessage(std::string msg);
+
  private:
   long initialRequestN_;
   std::unique_ptr<Subscriber> delegate_;
   std::vector<T> values_;
+  std::exception_ptr e_;
   bool terminated_{false};
   std::mutex m_;
   std::condition_variable terminalEventCV_;
@@ -142,29 +151,32 @@ void TestSubscriber<T>::onSubscribe(Subscription* s) {
 
 template <typename T>
 void TestSubscriber<T>::onNext(const T& t) {
-  std::cout << "onNext& " << t << std::endl;
   if (delegate_) {
+    std::cout << "TestSubscribe onNext& => copy then delegate" << std::endl;
+    values_.push_back(t);
     delegate_->onNext(t);
+  } else {
+    std::cout << "TestSubscribe onNext& => copy" << std::endl;
+    values_.push_back(t);
   }
-  values_.push_back(t);
 }
 
 template <typename T>
 void TestSubscriber<T>::onNext(T&& t) {
-  std::cout << "onNext&& " << t << std::endl;
   if (delegate_) {
+    std::cout << "TestSubscribe onNext&& => copy then delegate" << std::endl;
     // copy with push_back rather than emplace
     // since we pass the ref into the delegate
     values_.push_back(t);
     delegate_->onNext(std::move(t));
   } else {
+    std::cout << "TestSubscribe onNext&& => move" << std::endl;
     values_.emplace_back(std::move(t));
   }
 }
 
 template <typename T>
 void TestSubscriber<T>::onComplete() {
-  std::cout << "onComplete " << std::endl;
   if (delegate_) {
     delegate_->onComplete();
   }
@@ -174,17 +186,16 @@ void TestSubscriber<T>::onComplete() {
 
 template <typename T>
 void TestSubscriber<T>::onError(const std::exception_ptr ex) {
-  std::cout << "onError " << std::endl;
   if (delegate_) {
     delegate_->onError(ex);
   }
+  e_ = ex;
   terminated_ = true;
   terminalEventCV_.notify_all();
 }
 
 template <typename T>
 void TestSubscriber<T>::awaitTerminalEvent() {
-  std::cout << "awaiting" << std::endl;
   // now block this thread
   std::unique_lock<std::mutex> lk(m_);
   // if shutdown gets implemented this would then be released by it
@@ -197,9 +208,6 @@ TestSubscriber<T>::unique_subscriber() {
   class USubscriber : public reactivestreams_yarpl::Subscriber<T> {
    public:
     USubscriber(std::shared_ptr<TestSubscriber<T>> ts) : ts_(std::move(ts)) {}
-    ~USubscriber() {
-      std::cout << "USubscriber destroyed" << std::endl;
-    }
     void onSubscribe(reactivestreams_yarpl::Subscription* s) override {
       ts_->onSubscribe(s);
     }
@@ -207,7 +215,7 @@ TestSubscriber<T>::unique_subscriber() {
       ts_->onNext(t);
     }
     void onNext(T&& t) override {
-      ts_->onNext(t);
+      ts_->onNext(std::move(t));
     }
     void onError(const std::exception_ptr e) override {
       ts_->onError(e);
@@ -229,6 +237,26 @@ void TestSubscriber<T>::assertValueCount(size_t count) {
     std::stringstream ss;
     ss << "Value count " << values_.size() << " does not match " << count;
     throw std::runtime_error(ss.str());
+  }
+}
+
+template <typename T>
+void TestSubscriber<T>::assertOnErrorMessage(std::string msg) {
+  if (e_ == nullptr) {
+    std::stringstream ss;
+    ss << "exception_ptr == nullptr, but expected " << msg;
+    throw std::runtime_error(ss.str());
+  }
+  try {
+    std::rethrow_exception(e_);
+  } catch (std::runtime_error& re) {
+    if (re.what() != msg) {
+      std::stringstream ss;
+      ss << "Error message is: " << re.what() << " but expected: " << msg;
+      throw std::runtime_error(ss.str());
+    }
+  } catch (...) {
+    throw std::runtime_error("Expects an std::runtime_error");
   }
 }
 }
