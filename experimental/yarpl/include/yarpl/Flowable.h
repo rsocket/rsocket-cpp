@@ -59,15 +59,14 @@ class Flowable : public reactivestreams_yarpl::Publisher<T>,
   class FlowableOnSubscribeFunc : public Flowable {
    public:
     FlowableOnSubscribeFunc(Function&& function)
-        : function_(
-              std::make_shared<Function>(std::forward<Function>(function))) {}
+        : function_(Function(std::forward<Function>(function))) {}
 
     void subscribe(std::unique_ptr<Subscriber> subscriber) override {
-      (*function_)(std::move(subscriber));
+      (function_)(std::move(subscriber));
     }
 
    private:
-    std::shared_ptr<Function> function_;
+    Function function_;
   };
 };
 
