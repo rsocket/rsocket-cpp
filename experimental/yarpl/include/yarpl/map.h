@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <yarpl/flowable.h>
+#include <yarpl/Flowable.h>
 #include "reactivestreams/ReactiveStreams.h"
 
 namespace yarpl {

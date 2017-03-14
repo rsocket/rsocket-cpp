@@ -26,18 +26,23 @@ add_library(
         include/yarpl/Observable.h
         include/yarpl/Observable_Observer.h
         include/yarpl/Observable_Subscription.h
-        src/Observable_Subscription.cpp
-        include/yarpl/flowable.h
+        src/yarpl/observable/Observable_Subscription.cpp
+        include/yarpl/Flowable.h
         include/yarpl/map.h
         include/yarpl/Flowable_TestSubscriber.h
         include/yarpl/type_traits.h
+        src/yarpl/flowable/sources/Flowable_RangeSubscription.h
+        src/yarpl/flowable/sources/Flowable_RangeSubscription.cpp
+        src/yarpl/flowable/utils/SubscriptionHelper.h
+        src/yarpl/flowable/utils/SubscriptionHelper.cpp
         # move this out at some point
         include/reactivestreams/ReactiveStreams.h
 )
 
 target_include_directories(
         yarpl
-        PUBLIC "${PROJECT_SOURCE_DIR}/include" # allow include paths such as "yarpl/observable.h" can be used
+        PUBLIC "${PROJECT_SOURCE_DIR}/include" # allow include paths such as "yarpl/observable.h"
+        PUBLIC "${PROJECT_SOURCE_DIR}/src" # allow include paths such as "yarpl/flowable/FlowableRange.h"
 )
 
 # Executable for Experimenting
@@ -64,6 +69,8 @@ add_executable(
         test/Observable_test.cpp
         test/Flowable_test.cpp
         test/Subscription_test.cpp
+        test/Flowable_range_test.cpp
+        test/FlowableSubscriptionHelper_test.cpp
 )
 
 target_link_libraries(

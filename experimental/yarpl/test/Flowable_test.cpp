@@ -35,7 +35,7 @@ TEST(Flowable, SubscribeRequestAndCancel) {
       // complete downstream like take(...) would
       subscriber_->onComplete();
     }
-    void request(long n) override {
+    void request(int64_t n) override {
       // NOTE: Do not implement real code like this
       // This is NOT safe at all since request(n) can be called concurrently
       // This assumes synchronous execution which this unit test does
@@ -101,7 +101,7 @@ TEST(Flowable, OnError) {
     }
 
     void cancel() override {}
-    void request(long n) override {
+    void request(int64_t n) override {
       try {
         // simulate user function throwing and being caught
         throw std::runtime_error("something broke!");
@@ -166,7 +166,7 @@ TEST(Flowable, ItemsCollectedSynchronously) {
     void cancel() override {
       isCancelled = true;
     }
-    void request(long n) override {
+    void request(int64_t n) override {
       // ignoring n for tests ... DO NOT DO THIS FOR REAL
       subscriber_->onNext(Tuple{1, 2});
       subscriber_->onNext(Tuple{2, 3});
@@ -272,7 +272,7 @@ TEST(Flowable, TestRetainOnStaticAsyncFlowableWithMultipleSubscribers) {
     void cancel() override {
       isCancelled = true;
     }
-    void request(long n) override {
+    void request(int64_t n) override {
       // ignoring n for tests ... DO NOT DO THIS FOR REAL
       subscriber_->onNext(Tuple{1, 2});
       subscriber_->onNext(Tuple{2, 3});

@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include <folly/Baton.h>
 #include "reactivestreams/ReactiveStreams.h"
 
 namespace yarpl {
@@ -100,10 +99,27 @@ class TestSubscriber : public reactivestreams_yarpl::Subscriber<T>,
   void assertValueCount(size_t count);
 
   /**
+   * The number of onNext values received.
+   * @return
+   */
+  int64_t getValueCount();
+
+  /**
    * If the onError exception_ptr points to an error containing
    * the given msg, complete successfully, otherwise throw a runtime_error
    */
   void assertOnErrorMessage(std::string msg);
+
+  /**
+   * Submit credits to Subscription->request(...)
+   * @param n
+   */
+  void requestMore(int64_t n);
+
+  /**
+   * Submit Subscription->cancel();
+   */
+  void cancel();
 
  private:
   long initialRequestN_;
@@ -113,6 +129,7 @@ class TestSubscriber : public reactivestreams_yarpl::Subscriber<T>,
   bool terminated_{false};
   std::mutex m_;
   std::condition_variable terminalEventCV_;
+  Subscription* subscription_;
 };
 
 template <typename T>
@@ -142,21 +159,23 @@ std::shared_ptr<TestSubscriber<T>> TestSubscriber<T>::create(
 
 template <typename T>
 void TestSubscriber<T>::onSubscribe(Subscription* s) {
+  subscription_ = s;
   if (delegate_) {
     delegate_->onSubscribe(s);
   } else {
-    s->request(initialRequestN_);
+    subscription_->request(initialRequestN_);
   }
 }
 
 template <typename T>
 void TestSubscriber<T>::onNext(const T& t) {
   if (delegate_) {
-    std::cout << "TestSubscribe onNext& => copy then delegate" << std::endl;
+    //    std::cout << "TestSubscriber onNext& => copy then delegate" <<
+    //    std::endl;
     values_.push_back(t);
     delegate_->onNext(t);
   } else {
-    std::cout << "TestSubscribe onNext& => copy" << std::endl;
+    //    std::cout << "TestSubscriber onNext& => copy" << std::endl;
     values_.push_back(t);
   }
 }
@@ -164,13 +183,14 @@ void TestSubscriber<T>::onNext(const T& t) {
 template <typename T>
 void TestSubscriber<T>::onNext(T&& t) {
   if (delegate_) {
-    std::cout << "TestSubscribe onNext&& => copy then delegate" << std::endl;
+    //    std::cout << "TestSubscriber onNext&& => copy then delegate" <<
+    //    std::endl;
     // copy with push_back rather than emplace
     // since we pass the ref into the delegate
     values_.push_back(t);
     delegate_->onNext(std::move(t));
   } else {
-    std::cout << "TestSubscribe onNext&& => move" << std::endl;
+    //    std::cout << "TestSubscriber onNext&& => move" << std::endl;
     values_.emplace_back(std::move(t));
   }
 }
@@ -200,6 +220,16 @@ void TestSubscriber<T>::awaitTerminalEvent() {
   std::unique_lock<std::mutex> lk(m_);
   // if shutdown gets implemented this would then be released by it
   terminalEventCV_.wait(lk, [this] { return terminated_; });
+}
+
+template <typename T>
+void TestSubscriber<T>::requestMore(int64_t n) {
+  subscription_->request(n);
+}
+
+template <typename T>
+void TestSubscriber<T>::cancel() {
+  subscription_->cancel();
 }
 
 template <typename T>
@@ -238,6 +268,10 @@ void TestSubscriber<T>::assertValueCount(size_t count) {
     ss << "Value count " << values_.size() << " does not match " << count;
     throw std::runtime_error(ss.str());
   }
+}
+template <typename T>
+int64_t TestSubscriber<T>::getValueCount() {
+  return values_.size();
 }
 
 template <typename T>

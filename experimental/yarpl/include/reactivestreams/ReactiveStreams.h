@@ -11,7 +11,7 @@ namespace reactivestreams_yarpl {
 class Subscription {
  public:
   virtual ~Subscription() = default;
-  virtual void request(long n) = 0;
+  virtual void request(int64_t n) = 0;
   virtual void cancel() = 0;
 };
 

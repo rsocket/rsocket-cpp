@@ -5,6 +5,7 @@
 #include <memory>
 #include <type_traits>
 #include <utility>
+#include "experimental/yarpl/src/yarpl/flowable/sources/Flowable_RangeSubscription.h"
 
 #include "reactivestreams/ReactiveStreams.h"
 #include "type_traits.h"
@@ -43,6 +44,14 @@ class Flowable : public reactivestreams_yarpl::Publisher<T>,
           std::is_callable<F(T), typename std::result_of<F(T)>::type>::value>::
           type>
   auto map(F&& function);
+
+  static std::shared_ptr<Flowable<long>> range(long start, long count) {
+    return create([start, count](auto subscriber) {
+      auto s_ = new yarpl::flowable::sources::RangeSubscription(
+          start, count, std::move(subscriber));
+      s_->start();
+    });
+  }
 
  protected:
   Flowable() = default;
@@ -84,6 +93,7 @@ class Flowable : public reactivestreams_yarpl::Publisher<T>,
     const std::shared_ptr<Function> function_;
   };
 };
+
 
 } // flowable
 } // yarpl
