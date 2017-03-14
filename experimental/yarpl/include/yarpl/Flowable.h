@@ -26,8 +26,8 @@ class Flowable : public reactivestreams_yarpl::Publisher<T>,
       typename F,
       typename = typename std::enable_if<
           std::is_callable<F(std::unique_ptr<Subscriber>), void>::value>::type>
-  static std::shared_ptr<Flowable> create(F&& onSubscribeFunc) {
-    return std::make_shared<FlowableOnSubscribeFunc<F>>(
+  static std::unique_ptr<Flowable> create(F&& onSubscribeFunc) {
+    return std::make_unique<FlowableOnSubscribeFunc<F>>(
         std::forward<F>(onSubscribeFunc));
   }
 
@@ -38,7 +38,7 @@ class Flowable : public reactivestreams_yarpl::Publisher<T>,
           type>
   auto map(F&& function);
 
-  static std::shared_ptr<Flowable<long>> range(long start, long count) {
+  static std::unique_ptr<Flowable<long>> range(long start, long count) {
     return create([start, count](auto subscriber) {
       auto s_ = new yarpl::flowable::sources::RangeSubscription(
           start, count, std::move(subscriber));
@@ -59,7 +59,8 @@ class Flowable : public reactivestreams_yarpl::Publisher<T>,
   class FlowableOnSubscribeFunc : public Flowable {
    public:
     FlowableOnSubscribeFunc(Function&& function)
-        : function_(std::make_shared<Function>(std::forward<Function>(function))) {}
+        : function_(
+              std::make_shared<Function>(std::forward<Function>(function))) {}
 
     void subscribe(std::unique_ptr<Subscriber> subscriber) override {
       (*function_)(std::move(subscriber));
