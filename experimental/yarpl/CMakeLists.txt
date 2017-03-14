@@ -71,6 +71,7 @@ add_executable(
         test/Subscription_test.cpp
         test/Flowable_range_test.cpp
         test/FlowableSubscriptionHelper_test.cpp
+        test/Flowable_lifecycle.cpp
 )
 
 target_link_libraries(

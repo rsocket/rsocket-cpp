@@ -25,13 +25,6 @@ class Flowable : public reactivestreams_yarpl::Publisher<T>,
   template <
       typename F,
       typename = typename std::enable_if<
-          std::is_callable<F(Subscriber&), void>::value>::type>
-  static std::shared_ptr<Flowable> generate(F&& function) {
-    return std::make_shared<FlowableGenerator<F>>(std::forward<F>(function));
-  }
-  template <
-      typename F,
-      typename = typename std::enable_if<
           std::is_callable<F(std::unique_ptr<Subscriber>), void>::value>::type>
   static std::shared_ptr<Flowable> create(F&& onSubscribeFunc) {
     return std::make_shared<FlowableOnSubscribeFunc<F>>(
@@ -63,37 +56,19 @@ class Flowable : public reactivestreams_yarpl::Publisher<T>,
   Flowable& operator=(const Flowable&) = delete;
 
   template <typename Function>
-  class FlowableGenerator : public Flowable {
-   public:
-    FlowableGenerator(Function&& function)
-        : function_(
-              std::make_shared<Function>(std::forward<Function>(function))) {}
-
-    void subscribe(std::unique_ptr<Subscriber> subscriber) override {
-      // TODO implement this
-      subscriber->onError(std::make_exception_ptr("not implemented"));
-    }
-
-   private:
-    const std::shared_ptr<Function> function_;
-  };
-
-  template <typename Function>
   class FlowableOnSubscribeFunc : public Flowable {
    public:
     FlowableOnSubscribeFunc(Function&& function)
-        : function_(
-              std::make_shared<Function>(std::forward<Function>(function))) {}
+        : function_(std::make_shared<Function>(std::forward<Function>(function))) {}
 
     void subscribe(std::unique_ptr<Subscriber> subscriber) override {
       (*function_)(std::move(subscriber));
     }
 
    private:
-    const std::shared_ptr<Function> function_;
+    std::shared_ptr<Function> function_;
   };
 };
-
 
 } // flowable
 } // yarpl

@@ -114,15 +114,16 @@ TEST(FlowableRange, 1_to_100_cancel) {
 //  // theoretically allow all of these to emit before scheduling the cancel
 //  const int MAX_SIZE = 500000000;
 //  auto f = Flowable<long>::create([](auto s) {
-//    auto thread = std::thread([s_ = std::move(s)]() mutable {
+//    std::thread([s_ = std::move(s)]() mutable {
 //      auto r_ = new yarpl::flowable::sources::RangeSubscription(
 //          1, MAX_SIZE, std::move(s_));
 //      r_->start();
-//    });
-//    thread.detach();
+//    }).detach();
+//      std::cout << "done launching thread" << std::endl;
 //  });
 //  auto ts = TestSubscriber<long>::create();
 //  f->subscribe(ts->unique_subscriber());
+//    std::cout << "after subscribe" << std::endl;
 //  ts->cancel();
 //  std::cout << "Received " << ts->getValueCount() << " values" << std::endl;
 //  // it should cancel well before hitting the MAX_SIZE
