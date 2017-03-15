@@ -27,14 +27,34 @@ MarbleProcessor::MarbleProcessor(
   if (marble_.find("&&") != std::string::npos) {
     std::vector<folly::StringPiece> parts;
     folly::split("&&", marble_, parts);
-    assert(parts.size() == 2);
-    marble_ = parts[0].toString();
-    folly::dynamic parsedJson = folly::parseJson(parts[1].toString());
+    CHECK(parts.size() == 2);
+    std::string argMap = parts[1].toString();
+    LOG(INFO) << "Parsing argMap `" << argMap << "`";
+    folly::dynamic parsedJson = folly::parseJson(argMap);
+    LOG(INFO) << parsedJson.size();
+    LOG(INFO) << parsedJson;
     for (const auto& item : parsedJson.items()) {
-      argMap_[item.first.asString()] = std::make_pair(
-          item.second.keys().begin()->asString(),
-          item.second.values().begin()->asString());
+      try {
+        LOG(INFO) << item.first.typeName();
+        LOG(INFO) << item.first.asString();
+        LOG(INFO) << item.second.typeName();
+        LOG(INFO) << item.second.size();
+        LOG(INFO) << item.second.keys().begin()->typeName();
+        LOG(INFO) << item.second.keys().begin()->asString();
+        LOG(INFO) << item.second.values().begin()->typeName();
+        LOG(INFO) << item.second.values().begin()->asString();
+        argMap_[item.first.asString()] = std::make_pair(
+            item.second.keys().begin()->asString(),
+            item.second.values().begin()->asString());
+      } catch (std::exception& ex) {
+        LOG(INFO) << ex.what();
+      }
     }
+    for (const auto& i : argMap_) {
+      LOG(INFO) << i.first << " -> " << i.second.first << " " << i.second.second;
+    }
+    marble_ = parts[0].toString();
+    LOG(INFO) << "Actual marble `" << marble_ << "`";
   }
 }
 
