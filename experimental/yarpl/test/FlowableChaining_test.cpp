@@ -87,8 +87,7 @@ TEST(FlowableChaining, Map) {
   auto ts =
       TestSubscriber<std::string>::create(std::make_unique<MySubscriber>());
   Flowable::range(0, 20)
-      ->map<std::string>(
-          [](auto v) { return "hello via map " + std::to_string(v); })
+      ->map([](auto v) { return "hello via map " + std::to_string(v); })
       ->subscribe(ts->unique_subscriber());
   ts->awaitTerminalEvent();
   ts->assertValueCount(20);

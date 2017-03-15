@@ -48,13 +48,12 @@ class UniqueFlowable : public reactivestreams_yarpl::Publisher<T> {
   }
 
   template <
-      typename R,
       typename F,
       typename = typename std::enable_if<
           std::is_callable<F(T), typename std::result_of<F(T)>::type>::value>::
           type>
   auto map(F&& function) {
-    return lift<R>(yarpl::operators::FlowableMapOperator<T, R, F>(std::forward<F>(function)));
+    return lift<typename std::result_of<F(T)>::type>(yarpl::operators::FlowableMapOperator<T, typename std::result_of<F(T)>::type, F>(std::forward<F>(function)));
   };
 
  protected:
