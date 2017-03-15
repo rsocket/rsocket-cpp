@@ -5,6 +5,7 @@
 #include <memory>
 #include <type_traits>
 #include <utility>
+#include "yarpl/Flowable_TestSubscriber.h"
 #include "yarpl/flowable/sources/Flowable_RangeSubscription.h"
 
 #include "reactivestreams/ReactiveStreams.h"
@@ -13,60 +14,94 @@
 namespace yarpl {
 namespace flowable {
 
-// using reactivestream_yarpl to not conflict with the other reactivestreams
-
-template <typename T>
-class Flowable : public reactivestreams_yarpl::Publisher<T>,
-                 public std::enable_shared_from_this<Flowable<T>> {
+template <typename T, typename Function>
+class UniqueFlowable : public reactivestreams_yarpl::Publisher<T> {
+  // using reactivestream_yarpl to not conflict with the other reactivestreams
   using Subscriber = reactivestreams_yarpl::Subscriber<T>;
   using Subscription = reactivestreams_yarpl::Subscription;
 
  public:
-  template <
-      typename F,
-      typename = typename std::enable_if<
-          std::is_callable<F(std::unique_ptr<Subscriber>), void>::value>::type>
-  static std::unique_ptr<Flowable> create(F&& onSubscribeFunc) {
-    return std::make_unique<FlowableOnSubscribeFunc<F>>(
-        std::forward<F>(onSubscribeFunc));
+  UniqueFlowable(Function&& function)
+      : function_(Function(std::forward<Function>(function))) {}
+
+  void subscribe(std::unique_ptr<Subscriber> subscriber) override {
+    (function_)(std::move(subscriber));
   }
 
   template <
+      typename R,
       typename F,
-      typename = typename std::enable_if<
-          std::is_callable<F(T), typename std::result_of<F(T)>::type>::value>::
-          type>
-  auto map(F&& function);
+      typename = typename std::enable_if<std::is_callable<
+          F(std::unique_ptr<reactivestreams_yarpl::Subscriber<R>>),
+          std::unique_ptr<reactivestreams_yarpl::Subscriber<T>>>::value>::type>
+  auto lift(F&& onSubscribeLift) {
+    auto onSubscribe =
+        [ f = std::move(function_), onSub = std::move(onSubscribeLift) ](
+            std::unique_ptr<reactivestreams_yarpl::Subscriber<R>> s) mutable {
+      f(onSub(std::move(s)));
+    };
 
-  static std::unique_ptr<Flowable<long>> range(long start, long count) {
-    return create([start, count](auto subscriber) {
-      auto s_ = new yarpl::flowable::sources::RangeSubscription(
-          start, count, std::move(subscriber));
-      s_->start();
-    });
+    return std::make_unique<UniqueFlowable<R, decltype(onSubscribe)>>(
+        std::move(onSubscribe));
   }
+
+  //  template <
+  //      typename F,
+  //      typename = typename std::enable_if<
+  //          std::is_callable<F(T), typename
+  //          std::result_of<F(T)>::type>::value>::
+  //          type>
+  //  auto map(F&& function);
 
  protected:
+  UniqueFlowable() = default;
+  UniqueFlowable(UniqueFlowable&&) = delete;
+  UniqueFlowable(const UniqueFlowable&) = delete;
+  UniqueFlowable& operator=(UniqueFlowable&&) = delete;
+  UniqueFlowable& operator=(const UniqueFlowable&) = delete;
+
+ private:
+  Function function_;
+};
+
+/**
+* Create a UniqueFlowable.
+*
+* Called 'unsafeCreate' since this API is not the preferred public API
+* as it is easy to get wrong.
+*
+* Use Flowable::create instead unless creating internal library operators.
+*
+* @tparam F
+* @param onSubscribeFunc
+* @return
+*/
+template <
+    typename T,
+    typename F,
+    typename = typename std::enable_if<std::is_callable<
+        F(std::unique_ptr<reactivestreams_yarpl::Subscriber<T>>),
+        void>::value>::type>
+static auto unsafeCreateUniqueFlowable(F&& onSubscribeFunc) {
+  return std::make_unique<UniqueFlowable<T, F>>(
+      std::forward<F>(onSubscribeFunc));
+}
+
+class Flowable {
+ public:
   Flowable() = default;
   Flowable(Flowable&&) = delete;
   Flowable(const Flowable&) = delete;
   Flowable& operator=(Flowable&&) = delete;
   Flowable& operator=(const Flowable&) = delete;
 
- private:
-  template <typename Function>
-  class FlowableOnSubscribeFunc : public Flowable {
-   public:
-    FlowableOnSubscribeFunc(Function&& function)
-        : function_(Function(std::forward<Function>(function))) {}
-
-    void subscribe(std::unique_ptr<Subscriber> subscriber) override {
-      (function_)(std::move(subscriber));
-    }
-
-   private:
-    Function function_;
-  };
+  static auto range(long start, long count) {
+    return unsafeCreateUniqueFlowable<long>([start, count](auto subscriber) {
+      auto s_ = new yarpl::flowable::sources::RangeSubscription(
+          start, count, std::move(subscriber));
+      s_->start();
+    });
+  }
 };
 
 } // flowable
@@ -77,12 +112,12 @@ class Flowable : public reactivestreams_yarpl::Publisher<T>,
 namespace yarpl {
 namespace flowable {
 
-template <typename T>
-template <typename F, typename Default>
-auto Flowable<T>::map(F&& function) {
-  return std::make_shared<operators::Mapper<T, F>>(
-      std::forward<F>(function), this->shared_from_this());
-}
+// template <typename T>
+// template <typename F, typename Default>
+// auto UniqueFlowable<T>::map(F&& function) {
+//  return std::make_shared<operators::Mapper<T, F>>(
+//      std::forward<F>(function), this->shared_from_this());
+//}
 
 } // flowable
 } // yarpl

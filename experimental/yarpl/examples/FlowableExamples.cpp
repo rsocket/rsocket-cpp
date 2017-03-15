@@ -53,9 +53,7 @@ void FlowableExamples::run() {
     }
   };
 
-  // TODO is there someway to specialize Flowable so the <long> is not needed
-  // here?
-  Flowable<long>::range(1, 100)->subscribe(std::make_unique<MySubscriber>());
+  Flowable::range(1, 100)->subscribe(std::make_unique<MySubscriber>());
 
   std::cout << "---------------FlowableExamples::run-----------------"
             << std::endl;

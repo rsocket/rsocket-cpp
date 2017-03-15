@@ -12,14 +12,14 @@ using namespace yarpl::flowable;
 using namespace reactivestreams_yarpl;
 
 TEST(FlowableRange, 1_to_100) {
-  auto f = Flowable<long>::range(1, 100);
+  auto f = Flowable::range(1, 100);
   auto ts = TestSubscriber<long>::create(200);
   f->subscribe(ts->unique_subscriber());
   ts->assertValueCount(100);
 }
 
 TEST(FlowableRange, completes) {
-  auto f = Flowable<long>::range(1, 100);
+  auto f = Flowable::range(1, 100);
   auto ts = TestSubscriber<long>::create(200);
   f->subscribe(ts->unique_subscriber());
   ts->awaitTerminalEvent();
@@ -27,7 +27,7 @@ TEST(FlowableRange, completes) {
 }
 
 TEST(FlowableRange, 1_to_100_in_jumps) {
-  auto f = Flowable<long>::range(1, 100);
+  auto f = Flowable::range(1, 100);
   auto ts = TestSubscriber<long>::create(20);
   f->subscribe(ts->unique_subscriber());
   ts->assertValueCount(20);
@@ -80,14 +80,14 @@ TEST(FlowableRange, 1_to_100_in_concurrent_jumps) {
     }
   };
 
-  auto f = Flowable<long>::range(1, 100);
+  auto f = Flowable::range(1, 100);
   auto ts = TestSubscriber<long>::create(std::make_unique<MySubscriber>());
   f->subscribe(ts->unique_subscriber());
   ts->assertValueCount(100);
 }
 
 TEST(FlowableRange, 1_to_100_cancel) {
-  auto f = Flowable<long>::range(1, 100);
+  auto f = Flowable::range(1, 100);
   auto ts = TestSubscriber<long>::create(40);
   f->subscribe(ts->unique_subscriber());
   ts->cancel();

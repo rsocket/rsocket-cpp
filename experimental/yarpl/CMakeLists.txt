@@ -76,11 +76,12 @@ add_executable(
         yarpl-tests
         test/yarpl-tests.cpp
         test/Observable_test.cpp
-        test/Flowable_test.cpp
+        test/FlowableCreateSubscribe_test.cpp
         test/Subscription_test.cpp
         test/Flowable_range_test.cpp
         test/FlowableSubscriptionHelper_test.cpp
         test/Flowable_lifecycle.cpp
+        test/FlowableChaining_test.cpp
 )
 
 target_link_libraries(

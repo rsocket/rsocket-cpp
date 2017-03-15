@@ -15,7 +15,7 @@ using namespace reactivestreams_yarpl;
  *
  * - Demonstrating subscribe, onSubscribe, request, onNext, cancel.
  */
-TEST(Flowable, SubscribeRequestAndCancel) {
+TEST(FlowableCreateSubscribe, SubscribeRequestAndCancel) {
   // Subscription that emits integers forever as long as requested
   class InfiniteIntegersSource : public Subscription {
     std::unique_ptr<Subscriber<int>> subscriber_;
@@ -76,10 +76,10 @@ TEST(Flowable, SubscribeRequestAndCancel) {
   };
 
   // create Flowable around InfiniteIntegersSource
-  auto a =
-      Flowable<int>::create([](std::unique_ptr<Subscriber<int>> subscriber) {
-        InfiniteIntegersSource::subscribe(std::move(subscriber));
-      });
+  auto a = unsafeCreateUniqueFlowable<int>(
+          [](std::unique_ptr<Subscriber<int>> subscriber) {
+              InfiniteIntegersSource::subscribe(std::move(subscriber));
+          });
 
   auto ts = TestSubscriber<int>::create(std::make_unique<MySubscriber>());
   a->subscribe(ts->unique_subscriber());
@@ -87,7 +87,7 @@ TEST(Flowable, SubscribeRequestAndCancel) {
   ts->assertValueCount(6);
 }
 
-TEST(Flowable, OnError) {
+TEST(FlowableCreateSubscribe, OnError) {
   // Subscription that fails
   class Source : public Subscription {
     std::unique_ptr<Subscriber<int>> subscriber_;
@@ -112,11 +112,11 @@ TEST(Flowable, OnError) {
   };
 
   // create Flowable around Source
-  auto a =
-      Flowable<int>::create([](std::unique_ptr<Subscriber<int>> subscriber) {
-        auto s = Source(std::move(subscriber));
-        s.start();
-      });
+  auto a = unsafeCreateUniqueFlowable<int>(
+          [](std::unique_ptr<Subscriber<int>> subscriber) {
+              auto s = Source(std::move(subscriber));
+              s.start();
+          });
 
   auto ts = TestSubscriber<int>::create();
   a->subscribe(ts->unique_subscriber());
@@ -126,7 +126,7 @@ TEST(Flowable, OnError) {
 /**
  * Assert that all items passed through the Flowable get destroyed
  */
-TEST(Flowable, ItemsCollectedSynchronously) {
+TEST(FlowableCreateSubscribe, ItemsCollectedSynchronously) {
   static std::atomic<int> instanceCount;
 
   struct Tuple {
@@ -176,11 +176,11 @@ TEST(Flowable, ItemsCollectedSynchronously) {
   };
 
   // create Flowable around Source
-  auto a = Flowable<Tuple>::create(
-      [](std::unique_ptr<Subscriber<Tuple>> subscriber) {
-        Source s(std::move(subscriber));
-        s.start();
-      });
+  auto a = unsafeCreateUniqueFlowable<Tuple>(
+          [](std::unique_ptr<Subscriber<Tuple>> subscriber) {
+              Source s(std::move(subscriber));
+              s.start();
+          });
 
   auto ts = TestSubscriber<Tuple>::create();
   a->subscribe(ts->unique_subscriber());
@@ -198,7 +198,9 @@ TEST(Flowable, ItemsCollectedSynchronously) {
  * Assert that memory is not retained when a single Flowable
  * is subscribed to multiple times.
  */
-TEST(Flowable, TestRetainOnStaticAsyncFlowableWithMultipleSubscribers) {
+TEST(
+    FlowableCreateSubscribe,
+    TestRetainOnStaticAsyncFlowableWithMultipleSubscribers) {
   static std::atomic<int> tupleInstanceCount;
   static std::atomic<int> subscriptionInstanceCount;
   static std::atomic<int> subscriberInstanceCount;
@@ -284,31 +286,31 @@ TEST(Flowable, TestRetainOnStaticAsyncFlowableWithMultipleSubscribers) {
   {
     static std::atomic_int counter{2};
     // create Flowable around Source
-    auto a = Flowable<Tuple>::create(
-        [](std::unique_ptr<Subscriber<Tuple>> subscriber) {
-          std::cout << "Flowable subscribed to ... starting new thread ..."
-                    << std::endl;
-          try {
-            std::thread([subscriber_ = std::move(subscriber)]() mutable {
-              try {
-                std::cout << "*** Running in another thread!!!!!" << std::endl;
-                // force artificial delay
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                // now do work
-                Source s(std::move(subscriber_));
-                s.start();
-                // assuming pipeline is synchronous, which it is in this test
-                counter--;
-                std::cout << "Done thread" << std::endl;
-              } catch (std::exception& e) {
-                std::cout << e.what() << std::endl;
-              }
-            }).detach();
+    auto a = unsafeCreateUniqueFlowable<Tuple>(
+            [](std::unique_ptr<Subscriber<Tuple>> subscriber) {
+                std::cout << "Flowable subscribed to ... starting new thread ..."
+                          << std::endl;
+                try {
+                    std::thread([subscriber_ = std::move(subscriber)]() mutable {
+                        try {
+                            std::cout << "*** Running in another thread!!!!!" << std::endl;
+                            // force artificial delay
+                            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                            // now do work
+                            Source s(std::move(subscriber_));
+                            s.start();
+                            // assuming pipeline is synchronous, which it is in this test
+                            counter--;
+                            std::cout << "Done thread" << std::endl;
+                        } catch (std::exception &e) {
+                            std::cout << e.what() << std::endl;
+                        }
+                    }).detach();
 
-          } catch (std::exception& e) {
-            std::cout << e.what() << std::endl;
-          }
-        });
+                } catch (std::exception &e) {
+                    std::cout << e.what() << std::endl;
+                }
+            });
 
     EXPECT_EQ(0, subscriptionInstanceCount);
 
