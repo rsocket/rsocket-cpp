@@ -10,55 +10,53 @@ namespace operators {
 
 using reactivestreams_yarpl::Subscriber;
 
-//template <typename T, typename Transform>
-//class Mapper : public flowable::UniqueFlowable<T>,
-//               public reactivestreams_yarpl::Subscriber<T> {
-//  using Flowable = flowable::UniqueFlowable<T>;
-//  using Subscriber = reactivestreams_yarpl::Subscriber<T>;
-//  using Subscription = reactivestreams_yarpl::Subscription;
-//
-// public:
-//  Mapper(Transform&& transform, std::shared_ptr<Flowable> upstream)
-//      : forwarder_(
-//            std::make_unique<Forwarder>(std::forward<Transform>(transform))),
-//        upstream_(upstream) {}
-//
-//  void subscribe(std::unique_ptr<Subscriber> subscriber) override {
-//    // TODO(vjn): check that subscriber_.get() == nullptr?
-//    forwarder_->set_subscriber(std::move(subscriber));
-//    upstream_->subscribe(std::move(forwarder_));
-//  }
-//
-// private:
-//  class Forwarder : public Subscriber {
-//   public:
-//    Forwarder(Transform&& transform)
-//        : transform_(std::forward<Transform>(transform)) {}
-//
-//    void set_subscriber(std::unique_ptr<Subscriber> subscriber) {
-//      subscriber_ = std::move(subscriber);
-//    }
-//
-//    void onSubscribe(Subscription* subscription) override {
-//      subscriber_->onSubscribe(subscription);
-//    }
-//
-//    virtual void onComplete() override {
-//      subscriber_->onComplete();
-//    }
-//
-//    void onError(const std::exception_ptr error) override {
-//      subscriber_->onError(error);
-//    }
-//
-//   private:
-//    Transform transform_;
-//    std::unique_ptr<Subscriber> subscriber_;
-//  };
-//
-//  std::unique_ptr<Forwarder> forwarder_;
-//  const std::shared_ptr<Flowable> upstream_;
-//};
+template <typename T, typename R, typename F>
+class TransformSubscriber : public Subscriber<T> {
+ public:
+  TransformSubscriber(
+      std::unique_ptr<reactivestreams_yarpl::Subscriber<R>> s,
+      F* f)
+      : downstream_(std::move(s)), f_(f) {}
+
+  void onSubscribe(reactivestreams_yarpl::Subscription* upstreamSubscription) {
+    // just pass it through since map does nothing to the subscription
+    downstream_->onSubscribe(upstreamSubscription);
+  }
+
+  void onNext(const T& t) {
+    downstream_->onNext((*f_)(t));
+  }
+
+  void onNext(T&& t) {
+    downstream_->onNext((*f_)(std::move(t)));
+  }
+
+  void onComplete() {
+    downstream_->onComplete();
+  }
+
+  void onError(const std::exception_ptr error) {
+    downstream_->onError(error);
+  }
+
+ private:
+  std::unique_ptr<reactivestreams_yarpl::Subscriber<R>> downstream_;
+  F* f_;
+};
+
+template <typename T, typename R, typename F>
+class FlowableMapOperator {
+ public:
+  FlowableMapOperator(F&& f) : transform_(std::move(f)) {}
+  std::unique_ptr<reactivestreams_yarpl::Subscriber<T>> operator()(
+      std::unique_ptr<reactivestreams_yarpl::Subscriber<R>> s) {
+    return std::make_unique<TransformSubscriber<T, R, F>>(
+        std::move(s), &transform_);
+  }
+
+ private:
+  F transform_;
+};
 
 } // operators
 } // yarpl

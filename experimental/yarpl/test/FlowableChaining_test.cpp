@@ -61,10 +61,35 @@ TEST(FlowableChaining, Lift) {
 }
 
 TEST(FlowableChaining, Map) {
-  //  auto ts = TestSubscriber<long>::create();
-  //  Flowable<long>::range(0, 20)
-  //      ->map([](auto v) { return "hello " + std::to_string(v); })
-  //      ->subscribe(ts->unique_subscriber());
-  //  ts->awaitTerminalEvent();
-  //  ts->assertValueCount(20);
+  class MySubscriber : public Subscriber<std::string> {
+   public:
+    void onSubscribe(Subscription* subscription) {
+      subscription->request(100);
+    }
+
+    void onNext(const std::string& t) {
+      std::cout << "onNext& " << t << std::endl;
+    }
+
+    void onNext(std::string&& t) {
+      std::cout << "onNext&& " << t << std::endl;
+    }
+
+    void onComplete() {
+      std::cout << "onComplete " << std::endl;
+    }
+
+    void onError(const std::exception_ptr error) {
+      std::cout << "onError " << std::endl;
+    }
+  };
+
+  auto ts =
+      TestSubscriber<std::string>::create(std::make_unique<MySubscriber>());
+  Flowable::range(0, 20)
+      ->map<std::string>(
+          [](auto v) { return "hello via map " + std::to_string(v); })
+      ->subscribe(ts->unique_subscriber());
+  ts->awaitTerminalEvent();
+  ts->assertValueCount(20);
 }

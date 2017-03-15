@@ -11,6 +11,8 @@
 #include "reactivestreams/ReactiveStreams.h"
 #include "yarpl/utils/type_traits.h"
 
+#include "yarpl/flowable/operators/Flowable_Map.h"
+
 namespace yarpl {
 namespace flowable {
 
@@ -45,13 +47,15 @@ class UniqueFlowable : public reactivestreams_yarpl::Publisher<T> {
         std::move(onSubscribe));
   }
 
-  //  template <
-  //      typename F,
-  //      typename = typename std::enable_if<
-  //          std::is_callable<F(T), typename
-  //          std::result_of<F(T)>::type>::value>::
-  //          type>
-  //  auto map(F&& function);
+  template <
+      typename R,
+      typename F,
+      typename = typename std::enable_if<
+          std::is_callable<F(T), typename std::result_of<F(T)>::type>::value>::
+          type>
+  auto map(F&& function) {
+    return lift<R>(yarpl::operators::FlowableMapOperator<T, R, F>(std::forward<F>(function)));
+  };
 
  protected:
   UniqueFlowable() = default;
@@ -103,21 +107,6 @@ class Flowable {
     });
   }
 };
-
-} // flowable
-} // yarpl
-
-#include "yarpl/flowable/operators/Flowable_Map.h"
-
-namespace yarpl {
-namespace flowable {
-
-// template <typename T>
-// template <typename F, typename Default>
-// auto UniqueFlowable<T>::map(F&& function) {
-//  return std::make_shared<operators::Mapper<T, F>>(
-//      std::forward<F>(function), this->shared_from_this());
-//}
 
 } // flowable
 } // yarpl
