@@ -5,10 +5,10 @@
 #include <memory>
 #include <type_traits>
 #include <utility>
-#include "experimental/yarpl/src/yarpl/flowable/sources/Flowable_RangeSubscription.h"
+#include "yarpl/flowable/sources/Flowable_RangeSubscription.h"
 
 #include "reactivestreams/ReactiveStreams.h"
-#include "type_traits.h"
+#include "yarpl/utils/type_traits.h"
 
 namespace yarpl {
 namespace flowable {
@@ -48,13 +48,12 @@ class Flowable : public reactivestreams_yarpl::Publisher<T>,
 
  protected:
   Flowable() = default;
-
- private:
   Flowable(Flowable&&) = delete;
   Flowable(const Flowable&) = delete;
   Flowable& operator=(Flowable&&) = delete;
   Flowable& operator=(const Flowable&) = delete;
 
+ private:
   template <typename Function>
   class FlowableOnSubscribeFunc : public Flowable {
    public:
@@ -73,7 +72,7 @@ class Flowable : public reactivestreams_yarpl::Publisher<T>,
 } // flowable
 } // yarpl
 
-#include "map.h"
+#include "yarpl/flowable/operators/Flowable_Map.h"
 
 namespace yarpl {
 namespace flowable {

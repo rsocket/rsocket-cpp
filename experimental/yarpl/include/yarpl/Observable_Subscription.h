@@ -5,7 +5,7 @@
 #include <atomic>
 #include <functional>
 #include <memory>
-#include "type_traits.h"
+#include "yarpl/utils/type_traits.h"
 
 namespace yarpl {
 namespace observable {

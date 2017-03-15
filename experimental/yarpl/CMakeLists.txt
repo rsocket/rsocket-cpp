@@ -23,18 +23,27 @@ include_directories(${CMAKE_SOURCE_DIR})
 # library source
 add_library(
         yarpl
+        # public API
+        include/yarpl/Scheduler.h
+        include/yarpl/Disposable.h
+        # Observable public API
         include/yarpl/Observable.h
         include/yarpl/Observable_Observer.h
         include/yarpl/Observable_Subscription.h
         src/yarpl/observable/Observable_Subscription.cpp
+        # Flowable public API
         include/yarpl/Flowable.h
-        include/yarpl/map.h
         include/yarpl/Flowable_TestSubscriber.h
-        include/yarpl/type_traits.h
+        # flowable sources
         src/yarpl/flowable/sources/Flowable_RangeSubscription.h
         src/yarpl/flowable/sources/Flowable_RangeSubscription.cpp
+        # flowable operators
+        src/yarpl/flowable/operators/Flowable_Map.h
+        # flowable utils
         src/yarpl/flowable/utils/SubscriptionHelper.h
         src/yarpl/flowable/utils/SubscriptionHelper.cpp
+        # utils
+        src/yarpl/utils/type_traits.h
         # move this out at some point
         include/reactivestreams/ReactiveStreams.h
 )
