@@ -13,6 +13,11 @@ using reactivestreams_yarpl::Subscriber;
 template <typename T>
 class TakeSubscriber : public Subscriber<T> {
  public:
+  TakeSubscriber(TakeSubscriber&&) = default; // only allow std::move
+  TakeSubscriber(const TakeSubscriber&) = delete;
+  TakeSubscriber& operator=(TakeSubscriber&&) = default; // only allow std::move
+  TakeSubscriber& operator=(const TakeSubscriber&) = delete;
+
   TakeSubscriber(
       std::unique_ptr<reactivestreams_yarpl::Subscriber<T>> s,
       int64_t toTake)

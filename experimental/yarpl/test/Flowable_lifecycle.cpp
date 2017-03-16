@@ -19,6 +19,12 @@ using namespace reactivestreams_yarpl;
 void runHandlerFlowable(std::unique_ptr<Subscriber<long>> subscriber) {
   class Handler {
    public:
+    Handler() = default;
+    Handler(Handler&&) = default; // only allow std::move
+    Handler(const Handler&) = delete;
+    Handler& operator=(Handler&&) = default; // only allow std::move
+    Handler& operator=(const Handler&) = delete;
+
     void operator()(std::unique_ptr<Subscriber<long>> s) {
       std::thread([s = std::move(s)]() mutable {
         std::cout << "in thread" << std::endl;

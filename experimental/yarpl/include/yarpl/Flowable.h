@@ -24,8 +24,7 @@ class UniqueFlowable : public reactivestreams_yarpl::Publisher<T> {
   using Subscription = reactivestreams_yarpl::Subscription;
 
  public:
-  UniqueFlowable(Function&& function)
-      : function_(Function(std::move(function))) {}
+  UniqueFlowable(Function&& function) : function_(std::move(function)) {}
 
   void subscribe(std::unique_ptr<Subscriber> subscriber) override {
     (function_)(std::move(subscriber));

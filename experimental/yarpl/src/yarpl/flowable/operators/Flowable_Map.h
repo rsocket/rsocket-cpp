@@ -13,6 +13,12 @@ using reactivestreams_yarpl::Subscriber;
 template <typename T, typename R, typename F>
 class TransformSubscriber : public Subscriber<T> {
  public:
+  TransformSubscriber(TransformSubscriber&&) = default; // only allow std::move
+  TransformSubscriber(const TransformSubscriber&) = delete;
+  TransformSubscriber& operator=(TransformSubscriber&&) =
+      default; // only allow std::move
+  TransformSubscriber& operator=(const TransformSubscriber&) = delete;
+
   TransformSubscriber(
       std::unique_ptr<reactivestreams_yarpl::Subscriber<R>> s,
       F* f)
