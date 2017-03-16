@@ -5,6 +5,7 @@
 #include <thread>
 #include "reactivestreams/ReactiveStreams.h"
 #include "yarpl/Flowable.h"
+#include "yarpl/Flowable_Subscriber.h"
 #include "yarpl/Flowable_TestSubscriber.h"
 
 using namespace yarpl::flowable;
@@ -91,4 +92,27 @@ TEST(FlowableChaining, Map) {
       ->subscribe(ts->unique_subscriber());
   ts->awaitTerminalEvent();
   ts->assertValueCount(20);
+}
+
+TEST(FlowableChaining, rangeMapTake) {
+    auto a = Flowable::range(1, 100);
+    auto b = a->map([](auto i) { return "hello->" + std::to_string(i); });
+    auto c = b->take(10);
+
+    c->subscribe(createSubscriber<std::string>(
+            [](auto t) { std::cout << "Value received: " << t << std::endl; }));
+}
+
+TEST(FlowableChaining, rangeMapTakeBranched) {
+    auto a = Flowable::range(1, 100);
+    auto b = a->take(10);
+    auto c = b->map([](auto i) { return "hello->" + std::to_string(i); });
+
+    c->subscribe(createSubscriber<std::string>(
+            [](auto t) { std::cout << "Value received: " << t << std::endl; }));
+
+    // this should not work, but it does
+    auto c2 = b->map([](auto i) { return "should break->" + std::to_string(i); });
+    c2->subscribe(createSubscriber<std::string>(
+            [](auto t) { std::cout << "Value received2: " << t << std::endl; }));
 }
