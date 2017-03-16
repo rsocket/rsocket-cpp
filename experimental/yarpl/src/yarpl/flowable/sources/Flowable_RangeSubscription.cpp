@@ -54,11 +54,8 @@ int64_t RangeSubscription::tryEmit() {
   if (emitting_.fetch_add(1) == 0) {
     // this thread won the 0->1 ticket so will execute
     do {
-      // get current r so we don't access the atomic read on every iteration
-      // of the for-loop below
-      r = requested_.load();
       // this thread will emitting until emitting_ == 0 again
-      for (;
+      for (r = requested_.load();
            // below the max (start+count)
            current_ <= max_ &&
            // we have credits for sending

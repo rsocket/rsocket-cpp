@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include <vector>
 #include <sstream>
+#include <vector>
 #include "reactivestreams/ReactiveStreams.h"
 
 namespace yarpl {
@@ -65,8 +65,8 @@ class TestSubscriber : public reactivestreams_yarpl::Subscriber<T>,
    */
   static std::shared_ptr<TestSubscriber<T>> create(std::unique_ptr<Subscriber>);
 
-  TestSubscriber(std::unique_ptr<Subscriber> delegate);
-  TestSubscriber(long initialRequestN);
+  explicit TestSubscriber(std::unique_ptr<Subscriber> delegate);
+  explicit TestSubscriber(long initialRequestN);
 
   void onSubscribe(Subscription* s) override;
   void onNext(const T& t) override;

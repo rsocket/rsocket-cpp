@@ -25,7 +25,7 @@ class UniqueFlowable : public reactivestreams_yarpl::Publisher<T> {
 
  public:
   UniqueFlowable(Function&& function)
-      : function_(Function(std::forward<Function>(function))) {}
+      : function_(Function(std::move(function))) {}
 
   void subscribe(std::unique_ptr<Subscriber> subscriber) override {
     (function_)(std::move(subscriber));
@@ -108,9 +108,9 @@ class Flowable {
 
   static auto range(long start, long count) {
     return unsafeCreateUniqueFlowable<long>([start, count](auto subscriber) {
-      auto s_ = new yarpl::flowable::sources::RangeSubscription(
+      auto s = new yarpl::flowable::sources::RangeSubscription(
           start, count, std::move(subscriber));
-      s_->start();
+      s->start();
     });
   }
 

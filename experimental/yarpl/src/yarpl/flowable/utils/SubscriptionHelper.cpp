@@ -24,7 +24,7 @@ int64_t SubscriptionHelper::addCredits(
       // do nothing, return existing unmodified value
       return r;
     }
-    long u = r + n;
+    int64_t u = r + n;
     if (u < 0) {
       // overflow
       current->store(INT64_MAX);
@@ -62,9 +62,10 @@ int64_t SubscriptionHelper::consumeCredits(
       // do nothing, return existing unmodified value
       return r;
     }
-    long u = r - n;
+    int64_t u = r - n;
     if (u < 0) {
       // bad usage somewhere ... be resilient, just set to 0
+
       u = 0;
     }
     // set the new number
