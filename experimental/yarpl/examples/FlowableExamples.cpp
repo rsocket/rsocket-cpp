@@ -4,6 +4,7 @@
 #include <thread>
 #include "reactivestreams/ReactiveStreams.h"
 #include "yarpl/Flowable.h"
+#include "yarpl/Flowable_Subscriber.h"
 
 using namespace reactivestreams_yarpl;
 using namespace yarpl::flowable;
@@ -12,10 +13,11 @@ void FlowableExamples::run() {
   std::cout << "---------------FlowableExamples::run-----------------"
             << std::endl;
 
-  //  Flowable::range(1, 100)
-  //      ->map([](auto i) { return "hello->" + std::to_string(i); })
-  //      ->take(10)
-  //      ->subscribe();
+  Flowable::range(1, 100)
+      ->map([](auto i) { return "hello->" + std::to_string(i); })
+      ->take(10)
+      ->subscribe(createSubscriber<std::string>(
+          [](auto t) { std::cout << "Value received: " << t << std::endl; }));
 
   /* ****************************************************** */
 

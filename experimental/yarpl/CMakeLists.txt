@@ -33,6 +33,7 @@ add_library(
         src/yarpl/observable/Observable_Subscription.cpp
         # Flowable public API
         include/yarpl/Flowable.h
+        include/yarpl/Flowable_Subscriber.h
         include/yarpl/Flowable_TestSubscriber.h
         # flowable sources
         src/yarpl/flowable/sources/Flowable_RangeSubscription.h
