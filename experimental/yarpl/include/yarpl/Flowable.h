@@ -30,6 +30,14 @@ class UniqueFlowable : public reactivestreams_yarpl::Publisher<T> {
     (function_)(std::move(subscriber));
   }
 
+  // TODO should we use "reference qualifiers" for a "lift(...) &&" version
+  // that works differently than the normal "lift"?
+  // for example, move when Flowable is an rvalue, otherwise copy or have a
+  // shared_ptr?
+  // It's unclear how we'd convert to a shared_ptr in this case though,
+  // and copying seems like it could be a bad thing to end up doing
+  // on all functions.
+
   template <
       typename R,
       typename F,
