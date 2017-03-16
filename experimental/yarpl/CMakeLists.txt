@@ -39,6 +39,7 @@ add_library(
         src/yarpl/flowable/sources/Flowable_RangeSubscription.cpp
         # flowable operators
         src/yarpl/flowable/operators/Flowable_Map.h
+        src/yarpl/flowable/operators/Flowable_Take.h
         # flowable utils
         src/yarpl/flowable/utils/SubscriptionHelper.h
         src/yarpl/flowable/utils/SubscriptionHelper.cpp
@@ -82,7 +83,7 @@ add_executable(
         test/FlowableSubscriptionHelper_test.cpp
         test/Flowable_lifecycle.cpp
         test/FlowableChaining_test.cpp
-)
+        test/flowable_operators/Flowable_Map_test.cpp test/flowable_operators/Flowable_Take_test.cpp)
 
 target_link_libraries(
         yarpl-tests

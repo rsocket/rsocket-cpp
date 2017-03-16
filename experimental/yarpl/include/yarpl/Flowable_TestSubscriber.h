@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <vector>
+#include <sstream>
 #include "reactivestreams/ReactiveStreams.h"
 
 namespace yarpl {
@@ -103,6 +105,16 @@ class TestSubscriber : public reactivestreams_yarpl::Subscriber<T>,
    * @return
    */
   int64_t getValueCount();
+
+  /**
+   * Get a reference to a stored value at a given index position.
+   *
+   * The values are stored in the order received from onNext.
+   *
+   * @param index
+   * @return
+   */
+  T& getValueAt(size_t index);
 
   /**
    * If the onError exception_ptr points to an error containing
@@ -272,6 +284,11 @@ void TestSubscriber<T>::assertValueCount(size_t count) {
 template <typename T>
 int64_t TestSubscriber<T>::getValueCount() {
   return values_.size();
+}
+
+template <typename T>
+T& TestSubscriber<T>::getValueAt(size_t index) {
+  return values_[index];
 }
 
 template <typename T>

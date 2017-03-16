@@ -12,6 +12,7 @@
 #include "yarpl/utils/type_traits.h"
 
 #include "yarpl/flowable/operators/Flowable_Map.h"
+#include "yarpl/flowable/operators/Flowable_Take.h"
 
 namespace yarpl {
 namespace flowable {
@@ -53,7 +54,14 @@ class UniqueFlowable : public reactivestreams_yarpl::Publisher<T> {
           std::is_callable<F(T), typename std::result_of<F(T)>::type>::value>::
           type>
   auto map(F&& function) {
-    return lift<typename std::result_of<F(T)>::type>(yarpl::operators::FlowableMapOperator<T, typename std::result_of<F(T)>::type, F>(std::forward<F>(function)));
+    return lift<typename std::result_of<F(T)>::type>(
+        yarpl::operators::
+            FlowableMapOperator<T, typename std::result_of<F(T)>::type, F>(
+                std::forward<F>(function)));
+  };
+
+  auto take(int64_t toTake) {
+    return lift<T>(yarpl::operators::FlowableTakeOperator<T>(toTake));
   };
 
  protected:
@@ -103,6 +111,14 @@ class Flowable {
       auto s_ = new yarpl::flowable::sources::RangeSubscription(
           start, count, std::move(subscriber));
       s_->start();
+    });
+  }
+
+  template <typename T>
+  static auto fromPublisher(
+      std::unique_ptr<reactivestreams_yarpl::Publisher<T>> p) {
+    return unsafeCreateUniqueFlowable<T>([p = std::move(p)](auto s) {
+      p->subscribe(std::move(s));
     });
   }
 };

@@ -12,8 +12,13 @@ int64_t SubscriptionHelper::addCredits(
     int64_t n) {
   for (;;) {
     int64_t r = current->load();
+    // if already "infinite"
     if (r == INT64_MAX) {
       return INT64_MAX;
+    }
+    // if already "cancelled"
+    if (r == INT64_MIN) {
+      return INT64_MIN;
     }
     if (n <= 0) {
       // do nothing, return existing unmodified value

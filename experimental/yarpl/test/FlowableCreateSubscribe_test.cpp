@@ -77,9 +77,9 @@ TEST(FlowableCreateSubscribe, SubscribeRequestAndCancel) {
 
   // create Flowable around InfiniteIntegersSource
   auto a = unsafeCreateUniqueFlowable<int>(
-          [](std::unique_ptr<Subscriber<int>> subscriber) {
-              InfiniteIntegersSource::subscribe(std::move(subscriber));
-          });
+      [](std::unique_ptr<Subscriber<int>> subscriber) {
+        InfiniteIntegersSource::subscribe(std::move(subscriber));
+      });
 
   auto ts = TestSubscriber<int>::create(std::make_unique<MySubscriber>());
   a->subscribe(ts->unique_subscriber());
@@ -113,10 +113,10 @@ TEST(FlowableCreateSubscribe, OnError) {
 
   // create Flowable around Source
   auto a = unsafeCreateUniqueFlowable<int>(
-          [](std::unique_ptr<Subscriber<int>> subscriber) {
-              auto s = Source(std::move(subscriber));
-              s.start();
-          });
+      [](std::unique_ptr<Subscriber<int>> subscriber) {
+        auto s = Source(std::move(subscriber));
+        s.start();
+      });
 
   auto ts = TestSubscriber<int>::create();
   a->subscribe(ts->unique_subscriber());
@@ -177,10 +177,10 @@ TEST(FlowableCreateSubscribe, ItemsCollectedSynchronously) {
 
   // create Flowable around Source
   auto a = unsafeCreateUniqueFlowable<Tuple>(
-          [](std::unique_ptr<Subscriber<Tuple>> subscriber) {
-              Source s(std::move(subscriber));
-              s.start();
-          });
+      [](std::unique_ptr<Subscriber<Tuple>> subscriber) {
+        Source s(std::move(subscriber));
+        s.start();
+      });
 
   auto ts = TestSubscriber<Tuple>::create();
   a->subscribe(ts->unique_subscriber());
@@ -287,30 +287,30 @@ TEST(
     static std::atomic_int counter{2};
     // create Flowable around Source
     auto a = unsafeCreateUniqueFlowable<Tuple>(
-            [](std::unique_ptr<Subscriber<Tuple>> subscriber) {
-                std::cout << "Flowable subscribed to ... starting new thread ..."
-                          << std::endl;
-                try {
-                    std::thread([subscriber_ = std::move(subscriber)]() mutable {
-                        try {
-                            std::cout << "*** Running in another thread!!!!!" << std::endl;
-                            // force artificial delay
-                            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                            // now do work
-                            Source s(std::move(subscriber_));
-                            s.start();
-                            // assuming pipeline is synchronous, which it is in this test
-                            counter--;
-                            std::cout << "Done thread" << std::endl;
-                        } catch (std::exception &e) {
-                            std::cout << e.what() << std::endl;
-                        }
-                    }).detach();
+        [](std::unique_ptr<Subscriber<Tuple>> subscriber) {
+          std::cout << "Flowable subscribed to ... starting new thread ..."
+                    << std::endl;
+          try {
+            std::thread([subscriber_ = std::move(subscriber)]() mutable {
+              try {
+                std::cout << "*** Running in another thread!!!!!" << std::endl;
+                // force artificial delay
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                // now do work
+                Source s(std::move(subscriber_));
+                s.start();
+                // assuming pipeline is synchronous, which it is in this test
+                counter--;
+                std::cout << "Done thread" << std::endl;
+              } catch (std::exception& e) {
+                std::cout << e.what() << std::endl;
+              }
+            }).detach();
 
-                } catch (std::exception &e) {
-                    std::cout << e.what() << std::endl;
-                }
-            });
+          } catch (std::exception& e) {
+            std::cout << e.what() << std::endl;
+          }
+        });
 
     EXPECT_EQ(0, subscriptionInstanceCount);
 
@@ -343,4 +343,35 @@ TEST(
   EXPECT_EQ(0, subscriptionInstanceCount);
   EXPECT_EQ(0, subscriberInstanceCount);
   std::cout << "-----------------------------" << std::endl;
+}
+
+std::unique_ptr<reactivestreams_yarpl::Publisher<long>> getDataAsPublisher() {
+  return Flowable::range(1, 4);
+}
+
+TEST(FlowableCreateSubscribe, TestReturnTypePublisher) {
+  auto ts = TestSubscriber<long>::create();
+  getDataAsPublisher()->subscribe(ts->unique_subscriber());
+}
+
+TEST(FlowableCreateSubscribe, TestReturnTypePublisherToFlowable) {
+  auto ts = TestSubscriber<long>::create();
+  Flowable::fromPublisher(getDataAsPublisher())
+      ->take(3)
+      ->subscribe(ts->unique_subscriber());
+  ts->awaitTerminalEvent();
+  ts->assertValueCount(3);
+}
+
+// TODO figure out how to specify an exact return type
+// std::unique_ptr<UniqueFlowable<long, ???>>
+auto getDataAsFlowable() {
+  return Flowable::range(1, 4);
+}
+
+TEST(FlowableCreateSubscribe, TestReturnTypeFlowable) {
+  auto ts = TestSubscriber<long>::create();
+  getDataAsFlowable()->take(3)->subscribe(ts->unique_subscriber());
+  ts->awaitTerminalEvent();
+  ts->assertValueCount(3);
 }

@@ -26,7 +26,7 @@ void runHandlerFlowable(std::unique_ptr<Subscriber<long>> subscriber) {
       std::cout << "after launch of thread" << std::endl;
     };
   };
-    unsafeCreateUniqueFlowable<long>(Handler())->subscribe(std::move(subscriber));
+  unsafeCreateUniqueFlowable<long>(Handler())->subscribe(std::move(subscriber));
 }
 
 TEST(FlowableLifecycle, HandlerClass) {
