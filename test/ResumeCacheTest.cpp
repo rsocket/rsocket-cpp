@@ -236,10 +236,8 @@ TEST_F(ResumeCacheTest, EvictFIFO) {
   EXPECT_TRUE(cache.isPositionAvailable(frameSize * 3));
   EXPECT_TRUE(cache.isPositionAvailable(frameSize * 4));
 
-
   // create a huge frame and try to cache it
-  auto hugeFrame =
-      folly::IOBuf::createChain(frameSize * 3, frameSize * 3);
+  auto hugeFrame = folly::IOBuf::createChain(frameSize * 3, frameSize * 3);
   for (int i = 0; i < 3; i++) {
     hugeFrame->appendChain(frame->clone());
   }

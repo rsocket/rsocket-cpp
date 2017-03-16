@@ -24,7 +24,7 @@ class StatsPrinter : public Stats {
   void frameWritten(FrameType frameType) override;
   void frameRead(FrameType frameType) override;
   void resumeBufferChanged(int framesCountDelta, int dataSizeDelta) override;
-  void streamBufferChanged(
-    int64_t framesCountDelta, int64_t dataSizeDelta) override;
+  void streamBufferChanged(int64_t framesCountDelta, int64_t dataSizeDelta)
+      override;
 };
 }

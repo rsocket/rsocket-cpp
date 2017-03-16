@@ -96,8 +96,8 @@ StandardReactiveSocket::fromServerConnection(
     bool isResumable) {
   // TODO: isResumable should come as a flag on Setup frame and it should be
   // exposed to the application code. We should then remove this parameter
-  auto socket = disconnectedServer(
-    executor, std::move(handler), std::move(stats));
+  auto socket =
+      disconnectedServer(executor, std::move(handler), std::move(stats));
   socket->serverConnect(
       std::make_shared<FrameTransport>(std::move(connection)), isResumable);
   return socket;
@@ -238,6 +238,7 @@ void StandardReactiveSocket::onConnectionFrame(
     case FrameType::PAYLOAD:
     case FrameType::ERROR:
     case FrameType::RESUME_OK:
+    case FrameType::EXT:
     default:
       auto connectionCopy = std::move(connection_);
       connectionCopy->closeWithError(Frame_ERROR::unexpectedFrame());

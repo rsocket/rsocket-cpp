@@ -2,11 +2,11 @@
 
 #pragma once
 
+#include <folly/io/IOBuf.h>
 #include <stdint.h>
 #include <deque>
 #include <memory>
 #include <unordered_map>
-#include <folly/io/IOBuf.h>
 
 #include "src/ResumeCache.h"
 #include "src/ResumeTracker.h"

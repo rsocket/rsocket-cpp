@@ -60,7 +60,6 @@ void ResumeCache::resetUpToPosition(ResumePosition position) {
 
   clearFrames(position);
 
-
   resetPosition_ = position;
   DCHECK(frames_.empty() || frames_.front().first == resetPosition_);
 }
@@ -132,7 +131,7 @@ void ResumeCache::clearFrames(ResumePosition position) {
       -static_cast<int>(pos - resetPosition_));
 
   frames_.erase(frames_.begin(), end);
-  size_ -= (pos - resetPosition_);
+  size_ -= static_cast<decltype(size_)>(pos - resetPosition_);
 }
 
 void ResumeCache::sendFramesFromPosition(

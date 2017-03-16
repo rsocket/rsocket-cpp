@@ -71,6 +71,7 @@ void ServerConnectionAcceptor::processFrame(
     case FrameType::RESERVED:
     case FrameType::PAYLOAD:
     case FrameType::RESUME_OK:
+    case FrameType::EXT:
     default: {
       transport->outputFrameOrEnqueue(
           frameSerializer_.serializeOut(Frame_ERROR::unexpectedFrame()));

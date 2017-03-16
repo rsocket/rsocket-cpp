@@ -8,9 +8,9 @@
 namespace reactivesocket {
 
 StreamState::StreamState(ConnectionAutomaton& connection)
-    : resumeTracker_(connection), resumeCache_(connection),
-      stats_(connection.stats()) {
-}
+    : resumeTracker_(connection),
+      resumeCache_(connection),
+      stats_(connection.stats()) {}
 
 StreamState::~StreamState() {
   onClearFrames();
@@ -25,7 +25,7 @@ void StreamState::enqueueOutputPendingFrame(
 }
 
 std::deque<std::unique_ptr<folly::IOBuf>>
-    StreamState::moveOutputPendingFrames() {
+StreamState::moveOutputPendingFrames() {
   onClearFrames();
   return std::move(outputFrames_);
 }
@@ -34,8 +34,7 @@ void StreamState::onClearFrames() {
   auto numFrames = outputFrames_.size();
   if (numFrames != 0) {
     stats_.streamBufferChanged(
-      -static_cast<int64_t>(numFrames),
-      -static_cast<int64_t>(dataLength_));
+        -static_cast<int64_t>(numFrames), -static_cast<int64_t>(dataLength_));
     dataLength_ = 0;
   }
 }

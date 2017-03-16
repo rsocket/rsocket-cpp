@@ -7,8 +7,8 @@ namespace reactivesocket {
 
 class NoopStats : public Stats {
  public:
-   NoopStats() = default;
-   ~NoopStats() = default;
+  NoopStats() = default;
+  ~NoopStats() = default;
 
   void socketCreated() override {}
   void socketDisconnected() override {}

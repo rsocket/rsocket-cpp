@@ -40,6 +40,7 @@ bool ResumeTracker::shouldTrackFrame(
     case FrameType::METADATA_PUSH:
     case FrameType::RESUME:
     case FrameType::RESUME_OK:
+    case FrameType::EXT:
     default:
       return false;
   }

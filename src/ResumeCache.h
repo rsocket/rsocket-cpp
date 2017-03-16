@@ -17,8 +17,9 @@ class FrameTransport;
 
 class ResumeCache {
  public:
-  explicit ResumeCache(ConnectionAutomaton& connection,
-        size_t capacity = DEFAULT_CAPACITY)
+  explicit ResumeCache(
+      ConnectionAutomaton& connection,
+      size_t capacity = DEFAULT_CAPACITY)
       : connection_(connection), capacity_(capacity) {}
   ~ResumeCache();
 

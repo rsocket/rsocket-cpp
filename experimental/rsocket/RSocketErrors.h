@@ -12,20 +12,14 @@ namespace rsocket {
  */
 class RSocketError : public std::runtime_error {
  public:
-  explicit RSocketError(std::string s) : std::runtime_error(std::move(s)) {}
-  explicit RSocketError(const char* s) : std::runtime_error(s) {}
+  using std::runtime_error::runtime_error;
+
   /**
    * Get the error code for inclusion in an RSocket ERROR frame as per
    * https://github.com/ReactiveSocket/reactivesocket/blob/master/Protocol.md#error-codes
    * @return
    */
   virtual int getErrorCode() = 0;
-  /**
-   * Get the string name of the error as per
-   * https://github.com/ReactiveSocket/reactivesocket/blob/master/Protocol.md#error-codes
-   * @return
-   */
-  virtual const std::string getErrorString() = 0;
 };
 
 /**
@@ -33,15 +27,14 @@ class RSocketError : public std::runtime_error {
  */
 class InvalidSetupError : public RSocketError {
  public:
-  explicit InvalidSetupError(const std::string& s) : RSocketError(s) {}
-  explicit InvalidSetupError(const char* s) : RSocketError(s) {}
+  using RSocketError::RSocketError;
 
   int getErrorCode() override {
     return 0x00000001;
   }
 
-  const std::string getErrorString() override {
-    return std::string("INVALID_SETUP");
+  const char* what() const noexcept override {
+    return "INVALID_SETUP";
   }
 };
 
@@ -50,15 +43,14 @@ class InvalidSetupError : public RSocketError {
  */
 class UnsupportedSetupError : public RSocketError {
  public:
-  explicit UnsupportedSetupError(const std::string& s) : RSocketError(s) {}
-  explicit UnsupportedSetupError(const char* s) : RSocketError(s) {}
+  using RSocketError::RSocketError;
 
   int getErrorCode() override {
     return 0x00000002;
   }
 
-  const std::string getErrorString() override {
-    return std::string("UNSUPPORTED_SETUP");
+  const char* what() const noexcept override {
+    return "UNSUPPORTED_SETUP";
   }
 };
 
@@ -67,15 +59,14 @@ class UnsupportedSetupError : public RSocketError {
  */
 class RejectedSetupError : public RSocketError {
  public:
-  explicit RejectedSetupError(const std::string& s) : RSocketError(s) {}
-  explicit RejectedSetupError(const char* s) : RSocketError(s) {}
+  using RSocketError::RSocketError;
 
   int getErrorCode() override {
     return 0x00000003;
   }
 
-  const std::string getErrorString() override {
-    return std::string("REJECTED_SETUP");
+  const char* what() const noexcept override {
+    return "REJECTED_SETUP";
   }
 };
 
@@ -84,15 +75,14 @@ class RejectedSetupError : public RSocketError {
  */
 class RejectedResumeError : public RSocketError {
  public:
-  explicit RejectedResumeError(const std::string& s) : RSocketError(s) {}
-  explicit RejectedResumeError(const char* s) : RSocketError(s) {}
+  using RSocketError::RSocketError;
 
   int getErrorCode() override {
     return 0x00000004;
   }
 
-  const std::string getErrorString() override {
-    return std::string("REJECTED_RESUME");
+  const char* what() const noexcept override {
+    return "REJECTED_RESUME";
   }
 };
 
@@ -101,15 +91,14 @@ class RejectedResumeError : public RSocketError {
  */
 class ConnectionError : public RSocketError {
  public:
-  explicit ConnectionError(const std::string& s) : RSocketError(s) {}
-  explicit ConnectionError(const char* s) : RSocketError(s) {}
+  using RSocketError::RSocketError;
 
   int getErrorCode() override {
     return 0x00000101;
   }
 
-  const std::string getErrorString() override {
-    return std::string("CONNECTION_ERROR");
+  const char* what() const noexcept override {
+    return "CONNECTION_ERROR";
   }
 };
 
@@ -118,15 +107,14 @@ class ConnectionError : public RSocketError {
 */
 class ConnectionCloseError : public RSocketError {
  public:
-  explicit ConnectionCloseError(const std::string& s) : RSocketError(s) {}
-  explicit ConnectionCloseError(const char* s) : RSocketError(s) {}
+  using RSocketError::RSocketError;
 
   int getErrorCode() override {
     return 0x00000102;
   }
 
-  const std::string getErrorString() override {
-    return std::string("CONNECTION_CLOSE");
+  const char* what() const noexcept override {
+    return "CONNECTION_CLOSE";
   }
 };
 }

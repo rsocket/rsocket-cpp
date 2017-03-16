@@ -501,9 +501,7 @@ std::unique_ptr<folly::IOBuf> FrameSerializerV0::serializeOut(
 
 std::unique_ptr<folly::IOBuf> FrameSerializerV0::serializeOut(
     Frame_RESUME&& frame) {
-  auto queue = createBufferQueue(
-      kFrameHeaderSize + 16 +
-      sizeof(int64_t));
+  auto queue = createBufferQueue(kFrameHeaderSize + 16 + sizeof(int64_t));
   folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
   serializeHeaderInto(appender, frame.header_, /*extraFlags=*/0);
   CHECK(frame.token_.data().size() <= 16);

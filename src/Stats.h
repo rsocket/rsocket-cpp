@@ -33,6 +33,7 @@ class Stats {
   virtual void frameRead(FrameType frameType) = 0;
   virtual void resumeBufferChanged(int framesCountDelta, int dataSizeDelta) = 0;
   virtual void streamBufferChanged(
-    int64_t framesCountDelta, int64_t dataSizeDelta) = 0;
+      int64_t framesCountDelta,
+      int64_t dataSizeDelta) = 0;
 };
 }

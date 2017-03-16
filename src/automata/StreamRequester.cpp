@@ -4,9 +4,7 @@
 
 namespace reactivesocket {
 
-void StreamRequester::sendRequestFrame(
-    size_t initialN,
-    Payload&& request) {
+void StreamRequester::sendRequestFrame(size_t initialN, Payload&& request) {
   Frame_REQUEST_STREAM frame(
       streamId_,
       FrameFlags::EMPTY,

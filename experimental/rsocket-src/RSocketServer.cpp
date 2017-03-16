@@ -15,6 +15,7 @@ class RSocketConnection : public reactivesocket::ServerConnectionAcceptor {
  public:
   explicit RSocketConnection(OnSetupNewSocket onSetup)
       : onSetup_(std::move(onSetup)) {}
+
   ~RSocketConnection() {
     LOG(INFO) << "RSocketServer => destroy the connection acceptor";
   }
@@ -22,14 +23,15 @@ class RSocketConnection : public reactivesocket::ServerConnectionAcceptor {
   void setupNewSocket(
       std::shared_ptr<FrameTransport> frameTransport,
       ConnectionSetupPayload setupPayload,
-      Executor& executor) {
+      Executor& executor) override {
     onSetup_(std::move(frameTransport), std::move(setupPayload), executor);
   }
   void resumeSocket(
       std::shared_ptr<FrameTransport> frameTransport,
       ResumeIdentificationToken,
       ResumePosition,
-      Executor& executor) {
+      ResumePosition,
+      Executor& executor) override {
     //      onSetup_(std::move(frameTransport), std::move(setupPayload));
   }
 
@@ -84,8 +86,8 @@ void RSocketServer::start(OnAccept onAccept) {
   } else {
     throw std::runtime_error("RSocketServer.start already called.");
   }
-  lazyAcceptor_->start([ this, onAccept = std::move(onAccept) ](
-      std::unique_ptr<DuplexConnection> duplexConnection, Executor & executor) {
+  lazyAcceptor_->start([this](
+      std::unique_ptr<DuplexConnection> duplexConnection, Executor& executor) {
     LOG(INFO) << "RSocketServer => received new connection";
 
     LOG(INFO) << "RSocketServer => going to accept duplex connection";

@@ -35,12 +35,12 @@ static FrameType deserializeFrameType(uint16_t frameType) {
 static void serializeHeaderInto(
     folly::io::QueueAppender& appender,
     const FrameHeader& header) {
-  appender.writeBE<int32_t>(header.streamId_);
+  appender.writeBE<int32_t>(static_cast<int32_t>(header.streamId_));
 
   auto type = static_cast<uint8_t>(header.type_); // 6 bit
   auto flags = static_cast<uint16_t>(header.flags_); // 10 bit
-  appender.writeBE<uint8_t>((type << 2) | (flags >> 8));
-  appender.writeBE<uint8_t>(flags); // lower 8 bits
+  appender.writeBE<uint8_t>(static_cast<uint8_t>((type << 2) | (flags >> 8)));
+  appender.writeBE<uint8_t>(static_cast<uint8_t>(flags)); // lower 8 bits
 }
 
 static void deserializeHeaderFrom(folly::io::Cursor& cur, FrameHeader& header) {
@@ -48,7 +48,7 @@ static void deserializeHeaderFrom(folly::io::Cursor& cur, FrameHeader& header) {
   if (streamId < 0) {
     throw std::runtime_error("invalid stream id");
   }
-  header.streamId_ = streamId;
+  header.streamId_ = static_cast<StreamId>(streamId);
   uint16_t type = cur.readBE<uint8_t>(); // |Frame Type |I|M|
   header.type_ = deserializeFrameType(type >> 2);
   header.flags_ =
@@ -68,7 +68,7 @@ static void serializeMetadataInto(
   }
 
   // metadata length field not included in the medatadata length
-  uint32_t metadataLength = metadata->length();
+  uint32_t metadataLength = static_cast<uint32_t>(metadata->length());
   appender.write(static_cast<uint8_t>(metadataLength >> 16)); // first byte
   appender.write(
       static_cast<uint8_t>((metadataLength >> 8) & 0xFF)); // second byte
@@ -85,8 +85,8 @@ std::unique_ptr<folly::IOBuf> FrameSerializerV1_0::deserializeMetadataFrom(
   }
 
   uint32_t metadataLength = 0;
-  metadataLength |= cur.read<uint8_t>() << 16;
-  metadataLength |= cur.read<uint8_t>() << 8;
+  metadataLength |= static_cast<uint32_t>(cur.read<uint8_t>() << 16);
+  metadataLength |= static_cast<uint32_t>(cur.read<uint8_t>() << 8);
   metadataLength |= cur.read<uint8_t>();
 
   if (metadataLength > kMaxMetadataLength) {
@@ -300,7 +300,8 @@ std::unique_ptr<folly::IOBuf> FrameSerializerV1_0::serializeOut(
   appender.writeBE(static_cast<int32_t>(frame.maxLifetime_));
 
   if (!!(frame.header_.flags_ & FrameFlags::RESUME_ENABLE)) {
-    appender.writeBE<uint16_t>(frame.token_.data().size());
+    appender.writeBE<uint16_t>(
+        static_cast<uint16_t>(frame.token_.data().size()));
     appender.push(frame.token_.data().data(), frame.token_.data().size());
   }
 
@@ -347,11 +348,11 @@ std::unique_ptr<folly::IOBuf> FrameSerializerV1_0::serializeOut(
   appender.writeBE(static_cast<uint16_t>(frame.versionMajor_));
   appender.writeBE(static_cast<uint16_t>(frame.versionMinor_));
 
-  appender.writeBE<uint16_t>(frame.token_.data().size());
+  appender.writeBE<uint16_t>(static_cast<uint16_t>(frame.token_.data().size()));
   appender.push(frame.token_.data().data(), frame.token_.data().size());
 
-  appender.writeBE<int32_t>(frame.lastReceivedServerPosition_);
-  appender.writeBE<int32_t>(frame.clientPosition_);
+  appender.writeBE<int64_t>(frame.lastReceivedServerPosition_);
+  appender.writeBE<int64_t>(frame.clientPosition_);
   return queue.move();
 }
 

@@ -40,6 +40,7 @@ void StreamAutomatonBase::onNextFrame(std::unique_ptr<folly::IOBuf> payload) {
     case FrameType::METADATA_PUSH:
     case FrameType::RESUME:
     case FrameType::RESUME_OK:
+    case FrameType::EXT:
     default:
       onUnknownFrame();
       return;

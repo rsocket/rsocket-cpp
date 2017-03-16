@@ -798,7 +798,8 @@ TEST(ReactiveSocketTest, SetupWithKeepaliveAndStats) {
   clientConn->connectTo(*serverConn);
 
   StrictMock<MockSubscriber<Payload>> clientInput;
-  auto clientStats = std::make_shared<NiceMock<MockStats>>();;
+  auto clientStats = std::make_shared<NiceMock<MockStats>>();
+  ;
   std::unique_ptr<MockKeepaliveTimer> clientKeepalive =
       std::make_unique<MockKeepaliveTimer>();
 

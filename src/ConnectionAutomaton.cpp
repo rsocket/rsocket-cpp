@@ -319,7 +319,7 @@ void ConnectionAutomaton::resumeStreams() {
 
 void ConnectionAutomaton::processFrame(std::unique_ptr<folly::IOBuf> frame) {
   auto thisPtr = this->shared_from_this();
-  runInExecutor([thisPtr, frame = std::move(frame)]() mutable {
+  runInExecutor([ thisPtr, frame = std::move(frame) ]() mutable {
     thisPtr->processFrameImpl(std::move(frame));
   });
 }
@@ -520,6 +520,7 @@ void ConnectionAutomaton::onConnectionFrame(
     case FrameType::REQUEST_N:
     case FrameType::CANCEL:
     case FrameType::PAYLOAD:
+    case FrameType::EXT:
     default:
       closeWithError(Frame_ERROR::unexpectedFrame());
       return;
@@ -596,6 +597,7 @@ void ConnectionAutomaton::handleUnknownStream(
     case FrameType::PAYLOAD:
     case FrameType::ERROR:
     case FrameType::RESUME_OK:
+    case FrameType::EXT:
     default:
       closeWithError(Frame_ERROR::unexpectedFrame());
   }
@@ -611,9 +613,7 @@ void ConnectionAutomaton::sendKeepalive(
     std::unique_ptr<folly::IOBuf> data) {
   debugCheckCorrectExecutor();
   Frame_KEEPALIVE pingFrame(
-      flags,
-      streamState_->resumeTracker_.impliedPosition(),
-      std::move(data));
+      flags, streamState_->resumeTracker_.impliedPosition(), std::move(data));
   outputFrameOrEnqueue(
       frameSerializer().serializeOut(std::move(pingFrame), remoteResumeable_));
 }

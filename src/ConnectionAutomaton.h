@@ -54,7 +54,7 @@ class FrameSink {
   virtual void disconnectOrCloseWithError(Frame_ERROR&& error) = 0;
 
   virtual void sendKeepalive(
-    std::unique_ptr<folly::IOBuf> data = folly::IOBuf::create(0)) = 0;
+      std::unique_ptr<folly::IOBuf> data = folly::IOBuf::create(0)) = 0;
 };
 
 /// Handles connection-level frames and (de)multiplexes streams.
