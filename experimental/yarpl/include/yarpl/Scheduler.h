@@ -2,15 +2,44 @@
 
 #pragma once
 
+#include <functional>
 #include <memory>
-#include "type_traits.h"
 #include "yarpl/Disposable.h"
+#include "yarpl/utils/type_traits.h"
 
 namespace yarpl {
 
+class Worker : public yarpl::Disposable {
+ public:
+  Worker(){}
+  Worker(Worker&&) = delete;
+  Worker(const Worker&) = delete;
+  Worker& operator=(Worker&&) = delete;
+  Worker& operator=(const Worker&) = delete;
+
+  //  template <
+  //      typename F,
+  //      typename = typename std::enable_if<
+  //          std::is_callable<F(), typename
+  //          std::result_of<F()>::type>::value>::
+  //          type>
+  //  virtual yarpl::Disposable schedule(F&&) = 0; // TODO can't do this, so how
+  //  do we allow different impls?
+
+  virtual std::unique_ptr<yarpl::Disposable> schedule(
+      std::function<void()>&&) = 0;
+
+  virtual void dispose() override = 0;
+
+  virtual bool isDisposed() override = 0;
+
+  // TODO add schedule methods with delays and periodical execution
+};
+
 class Scheduler {
  public:
-  ~Scheduler() = default;
+  Scheduler(){}
+  virtual ~Scheduler() = default;
   Scheduler(Scheduler&&) = delete;
   Scheduler(const Scheduler&) = delete;
   Scheduler& operator=(Scheduler&&) = delete;
@@ -28,23 +57,5 @@ class Scheduler {
    * @return a Worker representing a serial queue of actions to be executed
    */
   virtual std::unique_ptr<Worker> createWorker() = 0;
-};
-
-class Worker : public yarpl::Disposable {
- public:
-  ~Worker() = default;
-  Worker(Worker&&) = delete;
-  Worker(const Worker&) = delete;
-  Worker& operator=(Worker&&) = delete;
-  Worker& operator=(const Worker&) = delete;
-
-  template <
-      typename F,
-      typename = typename std::enable_if<
-          std::is_callable<F(T), typename std::result_of<F(T)>::type>::value>::
-          type>
-  virtual yarpl::Disposable schedule(F&&) = 0;
-
-  // TODO add schehdule methods with delays and periodical execution
 };
 }

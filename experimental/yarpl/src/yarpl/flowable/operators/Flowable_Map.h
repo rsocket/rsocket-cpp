@@ -31,10 +31,12 @@ class TransformSubscriber : public Subscriber<T> {
 
   void onNext(const T& t) {
     downstream_->onNext((*f_)(t));
+    // TODO catch error and send via onError
   }
 
   void onNext(T&& t) {
     downstream_->onNext((*f_)(std::move(t)));
+    // TODO catch error and send via onError
   }
 
   void onComplete() {

@@ -95,24 +95,115 @@ TEST(FlowableChaining, Map) {
 }
 
 TEST(FlowableChaining, rangeMapTake) {
-    auto a = Flowable::range(1, 100);
-    auto b = a->map([](auto i) { return "hello->" + std::to_string(i); });
-    auto c = b->take(10);
+  auto a = Flowable::range(1, 100);
+  auto b = a->map([](auto i) { return "hello->" + std::to_string(i); });
+  auto c = b->take(10);
 
-    c->subscribe(createSubscriber<std::string>(
-            [](auto t) { std::cout << "Value received: " << t << std::endl; }));
+  c->subscribe(createSubscriber<std::string>(
+      [](auto t) { std::cout << "Value received: " << t << std::endl; }));
 }
 
 TEST(FlowableChaining, rangeMapTakeBranched) {
-    auto a = Flowable::range(1, 100);
+  auto a = Flowable::range(1, 100);
+  auto b = a->take(10);
+  auto c = b->map([](auto i) { return "hello->" + std::to_string(i); });
+
+  c->subscribe(createSubscriber<std::string>(
+      [](auto t) { std::cout << "Value received: " << t << std::endl; }));
+
+  // this should not work, but it does
+  auto c2 = b->map([](auto i) { return "should break->" + std::to_string(i); });
+  c2->subscribe(createSubscriber<std::string>(
+      [](auto t) { std::cout << "Value received2: " << t << std::endl; }));
+}
+
+TEST(FlowableChaining, customSourceThenMapTakeBranched) {
+  class InfiniteIntegersSource : public Subscription {
+    std::unique_ptr<Subscriber<int>> subscriber_;
+    std::atomic_bool isCancelled{false};
+
+    InfiniteIntegersSource(InfiniteIntegersSource&&) = default;
+    InfiniteIntegersSource(const InfiniteIntegersSource&) = delete;
+    InfiniteIntegersSource& operator=(InfiniteIntegersSource&&) = default;
+    InfiniteIntegersSource& operator=(const InfiniteIntegersSource&) = delete;
+
+   public:
+    static void subscribe(std::unique_ptr<Subscriber<int>> subscriber) {
+      InfiniteIntegersSource s_(std::move(subscriber));
+    }
+
+    void start() {
+      subscriber_->onSubscribe(this);
+    }
+
+    void cancel() override {
+      isCancelled = true;
+      // complete downstream like take(...) would
+      subscriber_->onComplete();
+    }
+    void request(int64_t n) override {
+      // NOTE: Do not implement real code like this
+      // This is NOT safe at all since request(n) can be called concurrently
+      // This assumes synchronous execution which this unit test does
+      // just to test the most basic wiring of all the types together.
+      for (auto i = 1; i < n; i++) {
+        if (isCancelled) {
+          return;
+        }
+        subscriber_->onNext(i);
+      }
+    }
+
+   protected:
+    InfiniteIntegersSource(std::unique_ptr<Subscriber<int>> subscriber)
+        : subscriber_(std::move(subscriber)) {
+      subscriber_->onSubscribe(this);
+    }
+  };
+
+  class OnSubscribeFunctor {
+   public:
+    OnSubscribeFunctor() = default;
+    ~OnSubscribeFunctor() {
+      std::cout << "******* DESTROY OnSubscribeFunctor" << std::endl;
+    }
+    OnSubscribeFunctor(OnSubscribeFunctor&&) {
+      std::cout << "******* moving OnSubscribeFunctor" << std::endl;
+      // no members to move
+    };
+    OnSubscribeFunctor(const OnSubscribeFunctor&) = delete;
+    OnSubscribeFunctor& operator=(OnSubscribeFunctor&& other) {
+      std::cout << "******* moving() OnSubscribeFunctor" << std::endl;
+      // no members to move
+      return *this;
+    };
+    OnSubscribeFunctor& operator=(const OnSubscribeFunctor&) = delete;
+
+    void operator()(
+        std::unique_ptr<reactivestreams_yarpl::Subscriber<int>> subscriber) {
+      std::cout << ">>> subscribing to InfiniteIntegersSource" << std::endl;
+      InfiniteIntegersSource::subscribe(std::move(subscriber));
+    }
+  };
+
+  // create Flowable around InfiniteIntegersSource
+  auto a =
+      yarpl::flowable::unsafeCreateUniqueFlowable<int>(OnSubscribeFunctor());
+
+  {
     auto b = a->take(10);
     auto c = b->map([](auto i) { return "hello->" + std::to_string(i); });
 
     c->subscribe(createSubscriber<std::string>(
-            [](auto t) { std::cout << "Value received: " << t << std::endl; }));
+        [](auto t) { std::cout << "Value received: " << t << std::endl; }));
+  }
 
-    // this should not work, but it does
-    auto c2 = b->map([](auto i) { return "should break->" + std::to_string(i); });
-    c2->subscribe(createSubscriber<std::string>(
-            [](auto t) { std::cout << "Value received2: " << t << std::endl; }));
+  {
+    auto b = a->take(10);
+    auto c = b->map([](auto i) { return "hello again->" + std::to_string(i); });
+
+    c->subscribe(createSubscriber<std::string>([](auto t) {
+      std::cout << "Value received again: " << t << std::endl;
+    }));
+  }
 }

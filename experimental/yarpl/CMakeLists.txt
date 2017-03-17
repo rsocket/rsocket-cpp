@@ -41,11 +41,15 @@ add_library(
         # flowable operators
         src/yarpl/flowable/operators/Flowable_Map.h
         src/yarpl/flowable/operators/Flowable_Take.h
+        src/yarpl/flowable/operators/Flowable_SubscribeOn.h
         # flowable utils
         src/yarpl/flowable/utils/SubscriptionHelper.h
         src/yarpl/flowable/utils/SubscriptionHelper.cpp
         # utils
         src/yarpl/utils/type_traits.h
+        # Scheduler
+        src/yarpl/ThreadScheduler.cpp
+        src/yarpl/ThreadScheduler.h
         # move this out at some point
         include/reactivestreams/ReactiveStreams.h
 )
@@ -84,7 +88,11 @@ add_executable(
         test/FlowableSubscriptionHelper_test.cpp
         test/Flowable_lifecycle.cpp
         test/FlowableChaining_test.cpp
-        test/flowable_operators/Flowable_Map_test.cpp test/flowable_operators/Flowable_Take_test.cpp)
+        test/flowable_operators/Flowable_Map_test.cpp
+        test/flowable_operators/Flowable_Take_test.cpp
+        test/flowable_operators/Flowable_SubscribeOn_test.cpp
+        test/Scheduler_test.cpp
+)
 
 target_link_libraries(
         yarpl-tests

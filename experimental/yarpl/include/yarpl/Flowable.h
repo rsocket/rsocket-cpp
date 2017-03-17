@@ -12,6 +12,7 @@
 #include "yarpl/utils/type_traits.h"
 
 #include "yarpl/flowable/operators/Flowable_Map.h"
+#include "yarpl/flowable/operators/Flowable_SubscribeOn.h"
 #include "yarpl/flowable/operators/Flowable_Take.h"
 
 namespace yarpl {
@@ -71,6 +72,10 @@ class UniqueFlowable : public reactivestreams_yarpl::Publisher<T> {
     return lift<T>(yarpl::operators::FlowableTakeOperator<T>(toTake));
   };
 
+  auto subscribeOn(yarpl::Scheduler& scheduler) {
+    return lift<T>(yarpl::operators::FlowableSubscribeOnOperator<T>(scheduler));
+  };
+
  protected:
   UniqueFlowable() = default;
   UniqueFlowable(UniqueFlowable&&) = delete;
@@ -87,6 +92,9 @@ class UniqueFlowable : public reactivestreams_yarpl::Publisher<T> {
 *
 * Called 'unsafeCreate' since this API is not the preferred public API
 * as it is easy to get wrong.
+*
+* This ONLY holds the function until the UniqueFlowable goes out of scope.
+* It is RECOMMENDED to NOT capture state inside the function.
 *
 * Use Flowable::create instead unless creating internal library operators.
 *

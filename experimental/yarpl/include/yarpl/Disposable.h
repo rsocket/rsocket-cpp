@@ -9,7 +9,8 @@ namespace yarpl {
  */
 class Disposable {
  public:
-  ~Disposable() = default;
+  Disposable(){}
+  virtual ~Disposable() = default;
   Disposable(Disposable&&) = delete;
   Disposable(const Disposable&) = delete;
   Disposable& operator=(Disposable&&) = delete;
