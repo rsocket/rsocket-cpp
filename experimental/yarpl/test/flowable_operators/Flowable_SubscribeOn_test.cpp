@@ -21,14 +21,14 @@ TEST(FlowableSubscribeOn, SubscribeToRangeOnThread) {
   auto ts = TestSubscriber<std::string>::create(2);
   yarpl::ThreadScheduler threadScheduler;
   Flowable::range(1, 5)
-      ->subscribeOn(threadScheduler)
-      ->map([](auto i) {
+      .subscribeOn(threadScheduler)
+      .map([](auto i) {
         std::stringstream s;
         s << std::this_thread::get_id();
         std::cout << " value " << i << " on thread: " << s.str() << std::endl;
         return s.str();
       })
-      ->subscribe(ts->unique_subscriber());
+      .subscribe(ts->unique_subscriber());
 
   for (;;) {
     if (ts->getValueCount() == 2) {

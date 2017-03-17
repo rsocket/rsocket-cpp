@@ -10,7 +10,7 @@ using namespace reactivestreams_yarpl;
 
 TEST(FlowableTake, Take5) {
   auto ts = TestSubscriber<long>::create();
-  Flowable::range(1, 10)->take(5)->subscribe(ts->unique_subscriber());
+  Flowable::range(1, 10).take(5).subscribe(ts->unique_subscriber());
   ts->awaitTerminalEvent();
   ts->assertValueCount(5);
 }

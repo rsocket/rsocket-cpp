@@ -46,9 +46,9 @@ void runHandlerFlowable(
     };
   };
   unsafeCreateUniqueFlowable<long>(Handler())
-      ->subscribeOn(scheduler)
-      ->take(50)
-      ->subscribe(std::move(subscriber));
+      .subscribeOn(scheduler)
+      .take(50)
+      .subscribe(std::move(subscriber));
 }
 
 TEST(FlowableLifecycle, HandlerClass) {

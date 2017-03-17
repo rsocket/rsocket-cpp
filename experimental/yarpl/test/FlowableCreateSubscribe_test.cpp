@@ -82,7 +82,7 @@ TEST(FlowableCreateSubscribe, SubscribeRequestAndCancel) {
       });
 
   auto ts = TestSubscriber<int>::create(std::make_unique<MySubscriber>());
-  a->subscribe(ts->unique_subscriber());
+  a.subscribe(ts->unique_subscriber());
   ts->awaitTerminalEvent();
   ts->assertValueCount(6);
 }
@@ -119,7 +119,7 @@ TEST(FlowableCreateSubscribe, OnError) {
       });
 
   auto ts = TestSubscriber<int>::create();
-  a->subscribe(ts->unique_subscriber());
+  a.subscribe(ts->unique_subscriber());
   ts->assertOnErrorMessage("something broke!");
 }
 
@@ -183,7 +183,7 @@ TEST(FlowableCreateSubscribe, ItemsCollectedSynchronously) {
       });
 
   auto ts = TestSubscriber<Tuple>::create();
-  a->subscribe(ts->unique_subscriber());
+  a.subscribe(ts->unique_subscriber());
   ts->awaitTerminalEvent();
   // reset the TestSubscriber since it holds the onNexted values
   ts.reset();
@@ -317,7 +317,7 @@ TEST(
     std::cout << "Thread counter: " << counter << std::endl;
     std::cout << "About to subscribe (1) ..." << std::endl;
 
-    { a->subscribe(std::make_unique<MySubscriber>()); }
+    { a.subscribe(std::make_unique<MySubscriber>()); }
     while (counter > 1) {
       std::cout << "waiting for completion" << std::endl;
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -327,7 +327,7 @@ TEST(
 
     std::cout << "About to subscribe (2) ..." << std::endl;
 
-    { a->subscribe(std::make_unique<MySubscriber>()); }
+    { a.subscribe(std::make_unique<MySubscriber>()); }
     while (counter > 0) {
       std::cout << "waiting for completion" << std::endl;
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -346,7 +346,8 @@ TEST(
 }
 
 std::unique_ptr<reactivestreams_yarpl::Publisher<long>> getDataAsPublisher() {
-  return Flowable::range(1, 4);
+    // is it possible to return a Publisher type without being a unique_ptr?
+    return Flowable::range(1, 4).as_unique_ptr();
 }
 
 TEST(FlowableCreateSubscribe, TestReturnTypePublisher) {
@@ -357,8 +358,8 @@ TEST(FlowableCreateSubscribe, TestReturnTypePublisher) {
 TEST(FlowableCreateSubscribe, TestReturnTypePublisherToFlowable) {
   auto ts = TestSubscriber<long>::create();
   Flowable::fromPublisher(getDataAsPublisher())
-      ->take(3)
-      ->subscribe(ts->unique_subscriber());
+      .take(3)
+      .subscribe(ts->unique_subscriber());
   ts->awaitTerminalEvent();
   ts->assertValueCount(3);
 }
@@ -371,7 +372,7 @@ auto getDataAsFlowable() {
 
 TEST(FlowableCreateSubscribe, TestReturnTypeFlowable) {
   auto ts = TestSubscriber<long>::create();
-  getDataAsFlowable()->take(3)->subscribe(ts->unique_subscriber());
+  getDataAsFlowable().take(3).subscribe(ts->unique_subscriber());
   ts->awaitTerminalEvent();
   ts->assertValueCount(3);
 }

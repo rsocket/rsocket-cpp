@@ -25,7 +25,12 @@ class UniqueFlowable : public reactivestreams_yarpl::Publisher<T> {
   using Subscription = reactivestreams_yarpl::Subscription;
 
  public:
-  UniqueFlowable(Function&& function) : function_(std::move(function)) {}
+  explicit UniqueFlowable(Function&& function)
+      : function_(std::move(function)) {}
+  UniqueFlowable(UniqueFlowable&&) = default;
+  UniqueFlowable(const UniqueFlowable&) = delete;
+  UniqueFlowable& operator=(UniqueFlowable&&) = default;
+  UniqueFlowable& operator=(const UniqueFlowable&) = delete;
 
   void subscribe(std::unique_ptr<Subscriber> subscriber) override {
     (function_)(std::move(subscriber));
@@ -52,8 +57,7 @@ class UniqueFlowable : public reactivestreams_yarpl::Publisher<T> {
       f(onSub(std::move(s)));
     };
 
-    return std::make_unique<UniqueFlowable<R, decltype(onSubscribe)>>(
-        std::move(onSubscribe));
+    return UniqueFlowable<R, decltype(onSubscribe)>(std::move(onSubscribe));
   }
 
   template <
@@ -76,12 +80,9 @@ class UniqueFlowable : public reactivestreams_yarpl::Publisher<T> {
     return lift<T>(yarpl::operators::FlowableSubscribeOnOperator<T>(scheduler));
   };
 
- protected:
-  UniqueFlowable() = default;
-  UniqueFlowable(UniqueFlowable&&) = delete;
-  UniqueFlowable(const UniqueFlowable&) = delete;
-  UniqueFlowable& operator=(UniqueFlowable&&) = delete;
-  UniqueFlowable& operator=(const UniqueFlowable&) = delete;
+  std::unique_ptr<UniqueFlowable<T, Function>> as_unique_ptr() {
+    return std::make_unique<UniqueFlowable<T, Function>>(std::move(function_));
+  }
 
  private:
   Function function_;
@@ -109,8 +110,7 @@ template <
         F(std::unique_ptr<reactivestreams_yarpl::Subscriber<T>>),
         void>::value>::type>
 static auto unsafeCreateUniqueFlowable(F&& onSubscribeFunc) {
-  return std::make_unique<UniqueFlowable<T, F>>(
-      std::forward<F>(onSubscribeFunc));
+  return UniqueFlowable<T, F>(std::forward<F>(onSubscribeFunc));
 }
 
 class Flowable {

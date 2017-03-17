@@ -57,8 +57,8 @@ TEST(FlowableChaining, Lift) {
 
   auto ts = TestSubscriber<std::string>::create();
   Flowable::range(1, 10)
-      ->lift<std::string>(LongToStringFunctor())
-      ->subscribe(ts->unique_subscriber());
+      .lift<std::string>(LongToStringFunctor())
+      .subscribe(ts->unique_subscriber());
 }
 
 TEST(FlowableChaining, Map) {
@@ -88,32 +88,32 @@ TEST(FlowableChaining, Map) {
   auto ts =
       TestSubscriber<std::string>::create(std::make_unique<MySubscriber>());
   Flowable::range(0, 20)
-      ->map([](auto v) { return "hello via map " + std::to_string(v); })
-      ->subscribe(ts->unique_subscriber());
+      .map([](auto v) { return "hello via map " + std::to_string(v); })
+      .subscribe(ts->unique_subscriber());
   ts->awaitTerminalEvent();
   ts->assertValueCount(20);
 }
 
 TEST(FlowableChaining, rangeMapTake) {
   auto a = Flowable::range(1, 100);
-  auto b = a->map([](auto i) { return "hello->" + std::to_string(i); });
-  auto c = b->take(10);
+  auto b = a.map([](auto i) { return "hello->" + std::to_string(i); });
+  auto c = b.take(10);
 
-  c->subscribe(createSubscriber<std::string>(
+  c.subscribe(createSubscriber<std::string>(
       [](auto t) { std::cout << "Value received: " << t << std::endl; }));
 }
 
 TEST(FlowableChaining, rangeMapTakeBranched) {
   auto a = Flowable::range(1, 100);
-  auto b = a->take(10);
-  auto c = b->map([](auto i) { return "hello->" + std::to_string(i); });
+  auto b = a.take(10);
+  auto c = b.map([](auto i) { return "hello->" + std::to_string(i); });
 
-  c->subscribe(createSubscriber<std::string>(
+  c.subscribe(createSubscriber<std::string>(
       [](auto t) { std::cout << "Value received: " << t << std::endl; }));
 
   // this should not work, but it does
-  auto c2 = b->map([](auto i) { return "should break->" + std::to_string(i); });
-  c2->subscribe(createSubscriber<std::string>(
+  auto c2 = b.map([](auto i) { return "should break->" + std::to_string(i); });
+  c2.subscribe(createSubscriber<std::string>(
       [](auto t) { std::cout << "Value received2: " << t << std::endl; }));
 }
 
@@ -191,18 +191,18 @@ TEST(FlowableChaining, customSourceThenMapTakeBranched) {
       yarpl::flowable::unsafeCreateUniqueFlowable<int>(OnSubscribeFunctor());
 
   {
-    auto b = a->take(10);
-    auto c = b->map([](auto i) { return "hello->" + std::to_string(i); });
+    auto b = a.take(10);
+    auto c = b.map([](auto i) { return "hello->" + std::to_string(i); });
 
-    c->subscribe(createSubscriber<std::string>(
+    c.subscribe(createSubscriber<std::string>(
         [](auto t) { std::cout << "Value received: " << t << std::endl; }));
   }
 
   {
-    auto b = a->take(10);
-    auto c = b->map([](auto i) { return "hello again->" + std::to_string(i); });
+    auto b = a.take(10);
+    auto c = b.map([](auto i) { return "hello again->" + std::to_string(i); });
 
-    c->subscribe(createSubscriber<std::string>([](auto t) {
+    c.subscribe(createSubscriber<std::string>([](auto t) {
       std::cout << "Value received again: " << t << std::endl;
     }));
   }
