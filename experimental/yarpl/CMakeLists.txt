@@ -34,6 +34,7 @@ add_library(
         # Flowable public API
         include/yarpl/Flowable.h
         include/yarpl/Flowable_Subscriber.h
+        include/yarpl/Flowable_Subscription.h
         include/yarpl/Flowable_TestSubscriber.h
         # flowable sources
         src/yarpl/flowable/sources/Flowable_RangeSubscription.h

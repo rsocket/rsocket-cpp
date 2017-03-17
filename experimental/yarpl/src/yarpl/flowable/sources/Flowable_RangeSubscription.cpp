@@ -14,86 +14,30 @@ RangeSubscription::RangeSubscription(
     long start,
     long count,
     std::unique_ptr<Subscriber> subscriber)
-    : current_(start),
-      max_(start + count - 1),
-      subscriber_(std::move(subscriber)){};
+    : FlowableSubscription(std::move(subscriber)),
+      current_(start),
+      max_(start + count - 1){};
 
-void RangeSubscription::start() {
-  subscriber_->onSubscribe(this);
-}
-
-void RangeSubscription::request(int64_t n) {
-  if (n <= 0) {
-    return;
-  }
-  int64_t r = SubscriptionHelper::addCredits(&requested_, n);
-  if (r <= 0) {
-    return;
-  }
-  auto consumed = tryEmit();
-  if (consumed > 0) {
-    SubscriptionHelper::consumeCredits(&requested_, consumed);
-
-    // if we've hit the end, or been cancelled, delete ourselves
-    // it will be >max_ since we suffix increment i.e. current_++
-    if (current_ > max_) {
-      subscriber_->onComplete();
-      tryDelete();
-      return;
-    } else if (SubscriptionHelper::isCancelled(&requested_)) {
-      tryDelete();
-      return;
-    }
-  }
-}
-
-/** do the actual work of emission */
-int64_t RangeSubscription::tryEmit() {
+std::tuple<int64_t, bool> RangeSubscription::emit(int64_t requested) {
   int64_t consumed{0};
-  int64_t r{0};
-  if (emitting_.fetch_add(1) == 0) {
-    // this thread won the 0->1 ticket so will execute
-    do {
-      // this thread will emitting until emitting_ == 0 again
-      for (r = requested_.load();
-           // below the max (start+count)
-           current_ <= max_ &&
-           // we have credits for sending
-           r > 0 &&
-           // we are not cancelled
-           !SubscriptionHelper::isCancelled(&requested_);
-           current_++) {
-        //    std::cout << "emitting current " << current_ << std::endl;
-        subscriber_->onNext(current_);
-        // decrement credit since we used one
-        r--;
-        consumed++;
-      }
-      // keep looping until emitting) hits 0 (>1 since fetch_add returns value
-      // before decrement)
-    } while (emitting_.fetch_add(-1) > 1);
-    return consumed;
-  } else {
-    return -1;
+  for (;
+       // below the max (start+count)
+       current_ <= max_ &&
+       // we have credits for sending
+       requested > 0 &&
+       // we are not cancelled
+       !isCancelled();
+       current_++) {
+    //    std::cout << "emitting current " << current_ << std::endl;
+    onNext(current_);
+    // decrement credit since we used one
+    requested--;
+    consumed++;
   }
+  // it will be >max_ since we suffix increment i.e. current_++
+  bool isCompleted = current_ > max_;
+  return std::make_tuple(consumed, isCompleted);
 }
-
-void RangeSubscription::cancel() {
-  if (SubscriptionHelper::addCancel(&requested_)) {
-    // if this is the first time calling cancel, try to delete
-    // if this thread wins the lock
-    tryDelete();
-  }
-}
-
-void RangeSubscription::tryDelete() {
-  // only one thread can call delete
-  if (emitting_.fetch_add(1) == 0) {
-    // TODO remove this cout once happy with it
-    std::cout << "Delete FlowableRange" << std::endl;
-    delete this;
-  }
-}
-}
-}
-}
+} // sources
+} // flowable
+} // yarpl
