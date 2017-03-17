@@ -364,7 +364,7 @@ target_link_libraries(
 
 add_dependencies(tcpresumeserver gmock)
 
-add_subdirectory(experimental/yarpl)
+# add_subdirectory(experimental/yarpl)
 
 ########################################
 # Examples
@@ -413,7 +413,6 @@ target_link_libraries(
         reactivesocket_examples_util
         rsocket_experimental
         ReactiveSocket
-        yarpl
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
         ${GLOG_LIBRARY}
