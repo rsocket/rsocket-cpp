@@ -3,20 +3,24 @@
 #pragma once
 
 #include <experimental/yarpl/include/yarpl/Scheduler.h>
-#include <yarpl/Flowable.h>
 #include "reactivestreams/ReactiveStreams.h"
 
 namespace yarpl {
 namespace operators {
 
-using reactivestreams_yarpl::Subscriber;
-using reactivestreams_yarpl::Subscription;
-
 // TODO this leaks right now, need to implement 'delete this'
-class SubscribeOnSubscription : public Subscription {
+class SubscribeOnSubscription : public reactivestreams_yarpl::Subscription {
  public:
-  SubscribeOnSubscription(Subscription* upstream, Scheduler& scheduler)
-      : upstream_(upstream), worker_(scheduler.createWorker()) {}
+  SubscribeOnSubscription(
+      reactivestreams_yarpl::Subscription* upstream,
+      Scheduler& scheduler)
+      : upstream_(upstream), worker_(scheduler.createWorker()) {
+    worker_ = scheduler.createWorker();
+  }
+  ~SubscribeOnSubscription() {
+    // TODO remove this once happy with it
+    std::cout << "SubscribeOnSubscription being destroyed" << std::endl;
+  }
   void request(int64_t n) override {
     auto u = upstream_;
     worker_->schedule([n, u]() { u->request(n); });
@@ -27,12 +31,12 @@ class SubscribeOnSubscription : public Subscription {
   }
 
  private:
-  Subscription* upstream_;
+  reactivestreams_yarpl::Subscription* upstream_;
   std::unique_ptr<Worker> worker_;
 };
 
 template <typename T>
-class SubscribeOnSubscriber : public Subscriber<T> {
+class SubscribeOnSubscriber : public reactivestreams_yarpl::Subscriber<T> {
  public:
   SubscribeOnSubscriber(SubscribeOnSubscriber&&) =
       default; // only allow std::move
@@ -41,7 +45,7 @@ class SubscribeOnSubscriber : public Subscriber<T> {
       default; // only allow std::move
   SubscribeOnSubscriber& operator=(const SubscribeOnSubscriber&) = delete;
 
-  explicit SubscribeOnSubscriber(
+  SubscribeOnSubscriber(
       std::unique_ptr<reactivestreams_yarpl::Subscriber<T>> s,
       yarpl::Scheduler& scheduler)
       : downstream_(std::move(s)), scheduler_(scheduler) {}
@@ -75,7 +79,7 @@ class SubscribeOnSubscriber : public Subscriber<T> {
 template <typename T>
 class FlowableSubscribeOnOperator {
  public:
-  FlowableSubscribeOnOperator(yarpl::Scheduler& scheduler)
+  explicit FlowableSubscribeOnOperator(yarpl::Scheduler& scheduler)
       : scheduler_(scheduler) {}
   std::unique_ptr<reactivestreams_yarpl::Subscriber<T>> operator()(
       std::unique_ptr<reactivestreams_yarpl::Subscriber<T>> s) {

@@ -1,9 +1,18 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "FlowableExamples.h"
+#include <iostream>
+#include "FlowableAExamples.h"
+#include "FlowableBExamples.h"
+#include "FlowableCExamples.h"
 #include "ObservableExamples.h"
 
 int main() {
+  std::cout << "*** Run ObservableExamples ***" << std::endl;
   ObservableExamples::run();
-  FlowableExamples::run();
+  std::cout << "*** Run FlowableExamplesA ***" << std::endl;
+  FlowableAExamples::run();
+  //  std::cout << "*** Run FlowableExamplesB ***" << std::endl;
+  //  FlowableBExamples::run();
+  std::cout << "*** Run FlowableExamplesC ***" << std::endl;
+  FlowableCExamples::run();
 }

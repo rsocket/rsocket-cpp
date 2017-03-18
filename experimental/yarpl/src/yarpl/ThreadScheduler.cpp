@@ -27,7 +27,13 @@ class ADisposable : public yarpl::Disposable {
 
 class ThreadWorker : public Worker {
  public:
-  ThreadWorker() {}
+  ThreadWorker() {
+      std::cout << "Create ThreadWorker" << std::endl;
+  }
+    ~ThreadWorker() {
+        std::cout << "DESTROYING ThreadWorker!" << std::endl;
+    }
+
   std::unique_ptr<yarpl::Disposable> schedule(
       std::function<void()>&& task) override {
     std::thread([task = std::move(task)]() { task(); }).detach();

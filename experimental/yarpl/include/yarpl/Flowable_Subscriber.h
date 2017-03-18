@@ -14,7 +14,8 @@ namespace {
 template <typename T, typename Function>
 class SubscriberWithOnNext : public reactivestreams_yarpl::Subscriber<T> {
  public:
-  SubscriberWithOnNext(Function&& function) : f_(std::move(function)) {}
+  explicit SubscriberWithOnNext(Function&& function)
+      : f_(std::move(function)) {}
   void onSubscribe(reactivestreams_yarpl::Subscription* s) override {
     s->request(INT64_MAX);
   }

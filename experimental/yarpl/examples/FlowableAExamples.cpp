@@ -1,9 +1,9 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "experimental/yarpl/examples/FlowableExamples.h"
+#include "FlowableAExamples.h"
 #include <thread>
 #include "reactivestreams/ReactiveStreams.h"
-#include "yarpl/Flowable.h"
+#include "yarpl/FlowableA.h"
 #include "yarpl/Flowable_Subscriber.h"
 #include "yarpl/ThreadScheduler.h"
 
@@ -11,11 +11,11 @@ using namespace reactivestreams_yarpl;
 using namespace yarpl::flowable;
 using namespace yarpl;
 
-void FlowableExamples::run() {
+void FlowableAExamples::run() {
   std::cout << "---------------FlowableExamples::run-----------------"
             << std::endl;
 
-  Flowable::range(1, 10)
+  Flowables::range(1, 10)
       .map([](auto i) { return "hello->" + std::to_string(i); })
       .take(3)
       .subscribe(createSubscriber<std::string>(
@@ -23,7 +23,7 @@ void FlowableExamples::run() {
 
   std::cout << "--------------- END Example" << std::endl;
 
-  auto a = Flowable::range(1, 10);
+  auto a = Flowables::range(1, 10);
   auto b = a.take(3);
   auto c = b.map([](auto i) { return "hello->" + std::to_string(i); });
   c.subscribe(createSubscriber<std::string>(
@@ -35,7 +35,7 @@ void FlowableExamples::run() {
 
   ThreadScheduler scheduler;
 
-  Flowable::range(1, 10)
+  Flowables::range(1, 10)
       .subscribeOn(scheduler) // put on background thread
       .map([](auto i) { return "Value received: " + std::to_string(i); })
       .take(6)
@@ -45,6 +45,7 @@ void FlowableExamples::run() {
       }));
 
   // wait to see above async example
+  /* sleep override */
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
   std::cout << "--------------- END Example" << std::endl;
@@ -90,7 +91,7 @@ void FlowableExamples::run() {
     int requested_{0};
   };
 
-  Flowable::range(1, 100).subscribe(std::make_unique<MySubscriber>());
+  Flowables::range(1, 100).subscribe(std::make_unique<MySubscriber>());
 
   std::cout << "---------------FlowableExamples::run-----------------"
             << std::endl;

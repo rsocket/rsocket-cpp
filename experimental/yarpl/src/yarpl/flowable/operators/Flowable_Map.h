@@ -2,16 +2,13 @@
 
 #pragma once
 
-#include <yarpl/Flowable.h>
 #include "reactivestreams/ReactiveStreams.h"
 
 namespace yarpl {
 namespace operators {
 
-using reactivestreams_yarpl::Subscriber;
-
 template <typename T, typename R, typename F>
-class TransformSubscriber : public Subscriber<T> {
+class TransformSubscriber : public reactivestreams_yarpl::Subscriber<T> {
  public:
   TransformSubscriber(TransformSubscriber&&) = default; // only allow std::move
   TransformSubscriber(const TransformSubscriber&) = delete;
@@ -55,7 +52,7 @@ class TransformSubscriber : public Subscriber<T> {
 template <typename T, typename R, typename F>
 class FlowableMapOperator {
  public:
-  FlowableMapOperator(F&& f) : transform_(std::move(f)) {}
+  explicit FlowableMapOperator(F&& f) : transform_(std::move(f)) {}
   std::unique_ptr<reactivestreams_yarpl::Subscriber<T>> operator()(
       std::unique_ptr<reactivestreams_yarpl::Subscriber<R>> s) {
     return std::make_unique<TransformSubscriber<T, R, F>>(

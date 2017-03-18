@@ -6,7 +6,7 @@
 #include <memory>
 #include <string>
 
-class FlowableExamples {
+class FlowableCExamples {
  public:
   static void run();
 };

@@ -52,7 +52,7 @@ TEST(Observable, OnError) {
       [&errorMessage](const std::exception_ptr e) {
         try {
           std::rethrow_exception(e);
-        } catch (std::runtime_error ex) {
+        } catch (const std::runtime_error& ex) {
           errorMessage = std::string(ex.what());
         }
       }));

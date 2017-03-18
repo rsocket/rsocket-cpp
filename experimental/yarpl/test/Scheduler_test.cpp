@@ -17,5 +17,7 @@ TEST(Scheduler, ThreadScheduler_Task) {
   });
   worker->dispose();
 
+  // TODO add condition variable into task above instead of sleep
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  // TODO add validation of above, right now just testing it doesn't blow up
 }

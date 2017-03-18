@@ -10,15 +10,12 @@ namespace yarpl {
 namespace flowable {
 namespace sources {
 
-using Subscriber = reactivestreams_yarpl::Subscriber<long>;
-using Subscription = reactivestreams_yarpl::Subscription;
-
 class RangeSubscription : public FlowableSubscription<long> {
  public:
   explicit RangeSubscription(
       long start,
       long count,
-      std::unique_ptr<Subscriber> subscriber);
+      std::unique_ptr<reactivestreams_yarpl::Subscriber<long>> subscriber);
 
   ~RangeSubscription() {
     // TODO remove this once happy with it

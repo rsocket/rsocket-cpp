@@ -1,4 +1,3 @@
-
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include <gtest/gtest.h>
@@ -39,16 +38,18 @@ void runHandlerFlowable(
     Handler& operator=(const Handler&) = delete;
 
     void operator()(std::unique_ptr<Subscriber<long>> s) {
+      // want to test that lifecycle works when thread scheduling occurs
+      /* sleep override */
       std::this_thread::sleep_for(std::chrono::milliseconds(500));
       auto s_ =
           new yarpl::flowable::sources::RangeSubscription(1, 100, std::move(s));
       s_->start();
     };
   };
-  unsafeCreateUniqueFlowable<long>(Handler())
-      .subscribeOn(scheduler)
-      .take(50)
-      .subscribe(std::move(subscriber));
+  Flowable<long>::create(Handler())
+      ->subscribeOn(scheduler)
+      ->take(50)
+      ->subscribe(std::move(subscriber));
 }
 
 TEST(FlowableLifecycle, HandlerClass) {

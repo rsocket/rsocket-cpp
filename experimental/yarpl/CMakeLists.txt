@@ -33,6 +33,9 @@ add_library(
         src/yarpl/observable/Observable_Subscription.cpp
         # Flowable public API
         include/yarpl/Flowable.h
+        include/yarpl/FlowableA.h
+        include/yarpl/FlowableB.h
+        include/yarpl/FlowableC.h
         include/yarpl/Flowable_Subscriber.h
         include/yarpl/Flowable_Subscription.h
         include/yarpl/Flowable_TestSubscriber.h
@@ -66,7 +69,12 @@ add_executable(
         yarpl-playground
         examples/yarpl-playground.cpp
         examples/ObservableExamples.cpp
-        examples/FlowableExamples.cpp
+        examples/FlowableAExamples.cpp
+        examples/FlowableAExamples.h
+        examples/FlowableBExamples.cpp
+        examples/FlowableBExamples.h
+        examples/FlowableCExamples.cpp
+        examples/FlowableCExamples.h
 )
 
 target_link_libraries(

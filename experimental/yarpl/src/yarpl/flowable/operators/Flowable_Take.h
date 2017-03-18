@@ -2,16 +2,13 @@
 
 #pragma once
 
-#include <yarpl/Flowable.h>
 #include "reactivestreams/ReactiveStreams.h"
 
 namespace yarpl {
 namespace operators {
 
-using reactivestreams_yarpl::Subscriber;
-
 template <typename T>
-class TakeSubscriber : public Subscriber<T> {
+class TakeSubscriber : public reactivestreams_yarpl::Subscriber<T> {
  public:
   TakeSubscriber(TakeSubscriber&&) = default; // only allow std::move
   TakeSubscriber(const TakeSubscriber&) = delete;
@@ -69,7 +66,7 @@ class TakeSubscriber : public Subscriber<T> {
 template <typename T>
 class FlowableTakeOperator {
  public:
-  FlowableTakeOperator(int64_t toTake) : toTake_(toTake) {}
+  explicit FlowableTakeOperator(int64_t toTake) : toTake_(toTake) {}
   std::unique_ptr<reactivestreams_yarpl::Subscriber<T>> operator()(
       std::unique_ptr<reactivestreams_yarpl::Subscriber<T>> s) {
     return std::make_unique<TakeSubscriber<T>>(std::move(s), toTake_);

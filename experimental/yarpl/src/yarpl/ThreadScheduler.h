@@ -2,13 +2,20 @@
 
 #pragma once
 
+#include <iostream>
 #include "yarpl/Scheduler.h"
 
 namespace yarpl {
 
 class ThreadScheduler : public Scheduler {
  public:
-  ThreadScheduler(){}
+  ThreadScheduler() {
+    std::cout << "Create ThreadScheduler" << std::endl;
+  }
+  ~ThreadScheduler() {
+    // TODO remove this once happy with it
+    std::cout << "Destroy ThreadScheduler" << std::endl;
+  }
   ThreadScheduler(ThreadScheduler&&) = delete;
   ThreadScheduler(const ThreadScheduler&) = delete;
   ThreadScheduler& operator=(ThreadScheduler&&) = delete;
