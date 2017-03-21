@@ -254,3 +254,80 @@ TEST_F(ResumeCacheTest, EvictFIFO) {
   cache.trackSentFrame(*frame);
   EXPECT_FALSE(cache.isPositionAvailable(frameSize * 5 + 1));
 }
+
+TEST_F(ResumeCacheTest, EvictStats) {
+  auto stats = std::make_shared<StrictMock<MockStats>>();
+  ConnectionAutomaton automaton(
+      inlineExecutor(),
+      nullptr,
+      nullptr,
+      nullptr,
+      stats,
+      nullptr,
+      ReactiveSocketMode::CLIENT);
+  automaton.setFrameSerializer(FrameSerializer::createCurrentVersion());
+
+  auto frame = frameSerializer_->serializeOut(Frame_CANCEL(0));
+  const auto frameSize = frame->computeChainDataLength();
+
+  // construct cache with capacity of 2 frameSize
+  ResumeCache cache(automaton, frameSize * 2);
+
+  {
+    InSequence dummy;
+    // Two added
+    EXPECT_CALL(*stats, resumeBufferChanged(1, frameSize));
+    EXPECT_CALL(*stats, resumeBufferChanged(1, frameSize));
+    // One evicted, one added
+    EXPECT_CALL(*stats, resumeBufferChanged(-1, -frameSize));
+    EXPECT_CALL(*stats, resumeBufferChanged(1, frameSize));
+    // Destruction
+    EXPECT_CALL(*stats, resumeBufferChanged(-2, -frameSize * 2));
+  }
+
+  cache.trackSentFrame(*frame);
+  cache.trackSentFrame(*frame);
+  cache.trackSentFrame(*frame);
+
+  EXPECT_EQ(frameSize * 2, cache.size());
+}
+
+TEST_F(ResumeCacheTest, PositionSmallFrame) {
+  ConnectionAutomaton automaton(
+      inlineExecutor(),
+      nullptr,
+      nullptr,
+      nullptr,
+      Stats::noop(),
+      nullptr,
+      ReactiveSocketMode::CLIENT);
+  automaton.setFrameSerializer(FrameSerializer::createCurrentVersion());
+
+  auto frame = frameSerializer_->serializeOut(Frame_CANCEL(0));
+  const auto frameSize = frame->computeChainDataLength();
+
+  // Cache is larger than frame
+  ResumeCache cache(automaton, frameSize * 2);
+  cache.trackSentFrame(*frame);
+  EXPECT_EQ(frame->computeChainDataLength(), cache.position());
+}
+
+TEST_F(ResumeCacheTest, PositionLargeFrame) {
+  ConnectionAutomaton automaton(
+      inlineExecutor(),
+      nullptr,
+      nullptr,
+      nullptr,
+      Stats::noop(),
+      nullptr,
+      ReactiveSocketMode::CLIENT);
+  automaton.setFrameSerializer(FrameSerializer::createCurrentVersion());
+
+  auto frame = frameSerializer_->serializeOut(Frame_CANCEL(0));
+  const auto frameSize = frame->computeChainDataLength();
+
+  // Cache is smaller than frame
+  ResumeCache cache(automaton, frameSize / 2);
+  cache.trackSentFrame(*frame);
+  EXPECT_EQ(frame->computeChainDataLength(), cache.position());
+}

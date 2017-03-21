@@ -75,9 +75,6 @@ int main(int argc, char* argv[]) {
 
   LOG(INFO) << "Parsing test file " << FLAGS_test_file;
 
-  TestFileParser testFileParser(FLAGS_test_file);
-  TestSuite testSuite = testFileParser.parse();
-
   folly::ScopedEventBaseThread evbt;
 
   folly::AsyncSocket::UniquePtr socket;
@@ -112,6 +109,8 @@ int main(int argc, char* argv[]) {
         std::move(requestHandler));
   });
 
+  TestFileParser testFileParser(FLAGS_test_file);
+  TestSuite testSuite = testFileParser.parse();
   LOG(INFO) << "Test file parsed. Executing " << testSuite.tests().size()
             << " tests.";
 

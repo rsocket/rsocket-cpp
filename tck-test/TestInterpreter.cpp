@@ -53,19 +53,13 @@ bool TestInterpreter::run(folly::EventBase* evb) {
         throw std::runtime_error("unknown command");
       }
     }
-
-    if (!test_.shouldSucceed()) {
-      LOG(INFO) << "Test " << test_.name() << " failed executing command #"
-                << i - 1;
-      return false;
-    }
   } catch (const std::exception& ex) {
-    LOG(INFO) << "... exception raised: " << ex.what();
-    if (test_.shouldSucceed()) {
-      LOG(ERROR) << "Test " << test_.name() << " failed executing command "
-                 << test_.commands()[i - 1].name();
-      return false;
-    }
+    LOG(ERROR) << folly::sformat(
+        "Test {} failed executing command {}. {}",
+        test_.name(),
+        test_.commands()[i - 1].name(),
+        ex.what());
+    return false;
   }
   LOG(INFO) << "Test " << test_.name() << " succeeded";
   return true;

@@ -45,11 +45,6 @@ void TestFileParser::parseCommand(const std::string& command) {
     currentTest_.setName(parameters[1]);
     return;
   }
-  if (parameters.size() == 1 &&
-      (parameters[0] == "pass" || parameters[0] == "fail")) {
-    currentTest_.setSucceeding(parameters[0] == "pass");
-    return;
-  }
 
   TestCommand newCommand(std::move(parameters));
   if (!newCommand.valid()) {

@@ -22,6 +22,7 @@ void ResumeCache::trackSentFrame(const folly::IOBuf& serializedFrame) {
     // if the frame is too huge, we don't cache it
     if (frameDataLength > capacity_) {
       resetUpToPosition(position_);
+      position_ += frameDataLength;
       DCHECK(size_ == 0);
       return;
     }
@@ -104,9 +105,9 @@ void ResumeCache::addFrame(const folly::IOBuf& frame, size_t frameDataLength) {
 
 void ResumeCache::evictFrame() {
   DCHECK(!frames_.empty());
-  frames_.pop_front();
 
-  auto position = frames_.empty() ? position_ : frames_.front().first;
+  auto position = frames_.size() > 1 ?
+    std::next(frames_.begin())->first : position_;
   resetUpToPosition(position);
 }
 

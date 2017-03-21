@@ -45,6 +45,10 @@ class ResumeCache {
     return position_;
   }
 
+  size_t size() const {
+    return size_;
+  }
+
  private:
   void addFrame(const folly::IOBuf&, size_t);
   void evictFrame();
@@ -59,9 +63,8 @@ class ResumeCache {
 
   std::deque<std::pair<ResumePosition, std::unique_ptr<folly::IOBuf>>> frames_;
 
-  // default capacity: 1MB
-  constexpr static size_t DEFAULT_CAPACITY = 1024 * 1024;
-  const size_t capacity_ = DEFAULT_CAPACITY;
+  constexpr static size_t DEFAULT_CAPACITY = 1024 * 1024; // 1MB
+  const size_t capacity_;
   size_t size_{0};
 };
 }
