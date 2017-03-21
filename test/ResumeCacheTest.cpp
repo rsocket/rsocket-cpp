@@ -309,7 +309,7 @@ TEST_F(ResumeCacheTest, PositionSmallFrame) {
   // Cache is larger than frame
   ResumeCache cache(automaton, frameSize * 2);
   cache.trackSentFrame(*frame);
-  EXPECT_EQ(frame->computeChainDataLength(), cache.position());
+  EXPECT_EQ(frame->computeChainDataLength(), static_cast<size_t>(cache.position()));
 }
 
 TEST_F(ResumeCacheTest, PositionLargeFrame) {
@@ -329,5 +329,5 @@ TEST_F(ResumeCacheTest, PositionLargeFrame) {
   // Cache is smaller than frame
   ResumeCache cache(automaton, frameSize / 2);
   cache.trackSentFrame(*frame);
-  EXPECT_EQ(frame->computeChainDataLength(), cache.position());
+  EXPECT_EQ(frame->computeChainDataLength(), static_cast<size_t>(cache.position()));
 }
