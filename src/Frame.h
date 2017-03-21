@@ -372,10 +372,8 @@ class Frame_ERROR {
   static Frame_ERROR invalidFrame();
   static Frame_ERROR badSetupFrame(const std::string& message);
   static Frame_ERROR connectionError(const std::string& message);
-  static Frame_ERROR invalid(StreamId streamId, const std::string& message);
-  static Frame_ERROR applicationError(
-      StreamId streamId,
-      const std::string& message);
+  static Frame_ERROR error(StreamId streamId, Payload&& payload);
+  static Frame_ERROR applicationError(StreamId streamId, Payload&& payload);
 
   FrameHeader header_;
   ErrorCode errorCode_{};

@@ -268,9 +268,10 @@ void ConnectionAutomaton::endStream(
   if (!endStreamInternal(streamId, signal)) {
     return;
   }
-  // TODO(stupaq): handle connection-level errors
-  assert(
-      signal == StreamCompletionSignal::GRACEFUL ||
+  DCHECK(
+      signal == StreamCompletionSignal::CANCEL ||
+      signal == StreamCompletionSignal::COMPLETE ||
+      signal == StreamCompletionSignal::APPLICATION_ERROR ||
       signal == StreamCompletionSignal::ERROR);
 }
 
@@ -762,6 +763,101 @@ void ConnectionAutomaton::setFrameSerializer(
 FrameSerializer& ConnectionAutomaton::frameSerializer() const {
   CHECK(frameSerializer_);
   return *frameSerializer_;
+}
+
+void ConnectionAutomaton::writeNewStream(
+    StreamId streamId,
+    StreamType streamType,
+    uint32_t initialRequestN,
+    Payload payload,
+    bool TEMP_completed) {
+  switch (streamType) {
+    case StreamType::CHANNEL:
+      outputFrameOrEnqueue(frameSerializer().serializeOut(Frame_REQUEST_CHANNEL(
+          streamId,
+          TEMP_completed ? FrameFlags::COMPLETE : FrameFlags::EMPTY,
+          initialRequestN,
+          std::move(payload))));
+      break;
+
+    case StreamType::STREAM:
+      outputFrameOrEnqueue(frameSerializer().serializeOut(Frame_REQUEST_STREAM(
+          streamId, FrameFlags::EMPTY, initialRequestN, std::move(payload))));
+      break;
+
+    case StreamType::REQUEST_RESPONSE:
+      outputFrameOrEnqueue(
+          frameSerializer().serializeOut(Frame_REQUEST_RESPONSE(
+              streamId, FrameFlags::EMPTY, std::move(payload))));
+      break;
+
+    case StreamType::FNF:
+      outputFrameOrEnqueue(frameSerializer().serializeOut(
+          Frame_REQUEST_FNF(streamId, FrameFlags::EMPTY, std::move(payload))));
+      break;
+
+    default:
+      CHECK(false); // unknown type
+  }
+}
+
+void ConnectionAutomaton::writeRequestN(StreamId streamId, uint32_t n) {
+  outputFrameOrEnqueue(
+      frameSerializer().serializeOut(Frame_REQUEST_N(streamId, n)));
+}
+
+void ConnectionAutomaton::writePayload(
+    StreamId streamId,
+    Payload payload,
+    bool complete) {
+  Frame_PAYLOAD frame(
+      streamId,
+      complete ? FrameFlags::COMPLETE : FrameFlags::EMPTY,
+      std::move(payload));
+  outputFrameOrEnqueue(frameSerializer().serializeOut(std::move(frame)));
+}
+
+void ConnectionAutomaton::writeCloseStream(
+    StreamId streamId,
+    StreamCompletionSignal signal,
+    Payload payload) {
+  switch (signal) {
+    case StreamCompletionSignal::COMPLETE:
+      outputFrameOrEnqueue(
+          frameSerializer().serializeOut(Frame_PAYLOAD::complete(streamId)));
+      break;
+
+    case StreamCompletionSignal::CANCEL:
+      outputFrameOrEnqueue(
+          frameSerializer().serializeOut(Frame_CANCEL(streamId)));
+      break;
+
+    case StreamCompletionSignal::ERROR:
+      outputFrameOrEnqueue(frameSerializer().serializeOut(
+          Frame_ERROR::error(streamId, std::move(payload))));
+      break;
+
+    case StreamCompletionSignal::APPLICATION_ERROR:
+      outputFrameOrEnqueue(frameSerializer().serializeOut(
+          Frame_ERROR::applicationError(streamId, std::move(payload))));
+      break;
+
+    case StreamCompletionSignal::INVALID_SETUP:
+    case StreamCompletionSignal::UNSUPPORTED_SETUP:
+    case StreamCompletionSignal::REJECTED_SETUP:
+
+    case StreamCompletionSignal::CONNECTION_ERROR:
+    case StreamCompletionSignal::CONNECTION_END:
+    case StreamCompletionSignal::SOCKET_CLOSED:
+    default:
+      CHECK(false); // unexpected value
+  }
+}
+
+void ConnectionAutomaton::onStreamClosed(
+    StreamId streamId,
+    StreamCompletionSignal signal) {
+  endStream(streamId, signal);
 }
 
 } // reactivesocket

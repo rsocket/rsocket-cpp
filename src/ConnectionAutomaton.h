@@ -14,6 +14,7 @@
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
 #include "src/StreamsFactory.h"
+#include "src/StreamsHandler.h"
 
 namespace reactivesocket {
 
@@ -68,6 +69,7 @@ class ConnectionAutomaton final
     : public FrameSink,
       public FrameProcessor,
       public ExecutorBase,
+      public StreamsWriter,
       public std::enable_shared_from_this<ConnectionAutomaton> {
  public:
   ConnectionAutomaton(
@@ -199,7 +201,7 @@ class ConnectionAutomaton final
     return streamsFactory_;
   }
 
-  FrameSerializer& frameSerializer() const;
+  FrameSerializer& frameSerializer() const override;
   void setFrameSerializer(std::unique_ptr<FrameSerializer>);
 
   Stats& stats() {
@@ -245,6 +247,21 @@ class ConnectionAutomaton final
 
   void pauseStreams();
   void resumeStreams();
+
+  void writeNewStream(
+      StreamId streamId,
+      StreamType streamType,
+      uint32_t initialRequestN,
+      Payload payload,
+      bool TEMP_completed) override;
+  void writeRequestN(StreamId streamId, uint32_t n) override;
+  void writePayload(StreamId streamId, Payload payload, bool complete) override;
+  void writeCloseStream(
+      StreamId streamId,
+      StreamCompletionSignal signal,
+      Payload payload) override;
+  void onStreamClosed(StreamId streamId, StreamCompletionSignal signal)
+      override;
 
   ConnectionLevelFrameHandler connectionLevelFrameHandler_;
 
