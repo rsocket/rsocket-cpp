@@ -63,13 +63,17 @@ void RequestResponseRequester::endStream(StreamCompletionSignal signal) {
       DCHECK(StreamCompletionSignal::COMPLETE != signal);
       DCHECK(StreamCompletionSignal::CANCEL != signal);
       state_ = State::CLOSED;
-      if (auto subscriber = std::move(consumingSubscriber_)) {
-        subscriber->onError(
-            StreamInterruptedException(static_cast<int>(signal)));
-      }
       break;
     case State::CLOSED:
       break;
+  }
+  if (auto subscriber = std::move(consumingSubscriber_)) {
+    if (signal == StreamCompletionSignal::COMPLETE ||
+        signal == StreamCompletionSignal::CANCEL) { // TODO: remove CANCEL
+      subscriber->onComplete();
+    } else {
+      subscriber->onError(StreamInterruptedException(static_cast<int>(signal)));
+    }
   }
 }
 

@@ -30,9 +30,10 @@ void ConsumerMixin::generateRequest(size_t n) {
 
 void ConsumerMixin::endStream(StreamCompletionSignal signal) {
   if (auto subscriber = std::move(consumingSubscriber_)) {
-    if (signal == StreamCompletionSignal::COMPLETE) {
+    if (signal == StreamCompletionSignal::COMPLETE ||
+        signal == StreamCompletionSignal::CANCEL) { // TODO: remove CANCEL
       subscriber->onComplete();
-    } else if (signal == StreamCompletionSignal::ERROR) {
+    } else {
       subscriber->onError(StreamInterruptedException(static_cast<int>(signal)));
     }
   }

@@ -120,7 +120,6 @@ void StreamAutomatonBase::newStream(
 
 void StreamAutomatonBase::writePayload(Payload&& payload, bool complete) {
   writer_->writePayload(streamId_, std::move(payload), complete);
-  closeStream(StreamCompletionSignal::ERROR);
 }
 
 void StreamAutomatonBase::writeRequestN(uint32_t n) {
