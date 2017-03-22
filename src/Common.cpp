@@ -47,7 +47,7 @@ std::string to_string(StreamCompletionSignal signal) {
     case StreamCompletionSignal::ERROR:
       return "ERROR";
     case StreamCompletionSignal::APPLICATION_ERROR:
-      return "APPLICATIONERROR";
+      return "APPLICATION_ERROR";
     case StreamCompletionSignal::INVALID_SETUP:
       return "INVALID_SETUP";
     case StreamCompletionSignal::UNSUPPORTED_SETUP:
