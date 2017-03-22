@@ -5,13 +5,13 @@
 #include <atomic>
 #include <functional>
 #include <memory>
+#include "yarpl/utils/type_traits.h"
 
 namespace yarpl {
 namespace observable {
 
 class Subscription {
  public:
-  // TODO: make private?
   explicit Subscription(std::function<void()> onCancel)
       : onCancel_(std::move(onCancel)) {}
 

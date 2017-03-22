@@ -1,7 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "examples/FlowableExamples.h"
-#include "examples/ObservableExamples.h"
+#include "FlowableExamples.h"
+#include "ObservableExamples.h"
 
 int main() {
   ObservableExamples::run();
