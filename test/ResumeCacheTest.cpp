@@ -39,7 +39,6 @@ TEST_F(ResumeCacheTest, EmptyCache) {
       inlineExecutor(),
       nullptr,
       nullptr,
-      nullptr,
       Stats::noop(),
       nullptr,
       ReactiveSocketMode::CLIENT);
@@ -67,7 +66,6 @@ TEST_F(ResumeCacheTest, EmptyCache) {
 TEST_F(ResumeCacheTest, OneFrame) {
   ConnectionAutomaton automaton(
       inlineExecutor(),
-      nullptr,
       nullptr,
       nullptr,
       Stats::noop(),
@@ -118,7 +116,6 @@ TEST_F(ResumeCacheTest, OneFrame) {
 TEST_F(ResumeCacheTest, TwoFrames) {
   ConnectionAutomaton automaton(
       inlineExecutor(),
-      nullptr,
       nullptr,
       nullptr,
       Stats::noop(),
@@ -176,7 +173,6 @@ TEST_F(ResumeCacheTest, Stats) {
       inlineExecutor(),
       nullptr,
       nullptr,
-      nullptr,
       stats,
       nullptr,
       ReactiveSocketMode::CLIENT);
@@ -202,7 +198,6 @@ TEST_F(ResumeCacheTest, Stats) {
 TEST_F(ResumeCacheTest, EvictFIFO) {
   ConnectionAutomaton automaton(
       inlineExecutor(),
-      nullptr,
       nullptr,
       nullptr,
       Stats::noop(),
@@ -261,7 +256,6 @@ TEST_F(ResumeCacheTest, EvictStats) {
       inlineExecutor(),
       nullptr,
       nullptr,
-      nullptr,
       stats,
       nullptr,
       ReactiveSocketMode::CLIENT);
@@ -297,7 +291,6 @@ TEST_F(ResumeCacheTest, PositionSmallFrame) {
       inlineExecutor(),
       nullptr,
       nullptr,
-      nullptr,
       Stats::noop(),
       nullptr,
       ReactiveSocketMode::CLIENT);
@@ -315,7 +308,6 @@ TEST_F(ResumeCacheTest, PositionSmallFrame) {
 TEST_F(ResumeCacheTest, PositionLargeFrame) {
   ConnectionAutomaton automaton(
       inlineExecutor(),
-      nullptr,
       nullptr,
       nullptr,
       Stats::noop(),

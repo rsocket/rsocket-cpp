@@ -29,17 +29,10 @@ StandardReactiveSocket::StandardReactiveSocket(
     std::shared_ptr<Stats> stats,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer,
     folly::Executor& executor)
-    : handler_(handler),
-      connection_(std::make_shared<ConnectionAutomaton>(
+    : connection_(std::make_shared<ConnectionAutomaton>(
           executor,
-          [this, handler](std::unique_ptr<folly::IOBuf> serializedFrame) {
-            onConnectionFrame(handler, std::move(serializedFrame));
-          },
-          handler,
-          std::bind(
-              &StandardReactiveSocket::resumeListener,
-              this,
-              std::placeholders::_1),
+          this,
+          std::move(handler),
           std::move(stats),
           std::move(keepaliveTimer),
           mode)),
@@ -162,98 +155,6 @@ void StandardReactiveSocket::metadataPush(
       Frame_METADATA_PUSH(std::move(metadata))));
 }
 
-void StandardReactiveSocket::onConnectionFrame(
-    std::shared_ptr<RequestHandler> handler,
-    std::unique_ptr<folly::IOBuf> serializedFrame) {
-  debugCheckCorrectExecutor();
-  auto type = connection_->frameSerializer().peekFrameType(*serializedFrame);
-  switch (type) {
-    case FrameType::SETUP: {
-      Frame_SETUP frame;
-      if (!connection_->deserializeFrameOrError(
-              frame, std::move(serializedFrame))) {
-        return;
-      }
-      if (!!(frame.header_.flags_ & FrameFlags::LEASE)) {
-        // TODO(yschimke) We don't have the correct lease and wait logic above
-        // yet
-        LOG(WARNING) << "ignoring setup frame with lease";
-        //          connectionOutput_.onNext(
-        //              Frame_ERROR::badSetupFrame("leases not supported")
-        //                  .serializeOut());
-        //          disconnect();
-      }
-
-      connection_->setFrameSerializer(FrameSerializer::createFrameSerializer(
-          ProtocolVersion{frame.versionMajor_, frame.versionMinor_}));
-
-      ConnectionSetupPayload setupPayload;
-      frame.moveToSetupPayload(setupPayload);
-      auto streamState =
-          handler->handleSetupPayload(*this, std::move(setupPayload));
-
-      // TODO(lehecka): use again
-      // connection.useStreamState(streamState);
-      break;
-    }
-    case FrameType::RESUME: {
-      Frame_RESUME frame;
-      if (!connection_->deserializeFrameOrError(
-              frame, std::move(serializedFrame))) {
-        return;
-      }
-      auto resumed = handler->handleResume(
-          *this,
-          frame.token_,
-          frame.lastReceivedServerPosition_,
-          frame.clientPosition_);
-      if (!resumed) {
-        // TODO(lehecka): the "connection" and "this" arguments needs to be
-        // cleaned up. It is not intuitive what is their lifetime.
-        auto connectionCopy = std::move(connection_);
-        connectionCopy->closeWithError(
-            Frame_ERROR::connectionError("can not resume"));
-      }
-      break;
-    }
-    case FrameType::METADATA_PUSH: {
-      Frame_METADATA_PUSH frame;
-      if (!connection_->deserializeFrameOrError(
-              frame, std::move(serializedFrame))) {
-        return;
-      }
-      handler->handleMetadataPush(std::move(frame.metadata_));
-      break;
-    }
-
-    case FrameType::REQUEST_CHANNEL:
-    case FrameType::REQUEST_STREAM:
-    case FrameType::REQUEST_RESPONSE:
-    case FrameType::REQUEST_FNF:
-    case FrameType::LEASE:
-    case FrameType::KEEPALIVE:
-    case FrameType::RESERVED:
-    case FrameType::REQUEST_N:
-    case FrameType::CANCEL:
-    case FrameType::PAYLOAD:
-    case FrameType::ERROR:
-    case FrameType::RESUME_OK:
-    case FrameType::EXT:
-    default:
-      auto connectionCopy = std::move(connection_);
-      connectionCopy->closeWithError(Frame_ERROR::unexpectedFrame());
-  }
-}
-
-std::shared_ptr<StreamState> StandardReactiveSocket::resumeListener(
-    const ResumeIdentificationToken& token) {
-  debugCheckCorrectExecutor();
-  CHECK(false) << "not implemented";
-  // TODO(lehecka)
-  return nullptr;
-  //  return handler_->handleResume(token);
-}
-
 void StandardReactiveSocket::clientConnect(
     std::shared_ptr<FrameTransport> frameTransport,
     ConnectionSetupPayload setupPayload) {
@@ -294,10 +195,8 @@ void StandardReactiveSocket::serverConnect(
 
 void StandardReactiveSocket::close() {
   debugCheckCorrectExecutor();
-  auto constexpr signal = StreamCompletionSignal::SOCKET_CLOSED;
-  if (auto copy = std::move(connection_)) {
-    copy->close(folly::exception_wrapper(), signal);
-  }
+  connection_->close(
+      folly::exception_wrapper(), StreamCompletionSignal::SOCKET_CLOSED);
 }
 
 void StandardReactiveSocket::disconnect() {
@@ -308,10 +207,7 @@ void StandardReactiveSocket::disconnect() {
 
 void StandardReactiveSocket::closeConnectionError(const std::string& reason) {
   debugCheckCorrectExecutor();
-  if (auto copy = std::move(connection_)) {
-    auto err = Frame_ERROR::connectionError(reason);
-    copy->closeWithError(std::move(err));
-  }
+  connection_->closeWithError(Frame_ERROR::connectionError(reason));
 }
 
 std::shared_ptr<FrameTransport> StandardReactiveSocket::detachFrameTransport() {
@@ -376,12 +272,12 @@ bool StandardReactiveSocket::tryResumeServer(
 }
 
 void StandardReactiveSocket::checkNotClosed() const {
-  CHECK(connection_) << "ReactiveSocket already closed";
+  CHECK(!connection_->isClosed()) << "ReactiveSocket already closed";
 }
 
 DuplexConnection* StandardReactiveSocket::duplexConnection() const {
   debugCheckCorrectExecutor();
-  return connection_ ? connection_->duplexConnection() : nullptr;
+  return connection_->duplexConnection();
 }
 
 void StandardReactiveSocket::debugCheckCorrectExecutor() const {
@@ -392,7 +288,7 @@ void StandardReactiveSocket::debugCheckCorrectExecutor() const {
 
 bool StandardReactiveSocket::isClosed() {
   debugCheckCorrectExecutor();
-  return !static_cast<bool>(connection_);
+  return connection_->isClosed();
 }
 
 } // reactivesocket

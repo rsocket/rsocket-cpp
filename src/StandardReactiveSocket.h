@@ -129,17 +129,8 @@ class StandardReactiveSocket : public ReactiveSocket {
       std::unique_ptr<KeepaliveTimer> keepaliveTimer,
       folly::Executor& executor);
 
-  void onConnectionFrame(
-      std::shared_ptr<RequestHandler> handler,
-      std::unique_ptr<folly::IOBuf> frame);
-
-  std::shared_ptr<StreamState> resumeListener(
-      const ResumeIdentificationToken& token);
-
   void checkNotClosed() const;
   void debugCheckCorrectExecutor() const;
-
-  std::shared_ptr<RequestHandler> handler_;
 
   std::shared_ptr<ConnectionAutomaton> connection_;
   folly::Executor& executor_;
