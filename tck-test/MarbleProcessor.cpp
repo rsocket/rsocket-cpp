@@ -10,6 +10,8 @@
 
 #include "src/Payload.h"
 
+using folly::dynamic;
+
 namespace reactivesocket {
 namespace tck {
 
@@ -25,14 +27,42 @@ MarbleProcessor::MarbleProcessor(
 
   // Populate argMap_
   if (marble_.find("&&") != std::string::npos) {
+
+
     std::vector<folly::StringPiece> parts;
     folly::split("&&", marble_, parts);
     CHECK(parts.size() == 2);
     std::string argMap = parts[1].toString();
     LOG(INFO) << "Parsing argMap `" << argMap << "`";
     folly::dynamic parsedJson = folly::parseJson(argMap);
+    LOG(INFO) << parsedJson.typeName();
     LOG(INFO) << parsedJson.size();
     LOG(INFO) << parsedJson;
+
+
+    folly::dynamic test = dynamic::object("a", dynamic::object("a", "b"))
+                                         ("b", dynamic::object("c", "d"))
+                                         ("c", dynamic::object("e", "f"));
+    LOG(INFO) << test;
+    for (const auto& i : test.items()) {
+      LOG(INFO) << i.first << " -> " << *i.second.keys().begin() << " " << *i.second.values().begin();
+    }
+
+    for (const auto& i : test.items()) {
+      LOG(INFO) << i.first << " -> " << i.second.keys().begin()->asString() << " " << i.second.values().begin()->asString();
+    }
+
+
+    for (const auto& i : parsedJson.items()) {
+      LOG(INFO) << i.first << " -> " << *i.second.keys().begin() << " " << *i.second.values().begin();
+    }
+
+
+    for (const auto& i : parsedJson.items()) {
+      LOG(INFO) << i.first << " -> " << i.second.keys().begin()->asString() << " " << i.second.values().begin()->asString();
+    }
+
+
     for (const auto& item : parsedJson.items()) {
       try {
         LOG(INFO) << item.first.typeName();
