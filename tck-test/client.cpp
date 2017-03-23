@@ -87,7 +87,7 @@ int main(int argc, char* argv[]) {
     LOG(INFO) << "Connecting to " << FLAGS_ip << ":" << FLAGS_port;
     folly::SocketAddress addr(FLAGS_ip, FLAGS_port, true);
     socket->connect(callback.get(), addr);
-    LOG(INFO) << "Attempting connections on " << addr.describe();
+    LOG(INFO) << "Connected to " << addr.describe();
   });
 
   callback->waitToConnect();

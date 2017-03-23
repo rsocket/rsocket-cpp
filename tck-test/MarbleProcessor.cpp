@@ -2,15 +2,49 @@
 
 #include "MarbleProcessor.h"
 
-#include <algorithm>
-
 #include <folly/Conv.h>
 #include <folly/ExceptionWrapper.h>
-#include <folly/json.h>
+#include <folly/Format.h>
+#include <folly/String.h>
 
-#include "src/Payload.h"
+namespace {
 
-using folly::dynamic;
+std::string trimQuotes(std::string input) {
+  if (input.size() < 3) {
+    return "";
+  }
+  CHECK(input[0] == '\"');
+  CHECK(input[input.size() - 1] == '\"');
+  return std::string(input, 1, input.size() - 2);
+}
+
+std::string trimBraces(std::string input) {
+  if (input.size() < 3) {
+    return "";
+  }
+  CHECK(input[0] == '{');
+  CHECK(input[input.size() - 1] == '}');
+  return std::string(input, 1, input.size() - 2);
+}
+
+std::map<std::string, std::pair<std::string, std::string>> getArgMap(
+    std::string input) {
+  std::map<std::string, std::pair<std::string, std::string>> argMap;
+  std::vector<std::string> payloads;
+  input = trimBraces(input);
+  folly::split(",", input, payloads);
+  for (const auto& payload : payloads) {
+    std::string key, value;
+    folly::split<false>(":", folly::StringPiece(payload), key, value);
+    value = trimBraces(value);
+    std::string data, metadata;
+    folly::split<true>(":", folly::StringPiece(value), data, metadata);
+    argMap[trimQuotes(key)] =
+        std::make_pair(trimQuotes(data), trimQuotes(metadata));
+  }
+  return argMap;
+}
+}
 
 namespace reactivesocket {
 namespace tck {
@@ -27,75 +61,11 @@ MarbleProcessor::MarbleProcessor(
 
   // Populate argMap_
   if (marble_.find("&&") != std::string::npos) {
-
-    std::string testJson = R"({"a":{"a":"b"},"b":{"c":"d"},"c":{"e":"f"}})";
-    folly::dynamic testDyn = folly::parseJson(testJson);
-    LOG(INFO) << testDyn;
-    for (const auto& i : testDyn.items()) {
-      LOG(INFO) << i.first << " -> " << *i.second.keys().begin() << " " << *i.second.values().begin();
-    }
-
-    for (const auto& i : testDyn.items()) {
-      LOG(INFO) << i.first << " -> " << i.second.keys().begin()->asString() << " " << i.second.values().begin()->asString();
-    }
-
-
-    std::vector<folly::StringPiece> parts;
+    std::vector<std::string> parts;
     folly::split("&&", marble_, parts);
     CHECK(parts.size() == 2);
-    std::string argMap = parts[1].toString();
-    LOG(INFO) << "Parsing argMap `" << argMap << "`";
-    folly::dynamic parsedJson = folly::parseJson(argMap);
-    LOG(INFO) << parsedJson.typeName();
-    LOG(INFO) << parsedJson.size();
-    LOG(INFO) << parsedJson;
-
-
-    folly::dynamic test = dynamic::object("a", dynamic::object("a", "b"))
-                                         ("b", dynamic::object("c", "d"))
-                                         ("c", dynamic::object("e", "f"));
-    LOG(INFO) << test;
-    for (const auto& i : test.items()) {
-      LOG(INFO) << i.first << " -> " << *i.second.keys().begin() << " " << *i.second.values().begin();
-    }
-
-    for (const auto& i : test.items()) {
-      LOG(INFO) << i.first << " -> " << i.second.keys().begin()->asString() << " " << i.second.values().begin()->asString();
-    }
-
-
-    for (const auto& i : parsedJson.items()) {
-      LOG(INFO) << i.first << " -> " << *i.second.keys().begin() << " " << *i.second.values().begin();
-    }
-
-
-    for (const auto& i : parsedJson.items()) {
-      LOG(INFO) << i.first << " -> " << i.second.keys().begin()->asString() << " " << i.second.values().begin()->asString();
-    }
-
-
-    for (const auto& item : parsedJson.items()) {
-      try {
-        LOG(INFO) << item.first.typeName();
-        LOG(INFO) << item.first.asString();
-        LOG(INFO) << item.second.typeName();
-        LOG(INFO) << item.second.size();
-        LOG(INFO) << item.second.keys().begin()->typeName();
-        LOG(INFO) << item.second.keys().begin()->asString();
-        LOG(INFO) << item.second.values().begin()->typeName();
-        LOG(INFO) << item.second.values().begin()->asString();
-        argMap_[item.first.asString()] = std::make_pair(
-            item.second.keys().begin()->asString(),
-            item.second.values().begin()->asString());
-      } catch (std::exception& ex) {
-        LOG(INFO) << ex.what();
-      }
-    }
-    for (const auto& i : argMap_) {
-      LOG(INFO) << i.first << " -> " << i.second.first << " " << i.second.second;
-    }
-    marble_ = parts[0].toString();
-    LOG(INFO) << "Actual marble `" << marble_ << "`";
+    argMap_ = getArgMap(parts[1]);
+    marble_ = parts[0];
   }
 }
 
