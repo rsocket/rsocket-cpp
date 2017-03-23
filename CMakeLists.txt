@@ -23,6 +23,8 @@ if(NOT REACTIVE_STREAMS_GIT_URL)
   set(REACTIVE_STREAMS_GIT_URL "https://github.com/ReactiveSocket/reactive-streams-cpp.git" CACHE STRING "Location of the ReactiveStreams C++ git repo" FORCE)
 endif(NOT REACTIVE_STREAMS_GIT_URL)
 
+option(BUILD_BENCHMARKS "Build benchmarks" ON)
+
 enable_testing()
 
 # Add a OSS macro.  This is mainly to get gflags working with travis.
@@ -492,5 +494,9 @@ target_link_libraries(
 ########################################
 # End Examples
 ########################################
+
+if(BUILD_BENCHMARKS)
+  add_subdirectory(benchmarks)
+endif(BUILD_BENCHMARKS)
 
 # EOF
