@@ -30,7 +30,8 @@ void ConsumerMixin::generateRequest(size_t n) {
 
 void ConsumerMixin::endStream(StreamCompletionSignal signal) {
   if (auto subscriber = std::move(consumingSubscriber_)) {
-    if (signal == StreamCompletionSignal::GRACEFUL) {
+    if (signal == StreamCompletionSignal::COMPLETE ||
+        signal == StreamCompletionSignal::CANCEL) { // TODO: remove CANCEL
       subscriber->onComplete();
     } else {
       subscriber->onError(StreamInterruptedException(static_cast<int>(signal)));
@@ -77,10 +78,7 @@ void ConsumerMixin::sendRequests() {
   size_t toSync = Frame_REQUEST_N::kMaxRequestN;
   toSync = pendingAllowance_.drainWithLimit(toSync);
   if (toSync > 0) {
-    auto frame =
-        Frame_REQUEST_N(Base::streamId_, static_cast<uint32_t>(toSync));
-    Base::connection_->outputFrameOrEnqueue(
-        Base::connection_->frameSerializer().serializeOut(std::move(frame)));
+    writeRequestN(static_cast<uint32_t>(toSync));
   }
 }
 
@@ -88,8 +86,6 @@ void ConsumerMixin::handleFlowControlError() {
   if (auto subscriber = std::move(consumingSubscriber_)) {
     subscriber->onError(std::runtime_error("surplus response"));
   }
-  auto frame = Frame_CANCEL(Base::streamId_);
-  Base::connection_->outputFrameOrEnqueue(
-      Base::connection_->frameSerializer().serializeOut(std::move(frame)));
+  errorStream("flow control error");
 }
 }

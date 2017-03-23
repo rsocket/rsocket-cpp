@@ -19,10 +19,8 @@ void RequestResponseResponder::onNextImpl(Payload response) noexcept {
     case State::RESPONDING: {
       state_ = State::CLOSED;
       debugCheckOnNextOnCompleteOnError();
-      Frame_PAYLOAD frame(streamId_, FrameFlags::COMPLETE, std::move(response));
-      connection_->outputFrameOrEnqueue(
-          connection_->frameSerializer().serializeOut(std::move(frame)));
-      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      writePayload(std::move(response), true);
+      closeStream(StreamCompletionSignal::COMPLETE);
       break;
     }
     case State::CLOSED:
@@ -35,10 +33,7 @@ void RequestResponseResponder::onCompleteImpl() noexcept {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
-      auto frame = Frame_PAYLOAD::complete(streamId_);
-      connection_->outputFrameOrEnqueue(
-          connection_->frameSerializer().serializeOut(std::move(frame)));
-      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      completeStream();
     } break;
     case State::CLOSED:
       break;
@@ -51,11 +46,7 @@ void RequestResponseResponder::onErrorImpl(
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
-      auto msg = ex.what().toStdString();
-      auto frame = Frame_ERROR::applicationError(streamId_, msg);
-      connection_->outputFrameOrEnqueue(
-          connection_->frameSerializer().serializeOut(std::move(frame)));
-      connection_->endStream(streamId_, StreamCompletionSignal::ERROR);
+      applicationError(ex.what().toStdString());
     } break;
     case State::CLOSED:
       break;
@@ -74,7 +65,8 @@ void RequestResponseResponder::endStream(StreamCompletionSignal signal) {
   switch (state_) {
     case State::RESPONDING:
       // Spontaneous ::endStream signal means an error.
-      DCHECK(StreamCompletionSignal::GRACEFUL != signal);
+      DCHECK(StreamCompletionSignal::COMPLETE != signal);
+      DCHECK(StreamCompletionSignal::CANCEL != signal);
       state_ = State::CLOSED;
       break;
     case State::CLOSED:
@@ -88,7 +80,7 @@ void RequestResponseResponder::onNextFrame(Frame_CANCEL&& frame) {
   switch (state_) {
     case State::RESPONDING:
       state_ = State::CLOSED;
-      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      closeStream(StreamCompletionSignal::CANCEL);
       break;
     case State::CLOSED:
       break;

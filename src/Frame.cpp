@@ -154,18 +154,17 @@ Frame_ERROR Frame_ERROR::connectionError(const std::string& message) {
   return Frame_ERROR(0, ErrorCode::CONNECTION_ERROR, Payload(message));
 }
 
-Frame_ERROR Frame_ERROR::invalid(
-    StreamId streamId,
-    const std::string& message) {
+Frame_ERROR Frame_ERROR::error(StreamId streamId, Payload&& payload) {
   DCHECK(streamId) << "streamId MUST be non-0";
-  return Frame_ERROR(streamId, ErrorCode::INVALID, Payload(message));
+  return Frame_ERROR(streamId, ErrorCode::INVALID, std::move(payload));
 }
 
 Frame_ERROR Frame_ERROR::applicationError(
     StreamId streamId,
-    const std::string& message) {
+    Payload&& payload) {
   DCHECK(streamId) << "streamId MUST be non-0";
-  return Frame_ERROR(streamId, ErrorCode::APPLICATION_ERROR, Payload(message));
+  return Frame_ERROR(
+      streamId, ErrorCode::APPLICATION_ERROR, std::move(payload));
 }
 
 std::ostream& operator<<(std::ostream& os, const Frame_ERROR& frame) {

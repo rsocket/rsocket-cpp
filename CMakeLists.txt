@@ -175,6 +175,7 @@ add_library(
   src/Stats.h
   src/StreamsFactory.cpp
   src/StreamsFactory.h
+  src/StreamsHandler.h
   src/StreamState.cpp
   src/StreamState.h
   src/SubscriberBase.h

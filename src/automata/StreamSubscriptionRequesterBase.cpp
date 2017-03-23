@@ -48,14 +48,11 @@ void StreamSubscriptionRequesterBase::cancelImpl() noexcept {
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;
-      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      closeStream(StreamCompletionSignal::CANCEL);
       break;
     case State::REQUESTED: {
       state_ = State::CLOSED;
-      auto frame = Frame_CANCEL(streamId_);
-      connection_->outputFrameOrEnqueue(
-          connection_->frameSerializer().serializeOut(std::move(frame)));
-      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      cancelStream();
     } break;
     case State::CLOSED:
       break;
@@ -67,7 +64,8 @@ void StreamSubscriptionRequesterBase::endStream(StreamCompletionSignal signal) {
     case State::NEW:
     case State::REQUESTED:
       // Spontaneous ::endStream signal means an error.
-      DCHECK(StreamCompletionSignal::GRACEFUL != signal);
+      DCHECK(StreamCompletionSignal::COMPLETE != signal);
+      DCHECK(StreamCompletionSignal::CANCEL != signal);
       state_ = State::CLOSED;
       break;
     case State::CLOSED:
@@ -96,7 +94,7 @@ void StreamSubscriptionRequesterBase::onNextFrame(Frame_PAYLOAD&& frame) {
   processPayload(std::move(frame.payload_));
 
   if (end) {
-    connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+    closeStream(StreamCompletionSignal::COMPLETE);
   }
 }
 
@@ -109,7 +107,7 @@ void StreamSubscriptionRequesterBase::onNextFrame(Frame_ERROR&& frame) {
     case State::REQUESTED:
       state_ = State::CLOSED;
       Base::onError(std::runtime_error(frame.payload_.moveDataToString()));
-      connection_->endStream(streamId_, StreamCompletionSignal::ERROR);
+      closeStream(StreamCompletionSignal::ERROR);
       break;
     case State::CLOSED:
       break;
