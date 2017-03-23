@@ -197,8 +197,7 @@ class ConnectionAutomaton final
   /// FrameProcessor methods are implemented with ExecutorBase and automatic
   /// marshaling
   /// onto the right executor to allow DuplexConnection living on a different
-  /// executor
-  /// and calling into ConnectionAutomaton.
+  /// executor  and calling into ConnectionAutomaton.
   void processFrame(std::unique_ptr<folly::IOBuf>) override;
   void onTerminal(folly::exception_wrapper) override;
 
