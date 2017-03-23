@@ -28,6 +28,17 @@ MarbleProcessor::MarbleProcessor(
   // Populate argMap_
   if (marble_.find("&&") != std::string::npos) {
 
+    std::string testJson = R"({"a":{"a":"b"},"b":{"c":"d"},"c":{"e":"f"}})";
+    folly::dynamic testDyn = folly::parseJson(testJson);
+    LOG(INFO) << testDyn;
+    for (const auto& i : testDyn.items()) {
+      LOG(INFO) << i.first << " -> " << *i.second.keys().begin() << " " << *i.second.values().begin();
+    }
+
+    for (const auto& i : testDyn.items()) {
+      LOG(INFO) << i.first << " -> " << i.second.keys().begin()->asString() << " " << i.second.values().begin()->asString();
+    }
+
 
     std::vector<folly::StringPiece> parts;
     folly::split("&&", marble_, parts);
