@@ -61,6 +61,7 @@ before_script:
 script:
   - mkdir -p build
   - cd build
+  - export ASAN_OPTIONS=detect_container_overflow=0
   - if [ -n "$CLANG_VERSION" -a "$ASAN" == "On" ]; then echo "turning on ASAN sanitize=address,undefined,integer no-sanitize=unsigned-integer-overflow"; fi
   - if [ -n "$CLANG_VERSION" -a "$ASAN" == "On" ]; then CXX_FLAGS="${CXX_FLAGS} -fsanitize=address,undefined,integer -fno-sanitize=unsigned-integer-overflow"; fi
   - if [ -n "$GCC_VERSION" -a "$ASAN" == "On" ]; then echo "turning on ASAN sanitize=address,undefined"; fi
