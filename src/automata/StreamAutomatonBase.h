@@ -13,7 +13,7 @@ class IOBuf;
 
 namespace reactivesocket {
 
-class ConnectionAutomaton;
+class StreamsWriter;
 class Frame_CANCEL;
 class Frame_ERROR;
 class Frame_REQUEST_CHANNEL;
@@ -22,6 +22,7 @@ class Frame_REQUEST_RESPONSE;
 class Frame_REQUEST_STREAM;
 class Frame_PAYLOAD;
 class RequestHandler;
+struct Payload;
 
 ///
 /// A common base class of all automatons.
@@ -35,17 +36,15 @@ class StreamAutomatonBase {
   /// constructor of any mixin and must be passed by const& to mixin's Base.
   struct Parameters {
     Parameters() = default;
-    Parameters(
-        std::shared_ptr<ConnectionAutomaton> _connection,
-        StreamId _streamId)
-        : connection(std::move(_connection)), streamId(_streamId) {}
+    Parameters(std::shared_ptr<StreamsWriter> _writer, StreamId _streamId)
+        : writer(std::move(_writer)), streamId(_streamId) {}
 
-    std::shared_ptr<ConnectionAutomaton> connection;
+    std::shared_ptr<StreamsWriter> writer;
     StreamId streamId{0};
   };
 
   explicit StreamAutomatonBase(Parameters params)
-      : connection_(std::move(params.connection)), streamId_(params.streamId) {}
+      : writer_(std::move(params.writer)), streamId_(params.streamId) {}
   virtual ~StreamAutomatonBase() = default;
 
   /// @{
@@ -89,6 +88,19 @@ class StreamAutomatonBase {
   virtual void onNextFrame(Frame_PAYLOAD&&);
   virtual void onNextFrame(Frame_ERROR&&);
 
+  void newStream(
+      StreamType streamType,
+      uint32_t initialRequestN,
+      Payload payload,
+      bool TEMP_completed = false);
+  void writePayload(Payload&& payload, bool complete);
+  void writeRequestN(uint32_t n);
+  void applicationError(std::string errorPayload);
+  void errorStream(std::string errorPayload);
+  void cancelStream();
+  void completeStream();
+  void closeStream(StreamCompletionSignal signal);
+
  private:
   template <typename Frame>
   void deserializeAndDispatch(std::unique_ptr<folly::IOBuf> payload);
@@ -96,13 +108,12 @@ class StreamAutomatonBase {
   void onBadFrame();
   void onUnknownFrame();
 
- protected:
   /// A partially-owning pointer to the connection, the stream runs on.
   /// It is declared as const to allow only ctor to initialize it for thread
   /// safety of the dtor.
-  const std::shared_ptr<ConnectionAutomaton> connection_;
-  /// An ID of the stream (within the connection) this automaton manages.
+  const std::shared_ptr<StreamsWriter> writer_;
   const StreamId streamId_;
+  // TODO: remove and nulify the writer_ instead
   bool isTerminated_{false};
 };
 }

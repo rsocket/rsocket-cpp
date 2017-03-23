@@ -24,16 +24,13 @@ void RequestResponseRequester::requestImpl(size_t n) noexcept {
 
   if (state_ == State::NEW) {
     state_ = State::REQUESTED;
-    Frame_REQUEST_RESPONSE frame(
-        streamId_, FrameFlags::EMPTY, std::move(std::move(initialPayload_)));
-    connection_->outputFrameOrEnqueue(
-        connection_->frameSerializer().serializeOut(std::move(frame)));
+    newStream(StreamType::REQUEST_RESPONSE, 1, std::move(initialPayload_));
   }
 
   if (payload_) {
     consumingSubscriber_->onNext(std::move(payload_));
     DCHECK(!payload_);
-    connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+    closeStream(StreamCompletionSignal::COMPLETE);
   } else {
     waitingForPayload_ = true;
   }
@@ -43,14 +40,11 @@ void RequestResponseRequester::cancelImpl() noexcept {
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;
-      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      closeStream(StreamCompletionSignal::CANCEL);
       break;
     case State::REQUESTED: {
       state_ = State::CLOSED;
-      auto frame = Frame_CANCEL(streamId_);
-      connection_->outputFrameOrEnqueue(
-          connection_->frameSerializer().serializeOut(std::move(frame)));
-      connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+      cancelStream();
     } break;
     case State::CLOSED:
       break;
@@ -66,14 +60,16 @@ void RequestResponseRequester::endStream(StreamCompletionSignal signal) {
     case State::NEW:
     case State::REQUESTED:
       // Spontaneous ::endStream signal means an error.
-      DCHECK(StreamCompletionSignal::GRACEFUL != signal);
+      DCHECK(StreamCompletionSignal::COMPLETE != signal);
+      DCHECK(StreamCompletionSignal::CANCEL != signal);
       state_ = State::CLOSED;
       break;
     case State::CLOSED:
       break;
   }
   if (auto subscriber = std::move(consumingSubscriber_)) {
-    if (signal == StreamCompletionSignal::GRACEFUL) {
+    if (signal == StreamCompletionSignal::COMPLETE ||
+        signal == StreamCompletionSignal::CANCEL) { // TODO: remove CANCEL
       subscriber->onComplete();
     } else {
       subscriber->onError(StreamInterruptedException(static_cast<int>(signal)));
@@ -93,7 +89,7 @@ void RequestResponseRequester::onNextFrame(Frame_ERROR&& frame) {
         subscriber->onError(
             std::runtime_error(frame.payload_.moveDataToString()));
       }
-      connection_->endStream(streamId_, StreamCompletionSignal::ERROR);
+      closeStream(StreamCompletionSignal::ERROR);
       break;
     case State::CLOSED:
       break;
@@ -117,15 +113,14 @@ void RequestResponseRequester::onNextFrame(Frame_PAYLOAD&& frame) {
   }
 
   if (!frame.payload_) {
-    connection_->closeWithError(
-        Frame_ERROR::invalid(streamId_, "payload expected"));
-    // will call endStream on all streams, including this one
+    errorStream("payload expected");
+    // will call endStream on the stream
     return;
   }
 
   if (waitingForPayload_) {
     consumingSubscriber_->onNext(std::move(frame.payload_));
-    connection_->endStream(streamId_, StreamCompletionSignal::GRACEFUL);
+    closeStream(StreamCompletionSignal::COMPLETE);
   } else {
     payload_ = std::move(frame.payload_);
     // we will just remember the payload and return it when request(n) is called

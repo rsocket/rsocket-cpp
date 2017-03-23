@@ -18,7 +18,9 @@ static const char* getTerminatingSignalErrorMessage(int terminatingSignal) {
     case StreamCompletionSignal::CONNECTION_ERROR:
       return "connection error";
     case StreamCompletionSignal::ERROR:
-      return "socket error";
+      return "socket or stream error";
+    case StreamCompletionSignal::APPLICATION_ERROR:
+      return "application error";
     case StreamCompletionSignal::SOCKET_CLOSED:
       return "reactive socket closed";
     case StreamCompletionSignal::UNSUPPORTED_SETUP:
@@ -27,8 +29,9 @@ static const char* getTerminatingSignalErrorMessage(int terminatingSignal) {
       return "rejected setup";
     case StreamCompletionSignal::INVALID_SETUP:
       return "invalid setup";
-    case StreamCompletionSignal::GRACEFUL:
-      DCHECK(false) << "throwing exception for GRACEFUL termination?";
+    case StreamCompletionSignal::COMPLETE:
+    case StreamCompletionSignal::CANCEL:
+      DCHECK(false) << "throwing exception for graceful termination?";
       return "graceful termination";
     default:
       return "stream interrupted";
@@ -37,10 +40,14 @@ static const char* getTerminatingSignalErrorMessage(int terminatingSignal) {
 
 std::string to_string(StreamCompletionSignal signal) {
   switch (signal) {
-    case StreamCompletionSignal::GRACEFUL:
-      return "GRACEFUL";
+    case StreamCompletionSignal::COMPLETE:
+      return "COMPLETE";
+    case StreamCompletionSignal::CANCEL:
+      return "CANCEL";
     case StreamCompletionSignal::ERROR:
       return "ERROR";
+    case StreamCompletionSignal::APPLICATION_ERROR:
+      return "APPLICATION_ERROR";
     case StreamCompletionSignal::INVALID_SETUP:
       return "INVALID_SETUP";
     case StreamCompletionSignal::UNSUPPORTED_SETUP:

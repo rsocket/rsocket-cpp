@@ -37,7 +37,9 @@ constexpr const ResumePosition kUnspecifiedResumePosition = -1;
 /// Indicates the reason why the stream automaton received a terminal signal
 /// from the connection.
 enum class StreamCompletionSignal {
-  GRACEFUL,
+  CANCEL,
+  COMPLETE,
+  APPLICATION_ERROR,
   ERROR,
   INVALID_SETUP,
   UNSUPPORTED_SETUP,
@@ -48,6 +50,13 @@ enum class StreamCompletionSignal {
 };
 
 enum class ReactiveSocketMode { SERVER, CLIENT };
+
+enum class StreamType {
+  REQUEST_RESPONSE,
+  STREAM,
+  CHANNEL,
+  FNF,
+};
 
 std::string to_string(StreamCompletionSignal);
 std::ostream& operator<<(std::ostream&, StreamCompletionSignal);
