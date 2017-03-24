@@ -7,7 +7,8 @@ using namespace yarpl::observable;
 
 TEST(Observable, SingleOnNext) {
   auto a = Observable<int>::create([](std::unique_ptr<Observer<int>> obs) {
-    obs->onSubscribe(Subscription::create());
+    Subscription s([] {});
+    obs->onSubscribe(&s);
     obs->onNext(1);
     obs->onComplete();
   });
@@ -20,7 +21,8 @@ TEST(Observable, SingleOnNext) {
 
 TEST(Observable, MultiOnNext) {
   auto a = Observable<int>::create([](std::unique_ptr<Observer<int>> obs) {
-    obs->onSubscribe(Subscription::create());
+    Subscription s([] {});
+    obs->onSubscribe(&s);
     obs->onNext(1);
     obs->onNext(2);
     obs->onNext(3);
@@ -41,14 +43,18 @@ TEST(Observable, OnError) {
     try {
       throw std::runtime_error("something broke!");
     } catch (const std::exception& e) {
-      obs->onError(e);
+      obs->onError(std::current_exception());
     }
   });
 
   a->subscribe(Observer<int>::create(
       [](int value) { /* do nothing */ },
-      [&errorMessage](const std::exception& e) {
-        errorMessage = std::string(e.what());
+      [&errorMessage](const std::exception_ptr e) {
+        try {
+          std::rethrow_exception(e);
+        } catch (const std::runtime_error& ex) {
+          errorMessage = std::string(ex.what());
+        }
       }));
 
   EXPECT_EQ("something broke!", errorMessage);
@@ -79,7 +85,8 @@ TEST(Observable, ItemsCollectedSynchronously) {
   };
 
   auto a = Observable<Tuple>::create([](std::unique_ptr<Observer<Tuple>> obs) {
-    obs->onSubscribe(Subscription::create());
+    Subscription s([] {});
+    obs->onSubscribe(&s);
     obs->onNext(Tuple{1, 2});
     obs->onNext(Tuple{2, 3});
     obs->onNext(Tuple{3, 4});
@@ -133,7 +140,8 @@ TEST(Observable, ItemsCollectedAsynchronously) {
   {
     auto a =
         Observable<Tuple>::create([](std::unique_ptr<Observer<Tuple>> obs) {
-          obs->onSubscribe(Subscription::create());
+          Subscription s([] {});
+          obs->onSubscribe(&s);
           std::cout << "-----------------------------" << std::endl;
           obs->onNext(Tuple{1, 2});
           std::cout << "-----------------------------" << std::endl;
@@ -171,7 +179,7 @@ class TakeObserver : public Observer<int> {
  private:
   const int limit;
   int count = 0;
-  std::unique_ptr<Subscription> subscription;
+  Subscription* subscription_;
   std::vector<int>& v;
 
  public:
@@ -179,18 +187,18 @@ class TakeObserver : public Observer<int> {
     v.reserve(5);
   }
 
-  void onSubscribe(std::unique_ptr<Subscription> s) override {
-    subscription = std::move(s);
+  void onSubscribe(Subscription* s) override {
+    subscription_ = s;
   }
   void onNext(const int& value) override {
     v.push_back(value);
     if (++count >= limit) {
       //      std::cout << "Cancelling subscription after receiving " << count
       //                << " items." << std::endl;
-      subscription->cancel();
+      subscription_->cancel();
     }
   }
-  void onError(const std::exception& e) override {}
+  void onError(const std::exception_ptr e) override {}
   void onComplete() override {}
 };
 
@@ -199,7 +207,8 @@ TEST(Observable, SubscriptionCancellation) {
   static std::atomic_int emitted{0};
   auto a = Observable<int>::create([](std::unique_ptr<Observer<int>> obs) {
     std::atomic_bool isUnsubscribed{false};
-    obs->onSubscribe(Subscription::create(isUnsubscribed));
+    Subscription s([&isUnsubscribed] { isUnsubscribed = true; });
+    obs->onSubscribe(&s);
     int i = 0;
     while (!isUnsubscribed && i <= 10) {
       emitted++;

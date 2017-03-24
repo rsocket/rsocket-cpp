@@ -1,42 +1,43 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "FlowableExamples.h"
+#include "FlowableAExamples.h"
 #include <thread>
 #include "reactivestreams/ReactiveStreams.h"
-#include "yarpl/Flowable.h"
+#include "yarpl/FlowableA.h"
 #include "yarpl/Flowable_Subscriber.h"
 #include "yarpl/ThreadScheduler.h"
 
 using namespace reactivestreams_yarpl;
 using namespace yarpl::flowable;
+using namespace yarpl::flowableA;
 using namespace yarpl;
 
-std::shared_ptr<Flowable<std::string>> getFlowable() {
-  return Flowables::range(1, 5)->map(
-      [](auto i) { return "Data=>" + std::to_string(i); });
+auto getFlowableA() {
+  return FlowablesA::range(1, 5)
+      .map([](auto i) { return "Data=>" + std::to_string(i); });
 }
 
-void FlowableExamples::run() {
+void FlowableAExamples::run() {
   std::cout << "---------------FlowableExamples::run-----------------"
             << std::endl;
 
-  Flowables::range(1, 10)
-      ->map([](auto i) { return "hello->" + std::to_string(i); })
-      ->take(3)
-      ->subscribe(createSubscriber<std::string>(
+  FlowablesA::range(1, 10)
+      .map([](auto i) { return "hello->" + std::to_string(i); })
+      .take(3)
+      .subscribe(createSubscriber<std::string>(
           [](auto t) { std::cout << "Value received: " << t << std::endl; }));
 
-  std::cout << "--------------- END Example" << std::endl;
-
-  getFlowable()->take(2)->subscribe(createSubscriber<std::string>(
+  getFlowableA().take(2).subscribe(createSubscriber<std::string>(
       [](auto t) { std::cout << "Value received: " << t << std::endl; }));
 
   std::cout << "--------------- END Example" << std::endl;
 
-  auto a = Flowables::range(1, 10);
-  auto b = a->take(3);
-  auto c = b->map([](auto i) { return "hello->" + std::to_string(i); });
-  c->subscribe(createSubscriber<std::string>(
+  std::cout << "--------------- END Example" << std::endl;
+
+  auto a = FlowablesA::range(1, 10);
+  auto b = a.take(3);
+  auto c = b.map([](auto i) { return "hello->" + std::to_string(i); });
+  c.subscribe(createSubscriber<std::string>(
       [](auto t) { std::cout << "Value received: " << t << std::endl; }));
 
   std::cout << "--------------- END Example" << std::endl;
@@ -45,11 +46,11 @@ void FlowableExamples::run() {
 
   ThreadScheduler scheduler;
 
-  Flowables::range(1, 10)
-      ->subscribeOn(scheduler) // put on background thread
-      ->map([](auto i) { return "Value received: " + std::to_string(i); })
-      ->take(6)
-      ->subscribe(createSubscriber<std::string>([](auto t) {
+  FlowablesA::range(1, 10)
+      .subscribeOn(scheduler) // put on background thread
+      .map([](auto i) { return "Value received: " + std::to_string(i); })
+      .take(6)
+      .subscribe(createSubscriber<std::string>([](auto t) {
         std::cout << t << " on thread: " << std::this_thread::get_id()
                   << std::endl;
       }));
@@ -101,7 +102,7 @@ void FlowableExamples::run() {
     int requested_{0};
   };
 
-  Flowables::range(1, 100)->subscribe(std::make_unique<MySubscriber>());
+  FlowablesA::range(1, 100).subscribe(std::make_unique<MySubscriber>());
 
   std::cout << "---------------FlowableExamples::run-----------------"
             << std::endl;
