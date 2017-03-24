@@ -12,6 +12,7 @@
 
 using namespace reactivestreams_yarpl;
 using namespace yarpl::flowable;
+using namespace yarpl::flowableC;
 using namespace yarpl;
 
 std::unique_ptr<FlowableC<long>> getC() {
