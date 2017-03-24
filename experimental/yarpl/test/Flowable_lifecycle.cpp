@@ -23,9 +23,7 @@ using namespace reactivestreams_yarpl;
  * @param scheduler
  * @param subscriber
  */
-void runHandlerFlowable(
-    Scheduler& scheduler,
-    std::unique_ptr<Subscriber<long>> subscriber) {
+auto runHandlerFlowable(Scheduler& scheduler) {
   class Handler {
    public:
     Handler() = default;
@@ -46,16 +44,59 @@ void runHandlerFlowable(
       s_->start();
     };
   };
-  Flowable<long>::create(Handler())
-      ->subscribeOn(scheduler)
-      ->take(50)
-      ->subscribe(std::move(subscriber));
+  return Flowable<long>::create(Handler())->subscribeOn(scheduler)->take(50);
 }
 
 TEST(FlowableLifecycle, HandlerClass) {
   ThreadScheduler scheduler;
-  auto ts = TestSubscriber<long>::create();
-  runHandlerFlowable(scheduler, ts->unique_subscriber());
+
+  /**
+   * Make sure we interleave request(n) with emission
+   * so it forces scheduling and concurrency.
+   */
+  class MySubscriber : public Subscriber<long> {
+   public:
+    void onSubscribe(Subscription* subscription) {
+      s_ = subscription;
+      requested = 10;
+      s_->request(10);
+    }
+
+    void onNext(const long& t) {
+      acceptAndRequestMoreIfNecessary();
+      std::cout << "onNext& " << t << std::endl;
+    }
+
+    void onNext(long&& t) {
+      acceptAndRequestMoreIfNecessary();
+      std::cout << "onNext&& " << t << std::endl;
+    }
+
+    void onComplete() {
+      std::cout << "onComplete " << std::endl;
+    }
+
+    void onError(const std::exception_ptr error) {
+      std::cout << "onError " << std::endl;
+    }
+
+   private:
+    Subscription* s_;
+    int requested{0};
+
+    void acceptAndRequestMoreIfNecessary() {
+      if (--requested == 2) {
+        std::cout << "Request more..." << std::endl;
+        requested += 8;
+        s_->request(8);
+      }
+    }
+  };
+
+  auto ts = TestSubscriber<long>::create(std::make_unique<MySubscriber>());
+  auto f = runHandlerFlowable(scheduler);
+  std::cout << "received f, now subscribe" << std::endl;
+  f->subscribe(ts->unique_subscriber());
   std::cout << "after runHandlerFlowable" << std::endl;
   ts->awaitTerminalEvent();
   ts->assertValueCount(50);

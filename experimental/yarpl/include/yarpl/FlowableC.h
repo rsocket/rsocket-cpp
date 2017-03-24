@@ -16,8 +16,16 @@
 #include "yarpl/flowable/operators/Flowable_Take.h"
 
 namespace yarpl {
-namespace flowable {
+namespace flowableC {
 
+/**
+ * Flowable type that uses unique_ptr for memory management.
+ *
+ * Does not work correctly in all chaining cases as OnSubscribe
+ * function can be destroyed. See Flowable_lifecycle.cpp test.
+ *
+ * @tparam T
+ */
 template <typename T>
 class FlowableC : public reactivestreams_yarpl::Publisher<T> {
   // using reactivestream_yarpl to not conflict with the other reactivestreams
@@ -105,7 +113,7 @@ class FlowableC : public reactivestreams_yarpl::Publisher<T> {
   template <typename Function>
   class Derived : public FlowableC {
    public:
-    Derived(Function&& function)
+    explicit Derived(Function&& function)
         : function_(
               std::make_unique<Function>(std::forward<Function>(function))) {}
 

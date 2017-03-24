@@ -7,7 +7,9 @@
 #include "yarpl/Flowable.h"
 #include "yarpl/Flowable_TestSubscriber.h"
 #include "yarpl/flowable/sources/Flowable_RangeSubscription.h"
+#include "yarpl/ThreadScheduler.h"
 
+using namespace yarpl;
 using namespace yarpl::flowable;
 using namespace reactivestreams_yarpl;
 
@@ -98,34 +100,23 @@ TEST(FlowableRange, 1_to_100_cancel) {
   ts->assertValueCount(40);
 }
 
-// TODO do this properly once we have subscribeOn
-// wrapping the thread like this is non-deterministic
-// as it can be interrupted
-// It manually works most of the time and proves cancellation works
-// but is not something that should be left to run all the time yet.
-
-///**
-// * Test that cancellation works correctly across thread boundaries
-// * to stop emission.
-// */
-// TEST(FlowableRange, async_cancellation) {
-//  // TODO can this be more deterministic?
-//  // this is still somewhat non-deterministic as a scheduler could
-//  // theoretically allow all of these to emit before scheduling the cancel
-//  const int MAX_SIZE = 500000000;
-//  auto f = Flowable<long>::create([](auto s) {
-//    std::thread([s_ = std::move(s)]() mutable {
-//      auto r_ = new yarpl::flowable::sources::RangeSubscription(
-//          1, MAX_SIZE, std::move(s_));
-//      r_->start();
-//    }).detach();
-//      std::cout << "done launching thread" << std::endl;
-//  });
-//  auto ts = TestSubscriber<long>::create();
-//  f.subscribe(ts->unique_subscriber());
-//    std::cout << "after subscribe" << std::endl;
-//  ts->cancel();
-//  std::cout << "Received " << ts->getValueCount() << " values" << std::endl;
-//  // it should cancel well before hitting the MAX_SIZE
-//  EXPECT_LT(ts->getValueCount(), MAX_SIZE);
-//}
+/**
+ * Test that cancellation works correctly across thread boundaries
+ * to stop emission.
+ */
+TEST(FlowableRange, async_cancellation) {
+  ThreadScheduler threadScheduler;
+  const int MAX_SIZE = 500000000;
+  auto f = Flowable<long>::create([](auto s) {
+    auto r_ = new yarpl::flowable::sources::RangeSubscription(
+        1, MAX_SIZE, std::move(s));
+    r_->start();
+  });
+  auto ts = TestSubscriber<long>::create();
+  f->subscribeOn(threadScheduler)->subscribe(ts->unique_subscriber());
+  std::cout << "after subscribe" << std::endl;
+  ts->cancel();
+  std::cout << "Received " << ts->getValueCount() << " values" << std::endl;
+  // it should cancel well before hitting the MAX_SIZE
+  EXPECT_LT(ts->getValueCount(), MAX_SIZE);
+}

@@ -16,8 +16,16 @@
 #include "yarpl/flowable/operators/Flowable_Take.h"
 
 namespace yarpl {
-namespace flowable {
+namespace flowableA {
 
+/**
+* Flowable type that is stack allocated and moves the OnSubscribe function
+* each time lift is performed.
+*
+* This also templates the Function which means the public API is awkward.
+*
+* @tparam T
+*/
 template <typename T, typename Function>
 class FlowableA : public reactivestreams_yarpl::Publisher<T> {
   // using reactivestream_yarpl to not conflict with the other reactivestreams
@@ -25,8 +33,7 @@ class FlowableA : public reactivestreams_yarpl::Publisher<T> {
   using Subscription = reactivestreams_yarpl::Subscription;
 
  public:
-  explicit FlowableA(Function&& function)
-      : function_(std::move(function)) {}
+  explicit FlowableA(Function&& function) : function_(std::move(function)) {}
   FlowableA(FlowableA&&) = default;
   FlowableA(const FlowableA&) = delete;
   FlowableA& operator=(FlowableA&&) = default;
@@ -101,20 +108,20 @@ template <
     typename = typename std::enable_if<std::is_callable<
         F(std::unique_ptr<reactivestreams_yarpl::Subscriber<T>>),
         void>::value>::type>
-static auto unsafeCreateUniqueFlowable(F&& onSubscribeFunc) {
+static auto unsafeCreateUniqueFlowableA(F&& onSubscribeFunc) {
   return FlowableA<T, F>(std::forward<F>(onSubscribeFunc));
 }
 
-class Flowables {
+class FlowablesA {
  public:
-  Flowables() = default;
-  Flowables(Flowables&&) = delete;
-  Flowables(const Flowables&) = delete;
-  Flowables& operator=(Flowables&&) = delete;
-  Flowables& operator=(const Flowables&) = delete;
+  FlowablesA() = default;
+  FlowablesA(FlowablesA&&) = delete;
+  FlowablesA(const FlowablesA&) = delete;
+  FlowablesA& operator=(FlowablesA&&) = delete;
+  FlowablesA& operator=(const FlowablesA&) = delete;
 
   static auto range(long start, long count) {
-    return unsafeCreateUniqueFlowable<long>([start, count](auto subscriber) {
+    return unsafeCreateUniqueFlowableA<long>([start, count](auto subscriber) {
       auto s = new yarpl::flowable::sources::RangeSubscription(
           start, count, std::move(subscriber));
       s->start();
@@ -124,7 +131,7 @@ class Flowables {
   template <typename T>
   static auto fromPublisher(
       std::unique_ptr<reactivestreams_yarpl::Publisher<T>> p) {
-    return unsafeCreateUniqueFlowable<T>([p = std::move(p)](auto s) {
+    return unsafeCreateUniqueFlowableA<T>([p = std::move(p)](auto s) {
       p->subscribe(std::move(s));
     });
   }

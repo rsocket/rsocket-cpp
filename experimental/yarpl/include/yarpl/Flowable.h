@@ -5,6 +5,8 @@
 #include <memory>
 #include <type_traits>
 #include <utility>
+
+#include <boost/intrusive_ptr.hpp>
 #include "yarpl/Flowable_TestSubscriber.h"
 #include "yarpl/flowable/sources/Flowable_RangeSubscription.h"
 
@@ -18,8 +20,14 @@
 namespace yarpl {
 namespace flowable {
 
+/**
+ * Flowable type that uses shared_ptr for memory management.
+ *
+ * @tparam T
+ */
 template <typename T>
-class Flowable : public reactivestreams_yarpl::Publisher<T> {
+class Flowable : public reactivestreams_yarpl::Publisher<T>,
+                 public std::enable_shared_from_this<Flowable<T>> {
   // using reactivestream_yarpl to not conflict with the other reactivestreams
   using Subscriber = reactivestreams_yarpl::Subscriber<T>;
   using Subscription = reactivestreams_yarpl::Subscription;
@@ -41,8 +49,8 @@ class Flowable : public reactivestreams_yarpl::Publisher<T> {
       typename F,
       typename = typename std::enable_if<
           std::is_callable<F(std::unique_ptr<Subscriber>), void>::value>::type>
-  static std::unique_ptr<Flowable<T>> create(F&& function) {
-    return std::make_unique<Derived<F>>(std::forward<F>(function));
+  static std::shared_ptr<Flowable<T>> create(F&& function) {
+    return std::make_shared<Derived<F>>(std::forward<F>(function));
   }
 
   /**
@@ -58,11 +66,13 @@ class Flowable : public reactivestreams_yarpl::Publisher<T> {
       typename = typename std::enable_if<std::is_callable<
           F(std::unique_ptr<reactivestreams_yarpl::Subscriber<R>>),
           std::unique_ptr<reactivestreams_yarpl::Subscriber<T>>>::value>::type>
-  std::unique_ptr<Flowable<R>> lift(F&& onSubscribeLift) {
-    return Flowable<R>::create(
-        [ this, onSub = std::move(onSubscribeLift) ](auto sOfR) mutable {
-          this->subscribe(std::move(onSub(std::move(sOfR))));
-        });
+  std::shared_ptr<Flowable<R>> lift(F&& onSubscribeLift) {
+    return Flowable<R>::create([
+      shared_this = this->shared_from_this(),
+      onSub = std::move(onSubscribeLift)
+    ](auto sOfR) mutable {
+      shared_this->subscribe(std::move(onSub(std::move(sOfR))));
+    });
   }
 
   /**
@@ -77,15 +87,20 @@ class Flowable : public reactivestreams_yarpl::Publisher<T> {
       typename = typename std::enable_if<
           std::is_callable<F(T), typename std::result_of<F(T)>::type>::value>::
           type>
-  std::unique_ptr<Flowable<typename std::result_of<F(T)>::type>> map(
-      F&& function);
+  std::shared_ptr<Flowable<typename std::result_of<F(T)>::type>> map(
+      F&& function) {
+    return lift<typename std::result_of<F(T)>::type>(
+        yarpl::operators::
+            FlowableMapOperator<T, typename std::result_of<F(T)>::type, F>(
+                std::forward<F>(function)));
+  }
 
   /**
    * Take n items from F<T> then cancel.
    * @param toTake
    * @return
    */
-  std::unique_ptr<Flowable<T>> take(int64_t toTake) {
+  std::shared_ptr<Flowable<T>> take(int64_t toTake) {
     return lift<T>(yarpl::operators::FlowableTakeOperator<T>(toTake));
   }
 
@@ -94,7 +109,7 @@ class Flowable : public reactivestreams_yarpl::Publisher<T> {
    * @param scheduler
    * @return
    */
-  std::unique_ptr<Flowable<T>> subscribeOn(yarpl::Scheduler& scheduler) {
+  std::shared_ptr<Flowable<T>> subscribeOn(yarpl::Scheduler& scheduler) {
     return lift<T>(yarpl::operators::FlowableSubscribeOnOperator<T>(scheduler));
   }
 
@@ -105,28 +120,17 @@ class Flowable : public reactivestreams_yarpl::Publisher<T> {
   template <typename Function>
   class Derived : public Flowable {
    public:
-    Derived(Function&& function)
-        : function_(
-              std::make_unique<Function>(std::forward<Function>(function))) {}
+    explicit Derived(Function&& function)
+        : function_(std::forward<Function>(function)) {}
 
     void subscribe(std::unique_ptr<Subscriber> subscriber) override {
-      (*function_)(std::move(subscriber));
+      (function_)(std::move(subscriber));
     }
 
    private:
-    std::unique_ptr<Function> function_;
+    Function function_;
   };
 };
-
-template <typename T>
-template <typename F, typename Default>
-std::unique_ptr<Flowable<typename std::result_of<F(T)>::type>> Flowable<T>::map(
-    F&& function) {
-  return lift<typename std::result_of<F(T)>::type>(
-      yarpl::operators::
-          FlowableMapOperator<T, typename std::result_of<F(T)>::type, F>(
-              std::forward<F>(function)));
-}
 
 class Flowables {
  public:
@@ -153,7 +157,7 @@ class Flowables {
     return Flowable<T>::create(std::forward<F>(function));
   }
 
-  static std::unique_ptr<Flowable<long>> range(long start, long count) {
+  static std::shared_ptr<Flowable<long>> range(long start, long count) {
     return Flowable<long>::create([start, count](auto subscriber) {
       auto s = new yarpl::flowable::sources::RangeSubscription(
           start, count, std::move(subscriber));
@@ -163,7 +167,7 @@ class Flowables {
 
   template <typename T>
   static auto fromPublisher(
-      std::unique_ptr<reactivestreams_yarpl::Publisher<T>> p) {
+      std::shared_ptr<reactivestreams_yarpl::Publisher<T>> p) {
     return Flowable<T>::create([p = std::move(p)](auto s) {
       p->subscribe(std::move(s));
     });

@@ -351,7 +351,7 @@ TEST(
   std::cout << "-----------------------------" << std::endl;
 }
 
-std::unique_ptr<reactivestreams_yarpl::Publisher<long>> getDataAsPublisher() {
+std::shared_ptr<reactivestreams_yarpl::Publisher<long>> getDataAsPublisher() {
   return Flowables::range(1, 4);
 }
 
@@ -369,7 +369,7 @@ TEST(FlowableCreateSubscribe, TestReturnTypePublisherToFlowable) {
   ts->assertValueCount(3);
 }
 
-std::unique_ptr<Flowable<long>> getDataAsFlowable() {
+std::shared_ptr<Flowable<long>> getDataAsFlowable() {
   return Flowables::range(1, 4);
 }
 

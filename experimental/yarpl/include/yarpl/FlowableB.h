@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -16,8 +17,18 @@
 #include "yarpl/flowable/operators/Flowable_Take.h"
 
 namespace yarpl {
-namespace flowable {
+namespace flowableB {
 
+/**
+* Flowable type that is stack allocated and moves the OnSubscribe function
+* each time lift is performed.
+*
+* This uses std::function instead of templated Function to make the public API
+* better than FlowableB. A side-effect is that Functors/OnSubscribe must
+* support copy.
+*
+* @tparam T
+*/
 template <typename T>
 class FlowableB : public reactivestreams_yarpl::Publisher<T> {
   // using reactivestream_yarpl to not conflict with the other reactivestreams
@@ -25,18 +36,15 @@ class FlowableB : public reactivestreams_yarpl::Publisher<T> {
   using Subscription = reactivestreams_yarpl::Subscription;
 
  public:
-  explicit FlowableB(std::unique_ptr<reactivestreams_yarpl::Publisher<T>>&& p)
-      : publisher_(std::move(p)){};
-    ~FlowableB() {
-        std::cout << "FlowableB being destroyed" << std::endl;
-    }
+  explicit FlowableB(std::function<void(std::unique_ptr<Subscriber>)>&& function)
+      : function_(std::move(function)) {}
   FlowableB(FlowableB&&) = default;
   FlowableB(const FlowableB&) = delete;
   FlowableB& operator=(FlowableB&&) = default;
   FlowableB& operator=(const FlowableB&) = delete;
 
   void subscribe(std::unique_ptr<Subscriber> subscriber) override {
-    publisher_->subscribe(std::move(subscriber));
+    (function_)(std::move(subscriber));
   }
 
   template <
@@ -45,31 +53,14 @@ class FlowableB : public reactivestreams_yarpl::Publisher<T> {
       typename = typename std::enable_if<std::is_callable<
           F(std::unique_ptr<reactivestreams_yarpl::Subscriber<R>>),
           std::unique_ptr<reactivestreams_yarpl::Subscriber<T>>>::value>::type>
-  FlowableB<R> lift(F&& onSubscribeLift) {
-    class LiftedPublisher : public reactivestreams_yarpl::Publisher<R> {
-     public:
-      LiftedPublisher(
-          std::unique_ptr<reactivestreams_yarpl::Publisher<T>>&& upstream,
-          F&& onSubscribeLift)
-          : upstream_(std::move(upstream)),
-            onSubscribeLift_(std::move(onSubscribeLift)) {}
-        ~LiftedPublisher() {
-            std::cout << "Lifted Publisher destroyed!!!" << std::endl;
-        }
-      void subscribe(
-          std::unique_ptr<reactivestreams_yarpl::Subscriber<R>> s) override {
-        upstream_->subscribe(onSubscribeLift_(std::move(s)));
-      }
-
-     private:
-      std::unique_ptr<reactivestreams_yarpl::Publisher<T>> upstream_;
-      F&& onSubscribeLift_;
+  auto lift(F&& onSubscribeLift) {
+    auto onSubscribe =
+        [ f = std::move(function_), onSub = std::move(onSubscribeLift) ](
+            std::unique_ptr<reactivestreams_yarpl::Subscriber<R>> s) mutable {
+      f(onSub(std::move(s)));
     };
 
-    auto newP = std::make_unique<LiftedPublisher>(
-        std::move(publisher_), std::move(onSubscribeLift));
-
-    return FlowableB<R>(std::move(newP));
+    return FlowableB<R>(std::move(onSubscribe));
   }
 
   template <
@@ -77,23 +68,23 @@ class FlowableB : public reactivestreams_yarpl::Publisher<T> {
       typename = typename std::enable_if<
           std::is_callable<F(T), typename std::result_of<F(T)>::type>::value>::
           type>
-  FlowableB<typename std::result_of<F(T)>::type> map(F&& function) {
+  auto map(F&& function) {
     return lift<typename std::result_of<F(T)>::type>(
         yarpl::operators::
             FlowableMapOperator<T, typename std::result_of<F(T)>::type, F>(
                 std::forward<F>(function)));
   }
 
-  FlowableB<T> take(int64_t toTake) {
+  auto take(int64_t toTake) {
     return lift<T>(yarpl::operators::FlowableTakeOperator<T>(toTake));
   }
 
-  FlowableB<T> subscribeOn(yarpl::Scheduler& scheduler) {
+  auto subscribeOn(yarpl::Scheduler& scheduler) {
     return lift<T>(yarpl::operators::FlowableSubscribeOnOperator<T>(scheduler));
   }
 
  private:
-  std::unique_ptr<reactivestreams_yarpl::Publisher<T>> publisher_;
+  std::function<void(std::unique_ptr<Subscriber>)> function_;
 };
 
 class FlowablesB {
@@ -104,31 +95,20 @@ class FlowablesB {
   FlowablesB& operator=(FlowablesB&&) = delete;
   FlowablesB& operator=(const FlowablesB&) = delete;
 
-  static FlowableB<long> range(long start, long count) {
-    class RangePublisher : public reactivestreams_yarpl::Publisher<long> {
-     public:
-        RangePublisher(long start, long count) : start_(start), count_(count) {}
-        ~RangePublisher() {
-            std::cout << "RangePublisher being DESTROYED " << std::endl;
-        }
-      void subscribe(
-          std::unique_ptr<reactivestreams_yarpl::Subscriber<long>> s) override {
-        auto rs = new yarpl::flowable::sources::RangeSubscription(
-            start_, count_, std::move(s));
-        rs->start();
-      }
-
-     private:
-      long start_;
-      long count_;
-    };
-    return FlowableB<long>(std::make_unique<RangePublisher>(start, count));
-  };
+  static auto range(long start, long count) {
+    return FlowableB<long>([start, count](auto subscriber) {
+      auto s = new yarpl::flowable::sources::RangeSubscription(
+          start, count, std::move(subscriber));
+      s->start();
+    });
+  }
 
   template <typename T>
   static auto fromPublisher(
       std::unique_ptr<reactivestreams_yarpl::Publisher<T>> p) {
-    return FlowableB<T>(std::move(p));
+    return FlowableB<T>([p = std::move(p)](auto s) {
+      p->subscribe(std::move(s));
+    });
   }
 };
 

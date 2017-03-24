@@ -96,6 +96,8 @@ add_executable(
         test/Flowable_range_test.cpp
         test/FlowableSubscriptionHelper_test.cpp
         test/Flowable_lifecycle.cpp
+        test/FlowableA_lifecycle.cpp
+        test/FlowableB_lifecycle.cpp
         test/FlowableChaining_test.cpp
         test/flowable_operators/Flowable_Map_test.cpp
         test/flowable_operators/Flowable_Take_test.cpp
