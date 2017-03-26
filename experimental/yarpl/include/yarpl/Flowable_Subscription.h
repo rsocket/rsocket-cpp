@@ -139,7 +139,7 @@ class FlowableSubscription : public reactivestreams_yarpl::Subscription {
 
   std::unique_ptr<reactivestreams_yarpl::Subscriber<T>> subscriber_;
   std::atomic_ushort emitting_{0};
-  std::atomic<std::int64_t> requested_{0};
+  std::atomic<int64_t> requested_{0};
 };
 }
 }

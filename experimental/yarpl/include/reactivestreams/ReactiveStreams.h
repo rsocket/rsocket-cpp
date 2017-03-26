@@ -43,13 +43,9 @@ class Subscriber {
    */
   virtual void onSubscribe(Subscription*) = 0;
   virtual void onNext(const T&) = 0;
-  virtual void onNext(T&& value) {
-    onNext(value);
-  }
+  virtual void onNext(T&&) = 0;
   virtual void onComplete() = 0;
-  virtual void onError(const std::exception_ptr error) {
-    throw error;
-  }
+  virtual void onError(const std::exception_ptr error) = 0;
 };
 
 template <typename T>

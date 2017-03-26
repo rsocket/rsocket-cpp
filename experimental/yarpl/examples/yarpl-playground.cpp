@@ -10,12 +10,12 @@
 int main() {
   std::cout << "*** Run ObservableExamples ***" << std::endl;
   ObservableExamples::run();
-  std::cout << "*** Run FlowableExamples ***" << std::endl;
-  FlowableExamples::run();
-  std::cout << "*** Run FlowableExamplesA ***" << std::endl;
-  FlowableAExamples::run();
-  std::cout << "*** Run FlowableExamplesB ***" << std::endl;
-  FlowableBExamples::run();
-  std::cout << "*** Run FlowableExamplesC ***" << std::endl;
-  FlowableCExamples::run();
+//  std::cout << "*** Run FlowableExamples ***" << std::endl;
+//  FlowableExamples::run();
+//  std::cout << "*** Run FlowableExamplesA ***" << std::endl;
+//  FlowableAExamples::run();
+//  std::cout << "*** Run FlowableExamplesB ***" << std::endl;
+//  FlowableBExamples::run();
+//  std::cout << "*** Run FlowableExamplesC ***" << std::endl;
+//  FlowableCExamples::run();
 }

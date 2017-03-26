@@ -30,7 +30,14 @@ add_library(
         include/yarpl/Observable.h
         include/yarpl/Observable_Observer.h
         include/yarpl/Observable_Subscription.h
+        include/yarpl/Observable_TestObserver.h
         src/yarpl/observable/Observable_Subscription.cpp
+        # Observable sources
+        src/yarpl/observable/sources/Observable_RangeSubscription.h
+        src/yarpl/observable/sources/Observable_RangeSubscription.cpp
+        # Observable operators
+        src/yarpl/observable/operators/Observable_Map.h
+        src/yarpl/observable/operators/Observable_Take.h
         # Flowable public API
         include/yarpl/Flowable.h
         include/yarpl/FlowableA.h
@@ -39,14 +46,14 @@ add_library(
         include/yarpl/Flowable_Subscriber.h
         include/yarpl/Flowable_Subscription.h
         include/yarpl/Flowable_TestSubscriber.h
-        # flowable sources
+        # Flowable sources
         src/yarpl/flowable/sources/Flowable_RangeSubscription.h
         src/yarpl/flowable/sources/Flowable_RangeSubscription.cpp
-        # flowable operators
+        # Flowable operators
         src/yarpl/flowable/operators/Flowable_Map.h
         src/yarpl/flowable/operators/Flowable_Take.h
         src/yarpl/flowable/operators/Flowable_SubscribeOn.h
-        # flowable utils
+        # Flowable utils
         src/yarpl/flowable/utils/SubscriptionHelper.h
         src/yarpl/flowable/utils/SubscriptionHelper.cpp
         # utils
@@ -94,7 +101,7 @@ add_executable(
         test/yarpl-tests.cpp
         test/Observable_test.cpp
         test/FlowableCreateSubscribe_test.cpp
-        test/Subscription_test.cpp
+        test/Observable_Subscription_test.cpp
         test/Flowable_range_test.cpp
         test/FlowableSubscriptionHelper_test.cpp
         test/Flowable_lifecycle.cpp
