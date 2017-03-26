@@ -7,22 +7,22 @@ using namespace yarpl::observable;
 
 TEST(Observable, SingleOnNext) {
   auto a = Observable<int>::create([](std::unique_ptr<Observer<int>> obs) {
-    Subscription s([] {});
-    obs->onSubscribe(&s);
+    auto s = Subscriptions::create();
+    obs->onSubscribe(s.get());
     obs->onNext(1);
     obs->onComplete();
   });
 
   std::vector<int> v;
-  a->subscribe(Observer<int>::create([&v](int value) { v.push_back(value); }));
+  a->subscribe(Observers::create<int>([&v](int value) { v.push_back(value); }));
 
   EXPECT_EQ(v.at(0), 1);
 }
 
 TEST(Observable, MultiOnNext) {
   auto a = Observable<int>::create([](std::unique_ptr<Observer<int>> obs) {
-    Subscription s([] {});
-    obs->onSubscribe(&s);
+    auto s = Subscriptions::create();
+    obs->onSubscribe(s.get());
     obs->onNext(1);
     obs->onNext(2);
     obs->onNext(3);
@@ -30,7 +30,7 @@ TEST(Observable, MultiOnNext) {
   });
 
   std::vector<int> v;
-  a->subscribe(Observer<int>::create([&v](int value) { v.push_back(value); }));
+  a->subscribe(Observers::create<int>([&v](int value) { v.push_back(value); }));
 
   EXPECT_EQ(v.at(0), 1);
   EXPECT_EQ(v.at(1), 2);
@@ -47,7 +47,7 @@ TEST(Observable, OnError) {
     }
   });
 
-  a->subscribe(Observer<int>::create(
+  a->subscribe(Observers::create<int>(
       [](int value) { /* do nothing */ },
       [&errorMessage](const std::exception_ptr e) {
         try {
@@ -85,8 +85,8 @@ TEST(Observable, ItemsCollectedSynchronously) {
   };
 
   auto a = Observable<Tuple>::create([](std::unique_ptr<Observer<Tuple>> obs) {
-    Subscription s([] {});
-    obs->onSubscribe(&s);
+    auto s = Subscriptions::create();
+    obs->onSubscribe(s.get());
     obs->onNext(Tuple{1, 2});
     obs->onNext(Tuple{2, 3});
     obs->onNext(Tuple{3, 4});
@@ -96,7 +96,7 @@ TEST(Observable, ItemsCollectedSynchronously) {
   // TODO how can it be made so 'auto' correctly works without doing copying?
   // a->subscribe(Observer<Tuple>::create(
   //    [](auto value) { std::cout << "received value " << value.a << "\n"; }));
-  a->subscribe(Observer<Tuple>::create([](const Tuple& value) {
+  a->subscribe(Observers::create<Tuple>([](const Tuple& value) {
     std::cout << "received value " << value.a << std::endl;
   }));
 
@@ -140,8 +140,8 @@ TEST(Observable, ItemsCollectedAsynchronously) {
   {
     auto a =
         Observable<Tuple>::create([](std::unique_ptr<Observer<Tuple>> obs) {
-          Subscription s([] {});
-          obs->onSubscribe(&s);
+          auto s = Subscriptions::create();
+          obs->onSubscribe(s.get());
           std::cout << "-----------------------------" << std::endl;
           obs->onNext(Tuple{1, 2});
           std::cout << "-----------------------------" << std::endl;
@@ -154,7 +154,7 @@ TEST(Observable, ItemsCollectedAsynchronously) {
 
     std::vector<Tuple> v;
     v.reserve(10); // otherwise it resizes and copies on each push_back
-    a->subscribe(Observer<Tuple>::create([&v](const Tuple& value) {
+    a->subscribe(Observers::create<Tuple>([&v](const Tuple& value) {
       std::cout << "received value " << value.a << std::endl;
       // copy into vector
       v.push_back(value);
@@ -198,6 +198,16 @@ class TakeObserver : public Observer<int> {
       subscription_->cancel();
     }
   }
+
+  void onNext(int&& value) override {
+    v.emplace_back(std::move(value));
+    if (++count >= limit) {
+      //      std::cout << "Cancelling subscription after receiving " << count
+      //                << " items." << std::endl;
+      subscription_->cancel();
+    }
+  }
+
   void onError(const std::exception_ptr e) override {}
   void onComplete() override {}
 };
@@ -207,8 +217,9 @@ TEST(Observable, SubscriptionCancellation) {
   static std::atomic_int emitted{0};
   auto a = Observable<int>::create([](std::unique_ptr<Observer<int>> obs) {
     std::atomic_bool isUnsubscribed{false};
-    Subscription s([&isUnsubscribed] { isUnsubscribed = true; });
-    obs->onSubscribe(&s);
+    auto s =
+        Subscriptions::create([&isUnsubscribed] { isUnsubscribed = true; });
+    obs->onSubscribe(s.get());
     int i = 0;
     while (!isUnsubscribed && i <= 10) {
       emitted++;

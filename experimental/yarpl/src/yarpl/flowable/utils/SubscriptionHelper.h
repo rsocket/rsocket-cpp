@@ -35,7 +35,7 @@ class SubscriptionHelper {
    * @param n
    * @return current value after change
    */
-  static int64_t addCredits(std::atomic<std::int64_t>* current, int64_t n);
+  static int64_t addCredits(std::atomic<int64_t>* current, int64_t n);
 
   /**
    * Set 'current' to INT64_MIN as a magic number to represent "cancelled".
@@ -47,7 +47,7 @@ class SubscriptionHelper {
    * @return true if changed from not-cancelled to cancelled, false if was
    * already cancelled
    */
-  static bool addCancel(std::atomic<std::int64_t>* current);
+  static bool addCancel(std::atomic<int64_t>* current);
 
   /**
    * Consume (remove) credits from the 'current' atomic_long.
@@ -58,7 +58,7 @@ class SubscriptionHelper {
    * @param n
    * @return current value after change
    */
-  static int64_t consumeCredits(std::atomic<std::int64_t>* current, int64_t n);
+  static int64_t consumeCredits(std::atomic<int64_t>* current, int64_t n);
 
   /**
    * Whether the current value represents a "cancelled" subscription.
@@ -66,14 +66,14 @@ class SubscriptionHelper {
    * @param current
    * @return true if cancelled
    */
-  static bool isCancelled(std::atomic<std::int64_t>* current);
+  static bool isCancelled(std::atomic<int64_t>* current);
 
   /**
    * If the requested value is MAX so we can ignore flow control.
    * @param current
    * @return true if infinite (max value)
    */
-  static bool isInfinite(std::atomic<std::int64_t>* current);
+  static bool isInfinite(std::atomic<int64_t>* current);
 };
 }
 }

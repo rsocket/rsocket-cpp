@@ -66,6 +66,12 @@ TEST(FlowableCreateSubscribe, SubscribeRequestAndCancel) {
         subscription->cancel();
       }
     }
+    void onNext(int&& value) override {
+      std::cout << "received&& " << value << std::endl;
+      if (value == 6) {
+        subscription->cancel();
+      }
+    }
     void onError(const std::exception_ptr e) override {}
     void onComplete() override {}
     void onSubscribe(Subscription* s) override {
