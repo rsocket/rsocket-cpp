@@ -69,6 +69,8 @@ add_executable(
         yarpl-playground
         examples/yarpl-playground.cpp
         examples/ObservableExamples.cpp
+        examples/FlowableExamples.cpp
+        examples/FlowableExamples.h
         examples/FlowableAExamples.cpp
         examples/FlowableAExamples.h
         examples/FlowableBExamples.cpp
