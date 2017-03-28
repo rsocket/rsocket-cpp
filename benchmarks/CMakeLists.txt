@@ -21,11 +21,23 @@ set(
 )
 
 include_directories(${GOOGLE_BENCHMARK_SOURCE_DIR}/include)
+include_directories(${CMAKE_SOURCE_DIR}/experimental)
 
 function(benchmark name file)
     add_executable(${name} ${file})
-    target_link_libraries(${name} ${GOOGLE_BENCHMARK_LIBS} ${CMAKE_THREAD_LIBS_INIT})
-    add_dependencies(${name} google_benchmark)
+    target_link_libraries(
+        ${name}
+        rsocket_experimental
+        ReactiveSocket
+        ${GOOGLE_BENCHMARK_LIBS}
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}${CMAKE_THREAD_LIBS_INIT})
+    add_dependencies(
+        ${name}
+        ReactiveStreams
+        google_benchmark)
 endfunction()
 
-benchmark(intro Intro.cpp)
+benchmark(baselines Baselines.cpp)
+benchmark(streamthroughput StreamThroughput.cpp)
