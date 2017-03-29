@@ -15,6 +15,7 @@ using namespace ::reactivesocket;
 using namespace ::folly;
 using namespace ::rsocket;
 
+#define MAX_REQUESTS (64)
 #define MESSAGE_LENGTH (32)
 
 DEFINE_string(host, "localhost", "host to connect to");
@@ -202,7 +203,7 @@ BENCHMARK_DEFINE_F(BM_RsFixture, BM_RequestResponse_Throughput)(benchmark::State
     int numSubscribers = state.range(0);
     int mask = numSubscribers - 1;
 
-    std::shared_ptr<BM_Subscriber> subs[numSubscribers];
+    std::shared_ptr<BM_Subscriber> subs[MAX_REQUESTS+1];
 
     auto rs = clientRs->connect().get();
 
@@ -241,6 +242,6 @@ BENCHMARK_DEFINE_F(BM_RsFixture, BM_RequestResponse_Throughput)(benchmark::State
     state.SetItemsProcessed(reqs);
 }
 
-BENCHMARK_REGISTER_F(BM_RsFixture, BM_RequestResponse_Throughput)->Arg(1)->Arg(2)->Arg(8)->Arg(16)->Arg(32)->Arg(64);
+BENCHMARK_REGISTER_F(BM_RsFixture, BM_RequestResponse_Throughput)->Arg(1)->Arg(2)->Arg(8)->Arg(16)->Arg(32)->Arg(MAX_REQUESTS);
 
 BENCHMARK_MAIN()
