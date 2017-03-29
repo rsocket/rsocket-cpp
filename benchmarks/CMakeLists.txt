@@ -32,7 +32,8 @@ function(benchmark name file)
         ${GOOGLE_BENCHMARK_LIBS}
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
-        ${GLOG_LIBRARY}${CMAKE_THREAD_LIBS_INIT})
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
     add_dependencies(
         ${name}
         ReactiveStreams
