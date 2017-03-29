@@ -22,12 +22,10 @@ class BM_Subscription : public SubscriptionBase {
 public:
     explicit BM_Subscription(
         std::shared_ptr<Subscriber<Payload>> subscriber,
-        std::string name,
-        size_t numberToEmit = 2)
+        std::string name)
         : ExecutorBase(defaultExecutor()),
         subscriber_(std::move(subscriber)),
         name_(std::move(name)),
-        numberToEmit_(numberToEmit),
         cancelled_(false)
     {
     }
@@ -35,30 +33,19 @@ public:
 private:
     void requestImpl(size_t n) noexcept override
     {
-        LOG(INFO) << "requested=" << n << " currentElem=" << currentElem_
-            << " numberToEmit=" << numberToEmit_;
+        LOG(INFO) << "requested=" << n << " currentElem=" << currentElem_;
 
-        if (numberToEmit_ == 0) {
-            subscriber_->onComplete();
+        if (cancelled_) {
+            LOG(INFO) << "emission stopped by cancellation";
             return;
         }
-        for (size_t i = 0; i < n; i++) {
-            if (cancelled_) {
-                LOG(INFO) << "emission stopped by cancellation";
-                return;
-            }
-            std::stringstream ss;
-            ss << "Hello " << name_ << " " << currentElem_ << "!";
-            std::string s = ss.str();
-            subscriber_->onNext(Payload(s));
-            // currentElem is used to track progress across requestImpl invocations
-            currentElem_++;
-            // break the loop and complete the stream if numberToEmit_ is matched
-            if (currentElem_ == numberToEmit_) {
-                subscriber_->onComplete();
-                return;
-            }
-        }
+
+        std::stringstream ss;
+        ss << "Hello " << name_ << " " << currentElem_ << "!";
+        std::string s = ss.str();
+        subscriber_->onNext(Payload(s));
+        currentElem_++;
+        subscriber_->onComplete();
     }
 
     void cancelImpl() noexcept override
@@ -70,7 +57,6 @@ private:
 
     std::shared_ptr<Subscriber<Payload>> subscriber_;
     std::string name_;
-    size_t numberToEmit_;
     size_t currentElem_ = 0;
     std::atomic_bool cancelled_;
 };
@@ -78,17 +64,17 @@ private:
 class BM_RequestHandler : public DefaultRequestHandler
 {
 public:
-    void handleRequestStream(
+    void handleRequestResponse(
         Payload request, StreamId streamId, const std::shared_ptr<Subscriber<Payload>> &response) noexcept override
     {
-        LOG(INFO) << "BM_RequestHandler.handleRequestStream " << request;
+        LOG(INFO) << "BM_RequestHandler.handleRequestResponse " << request;
 
         // string from payload data
         const char* p = reinterpret_cast<const char*>(request.data->data());
         auto requestString = std::string(p, request.data->length());
 
         response->onSubscribe(
-            std::make_shared<BM_Subscription>(response, requestString, 100000000));
+            std::make_shared<BM_Subscription>(response, requestString));
     }
 
     std::shared_ptr<StreamState> handleSetupPayload(
@@ -141,16 +127,17 @@ public:
             subscription_->request(toRequest);
         };
 
-        if (cancel_)
-        {
-            subscription_->cancel();
-        }
+//        if (cancel_)
+//        {
+//            subscription_->cancel();
+//        }
     }
 
     void onComplete() noexcept override
     {
         LOG(INFO) << "BM_Subscriber " << this << " onComplete";
         terminated_ = true;
+        completed_ = true;
         terminalEventCV_.notify_all();
     }
 
@@ -171,9 +158,9 @@ public:
         LOG(INFO) << "BM_Subscriber " << this << " unblocked";
     }
 
-    void cancel()
+    bool completed()
     {
-        cancel_ = true;
+        return completed_;
     }
 
     int received()
@@ -192,6 +179,7 @@ private:
     std::mutex m_;
     std::condition_variable terminalEventCV_;
     std::atomic_bool cancel_{false};
+    std::atomic_bool completed_{false};
 };
 
 class BM_RsFixture : public benchmark::Fixture
@@ -203,7 +191,8 @@ public:
         serverRs_(RSocket::createServer(TcpConnectionAcceptor::create(port_))),
         handler_(std::make_shared<BM_RequestHandler>())
     {
-        FLAGS_minloglevel = 100;
+        FLAGS_v = 0;
+        FLAGS_minloglevel = 6;
         serverRs_->start([this](auto r) { return handler_; });
     }
 
@@ -225,30 +214,53 @@ public:
     std::shared_ptr<BM_RequestHandler> handler_;
 };
 
-BENCHMARK_F(BM_RsFixture, BM_Stream_Throughput)(benchmark::State &state)
+BENCHMARK_DEFINE_F(BM_RsFixture, BM_RequestResponse_Throughput)(benchmark::State &state)
 {
     auto clientRs = RSocket::createClient(TcpConnectionFactory::create(host_, port_));
+    int reqs = 0;
+    int numSubscribers = state.range(0);
+    int mask = numSubscribers - 1;
 
-    auto s = std::make_shared<BM_Subscriber>(5, 6);
+    std::shared_ptr<BM_Subscriber> subs[numSubscribers];
 
-    clientRs
-        ->connect()
-            .then(
-                [s](std::shared_ptr<RSocketRequester> rs)
-                {
-                   rs->requestStream(Payload("BM_Stream"), s);
-                });
+    auto rs = clientRs->connect().get();
 
     while (state.KeepRunning())
     {
-        std::this_thread::yield();
+        int index = reqs & mask;
+
+        if (nullptr != subs[index])
+        {
+            while (!subs[index]->completed())
+            {
+                std::this_thread::yield();
+            }
+
+            subs[index].reset();
+        }
+
+        subs[index] = std::make_shared<BM_Subscriber>(5, 6);
+        rs->requestResponse(Payload("BM_RequestResponse"), subs[index]);
+        reqs++;
     }
 
-    s->cancel();
-    s->awaitTerminalEvent();
+    for (int i = 0; i < numSubscribers; i++)
+    {
+        if (subs[i])
+        {
+            subs[i]->awaitTerminalEvent();
+        }
+    }
+
+    char label[256];
+
+    std::snprintf(label, sizeof(label), "Max Requests: %d", numSubscribers);
+    state.SetLabel(label);
 
     //state.SetBytesProcessed(totalBytesReceived);
-    state.SetItemsProcessed(s->received());
+    state.SetItemsProcessed(reqs);
 }
+
+BENCHMARK_REGISTER_F(BM_RsFixture, BM_RequestResponse_Throughput)->Arg(1)->Arg(2)->Arg(8)->Arg(16)->Arg(32)->Arg(64);
 
 BENCHMARK_MAIN()
