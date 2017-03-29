@@ -694,8 +694,10 @@ bool FrameSerializerV0::deserializeFrom(
 
     frame.versionMajor_ = cur.readBE<uint16_t>();
     frame.versionMinor_ = cur.readBE<uint16_t>();
-    frame.keepaliveTime_ = cur.readBE<uint32_t>();
-    frame.maxLifetime_ = cur.readBE<uint32_t>();
+    frame.keepaliveTime_ =
+        std::min(cur.readBE<uint32_t>(), Frame_SETUP::kMaxKeepaliveTime);
+    frame.maxLifetime_ =
+        std::min(cur.readBE<uint32_t>(), Frame_SETUP::kMaxLifetime);
 
     // TODO: Remove hack:
     // https://github.com/ReactiveSocket/reactivesocket-cpp/issues/243
@@ -726,8 +728,9 @@ bool FrameSerializerV0::deserializeFrom(
   try {
     FrameFlags_V0 flags;
     deserializeHeaderFrom(cur, frame.header_, flags);
-    frame.ttl_ = cur.readBE<uint32_t>();
-    frame.numberOfRequests_ = cur.readBE<uint32_t>();
+    frame.ttl_ = std::min(cur.readBE<uint32_t>(), Frame_LEASE::kMaxTtl);
+    frame.numberOfRequests_ =
+        std::min(cur.readBE<uint32_t>(), Frame_LEASE::kMaxNumRequests);
     frame.metadata_ = deserializeMetadataFrom(cur, frame.header_.flags_);
   } catch (...) {
     return false;
@@ -744,9 +747,9 @@ bool FrameSerializerV0::deserializeFrom(
     deserializeHeaderFrom(cur, frame.header_, flags);
     std::vector<uint8_t> data(16);
     cur.pull(data.data(), data.size());
-    // TODO: this should be actual version not a constant
-    frame.versionMajor_ = 0;
-    frame.versionMinor_ = 0;
+    auto protocolVer = protocolVersion();
+    frame.versionMajor_ = protocolVer.major;
+    frame.versionMinor_ = protocolVer.minor;
     frame.token_.set(std::move(data));
     frame.lastReceivedServerPosition_ = cur.readBE<int64_t>();
     frame.clientPosition_ = kUnspecifiedResumePosition;

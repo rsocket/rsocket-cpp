@@ -42,13 +42,9 @@ class MockRequestHandler : public RequestHandler {
       std::shared_ptr<StreamState>(
           ReactiveSocket& socket,
           ConnectionSetupPayload& request));
-  MOCK_METHOD4(
+  MOCK_METHOD2(
       handleResume_,
-      bool(
-          ReactiveSocket& socket,
-          const ResumeIdentificationToken& token,
-          ResumePosition serverPosition,
-          ResumePosition clientPosition));
+      bool(ReactiveSocket& socket, ResumeParameters& resumeParams));
 
   std::shared_ptr<Subscriber<Payload>> handleRequestChannel(
       Payload request,
@@ -90,10 +86,8 @@ class MockRequestHandler : public RequestHandler {
 
   bool handleResume(
       ReactiveSocket& socket,
-      const ResumeIdentificationToken& token,
-      ResumePosition serverPosition,
-      ResumePosition clientPosition) noexcept override {
-    return handleResume_(socket, token, serverPosition, clientPosition);
+      ResumeParameters resumeParams) noexcept override {
+    return handleResume_(socket, resumeParams);
   }
 
   void handleCleanResume(

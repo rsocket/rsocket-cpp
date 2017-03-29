@@ -106,8 +106,8 @@ void ResumeCache::addFrame(const folly::IOBuf& frame, size_t frameDataLength) {
 void ResumeCache::evictFrame() {
   DCHECK(!frames_.empty());
 
-  auto position = frames_.size() > 1 ?
-    std::next(frames_.begin())->first : position_;
+  auto position =
+      frames_.size() > 1 ? std::next(frames_.begin())->first : position_;
   resetUpToPosition(position);
 }
 

@@ -138,7 +138,7 @@ static std::unique_ptr<folly::IOBuf> serializeOutInternal(
   folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
   serializeHeaderInto(appender, frame.header_);
 
-  appender.writeBE<uint32_t>(frame.requestN_);
+  appender.writeBE<int32_t>(static_cast<int32_t>(frame.requestN_));
   serializePayloadInto(appender, std::move(frame.payload_));
   return queue.move();
 }
@@ -150,7 +150,12 @@ static bool deserializeFromInternal(
   try {
     deserializeHeaderFrom(cur, frame.header_);
 
-    frame.requestN_ = cur.readBE<uint32_t>();
+    auto requestN = cur.readBE<int32_t>();
+    // TODO(lehecka): requestN <= 0
+    if (requestN < 0) {
+      throw std::runtime_error("invalid request N");
+    }
+    frame.requestN_ = static_cast<uint32_t>(requestN);
     frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags_);
   } catch (...) {
     return false;
@@ -226,7 +231,7 @@ std::unique_ptr<folly::IOBuf> FrameSerializerV1_0::serializeOut(
   auto queue = createBufferQueue(kFrameHeaderSize + sizeof(uint32_t));
   folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
   serializeHeaderInto(appender, frame.header_);
-  appender.writeBE<uint32_t>(frame.requestN_);
+  appender.writeBE<int32_t>(static_cast<int32_t>(frame.requestN_));
   return queue.move();
 }
 
@@ -409,7 +414,11 @@ bool FrameSerializerV1_0::deserializeFrom(
   folly::io::Cursor cur(in.get());
   try {
     deserializeHeaderFrom(cur, frame.header_);
-    frame.requestN_ = cur.readBE<uint32_t>();
+    auto requestN = cur.readBE<int32_t>();
+    if (requestN <= 0) {
+      throw std::runtime_error("invalid request n");
+    }
+    frame.requestN_ = static_cast<uint32_t>(requestN);
   } catch (...) {
     return false;
   }
@@ -500,13 +509,13 @@ bool FrameSerializerV1_0::deserializeFrom(
     frame.versionMinor_ = cur.readBE<uint16_t>();
 
     auto keepaliveTime = cur.readBE<int32_t>();
-    if (keepaliveTime < 0) {
+    if (keepaliveTime <= 0) {
       throw std::runtime_error("invalid keepalive time");
     }
     frame.keepaliveTime_ = static_cast<uint32_t>(keepaliveTime);
 
     auto maxLifetime = cur.readBE<int32_t>();
-    if (maxLifetime < 0) {
+    if (maxLifetime <= 0) {
       throw std::runtime_error("invalid maxLife time");
     }
     frame.maxLifetime_ = static_cast<uint32_t>(maxLifetime);
@@ -540,13 +549,13 @@ bool FrameSerializerV1_0::deserializeFrom(
     deserializeHeaderFrom(cur, frame.header_);
 
     auto ttl = cur.readBE<int32_t>();
-    if (ttl < 0) {
+    if (ttl <= 0) {
       throw std::runtime_error("invalid ttl value");
     }
     frame.ttl_ = static_cast<uint32_t>(ttl);
 
     auto numberOfRequests = cur.readBE<int32_t>();
-    if (numberOfRequests < 0) {
+    if (numberOfRequests <= 0) {
       throw std::runtime_error("invalid numberOfRequests value");
     }
     frame.numberOfRequests_ = static_cast<uint32_t>(numberOfRequests);

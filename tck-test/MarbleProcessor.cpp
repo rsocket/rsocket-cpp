@@ -2,13 +2,49 @@
 
 #include "MarbleProcessor.h"
 
-#include <algorithm>
-
 #include <folly/Conv.h>
 #include <folly/ExceptionWrapper.h>
-#include <folly/json.h>
+#include <folly/Format.h>
+#include <folly/String.h>
 
-#include "src/Payload.h"
+namespace {
+
+std::string trimQuotes(std::string input) {
+  if (input.size() < 3) {
+    return "";
+  }
+  CHECK(input[0] == '\"');
+  CHECK(input[input.size() - 1] == '\"');
+  return std::string(input, 1, input.size() - 2);
+}
+
+std::string trimBraces(std::string input) {
+  if (input.size() < 3) {
+    return "";
+  }
+  CHECK(input[0] == '{');
+  CHECK(input[input.size() - 1] == '}');
+  return std::string(input, 1, input.size() - 2);
+}
+
+std::map<std::string, std::pair<std::string, std::string>> getArgMap(
+    std::string input) {
+  std::map<std::string, std::pair<std::string, std::string>> argMap;
+  std::vector<std::string> payloads;
+  input = trimBraces(input);
+  folly::split(",", input, payloads);
+  for (const auto& payload : payloads) {
+    std::string key, value;
+    folly::split<false>(":", folly::StringPiece(payload), key, value);
+    value = trimBraces(value);
+    std::string data, metadata;
+    folly::split<true>(":", folly::StringPiece(value), data, metadata);
+    argMap[trimQuotes(key)] =
+        std::make_pair(trimQuotes(data), trimQuotes(metadata));
+  }
+  return argMap;
+}
+}
 
 namespace reactivesocket {
 namespace tck {
@@ -25,16 +61,11 @@ MarbleProcessor::MarbleProcessor(
 
   // Populate argMap_
   if (marble_.find("&&") != std::string::npos) {
-    std::vector<folly::StringPiece> parts;
+    std::vector<std::string> parts;
     folly::split("&&", marble_, parts);
-    assert(parts.size() == 2);
-    marble_ = parts[0].toString();
-    folly::dynamic parsedJson = folly::parseJson(parts[1].toString());
-    for (const auto& item : parsedJson.items()) {
-      argMap_[item.first.asString()] = std::make_pair(
-          item.second.keys().begin()->asString(),
-          item.second.values().begin()->asString());
-    }
+    CHECK(parts.size() == 2);
+    argMap_ = getArgMap(parts[1]);
+    marble_ = parts[0];
   }
 }
 

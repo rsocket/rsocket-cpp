@@ -165,8 +165,8 @@ TEST(FrameTest, Frame_SETUP) {
   FrameFlags flags = FrameFlags::EMPTY;
   uint16_t versionMajor = 4;
   uint16_t versionMinor = 5;
-  uint32_t keepaliveTime = std::numeric_limits<uint32_t>::max();
-  uint32_t maxLifetime = std::numeric_limits<uint32_t>::max();
+  uint32_t keepaliveTime = Frame_SETUP::kMaxKeepaliveTime;
+  uint32_t maxLifetime = Frame_SETUP::kMaxLifetime;
   std::vector<uint8_t> tokenData(16, 1);
   ResumeIdentificationToken token;
   token.set(std::move(tokenData));
@@ -198,8 +198,8 @@ TEST(FrameTest, Frame_SETUP_resume) {
   FrameFlags flags = FrameFlags::EMPTY | FrameFlags::RESUME_ENABLE;
   uint16_t versionMajor = 0;
   uint16_t versionMinor = 0;
-  uint32_t keepaliveTime = std::numeric_limits<uint32_t>::max();
-  uint32_t maxLifetime = std::numeric_limits<uint32_t>::max();
+  uint32_t keepaliveTime = Frame_SETUP::kMaxKeepaliveTime;
+  uint32_t maxLifetime = Frame_SETUP::kMaxLifetime;
   std::vector<uint8_t> tokenData(16, 1);
   ResumeIdentificationToken token;
   token.set(std::move(tokenData));
@@ -228,8 +228,8 @@ TEST(FrameTest, Frame_SETUP_resume) {
 
 TEST(FrameTest, Frame_LEASE) {
   FrameFlags flags = FrameFlags::EMPTY;
-  uint32_t ttl = std::numeric_limits<uint32_t>::max();
-  auto numberOfRequests = Frame_REQUEST_N::kMaxRequestN;
+  uint32_t ttl = Frame_LEASE::kMaxTtl;
+  auto numberOfRequests = Frame_LEASE::kMaxNumRequests;
   auto frame = reserialize<Frame_LEASE>(ttl, numberOfRequests);
 
   expectHeader(FrameType::LEASE, flags, 0, frame);

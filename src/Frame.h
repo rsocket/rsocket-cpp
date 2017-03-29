@@ -165,6 +165,29 @@ class FrameBufferAllocator {
 /// stream, intermediate layers that are frame-type-agnostic pass around
 /// serialized frame.
 
+class Frame_REQUEST_N {
+ public:
+  /*
+   * Maximum value for ReactiveSocket Subscription::request.
+   * Value is a signed int, however negative values are not allowed.
+   *
+   * n.b. this is less than size_t because of the Frame encoding restrictions.
+   */
+  static constexpr size_t kMaxRequestN = std::numeric_limits<int32_t>::max();
+
+  Frame_REQUEST_N() = default;
+  Frame_REQUEST_N(StreamId streamId, uint32_t requestN)
+      : header_(FrameType::REQUEST_N, FrameFlags::EMPTY, streamId),
+        requestN_(requestN) {
+    DCHECK(requestN_ > 0);
+    DCHECK(requestN_ <= kMaxRequestN);
+  }
+
+  FrameHeader header_;
+  uint32_t requestN_{};
+};
+std::ostream& operator<<(std::ostream&, const Frame_REQUEST_N&);
+
 class Frame_REQUEST_Base {
  public:
   Frame_REQUEST_Base() = default;
@@ -177,8 +200,11 @@ class Frame_REQUEST_Base {
       : header_(frameType, flags | payload.getFlags(), streamId),
         requestN_(requestN),
         payload_(std::move(payload)) {
-    payload_.checkFlags(header_.flags_); // to verify the client didn't set
+    // to verify the client didn't set
     // METADATA and provided none
+    payload_.checkFlags(header_.flags_);
+    // TODO: DCHECK(requestN_ > 0);
+    DCHECK(requestN_ <= Frame_REQUEST_N::kMaxRequestN);
   }
 
   /// For compatibility with other data-carrying frames.
@@ -291,26 +317,6 @@ class Frame_REQUEST_FNF {
 };
 std::ostream& operator<<(std::ostream&, const Frame_REQUEST_FNF&);
 
-class Frame_REQUEST_N {
- public:
-  /*
-   * Maximum value for ReactiveSocket Subscription::request.
-   * Value is a signed int, however negative values are not allowed.
-   *
-   * n.b. this is less than size_t because of the Frame encoding restrictions.
-   */
-  static constexpr size_t kMaxRequestN = std::numeric_limits<int32_t>::max();
-
-  Frame_REQUEST_N() = default;
-  Frame_REQUEST_N(StreamId streamId, uint32_t requestN)
-      : header_(FrameType::REQUEST_N, FrameFlags::EMPTY, streamId),
-        requestN_(requestN) {}
-
-  FrameHeader header_;
-  uint32_t requestN_{};
-};
-std::ostream& operator<<(std::ostream&, const Frame_REQUEST_N&);
-
 class Frame_METADATA_PUSH {
  public:
   Frame_METADATA_PUSH() {}
@@ -408,6 +414,11 @@ class Frame_SETUP {
   constexpr static const FrameFlags AllowedFlags = FrameFlags::METADATA |
       FrameFlags::RESUME_ENABLE | FrameFlags::LEASE | FrameFlags::STRICT;
 
+  constexpr static const uint32_t kMaxKeepaliveTime =
+      std::numeric_limits<int32_t>::max();
+  constexpr static const uint32_t kMaxLifetime =
+      std::numeric_limits<int32_t>::max();
+
   Frame_SETUP() = default;
   Frame_SETUP(
       FrameFlags flags,
@@ -433,6 +444,10 @@ class Frame_SETUP {
         payload_(std::move(payload)) {
     payload_.checkFlags(header_.flags_); // to verify the client didn't set
     // METADATA and provided none
+    DCHECK(keepaliveTime_ > 0);
+    DCHECK(maxLifetime_ > 0);
+    DCHECK(keepaliveTime_ <= kMaxKeepaliveTime);
+    DCHECK(maxLifetime_ <= kMaxLifetime);
   }
 
   void moveToSetupPayload(ConnectionSetupPayload& setupPayload);
@@ -453,6 +468,9 @@ std::ostream& operator<<(std::ostream&, const Frame_SETUP&);
 class Frame_LEASE {
  public:
   constexpr static const FrameFlags AllowedFlags = FrameFlags::METADATA;
+  constexpr static const uint32_t kMaxTtl = std::numeric_limits<int32_t>::max();
+  constexpr static const uint32_t kMaxNumRequests =
+      std::numeric_limits<int32_t>::max();
 
   Frame_LEASE() = default;
   Frame_LEASE(
@@ -465,7 +483,12 @@ class Frame_LEASE {
             0),
         ttl_(ttl),
         numberOfRequests_(numberOfRequests),
-        metadata_(std::move(metadata)) {}
+        metadata_(std::move(metadata)) {
+    DCHECK(ttl_ > 0);
+    DCHECK(numberOfRequests_ > 0);
+    DCHECK(ttl_ <= kMaxTtl);
+    DCHECK(numberOfRequests_ <= kMaxNumRequests);
+  }
 
   FrameHeader header_;
   uint32_t ttl_{};

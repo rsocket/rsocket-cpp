@@ -803,6 +803,8 @@ TEST(ReactiveSocketTest, SetupWithKeepaliveAndStats) {
   std::unique_ptr<MockKeepaliveTimer> clientKeepalive =
       std::make_unique<MockKeepaliveTimer>();
 
+  EXPECT_CALL(*clientKeepalive, keepaliveTime())
+      .WillRepeatedly(Return(std::chrono::milliseconds(10)));
   EXPECT_CALL(*clientKeepalive, start(_)).InSequence(s);
 
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();

@@ -13,8 +13,8 @@
 #include "tck-test/TestFileParser.h"
 #include "tck-test/TestInterpreter.h"
 
-DEFINE_string(host, "::1", "host to connect to");
-DEFINE_int32(port, 9898, "host:port to connect to");
+DEFINE_string(ip, "127.0.0.1", "IP to connect to");
+DEFINE_int32(port, 9898, "port to connect to");
 DEFINE_string(test_file, "../tck-test/clienttest.txt", "test file to run");
 DEFINE_string(
     tests,
@@ -84,10 +84,10 @@ int main(int argc, char* argv[]) {
   evbt.getEventBase()->runInEventBaseThreadAndWait([&]() {
     socket.reset(new folly::AsyncSocket(evbt.getEventBase()));
     callback = std::make_unique<SocketConnectCallback>();
-    folly::SocketAddress addr(FLAGS_host, FLAGS_port, true);
-
-    LOG(INFO) << "Attempting connection to " << addr.describe();
+    LOG(INFO) << "Connecting to " << FLAGS_ip << ":" << FLAGS_port;
+    folly::SocketAddress addr(FLAGS_ip, FLAGS_port, true);
     socket->connect(callback.get(), addr);
+    LOG(INFO) << "Connected to " << addr.describe();
   });
 
   callback->waitToConnect();
@@ -138,5 +138,5 @@ int main(int argc, char* argv[]) {
     callback.reset();
     socket.reset();
   });
-  return 0;
+  return !(passed == ran);
 }

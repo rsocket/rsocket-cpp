@@ -20,19 +20,17 @@ namespace reactivesocket {
 
 ConnectionAutomaton::ConnectionAutomaton(
     folly::Executor& executor,
-    ConnectionLevelFrameHandler connectionLevelFrameHandler,
+    ReactiveSocket* reactiveSocket,
     std::shared_ptr<RequestHandler> requestHandler,
-    ResumeListener resumeListener,
     std::shared_ptr<Stats> stats,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer,
     ReactiveSocketMode mode)
     : ExecutorBase(executor),
-      connectionLevelFrameHandler_(std::move(connectionLevelFrameHandler)),
+      reactiveSocket_(reactiveSocket),
       stats_(std::move(stats)),
       mode_(mode),
       streamState_(std::make_shared<StreamState>(*this)),
       requestHandler_(std::move(requestHandler)),
-      resumeListener_(resumeListener),
       keepaliveTimer_(std::move(keepaliveTimer)),
       streamsFactory_(*this, mode) {
   // We deliberately do not "open" input or output to avoid having c'tor on the
@@ -132,17 +130,20 @@ void ConnectionAutomaton::close(
     folly::exception_wrapper ex,
     StreamCompletionSignal signal) {
   debugCheckCorrectExecutor();
+
+  if (isClosed_) {
+    return;
+  }
+  isClosed_ = true;
+  reactiveSocket_ = nullptr;
+  stats_->socketClosed(signal);
+
   VLOG(6) << "close";
 
   if (resumeCallback_) {
     resumeCallback_->onResumeError(
         std::runtime_error(ex ? ex.what().c_str() : "RS closing"));
     resumeCallback_.reset();
-  }
-
-  if (!isClosed_) {
-    isClosed_ = true;
-    stats_->socketClosed(signal);
   }
 
   onConnectListeners_.clear();
@@ -327,8 +328,11 @@ void ConnectionAutomaton::processFrame(std::unique_ptr<folly::IOBuf> frame) {
 
 void ConnectionAutomaton::processFrameImpl(
     std::unique_ptr<folly::IOBuf> frame) {
-  auto frameType = frameSerializer().peekFrameType(*frame);
-  stats_->frameRead(frameType);
+  if (isClosed()) {
+    return;
+  }
+
+  stats_->frameRead(frameSerializer().peekFrameType(*frame));
 
   // TODO(tmont): If a frame is invalid, it will still be tracked. However, we
   // actually want that. We want to keep
@@ -415,9 +419,8 @@ void ConnectionAutomaton::onConnectionFrame(
       return;
     }
     case FrameType::SETUP: {
-      // TODO(tmont): check for ENABLE_RESUME and make sure isResumable_ is true
       Frame_SETUP frame;
-      if (!deserializeFrameOrError(frame, payload->clone())) {
+      if (!deserializeFrameOrError(frame, std::move(payload))) {
         return;
       }
       if (!!(frame.header_.flags_ & FrameFlags::RESUME_ENABLE)) {
@@ -425,46 +428,42 @@ void ConnectionAutomaton::onConnectionFrame(
       } else {
         remoteResumeable_ = false;
       }
-      // TODO(blom, t15719366): Don't pass the full frame here
-      connectionLevelFrameHandler_(std::move(payload));
+      if (!!(frame.header_.flags_ & FrameFlags::LEASE)) {
+        // TODO(yschimke) We don't have the correct lease and wait logic above
+        // yet
+        LOG(ERROR) << "ignoring setup frame with lease";
+      }
+
+      setFrameSerializer(FrameSerializer::createFrameSerializer(
+          ProtocolVersion{frame.versionMajor_, frame.versionMinor_}));
+
+      ConnectionSetupPayload setupPayload;
+      frame.moveToSetupPayload(setupPayload);
+      requestHandler_->handleSetupPayload(
+          *reactiveSocket_, std::move(setupPayload));
       return;
     }
     case FrameType::METADATA_PUSH: {
-      connectionLevelFrameHandler_(std::move(payload));
+      Frame_METADATA_PUSH frame;
+      if (deserializeFrameOrError(frame, std::move(payload))) {
+        requestHandler_->handleMetadataPush(std::move(frame.metadata_));
+      }
       return;
     }
     case FrameType::RESUME: {
       if (mode_ == ReactiveSocketMode::SERVER && isResumable_) {
-        connectionLevelFrameHandler_(std::move(payload));
-        //      Frame_RESUME frame;
-        //      if (!deserializeFrameOrError(frame, std::move(payload))) {
-        //        return;
-        //      }
-        //      bool canResume = false;
-        //
-        //      if (isServer_ && isResumable_) {
-        //        auto streamState = resumeListener_(frame.token_);
-        //        if (nullptr != streamState) {
-        //          canResume = true;
-        //          useStreamState(streamState);
-        //        }
-        //      }
-        //
-        //      if (canResume) {
-        //        outputFrameOrEnqueue(
-        //            Frame_RESUME_OK(
-        //            streamState_->resumeTracker_.impliedPosition())
-        //                .serializeOut());
-        //        for (auto it : streamState_->streams_) {
-        //          const StreamId streamId = it.first;
-        //
-        //          if (streamState_->resumeCache_.isPositionAvailable(
-        //                  frame.position_, streamId)) {
-        //            it.second->onCleanResume();
-        //          } else {
-        //            it.second->onDirtyResume();
-        //          }
-        //        }
+        Frame_RESUME frame;
+        if (!deserializeFrameOrError(frame, std::move(payload))) {
+          return;
+        }
+        auto resumed = requestHandler_->handleResume(
+            *reactiveSocket_,
+            ResumeParameters(frame.token_,
+            frame.lastReceivedServerPosition_,
+            frame.clientPosition_));
+        if (!resumed) {
+          closeWithError(Frame_ERROR::connectionError("can not resume"));
+        }
       } else {
         closeWithError(
             Frame_ERROR::connectionError("RS not resumable. Can not resume"));
@@ -632,11 +631,6 @@ bool ConnectionAutomaton::isPositionAvailable(ResumePosition position) {
   return streamState_->resumeCache_.isPositionAvailable(position);
 }
 
-// ResumePosition ConnectionAutomaton::positionDifference(
-//    ResumePosition position) {
-//  return streamState_->resumeCache_.position() - position;
-//}
-
 bool ConnectionAutomaton::resumeFromPositionOrClose(
     ResumePosition serverPosition,
     ResumePosition clientPosition) {
@@ -706,19 +700,11 @@ void ConnectionAutomaton::outputFrame(std::unique_ptr<folly::IOBuf> frame) {
   frameTransport_->outputFrameOrEnqueue(std::move(frame));
 }
 
-void ConnectionAutomaton::useStreamState(
-    std::shared_ptr<StreamState> streamState) {
-  CHECK(streamState);
-  if (mode_ == ReactiveSocketMode::SERVER && isResumable_) {
-    streamState_.swap(streamState);
-  }
-}
-
 uint32_t ConnectionAutomaton::getKeepaliveTime() const {
   debugCheckCorrectExecutor();
   return keepaliveTimer_
       ? static_cast<uint32_t>(keepaliveTimer_->keepaliveTime().count())
-      : std::numeric_limits<uint32_t>::max();
+      : Frame_SETUP::kMaxKeepaliveTime;
 }
 
 bool ConnectionAutomaton::isDisconnectedOrClosed() const {

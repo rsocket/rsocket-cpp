@@ -80,12 +80,8 @@ TEST(ConnectionAutomatonTest, InvalidFrameHeader) {
   std::shared_ptr<ConnectionAutomaton> connectionAutomaton;
   connectionAutomaton = std::make_shared<ConnectionAutomaton>(
       defaultExecutor(),
-      [&](std::unique_ptr<folly::IOBuf>) {
-        connectionAutomaton->closeWithError(
-            Frame_ERROR::connectionError("invalid frame"));
-      },
-      std::make_shared<NullRequestHandler>(),
       nullptr,
+      std::make_shared<NullRequestHandler>(),
       Stats::noop(),
       nullptr,
       ReactiveSocketMode::CLIENT);
@@ -168,12 +164,8 @@ static void terminateTest(
   std::shared_ptr<ConnectionAutomaton> connectionAutomaton;
   connectionAutomaton = std::make_shared<ConnectionAutomaton>(
       defaultExecutor(),
-      [&](std::unique_ptr<folly::IOBuf>) {
-        connectionAutomaton->closeWithError(
-            Frame_ERROR::connectionError("invalid frame"));
-      },
-      std::make_shared<NullRequestHandler>(),
       nullptr,
+      std::make_shared<NullRequestHandler>(),
       Stats::noop(),
       nullptr,
       ReactiveSocketMode::CLIENT);
@@ -268,12 +260,8 @@ TEST(ConnectionAutomatonTest, RefuseFrame) {
   std::shared_ptr<ConnectionAutomaton> connectionAutomaton;
   connectionAutomaton = std::make_shared<ConnectionAutomaton>(
       defaultExecutor(),
-      [&](std::unique_ptr<folly::IOBuf>) {
-        connectionAutomaton->closeWithError(
-            Frame_ERROR::connectionError("invalid frame"));
-      },
-      std::make_shared<NullRequestHandler>(),
       nullptr,
+      std::make_shared<NullRequestHandler>(),
       Stats::noop(),
       nullptr,
       ReactiveSocketMode::CLIENT);

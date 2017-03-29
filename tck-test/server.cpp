@@ -21,7 +21,8 @@ using namespace ::testing;
 using namespace ::reactivesocket;
 using namespace ::folly;
 
-DEFINE_string(address, "9898", "port to listen to");
+DEFINE_string(ip, "0.0.0.0", "IP to bind on");
+DEFINE_int32(port, 9898, "port to listen to");
 DEFINE_string(test_file, "../tck-test/servertest.txt", "test file to run");
 DEFINE_bool(enable_stats_printer, false, "enable StatsPrinter");
 
@@ -261,8 +262,8 @@ int main(int argc, char* argv[]) {
   evbt.getEventBase()->runInEventBaseThreadAndWait(
       [&evbt, &serverSocket, &callback]() {
         evbt.getEventBase()->setName("RsSockEvb");
-        folly::SocketAddress addr;
-        addr.setFromLocalIpPort(FLAGS_address);
+        LOG(INFO) << "Binding to " << FLAGS_ip << ":" << FLAGS_port;
+        folly::SocketAddress addr(FLAGS_ip, FLAGS_port, true);
         serverSocket->setReusePortEnabled(true);
         serverSocket->bind(addr);
         serverSocket->addAcceptCallback(&callback, evbt.getEventBase());

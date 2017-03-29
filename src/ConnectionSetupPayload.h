@@ -31,4 +31,20 @@ class ConnectionSetupPayload {
 };
 
 std::ostream& operator<<(std::ostream&, const ConnectionSetupPayload&);
-}
+
+class ResumeParameters {
+ public:
+  ResumeParameters(
+      ResumeIdentificationToken _token,
+      ResumePosition _serverPosition,
+      ResumePosition _clientPosition)
+      : token(std::move(_token)),
+        serverPosition(_serverPosition),
+        clientPosition(_clientPosition) {}
+
+  ResumeIdentificationToken token;
+  ResumePosition serverPosition;
+  ResumePosition clientPosition;
+};
+
+} // reactivesocket

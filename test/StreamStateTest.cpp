@@ -19,7 +19,6 @@ class StreamStateTest : public Test {
           inlineExecutor(),
           nullptr,
           nullptr,
-          nullptr,
           stats_,
           nullptr,
           ReactiveSocketMode::CLIENT)};

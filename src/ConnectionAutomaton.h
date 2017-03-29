@@ -29,20 +29,6 @@ class RequestHandler;
 class Stats;
 class StreamState;
 
-/// Creates, registers and spins up responder for provided new stream ID and
-/// serialised frame.
-///
-/// It is a responsibility of this strategy to register the responder with the
-/// connection automaton and provide it with the initial frame if needed.
-/// Returns true if the responder has been created successfully, false if the
-/// frame cannot start a new stream, in which case the frame (passed by a
-/// mutable referece) must not be modified.
-using ConnectionLevelFrameHandler =
-    std::function<void(std::unique_ptr<folly::IOBuf>)>;
-
-using ResumeListener = std::function<std::shared_ptr<StreamState>(
-    const ResumeIdentificationToken& token)>;
-
 class FrameSink {
  public:
   virtual ~FrameSink() = default;
@@ -74,9 +60,8 @@ class ConnectionAutomaton final
  public:
   ConnectionAutomaton(
       folly::Executor& executor,
-      ConnectionLevelFrameHandler connectionLevelFrameHandler,
+      ReactiveSocket* reactiveSocket,
       std::shared_ptr<RequestHandler> requestHandler,
-      ResumeListener resumeListener,
       std::shared_ptr<Stats> stats,
       std::unique_ptr<KeepaliveTimer> keepaliveTimer_,
       ReactiveSocketMode mode);
@@ -109,7 +94,6 @@ class ConnectionAutomaton final
 
   ~ConnectionAutomaton();
 
-  /// @{
   /// A contract exposed to StreamAutomatonBase, modelled after Subscriber
   /// and Subscription contracts, while omitting flow control related signals.
 
@@ -145,16 +129,12 @@ class ConnectionAutomaton final
   ///   ConnectionAutomaton.
   void endStream(StreamId streamId, StreamCompletionSignal signal);
 
-  void useStreamState(std::shared_ptr<StreamState> streamState);
-  /// @}
-
   void sendKeepalive(std::unique_ptr<folly::IOBuf> data) override;
 
   void setResumable(bool resumable);
   Frame_RESUME createResumeFrame(const ResumeIdentificationToken& token) const;
 
   bool isPositionAvailable(ResumePosition position);
-  //  ResumePosition positionDifference(ResumePosition position);
 
   void outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf> frame);
 
@@ -219,8 +199,7 @@ class ConnectionAutomaton final
   /// FrameProcessor methods are implemented with ExecutorBase and automatic
   /// marshaling
   /// onto the right executor to allow DuplexConnection living on a different
-  /// executor
-  /// and calling into ConnectionAutomaton.
+  /// executor and calling into ConnectionAutomaton.
   void processFrame(std::unique_ptr<folly::IOBuf>) override;
   void onTerminal(folly::exception_wrapper) override;
 
@@ -263,7 +242,7 @@ class ConnectionAutomaton final
   void onStreamClosed(StreamId streamId, StreamCompletionSignal signal)
       override;
 
-  ConnectionLevelFrameHandler connectionLevelFrameHandler_;
+  ReactiveSocket* reactiveSocket_;
 
   const std::shared_ptr<Stats> stats_;
   ReactiveSocketMode mode_;
@@ -280,7 +259,6 @@ class ConnectionAutomaton final
   std::list<ErrorCallback> onDisconnectListeners_;
   std::list<ErrorCallback> onCloseListeners_;
 
-  ResumeListener resumeListener_;
   const std::unique_ptr<KeepaliveTimer> keepaliveTimer_;
 
   std::unique_ptr<ClientResumeStatusCallback> resumeCallback_;

@@ -44,9 +44,7 @@ class ServerConnectionAcceptor {
   /// connection fails)
   virtual void resumeSocket(
       std::shared_ptr<FrameTransport>,
-      ResumeIdentificationToken,
-      ResumePosition,
-      ResumePosition,
+      ResumeParameters,
       folly::Executor&) = 0;
 
   void acceptConnection(std::unique_ptr<DuplexConnection>, folly::Executor&);
