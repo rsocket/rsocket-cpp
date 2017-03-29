@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <arpa/inet.h>
+#include <atomic>
 
 #define MAX_MESSAGE_LENGTH (8 * 1024)
 #define PORT (35437)
