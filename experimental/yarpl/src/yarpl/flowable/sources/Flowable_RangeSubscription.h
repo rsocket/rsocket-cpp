@@ -2,9 +2,9 @@
 
 #pragma once
 
-#import <iostream>
-#import "reactivestreams/ReactiveStreams.h"
-#import "yarpl/Flowable_Subscription.h"
+#include <iostream>
+#include "reactivestreams/ReactiveStreams.h"
+#include "yarpl/Flowable_Subscription.h"
 
 namespace yarpl {
 namespace flowable {
