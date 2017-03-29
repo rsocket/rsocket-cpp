@@ -15,6 +15,8 @@ using namespace ::reactivesocket;
 using namespace ::folly;
 using namespace ::rsocket;
 
+#define MESSAGE_LENGTH (32)
+
 DEFINE_string(host, "localhost", "host to connect to");
 DEFINE_int32(port, 9898, "host:port to connect to");
 
@@ -23,11 +25,11 @@ public:
     explicit BM_Subscription(
         std::shared_ptr<Subscriber<Payload>> subscriber,
         std::string name,
-        size_t numberToEmit = 2)
+        size_t length)
         : ExecutorBase(defaultExecutor()),
         subscriber_(std::move(subscriber)),
         name_(std::move(name)),
-        numberToEmit_(numberToEmit),
+        data_(length, 'a'),
         cancelled_(false)
     {
     }
@@ -35,42 +37,27 @@ public:
 private:
     void requestImpl(size_t n) noexcept override
     {
-        LOG(INFO) << "requested=" << n << " currentElem=" << currentElem_
-            << " numberToEmit=" << numberToEmit_;
+        LOG(INFO) << "requested=" << n << " currentElem=" << currentElem_;
 
-        if (numberToEmit_ == 0) {
-            subscriber_->onComplete();
-            return;
-        }
         for (size_t i = 0; i < n; i++) {
             if (cancelled_) {
                 LOG(INFO) << "emission stopped by cancellation";
                 return;
             }
-            std::stringstream ss;
-            ss << "Hello " << name_ << " " << currentElem_ << "!";
-            std::string s = ss.str();
-            subscriber_->onNext(Payload(s));
-            // currentElem is used to track progress across requestImpl invocations
+            subscriber_->onNext(Payload(data_));
             currentElem_++;
-            // break the loop and complete the stream if numberToEmit_ is matched
-            if (currentElem_ == numberToEmit_) {
-                subscriber_->onComplete();
-                return;
-            }
         }
     }
 
     void cancelImpl() noexcept override
     {
         LOG(INFO) << "cancellation received";
-        // simple cancellation token (nothing to shut down, just stop next loop)
         cancelled_ = true;
     }
 
     std::shared_ptr<Subscriber<Payload>> subscriber_;
     std::string name_;
-    size_t numberToEmit_;
+    std::string data_;
     size_t currentElem_ = 0;
     std::atomic_bool cancelled_;
 };
@@ -83,19 +70,17 @@ public:
     {
         LOG(INFO) << "BM_RequestHandler.handleRequestStream " << request;
 
-        // string from payload data
         const char* p = reinterpret_cast<const char*>(request.data->data());
         auto requestString = std::string(p, request.data->length());
 
         response->onSubscribe(
-            std::make_shared<BM_Subscription>(response, requestString, 100000000));
+            std::make_shared<BM_Subscription>(response, requestString, MESSAGE_LENGTH));
     }
 
     std::shared_ptr<StreamState> handleSetupPayload(
         ReactiveSocket &socket, ConnectionSetupPayload request) noexcept override
     {
         LOG(INFO) << "BM_RequestHandler.handleSetupPayload " << request;
-        // TODO what should this do?
         return nullptr;
     }
 };
@@ -108,16 +93,14 @@ public:
         LOG(INFO) << "BM_Subscriber destroy " << this;
     }
 
-    BM_Subscriber(int initialRequest, int numToTake)
+    BM_Subscriber(int initialRequest)
         : initialRequest_(initialRequest),
         thresholdForRequest_(initialRequest * 0.75),
-        numToTake_(numToTake),
         received_(0)
     {
         LOG(INFO) << "BM_Subscriber " << this << " created with => "
             << "  Initial Request: " << initialRequest
-            << "  Threshold for re-request: " << thresholdForRequest_
-            << "  Num to Take: " << numToTake;
+            << "  Threshold for re-request: " << thresholdForRequest_;
     }
 
     void onSubscribe(std::shared_ptr<reactivesocket::Subscription> subscription) noexcept override
@@ -132,7 +115,9 @@ public:
     {
         LOG(INFO) << "BM_Subscriber " << this
             << " onNext as string: " << element.moveDataToString();
-        received_++;
+
+        received_.store(received_ + 1, std::memory_order_release);
+
         if (--requested_ == thresholdForRequest_) {
             int toRequest = (initialRequest_ - thresholdForRequest_);
             LOG(INFO) << "BM_Subscriber " << this << " requesting " << toRequest
@@ -176,22 +161,21 @@ public:
         cancel_ = true;
     }
 
-    int received()
+    size_t received()
     {
-        return received_;
+        return received_.load(std::memory_order_acquire);
     }
 
 private:
     int initialRequest_;
     int thresholdForRequest_;
-    int numToTake_;
     int requested_;
-    int received_;
     std::shared_ptr<reactivesocket::Subscription> subscription_;
     bool terminated_{false};
     std::mutex m_;
     std::condition_variable terminalEventCV_;
     std::atomic_bool cancel_{false};
+    std::atomic<size_t> received_;
 };
 
 class BM_RsFixture : public benchmark::Fixture
@@ -225,11 +209,11 @@ public:
     std::shared_ptr<BM_RequestHandler> handler_;
 };
 
-BENCHMARK_F(BM_RsFixture, BM_Stream_Throughput)(benchmark::State &state)
+BENCHMARK_DEFINE_F(BM_RsFixture, BM_Stream_Throughput)(benchmark::State &state)
 {
     auto clientRs = RSocket::createClient(TcpConnectionFactory::create(host_, port_));
 
-    auto s = std::make_shared<BM_Subscriber>(5, 6);
+    auto s = std::make_shared<BM_Subscriber>(state.range(0));
 
     clientRs
         ->connect()
@@ -244,11 +228,19 @@ BENCHMARK_F(BM_RsFixture, BM_Stream_Throughput)(benchmark::State &state)
         std::this_thread::yield();
     }
 
+    size_t rcved = s->received();
+
     s->cancel();
     s->awaitTerminalEvent();
 
-    //state.SetBytesProcessed(totalBytesReceived);
-    state.SetItemsProcessed(s->received());
+    char label[256];
+
+    std::snprintf(label, sizeof(label), "Message Length: %d", MESSAGE_LENGTH);
+    state.SetLabel(label);
+
+    state.SetItemsProcessed(rcved);
 }
+
+BENCHMARK_REGISTER_F(BM_RsFixture, BM_Stream_Throughput)->Arg(8)->Arg(32)->Arg(128);
 
 BENCHMARK_MAIN()
