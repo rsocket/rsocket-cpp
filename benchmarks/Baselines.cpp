@@ -8,6 +8,7 @@
 #include <iostream>
 #include <arpa/inet.h>
 #include <atomic>
+#include <cstring>
 
 #define MAX_MESSAGE_LENGTH (8 * 1024)
 #define PORT (35437)
@@ -30,8 +31,8 @@ static void BM_Baseline_TCP_Throughput(benchmark::State &state)
             socklen_t addrlen = sizeof(addr);
             char message[MAX_MESSAGE_LENGTH];
 
-            ::memset(message, 0, sizeof(message));
-            ::memset(&addr, 0, sizeof(addr));
+            std::memset(message, 0, sizeof(message));
+            std::memset(&addr, 0, sizeof(addr));
 
             if (serverSock < 0)
             {
@@ -100,8 +101,8 @@ static void BM_Baseline_TCP_Throughput(benchmark::State &state)
     socklen_t addrlen = sizeof(addr);
     char message[MAX_MESSAGE_LENGTH];
 
-    ::memset(message, 0, sizeof(message));
-    ::memset(&addr, 0, sizeof(addr));
+    std::memset(message, 0, sizeof(message));
+    std::memset(&addr, 0, sizeof(addr));
 
     if (sock < 0)
     {
@@ -170,8 +171,8 @@ static void BM_Baseline_TCP_Latency(benchmark::State &state)
             socklen_t addrlen = sizeof(addr);
             char message[MAX_MESSAGE_LENGTH];
 
-            ::memset(message, 0, sizeof(message));
-            ::memset(&addr, 0, sizeof(addr));
+            std::memset(message, 0, sizeof(message));
+            std::memset(&addr, 0, sizeof(addr));
 
             if (serverSock < 0)
             {
@@ -260,8 +261,8 @@ static void BM_Baseline_TCP_Latency(benchmark::State &state)
     socklen_t addrlen = sizeof(addr);
     char message[MAX_MESSAGE_LENGTH];
 
-    ::memset(message, 0, sizeof(message));
-    ::memset(&addr, 0, sizeof(addr));
+    std::memset(message, 0, sizeof(message));
+    std::memset(&addr, 0, sizeof(addr));
 
     if (sock < 0)
     {
