@@ -7,22 +7,31 @@
 #include <utility>
 #include "yarpl/utils/type_traits.h"
 
+#include "yarpl/Flowable.h"
+
 #include "yarpl/Disposable.h"
 #include "yarpl/Observable_Observer.h"
 #include "yarpl/Observable_Subscription.h"
 
 #include "yarpl/observable/sources/Observable_RangeSubscription.h"
 
+#include "yarpl/flowable/sources/Flowable_FromObservable.h"
 #include "yarpl/observable/operators/Observable_Map.h"
 #include "yarpl/observable/operators/Observable_Take.h"
 
 namespace yarpl {
 namespace observable {
 
+// forward declarations
 template <typename T>
 class ObservableEmitter;
 template <typename T, typename OF>
 class EmitterSubscription;
+
+/**
+*Strategy for backpressure when converting from Observable to Flowable.
+*/
+enum class BackpressureStrategy { DROP };
 
 /**
  * Observable type for async push streams.
@@ -155,6 +164,27 @@ class Observable : public std::enable_shared_from_this<Observable<T>> {
   std::shared_ptr<Observable<T>> take(int64_t toTake) {
     return lift<T>(
         yarpl::observable::operators::ObservableTakeOperator<T>(toTake));
+  }
+
+  /**
+   * Convert from Observable to Flowable with a given BackpressureStrategy.
+   *
+   * Currently the only strategy is DROP.
+   *
+   * @param strategy
+   * @return
+   */
+  std::shared_ptr<yarpl::flowable::Flowable<T>> toFlowable(
+      BackpressureStrategy strategy) {
+    // we currently ONLY support the DROP strategy
+    // so do not use the strategy parameter for anything
+    return yarpl::flowable::Flowable<T>::create([o = this->shared_from_this()](
+        auto subscriber) mutable {
+      auto s =
+          new yarpl::flowable::sources::FlowableFromObservableSubscription<T>(
+              std::move(o), std::move(subscriber));
+      s->start();
+    });
   }
 
  protected:

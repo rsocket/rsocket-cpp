@@ -97,14 +97,6 @@ class ObservableSubscription : public Subscription {
   virtual void start() = 0;
 
   /**
-   * Send events to downstream using this from within 'emit'
-   * @param t
-   */
-  void onNext(T& t) {
-    observer_->onNext(t);
-  }
-
-  /**
    *Send events to downstream using this from within 'emit'
    *@param t
    */

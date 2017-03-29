@@ -14,7 +14,7 @@ RangeSubscription::RangeSubscription(
     long start,
     long count,
     std::unique_ptr<reactivestreams_yarpl::Subscriber<long>> subscriber)
-    : FlowableSubscription(std::move(subscriber)),
+    : FlowableSubscriptionSync(std::move(subscriber)),
       current_(start),
       max_(start + count - 1){};
 

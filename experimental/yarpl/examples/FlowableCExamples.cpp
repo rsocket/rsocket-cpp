@@ -24,24 +24,24 @@ void FlowableCExamples::run() {
     auto subscription = new yarpl::flowable::sources::RangeSubscription(
         1, 10, std::move(subscriber));
     subscription->start();
-  })->subscribe(createSubscriber<long>([](auto t) {
+  })->subscribe(Subscribers::create<long>([](auto t) {
     std::cout << "Value received: " << t << std::endl;
   }));
 
-  FlowablesC::range(1, 5)->subscribe(createSubscriber<long>(
+  FlowablesC::range(1, 5)->subscribe(Subscribers::create<long>(
       [](auto t) { std::cout << "Value received: " << t << std::endl; }));
 
   getC()
       ->map([](auto i) { return "mapped value => " + std::to_string(i); })
-      ->subscribe(createSubscriber<std::string>(
+      ->subscribe(Subscribers::create<std::string>(
           [](auto t) { std::cout << "from getC => " << t << std::endl; }));
 
   FlowablesC::range(1, 5)
       ->map([](auto i) { return "mapped value => " + std::to_string(i); })
-      ->subscribe(createSubscriber<std::string>(
+      ->subscribe(Subscribers::create<std::string>(
           [](auto t) { std::cout << "Value received: " << t << std::endl; }));
 
-  FlowablesC::range(1, 5)->take(2)->subscribe(createSubscriber<long>(
+  FlowablesC::range(1, 5)->take(2)->subscribe(Subscribers::create<long>(
       [](auto t) { std::cout << "Value received: " << t << std::endl; }));
 
   ThreadScheduler scheduler;
@@ -53,7 +53,7 @@ void FlowableCExamples::run() {
         return "mapped->" + std::to_string(i);
       })
       ->take(2)
-      ->subscribe(createSubscriber<std::string>([](auto t) {
+      ->subscribe(Subscribers::create<std::string>([](auto t) {
         std::cout << "Value received after scheduling: " << t << std::endl;
       }));
 

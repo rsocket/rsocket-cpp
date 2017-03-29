@@ -4,13 +4,13 @@
 
 #include <iostream>
 #include "reactivestreams/ReactiveStreams.h"
-#include "yarpl/Flowable_Subscription.h"
+#include "yarpl/Flowable_SubscriptionSync.h"
 
 namespace yarpl {
 namespace flowable {
 namespace sources {
 
-class RangeSubscription : public FlowableSubscription<long> {
+class RangeSubscription : public FlowableSubscriptionSync<long> {
  public:
   explicit RangeSubscription(
       long start,

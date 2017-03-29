@@ -11,27 +11,43 @@ namespace yarpl {
 namespace flowable {
 
 /**
- * Abstract base for creating Subscriptions that
+ * Abstract base for creating Subscriptions that:
  * - obey the contracts
  * - manage concurrency
  * - delete themselves after onComplete, onError, or cancellation.
+ *
+ * This should only be used for synchronous emission as it assumes the
+ * emit(...) method will be invokved synchronously.
+ *
+ * This base class is good for use cases such as:
+ *
+ * - range of values
+ * - iterators
+ * - lines of file read with blocking IO
+ *
+ * It should not be used for event listeners which should be
+ * represented by Observable instead.
+ *
+ * It should also not be used for non-blocking IO which needs
+ * a different set of behaviors that this abstraction does
+ * not attempt to address.
  */
 template <typename T>
-class FlowableSubscription : public reactivestreams_yarpl::Subscription {
+class FlowableSubscriptionSync : public reactivestreams_yarpl::Subscription {
  public:
-  explicit FlowableSubscription(
+  explicit FlowableSubscriptionSync(
       std::unique_ptr<reactivestreams_yarpl::Subscriber<T>> s)
       : subscriber_(std::move(s)) {}
-  ~FlowableSubscription() {
+  ~FlowableSubscriptionSync() {
     // TODO remove this once happy with it
-    std::cout << "DESTROY FlowableSubscription!!!" << std::endl;
+    std::cout << "DESTROY FlowableSubscriptionSync!!!" << std::endl;
   }
 
   // TODO do we need move semantics?
-  FlowableSubscription(FlowableSubscription&&) = delete;
-  FlowableSubscription(const FlowableSubscription&) = delete;
-  FlowableSubscription& operator=(FlowableSubscription&&) = delete;
-  FlowableSubscription& operator=(const FlowableSubscription&) = delete;
+  FlowableSubscriptionSync(FlowableSubscriptionSync&&) = delete;
+  FlowableSubscriptionSync(const FlowableSubscriptionSync&) = delete;
+  FlowableSubscriptionSync& operator=(FlowableSubscriptionSync&&) = delete;
+  FlowableSubscriptionSync& operator=(const FlowableSubscriptionSync&) = delete;
 
   void start() {
     subscriber_->onSubscribe(this);
@@ -88,7 +104,7 @@ class FlowableSubscription : public reactivestreams_yarpl::Subscription {
    * Send events to downstream using this from within 'emit'
    * @param t
    */
-  void onNext(T& t) {
+  void onNext(const T& t) {
     subscriber_->onNext(t);
   }
 
@@ -132,7 +148,7 @@ class FlowableSubscription : public reactivestreams_yarpl::Subscription {
     // only one thread can call delete
     if (emitting_.fetch_add(1) == 0) {
       // TODO remove this cout once happy with it
-      std::cout << "Delete FlowableSubscription" << std::endl;
+      std::cout << "Delete FlowableSubscriptionSync" << std::endl;
       delete this;
     }
   }

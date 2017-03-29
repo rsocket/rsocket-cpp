@@ -24,10 +24,10 @@ void FlowableAExamples::run() {
   FlowablesA::range(1, 10)
       .map([](auto i) { return "hello->" + std::to_string(i); })
       .take(3)
-      .subscribe(createSubscriber<std::string>(
+      .subscribe(Subscribers::create<std::string>(
           [](auto t) { std::cout << "Value received: " << t << std::endl; }));
 
-  getFlowableA().take(2).subscribe(createSubscriber<std::string>(
+  getFlowableA().take(2).subscribe(Subscribers::create<std::string>(
       [](auto t) { std::cout << "Value received: " << t << std::endl; }));
 
   std::cout << "--------------- END Example" << std::endl;
@@ -37,7 +37,7 @@ void FlowableAExamples::run() {
   auto a = FlowablesA::range(1, 10);
   auto b = a.take(3);
   auto c = b.map([](auto i) { return "hello->" + std::to_string(i); });
-  c.subscribe(createSubscriber<std::string>(
+  c.subscribe(Subscribers::create<std::string>(
       [](auto t) { std::cout << "Value received: " << t << std::endl; }));
 
   std::cout << "--------------- END Example" << std::endl;
@@ -50,7 +50,7 @@ void FlowableAExamples::run() {
       .subscribeOn(scheduler) // put on background thread
       .map([](auto i) { return "Value received: " + std::to_string(i); })
       .take(6)
-      .subscribe(createSubscriber<std::string>([](auto t) {
+      .subscribe(Subscribers::create<std::string>([](auto t) {
         std::cout << t << " on thread: " << std::this_thread::get_id()
                   << std::endl;
       }));

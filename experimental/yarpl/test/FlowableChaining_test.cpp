@@ -99,7 +99,7 @@ TEST(FlowableChaining, rangeMapTake) {
   auto b = a->map([](auto i) { return "hello->" + std::to_string(i); });
   auto c = b->take(10);
 
-  c->subscribe(createSubscriber<std::string>(
+  c->subscribe(Subscribers::create<std::string>(
       [](auto t) { std::cout << "Value received: " << t << std::endl; }));
 }
 
@@ -108,12 +108,12 @@ TEST(FlowableChaining, rangeMapTakeBranched) {
   auto b = a->take(10);
   auto c = b->map([](auto i) { return "hello->" + std::to_string(i); });
 
-  c->subscribe(createSubscriber<std::string>(
+  c->subscribe(Subscribers::create<std::string>(
       [](auto t) { std::cout << "Value received: " << t << std::endl; }));
 
   // this should not work, but it does
   auto c2 = b->map([](auto i) { return "should break->" + std::to_string(i); });
-  c2->subscribe(createSubscriber<std::string>(
+  c2->subscribe(Subscribers::create<std::string>(
       [](auto t) { std::cout << "Value received2: " << t << std::endl; }));
 }
 
@@ -193,7 +193,7 @@ TEST(FlowableChaining, customSourceThenMapTakeBranched) {
     auto b = a->take(10);
     auto c = b->map([](auto i) { return "hello->" + std::to_string(i); });
 
-    c->subscribe(createSubscriber<std::string>(
+    c->subscribe(Subscribers::create<std::string>(
         [](auto t) { std::cout << "Value received: " << t << std::endl; }));
   }
 
@@ -201,7 +201,7 @@ TEST(FlowableChaining, customSourceThenMapTakeBranched) {
     auto b = a->take(10);
     auto c = b->map([](auto i) { return "hello again->" + std::to_string(i); });
 
-    c->subscribe(createSubscriber<std::string>([](auto t) {
+    c->subscribe(Subscribers::create<std::string>([](auto t) {
       std::cout << "Value received again: " << t << std::endl;
     }));
   }

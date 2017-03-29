@@ -44,11 +44,12 @@ add_library(
         include/yarpl/FlowableB.h
         include/yarpl/FlowableC.h
         include/yarpl/Flowable_Subscriber.h
-        include/yarpl/Flowable_Subscription.h
+        include/yarpl/Flowable_SubscriptionSync.h
         include/yarpl/Flowable_TestSubscriber.h
         # Flowable sources
         src/yarpl/flowable/sources/Flowable_RangeSubscription.h
         src/yarpl/flowable/sources/Flowable_RangeSubscription.cpp
+        src/yarpl/flowable/sources/Flowable_FromObservable.h
         # Flowable operators
         src/yarpl/flowable/operators/Flowable_Map.h
         src/yarpl/flowable/operators/Flowable_Take.h

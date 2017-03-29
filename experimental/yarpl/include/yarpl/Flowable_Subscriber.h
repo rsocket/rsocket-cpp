@@ -37,19 +37,22 @@ class SubscriberWithOnNext : public reactivestreams_yarpl::Subscriber<T> {
 };
 }
 
-/**
- * Create a TestSubscriber that will subscribe upwards
- * with no flow control (max value) and store all values it receives.
- * @return
- */
-template <
-    typename T,
-    typename F,
-    typename =
-        typename std::enable_if<std::is_callable<F(T), void>::value>::type>
-static std::unique_ptr<reactivestreams_yarpl::Subscriber<T>> createSubscriber(
-    F&& onNextFunc) {
-  return std::make_unique<SubscriberWithOnNext<T, F>>(std::move(onNextFunc));
-}
+class Subscribers {
+ public:
+  /**
+   * Create a TestSubscriber that will subscribe upwards
+   * with no flow control (max value) and store all values it receives.
+   * @return
+   */
+  template <
+      typename T,
+      typename F,
+      typename =
+          typename std::enable_if<std::is_callable<F(T), void>::value>::type>
+  static std::unique_ptr<reactivestreams_yarpl::Subscriber<T>> create(
+      F&& onNextFunc) {
+    return std::make_unique<SubscriberWithOnNext<T, F>>(std::move(onNextFunc));
+  }
+};
 }
 }
