@@ -68,3 +68,7 @@ script:
   - cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_FLAGS="${CXX_FLAGS}" -DCMAKE_EXE_LINKER_FLAGS="${CXX_LINKER_FLAGS}" -DMETA_CXX_STD=$CPP_VERSION
   - make -j8
   - ./tests
+  - cd ..
+  - ./scripts/prepare_tck_drivers.sh
+  - ./scripts/tck_test.sh -c cpp -s cpp 
+  - ./scripts/tck_test.sh -c java -s java 

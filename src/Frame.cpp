@@ -9,6 +9,11 @@
 
 namespace reactivesocket {
 
+const uint32_t Frame_LEASE::kMaxTtl;
+const uint32_t Frame_LEASE::kMaxNumRequests;
+const uint32_t Frame_SETUP::kMaxKeepaliveTime;
+const uint32_t Frame_SETUP::kMaxLifetime;
+
 std::unique_ptr<folly::IOBuf> FrameBufferAllocator::allocate(size_t size) {
   // Purposely leak the allocator, since it's hard to deterministically
   // guarantee that threads will stop using it before it would get statically

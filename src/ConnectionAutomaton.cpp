@@ -131,12 +131,12 @@ void ConnectionAutomaton::close(
     StreamCompletionSignal signal) {
   debugCheckCorrectExecutor();
 
-  if (!isClosed_) {
-    isClosed_ = true;
-    stats_->socketClosed(signal);
-  } else {
+  if (isClosed_) {
     return;
   }
+  isClosed_ = true;
+  reactiveSocket_ = nullptr;
+  stats_->socketClosed(signal);
 
   VLOG(6) << "close";
 
@@ -328,8 +328,11 @@ void ConnectionAutomaton::processFrame(std::unique_ptr<folly::IOBuf> frame) {
 
 void ConnectionAutomaton::processFrameImpl(
     std::unique_ptr<folly::IOBuf> frame) {
-  auto frameType = frameSerializer().peekFrameType(*frame);
-  stats_->frameRead(frameType);
+  if (isClosed()) {
+    return;
+  }
+
+  stats_->frameRead(frameSerializer().peekFrameType(*frame));
 
   // TODO(tmont): If a frame is invalid, it will still be tracked. However, we
   // actually want that. We want to keep
@@ -442,10 +445,9 @@ void ConnectionAutomaton::onConnectionFrame(
     }
     case FrameType::METADATA_PUSH: {
       Frame_METADATA_PUSH frame;
-      if (!deserializeFrameOrError(frame, std::move(payload))) {
-        return;
+      if (deserializeFrameOrError(frame, std::move(payload))) {
+        requestHandler_->handleMetadataPush(std::move(frame.metadata_));
       }
-      requestHandler_->handleMetadataPush(std::move(frame.metadata_));
       return;
     }
     case FrameType::RESUME: {
@@ -456,9 +458,9 @@ void ConnectionAutomaton::onConnectionFrame(
         }
         auto resumed = requestHandler_->handleResume(
             *reactiveSocket_,
-            frame.token_,
+            ResumeParameters(frame.token_,
             frame.lastReceivedServerPosition_,
-            frame.clientPosition_);
+            frame.clientPosition_));
         if (!resumed) {
           closeWithError(Frame_ERROR::connectionError("can not resume"));
         }
@@ -702,7 +704,7 @@ uint32_t ConnectionAutomaton::getKeepaliveTime() const {
   debugCheckCorrectExecutor();
   return keepaliveTimer_
       ? static_cast<uint32_t>(keepaliveTimer_->keepaliveTime().count())
-      : std::numeric_limits<uint32_t>::max();
+      : Frame_SETUP::kMaxKeepaliveTime;
 }
 
 bool ConnectionAutomaton::isDisconnectedOrClosed() const {

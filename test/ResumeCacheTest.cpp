@@ -129,7 +129,7 @@ TEST_F(ResumeCacheTest, TwoFrames) {
   auto frame1 = frameSerializer_->serializeOut(Frame_CANCEL(0));
   const auto frame1Size = frame1->computeChainDataLength();
 
-  auto frame2 = frameSerializer_->serializeOut(Frame_REQUEST_N(0, 0));
+  auto frame2 = frameSerializer_->serializeOut(Frame_REQUEST_N(0, 2));
   const auto frame2Size = frame2->computeChainDataLength();
 
   cache.trackSentFrame(*frame1);
@@ -184,7 +184,7 @@ TEST_F(ResumeCacheTest, Stats) {
   EXPECT_CALL(*stats, resumeBufferChanged(1, frame1Size));
   cache.trackSentFrame(*frame1);
 
-  auto frame2 = frameSerializer_->serializeOut(Frame_REQUEST_N(0, 0));
+  auto frame2 = frameSerializer_->serializeOut(Frame_REQUEST_N(0, 3));
   auto frame2Size = frame2->computeChainDataLength();
   EXPECT_CALL(*stats, resumeBufferChanged(1, frame2Size)).Times(2);
   cache.trackSentFrame(*frame2);

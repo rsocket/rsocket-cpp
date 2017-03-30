@@ -28,9 +28,7 @@ class RSocketConnection : public reactivesocket::ServerConnectionAcceptor {
   }
   void resumeSocket(
       std::shared_ptr<FrameTransport> frameTransport,
-      ResumeIdentificationToken,
-      ResumePosition,
-      ResumePosition,
+      ResumeParameters,
       Executor& executor) override {
     //      onSetup_(std::move(frameTransport), std::move(setupPayload));
   }

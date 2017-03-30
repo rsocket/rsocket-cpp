@@ -169,7 +169,7 @@ void StandardReactiveSocket::clientConnect(
       FrameSerializer::kCurrentProtocolVersion.major,
       FrameSerializer::kCurrentProtocolVersion.minor,
       connection_->getKeepaliveTime(),
-      std::numeric_limits<uint32_t>::max(),
+      Frame_SETUP::kMaxLifetime,
       setupPayload.token,
       std::move(setupPayload.metadataMimeType),
       std::move(setupPayload.dataMimeType),
@@ -256,8 +256,7 @@ void StandardReactiveSocket::tryClientResume(
 
 bool StandardReactiveSocket::tryResumeServer(
     std::shared_ptr<FrameTransport> frameTransport,
-    ResumePosition serverPosition,
-    ResumePosition clientPosition) {
+    const ResumeParameters& resumeParams) {
   // TODO: verify/assert that the new frameTransport is on the same event base
   debugCheckCorrectExecutor();
   checkNotClosed();
@@ -268,7 +267,8 @@ bool StandardReactiveSocket::tryResumeServer(
       std::runtime_error("resuming server on a different connection"));
   // TODO: verify, we should not be receiving any frames, not a single one
   connection_->connect(std::move(frameTransport), /*sendPendingFrames=*/false);
-  return connection_->resumeFromPositionOrClose(serverPosition, clientPosition);
+  return connection_->resumeFromPositionOrClose(
+      resumeParams.serverPosition, resumeParams.clientPosition);
 }
 
 void StandardReactiveSocket::checkNotClosed() const {
