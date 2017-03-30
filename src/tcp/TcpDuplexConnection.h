@@ -19,6 +19,12 @@ class TcpDuplexConnection : public DuplexConnection {
       std::shared_ptr<Stats> stats = Stats::noop());
   ~TcpDuplexConnection();
 
+  //
+  // both getOutput and setOutput are ok to be called multiple times
+  // on a single instance of TcpDuplexConnection
+  // the latest input/output will be used
+  //
+
   std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>> getOutput()
       override;
 
@@ -27,5 +33,7 @@ class TcpDuplexConnection : public DuplexConnection {
 
  private:
   std::shared_ptr<TcpReaderWriter> tcpReaderWriter_;
+  Stats& stats_;
+  folly::Executor& executor_;
 };
 } // reactivesocket
