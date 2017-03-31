@@ -178,7 +178,6 @@ int main(int argc, char* argv[]) {
         folly::SocketAddress addr;
         addr.setFromLocalIpPort(FLAGS_address);
 
-        serverSocket->setReusePortEnabled(true);
         serverSocket->bind(addr);
         serverSocket->addAcceptCallback(&callback, &eventBase);
         serverSocket->listen(10);
