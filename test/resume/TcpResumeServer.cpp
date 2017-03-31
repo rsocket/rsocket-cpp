@@ -201,7 +201,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
  public:
   Callback(EventBase& eventBase, std::shared_ptr<Stats> stats)
       : eventBase_(eventBase),
-        stats_(std::move(stats)),
+        stats_(stats),
         connectionAcceptor_(eventBase, stats) {}
 
   virtual void connectionAccepted(
