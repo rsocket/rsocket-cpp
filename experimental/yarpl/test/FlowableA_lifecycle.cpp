@@ -45,7 +45,9 @@ auto getFlowableAwithHandler(Scheduler& scheduler) {
       s_->start();
     };
   };
-  return unsafeCreateUniqueFlowableA<long>(Handler()).subscribeOn(scheduler).take(50);
+  return unsafeCreateUniqueFlowableA<long>(Handler())
+      .subscribeOn(scheduler)
+      .take(50);
 }
 
 TEST(FlowableALifecycle, AsStackAllocated) {
@@ -103,82 +105,84 @@ TEST(FlowableALifecycle, AsStackAllocated) {
   ts->assertValueCount(50);
 }
 
-
 auto getFlowableAwithHandlerAsUniquePtr(Scheduler& scheduler) {
-    class Handler {
-    public:
-        Handler() = default;
-        ~Handler() {
-            std::cout << "DESTROY Handler" << std::endl;
-        }
-        Handler(Handler&&) = default; // only allow std::move
-        Handler(const Handler&) = delete;
-        Handler& operator=(Handler&&) = default; // only allow std::move
-        Handler& operator=(const Handler&) = delete;
+  class Handler {
+   public:
+    Handler() = default;
+    ~Handler() {
+      std::cout << "DESTROY Handler" << std::endl;
+    }
+    Handler(Handler&&) = default; // only allow std::move
+    Handler(const Handler&) = delete;
+    Handler& operator=(Handler&&) = default; // only allow std::move
+    Handler& operator=(const Handler&) = delete;
 
-        void operator()(std::unique_ptr<Subscriber<long>> s) {
-            // want to test that lifecycle works when thread scheduling occurs
-            /* sleep override */
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-            auto s_ =
-                    new yarpl::flowable::sources::RangeSubscription(1, 100, std::move(s));
-            s_->start();
-        };
+    void operator()(std::unique_ptr<Subscriber<long>> s) {
+      // want to test that lifecycle works when thread scheduling occurs
+      /* sleep override */
+      std::this_thread::sleep_for(std::chrono::milliseconds(500));
+      auto s_ =
+          new yarpl::flowable::sources::RangeSubscription(1, 100, std::move(s));
+      s_->start();
     };
-    return unsafeCreateUniqueFlowableA<long>(Handler()).subscribeOn(scheduler).take(50).as_unique_ptr();
+  };
+  return unsafeCreateUniqueFlowableA<long>(Handler())
+      .subscribeOn(scheduler)
+      .take(50)
+      .as_unique_ptr();
 }
 
 TEST(FlowableALifecycle, AsUniquePtr) {
-    ThreadScheduler scheduler;
+  ThreadScheduler scheduler;
 
-    /**
-     * Make sure we interleave request(n) with emission
-     * so it forces scheduling and concurrency.
-     */
-    class MySubscriber : public Subscriber<long> {
-    public:
-        void onSubscribe(Subscription* subscription) {
-            s_ = subscription;
-            requested = 10;
-            s_->request(10);
-        }
+  /**
+   * Make sure we interleave request(n) with emission
+   * so it forces scheduling and concurrency.
+   */
+  class MySubscriber : public Subscriber<long> {
+   public:
+    void onSubscribe(Subscription* subscription) {
+      s_ = subscription;
+      requested = 10;
+      s_->request(10);
+    }
 
-        void onNext(const long& t) {
-            acceptAndRequestMoreIfNecessary();
-            std::cout << "onNext& " << t << std::endl;
-        }
+    void onNext(const long& t) {
+      acceptAndRequestMoreIfNecessary();
+      std::cout << "onNext& " << t << std::endl;
+    }
 
-        void onNext(long&& t) {
-            acceptAndRequestMoreIfNecessary();
-            std::cout << "onNext&& " << t << std::endl;
-        }
+    void onNext(long&& t) {
+      acceptAndRequestMoreIfNecessary();
+      std::cout << "onNext&& " << t << std::endl;
+    }
 
-        void onComplete() {
-            std::cout << "onComplete " << std::endl;
-        }
+    void onComplete() {
+      std::cout << "onComplete " << std::endl;
+    }
 
-        void onError(const std::exception_ptr error) {
-            std::cout << "onError " << std::endl;
-        }
+    void onError(const std::exception_ptr error) {
+      std::cout << "onError " << std::endl;
+    }
 
-    private:
-        Subscription* s_;
-        int requested{0};
+   private:
+    Subscription* s_;
+    int requested{0};
 
-        void acceptAndRequestMoreIfNecessary() {
-            if (--requested == 2) {
-                std::cout << "Request more..." << std::endl;
-                requested += 8;
-                s_->request(8);
-            }
-        }
-    };
+    void acceptAndRequestMoreIfNecessary() {
+      if (--requested == 2) {
+        std::cout << "Request more..." << std::endl;
+        requested += 8;
+        s_->request(8);
+      }
+    }
+  };
 
-    auto ts = TestSubscriber<long>::create(std::make_unique<MySubscriber>());
-    auto f = getFlowableAwithHandlerAsUniquePtr(scheduler);
-    std::cout << "received f, now subscribe" << std::endl;
-    f->subscribe(ts->unique_subscriber());
-    std::cout << "after runHandlerFlowable" << std::endl;
-    ts->awaitTerminalEvent();
-    ts->assertValueCount(50);
+  auto ts = TestSubscriber<long>::create(std::make_unique<MySubscriber>());
+  auto f = getFlowableAwithHandlerAsUniquePtr(scheduler);
+  std::cout << "received f, now subscribe" << std::endl;
+  f->subscribe(ts->unique_subscriber());
+  std::cout << "after runHandlerFlowable" << std::endl;
+  ts->awaitTerminalEvent();
+  ts->assertValueCount(50);
 }

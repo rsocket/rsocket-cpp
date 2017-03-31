@@ -458,9 +458,10 @@ void ConnectionAutomaton::onConnectionFrame(
         }
         auto resumed = requestHandler_->handleResume(
             *reactiveSocket_,
-            ResumeParameters(frame.token_,
-            frame.lastReceivedServerPosition_,
-            frame.clientPosition_));
+            ResumeParameters(
+                frame.token_,
+                frame.lastReceivedServerPosition_,
+                frame.clientPosition_));
         if (!resumed) {
           closeWithError(Frame_ERROR::connectionError("can not resume"));
         }

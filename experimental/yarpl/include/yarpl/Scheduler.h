@@ -11,7 +11,7 @@ namespace yarpl {
 
 class Worker : public yarpl::Disposable {
  public:
-  Worker(){}
+  Worker() {}
   Worker(Worker&&) = delete;
   Worker(const Worker&) = delete;
   Worker& operator=(Worker&&) = delete;
@@ -38,7 +38,7 @@ class Worker : public yarpl::Disposable {
 
 class Scheduler {
  public:
-  Scheduler(){}
+  Scheduler() {}
   virtual ~Scheduler() = default;
   Scheduler(Scheduler&&) = delete;
   Scheduler(const Scheduler&) = delete;

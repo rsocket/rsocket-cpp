@@ -36,7 +36,8 @@ class FlowableB : public reactivestreams_yarpl::Publisher<T> {
   using Subscription = reactivestreams_yarpl::Subscription;
 
  public:
-  explicit FlowableB(std::function<void(std::unique_ptr<Subscriber>)>&& function)
+  explicit FlowableB(
+      std::function<void(std::unique_ptr<Subscriber>)>&& function)
       : function_(std::move(function)) {}
   FlowableB(FlowableB&&) = default;
   FlowableB(const FlowableB&) = delete;

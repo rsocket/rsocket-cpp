@@ -7,10 +7,10 @@
 #include "yarpl/flowable/utils/SubscriptionHelper.h"
 
 namespace yarpl {
-    namespace observable {
-        template <typename T>
-        class Observable;
-    }
+namespace observable {
+template <typename T>
+class Observable;
+}
 }
 
 namespace yarpl {

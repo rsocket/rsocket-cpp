@@ -69,11 +69,11 @@ TEST(SubscriptionHelper, addCancel2) {
 }
 
 TEST(SubscriptionHelper, addCancel3) {
-    std::atomic<std::int64_t> rn{9999};
-    SubscriptionHelper::addCancel(&rn);
-    // it should stay cancelled once cancelled
-    SubscriptionHelper::addCredits(&rn, 1);
-    ASSERT_TRUE(SubscriptionHelper::isCancelled(&rn));
+  std::atomic<std::int64_t> rn{9999};
+  SubscriptionHelper::addCancel(&rn);
+  // it should stay cancelled once cancelled
+  SubscriptionHelper::addCredits(&rn, 1);
+  ASSERT_TRUE(SubscriptionHelper::isCancelled(&rn));
 }
 
 TEST(SubscriptionHelper, isInfinite) {
