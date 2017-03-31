@@ -130,8 +130,7 @@ class TestObserver : public yarpl::observable::Observer<T>,
 };
 
 template <typename T>
-TestObserver<T>::TestObserver()
-    : delegate_(nullptr){};
+TestObserver<T>::TestObserver() : delegate_(nullptr){};
 
 template <typename T>
 TestObserver<T>::TestObserver(std::unique_ptr<Observer> delegate)

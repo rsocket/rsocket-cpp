@@ -29,7 +29,6 @@ void TcpConnectionAcceptor::start(
   thread.detach();
   eventBase_.runInEventBaseThread([this]() {
     LOG(INFO) << "ConnectionAcceptor => start in loop";
-    serverSocket_->setReusePortEnabled(true);
     serverSocket_->bind(addr_);
     serverSocket_->addAcceptCallback(this, &eventBase_);
     serverSocket_->listen(10);

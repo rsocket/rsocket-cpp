@@ -104,7 +104,7 @@ TEST(FlowableBLifecycle, AsStackAllocated) {
 }
 
 //
-//auto getFlowableBwithHandlerAsUniquePtr(Scheduler& scheduler) {
+// auto getFlowableBwithHandlerAsUniquePtr(Scheduler& scheduler) {
 //    class Handler {
 //    public:
 //        Handler() = default;
@@ -121,14 +121,15 @@ TEST(FlowableBLifecycle, AsStackAllocated) {
 //            /* sleep override */
 //            std::this_thread::sleep_for(std::chrono::milliseconds(500));
 //            auto s_ =
-//                    new yarpl::flowable::sources::RangeSubscription(1, 100, std::move(s));
+//                    new yarpl::flowable::sources::RangeSubscription(1, 100,
+//                    std::move(s));
 //            s_->start();
 //        };
 //    };
 //    return FlowableB<long>(Handler()).subscribeOn(scheduler).take(50);
 //}
 //
-//TEST(FlowableBLifecycle, AsUniquePtr) {
+// TEST(FlowableBLifecycle, AsUniquePtr) {
 //    ThreadScheduler scheduler;
 //
 //    /**

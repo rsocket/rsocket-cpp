@@ -13,8 +13,8 @@ using namespace yarpl::flowableA;
 using namespace yarpl;
 
 auto getFlowableA() {
-  return FlowablesA::range(1, 5)
-      .map([](auto i) { return "Data=>" + std::to_string(i); });
+  return FlowablesA::range(1, 5).map(
+      [](auto i) { return "Data=>" + std::to_string(i); });
 }
 
 void FlowableAExamples::run() {

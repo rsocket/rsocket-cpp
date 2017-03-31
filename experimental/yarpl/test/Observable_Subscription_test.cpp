@@ -5,7 +5,7 @@
 
 using namespace yarpl::observable;
 
-//TEST(Subscription, SubscriptionOnCancelInvocation) {
+// TEST(Subscription, SubscriptionOnCancelInvocation) {
 //  bool onCancelInvoked = false;
 //  auto s = Subscription::create([&onCancelInvoked]() {
 //    std::cout << "onCancel function invoked" << std::endl;
