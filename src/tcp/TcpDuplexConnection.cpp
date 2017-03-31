@@ -14,8 +14,8 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
  public:
   explicit TcpReaderWriter(
       folly::AsyncSocket::UniquePtr&& socket,
-      Stats& stats = Stats::noop())
-      : socket_(std::move(socket)), stats_(stats) {}
+      std::shared_ptr<Stats> stats)
+      : socket_(std::move(socket)), stats_(std::move(stats)) {}
 
   ~TcpReaderWriter() {
     CHECK(isClosed());
@@ -52,7 +52,7 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
       return;
     }
 
-    stats_.bytesWritten(element->computeChainDataLength());
+    stats_->bytesWritten(element->computeChainDataLength());
     socket_->writeChain(this, std::move(element));
   }
 
@@ -86,7 +86,7 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
 
   void readDataAvailable(size_t len) noexcept override {
     readBuffer_.postallocate(len);
-    stats_.bytesRead(len);
+    stats_->bytesRead(len);
 
     if (inputSubscriber_) {
       readBufferAvailable(readBuffer_.split(len));
@@ -131,6 +131,7 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
 
   folly::IOBufQueue readBuffer_{folly::IOBufQueue::cacheChainLength()};
   folly::AsyncSocket::UniquePtr socket_;
+  const std::shared_ptr<Stats> stats_;
 
   std::shared_ptr<reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
       inputSubscriber_;
@@ -200,16 +201,16 @@ class TcpInputSubscription : public SubscriptionBase {
 TcpDuplexConnection::TcpDuplexConnection(
     folly::AsyncSocket::UniquePtr&& socket,
     folly::Executor& executor,
-    Stats& stats)
+    std::shared_ptr<Stats> stats)
     : tcpReaderWriter_(
           std::make_shared<TcpReaderWriter>(std::move(socket), stats)),
       stats_(stats),
       executor_(executor) {
-  stats_.duplexConnectionCreated("tcp", this);
+  stats_->duplexConnectionCreated("tcp", this);
 }
 
 TcpDuplexConnection::~TcpDuplexConnection() {
-  tcpReaderWriter_->stats_->duplexConnectionClosed("tcp", this);
+  stats_->duplexConnectionClosed("tcp", this);
 }
 
 std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>>

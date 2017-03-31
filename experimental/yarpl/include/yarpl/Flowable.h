@@ -15,7 +15,6 @@
 #include "yarpl/flowable/operators/Flowable_SubscribeOn.h"
 #include "yarpl/flowable/operators/Flowable_Take.h"
 
-
 namespace yarpl {
 namespace flowable {
 
@@ -171,7 +170,6 @@ class Flowables {
       p->subscribe(std::move(s));
     });
   }
-
 };
 }
 }

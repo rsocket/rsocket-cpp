@@ -14,7 +14,7 @@
  *
  * And it does nothing with disposal.
  */
- //TODO fix this mess by finishing a proper implementation
+// TODO fix this mess by finishing a proper implementation
 namespace yarpl {
 
 class ADisposable : public yarpl::Disposable {
@@ -28,11 +28,11 @@ class ADisposable : public yarpl::Disposable {
 class ThreadWorker : public Worker {
  public:
   ThreadWorker() {
-      std::cout << "Create ThreadWorker" << std::endl;
+    std::cout << "Create ThreadWorker" << std::endl;
   }
-    ~ThreadWorker() {
-        std::cout << "DESTROYING ThreadWorker!" << std::endl;
-    }
+  ~ThreadWorker() {
+    std::cout << "DESTROYING ThreadWorker!" << std::endl;
+  }
 
   std::unique_ptr<yarpl::Disposable> schedule(
       std::function<void()>&& task) override {
