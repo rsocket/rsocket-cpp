@@ -43,6 +43,7 @@ add_library(
         include/yarpl/FlowableA.h
         include/yarpl/FlowableB.h
         include/yarpl/FlowableC.h
+        include/yarpl/FlowableV.h
         include/yarpl/Flowable_Subscriber.h
         include/yarpl/Flowable_SubscriptionSync.h
         include/yarpl/Flowable_TestSubscriber.h
@@ -85,6 +86,8 @@ add_executable(
         examples/FlowableBExamples.h
         examples/FlowableCExamples.cpp
         examples/FlowableCExamples.h
+        examples/FlowableVExamples.cpp
+        examples/FlowableVExamples.h
 )
 
 target_link_libraries(

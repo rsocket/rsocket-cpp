@@ -11,6 +11,12 @@ namespace reactivestreams_yarpl {
 /**
  * Emitted from Publisher.subscribe to Subscriber.onSubscribe.
  * Implementations of this SHOULD own the Subscriber lifecycle.
+ *
+ * Rules:
+ * - No subscription methods will be invoked after onError or
+ *   onComplete has been called on the subscriber.
+ * - No more than one invocation of subscription's methods at
+ *   any time: same method, or different ones.
  */
 class Subscription {
  public:
