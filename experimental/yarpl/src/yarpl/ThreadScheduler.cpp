@@ -33,6 +33,7 @@ class ThreadWorker : public Worker {
   ThreadWorker() {
     std::cout << "Create ThreadWorker" << std::endl;
   }
+
   ~ThreadWorker() {
     std::cout << "DESTROYING ThreadWorker!" << std::endl;
   }

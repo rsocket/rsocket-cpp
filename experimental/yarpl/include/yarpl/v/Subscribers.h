@@ -1,0 +1,48 @@
+#pragma once
+
+#include <limits>
+
+#include "Subscriber.h"
+
+namespace yarpl {
+
+class Subscribers {
+  static const auto max = std::numeric_limits<int64_t>::max();
+
+public:
+  template<typename T, typename N>
+  static auto create(N&& next, int64_t batch = max) {
+    class Derived : public Subscriber<T> {
+    public:
+      Derived(N&& next, int64_t batch)
+        : next_(std::forward<N>(next)), batch_(batch), pending_(0) {}
+
+      virtual void onSubscribe(Subscription::Handle subscription) override {
+        Subscriber<T>::onSubscribe(subscription);
+        pending_ += batch_;
+        subscription->request(batch_);
+      }
+
+      virtual void onNext(const T& value) override {
+        next_(value);
+        if (--pending_ < batch_/2) {
+          const auto delta = batch_ - pending_;
+          pending_ += delta;
+          Subscriber<T>::subscription()->request(delta);
+        }
+      }
+
+    private:
+      N next_;
+      const int64_t batch_;
+      int64_t pending_;
+    };
+
+    return std::make_unique<Derived>(std::forward<N>(next), batch);
+  }
+
+private:
+  Subscribers() = delete;
+};
+
+}  // yarpl
