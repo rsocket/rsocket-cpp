@@ -29,9 +29,7 @@ class Subscription : public reactivestreams_yarpl::Subscription,
     public boost::intrusive_ref_counter<Subscription> {
 public:
   using Handle = boost::intrusive_ptr<Subscription>;
-  virtual ~Subscription() {
-    std::cout << "~Subscription(): count=" << use_count() << std::endl;
-  }
+  virtual ~Subscription() = default;
 
   virtual void request(int64_t n) = 0;
   virtual void cancel() = 0;
@@ -39,6 +37,7 @@ public:
 protected:
   Subscription() : reference_(this) {}
 
+  // Drop the reference we're holding on the subscription (handle).
   void release() {
     reference_.reset();
   }
@@ -96,10 +95,10 @@ class Flowable : public boost::intrusive_ref_counter<Flowable<T>> {
 
 public:
   using Handle = boost::intrusive_ptr<Flowable<T>>;
+  using Subscriber = Subscriber<T>;
 
   virtual ~Flowable() = default;
-  virtual void subscribe(std::unique_ptr<Subscriber<T>>) = 0;
-  virtual void subscribe(Subscriber<T>&&) = 0;
+  virtual void subscribe(std::unique_ptr<Subscriber>) = 0;
 
   /**
    * Create a flowable from an emitter.
@@ -118,14 +117,14 @@ public:
    * \return a handle to a flowable that will use the emitter.
    */
   template<typename Emitter, typename = typename std::enable_if<
-      std::is_callable<Emitter(Subscriber<T>&, int64_t),
+      std::is_callable<Emitter(Subscriber&, int64_t),
                        std::tuple<int64_t, bool>>::value>::type>
   static Handle create(Emitter&& emitter) {
     return Handle(new Wrapper<Emitter>(std::forward<Emitter>(emitter)));
   }
 
 private:
-  virtual std::tuple<int64_t, bool> emit(Subscriber<T>&, int64_t) = 0;
+  virtual std::tuple<int64_t, bool> emit(Subscriber&, int64_t) = 0;
 
   template<typename Emitter>
   class Wrapper : public Flowable {
@@ -133,18 +132,12 @@ private:
     Wrapper(Emitter&& emitter)
       : emitter_(std::forward<Emitter>(emitter)) {}
 
-    virtual void subscribe(std::unique_ptr<Subscriber<T>> subscriber) {
-      new SynchronousSubscription<std::unique_ptr<Subscriber<T>>>(
-          this, std::forward<std::unique_ptr<Subscriber<T>>>(subscriber));
-    }
-
-    virtual void subscribe(Subscriber<T>&& subscriber) {
-      new SynchronousSubscription<Subscriber<T>&&>(
-          this, std::forward<Subscriber<T>&&>(subscriber));
+    virtual void subscribe(std::unique_ptr<Subscriber> subscriber) {
+      new SynchronousSubscription(this, std::move(subscriber));
     }
 
     virtual std::tuple<int64_t, bool> emit(
-        Subscriber<T>& subscriber, int64_t requested) {
+        Subscriber& subscriber, int64_t requested) {
       return emitter_(subscriber, requested);
     }
 
@@ -155,15 +148,15 @@ private:
   /**
    * Manager for a flowable subscription.
    *
+   * This is synchronous: the emit calls are triggered within the context
+   * of a request(n) call.
    */
-  template<typename Downstream>
-  class SynchronousSubscription : public Subscription, public Subscriber<T> {
+  class SynchronousSubscription : public Subscription, public Subscriber {
   public:
     SynchronousSubscription(
-        Flowable::Handle handle, Downstream&& subscriber)
-      : flowable_(handle),
-        subscriber_(std::forward<Downstream>(subscriber)) {
-      pointer()->onSubscribe(Handle(this));
+        Flowable::Handle handle, std::unique_ptr<Subscriber> subscriber)
+      : flowable_(handle), subscriber_(std::move(subscriber)) {
+      subscriber_->onSubscribe(Handle(this));
     }
 
     virtual void request(int64_t delta) override {
@@ -173,11 +166,6 @@ private:
         throw std::logic_error(message);
       }
 
-      // TODO(benjchristensen): The (JVM) Reactive Streams specification
-      // says (Subscriber, #7) that concurrent calls are not permitted to
-      // a subscription's methods.  So this loop may not be needed, and a
-      // simple store() should suffice.  Conversely, if we cannot depend
-      // upon this, Subscription* cannot be passed in to the subscriber.
       while (true) {
         auto current = requested_.load(std::memory_order_relaxed);
         auto total = current + delta;
@@ -193,13 +181,14 @@ private:
       process();
     }
 
-    // TODO(vjn):
     virtual void cancel() override {
       static auto min = std::numeric_limits<int64_t>::min();
       auto previous = requested_.exchange(min, std::memory_order_relaxed);
       if (previous != min) {
         // we're first to mark the cancellation.  Cancel the upstream.
       }
+
+      // Note: process() will finalize: releasing our reference on this.
       process();
     }
 
@@ -209,40 +198,34 @@ private:
     }
 
     virtual void onNext(const T& value) override {
-      pointer()->onNext(value);
+      subscriber_->onNext(value);
     }
 
     virtual void onNext(T&& value) override {
-      pointer()->onNext(std::move(value));
+      subscriber_->onNext(std::move(value));
     }
 
     virtual void onComplete() override {
       static auto min = std::numeric_limits<int64_t>::min();
-      pointer()->onComplete();
+      subscriber_->onComplete();
       requested_.store(min, std::memory_order_relaxed);
       // We should already be in process(); nothing more to do.
+      //
+      // Note: we're not invoking the Subscriber superclass' method:
+      // we're following the Subscription's protocol instead.
     }
 
     virtual void onError(const std::exception_ptr error) override {
       static auto min = std::numeric_limits<int64_t>::min();
-      pointer()->onError(error);
+      subscriber_->onError(error);
       requested_.store(min, std::memory_order_relaxed);
       // We should already be in process(); nothing more to do.
+      //
+      // Note: we're not invoking the Subscriber superclass' method:
+      // we're following the Subscription's protocol instead.
     }
 
   private:
-    Subscriber<T>* pointer(std::unique_ptr<Subscriber<T>>& subscriber) {
-      return subscriber.operator->();
-    }
-
-    Subscriber<T>* pointer(Subscriber<T>& subscriber) {
-      return &subscriber;
-    }
-
-    Subscriber<T>* pointer() {
-      return pointer(subscriber_);
-    }
-
     // Processing loop.  Note: this can delete `this` upon completion,
     // error, or cancellation; thus, no fields should be accessed once
     // this method returns.
@@ -293,7 +276,37 @@ private:
     std::mutex processing_;
 
     Flowable::Handle flowable_;
-    Downstream subscriber_;
+    std::unique_ptr<Subscriber> subscriber_;
+  };
+
+  /**
+   * Base (helper) class for operators.
+   */
+  template<typename Downstream>
+  class Operator : public Flowable, public Subscriber {
+  public:
+    Operator(Flowable::Handle upstream) : upstream_(upstream) {}
+
+    virtual void subscribe(std::unique_ptr<Subscriber> subscriber) override {
+      downstream_ = std::move(subscriber);
+      upstream_->subscribe(this);
+    }
+
+    virtual void onSubscribe(Subscription::Handle subscription) {
+      downstream_->onSubscribe(subscription);
+    }
+
+    virtual void onComplete() {
+      downstream_->onComplete();
+    }
+
+    virtual void onError(const std::exception_ptr error) {
+      downstream_->onError(error);
+    }
+
+  private:
+    std::unique_ptr<Subscriber> downstream_;
+    Flowable::Handle upstream_;
   };
 };
 
@@ -394,7 +407,7 @@ public:
       int64_t pending_;
     };
 
-    return Derived(std::forward<N>(next), batch);
+    return std::make_unique<Derived>(std::forward<N>(next), batch);
   }
 
 private:
