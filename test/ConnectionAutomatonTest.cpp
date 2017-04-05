@@ -35,12 +35,6 @@ TEST(ConnectionAutomatonTest, InvalidFrameHeader) {
 
   automatonConnection->connectTo(*testConnection);
 
-  auto framedAutomatonConnection = std::make_unique<FramedDuplexConnection>(
-      std::move(automatonConnection), inlineExecutor());
-
-  auto framedTestConnection = std::make_unique<FramedDuplexConnection>(
-      std::move(testConnection), inlineExecutor());
-
   // Dump 1 invalid frame and expect an error
 
   auto inputSubscription = std::make_shared<MockSubscription>();
@@ -48,7 +42,7 @@ TEST(ConnectionAutomatonTest, InvalidFrameHeader) {
   EXPECT_CALL(*inputSubscription, request_(_))
       .Times(AtMost(2))
       .WillOnce(Invoke([&](size_t n) {
-        framedTestConnection->getOutput()->onNext(makeInvalidFrameHeader());
+        testConnection->getOutput()->onNext(makeInvalidFrameHeader());
       }))
       .WillOnce(
           /*this call is because of async scheduling on executor*/ Return());
@@ -74,8 +68,8 @@ TEST(ConnectionAutomatonTest, InvalidFrameHeader) {
   EXPECT_CALL(*testOutputSubscriber, onComplete_()).Times(1);
   EXPECT_CALL(*testOutputSubscriber, onError_(_)).Times(0);
 
-  framedTestConnection->setInput(testOutputSubscriber);
-  framedTestConnection->getOutput()->onSubscribe(inputSubscription);
+  testConnection->setInput(testOutputSubscriber);
+  testConnection->getOutput()->onSubscribe(inputSubscription);
 
   std::shared_ptr<ConnectionAutomaton> connectionAutomaton;
   connectionAutomaton = std::make_shared<ConnectionAutomaton>(
@@ -88,10 +82,10 @@ TEST(ConnectionAutomatonTest, InvalidFrameHeader) {
   connectionAutomaton->setFrameSerializer(
       FrameSerializer::createCurrentVersion());
   connectionAutomaton->connect(
-      std::make_shared<FrameTransport>(std::move(framedAutomatonConnection)),
-      true);
+      std::make_shared<FrameTransport>(std::move(automatonConnection)), true);
   connectionAutomaton->close(
       folly::exception_wrapper(), StreamCompletionSignal::CONNECTION_END);
+  testConnection->getOutput()->onComplete();
 }
 
 static void terminateTest(
@@ -104,12 +98,6 @@ static void terminateTest(
 
   automatonConnection->connectTo(*testConnection);
 
-  auto framedAutomatonConnection = std::make_unique<FramedDuplexConnection>(
-      std::move(automatonConnection), inlineExecutor());
-
-  auto framedTestConnection = std::make_unique<FramedDuplexConnection>(
-      std::move(testConnection), inlineExecutor());
-
   auto inputSubscription = std::make_shared<MockSubscription>();
 
   if (!inOnSubscribe) {
@@ -118,10 +106,9 @@ static void terminateTest(
             .Times(AtMost(2))
             .WillOnce(Invoke([&](size_t n) {
               if (inRequest) {
-                framedTestConnection->getOutput()->onComplete();
+                testConnection->getOutput()->onComplete();
               } else {
-                framedTestConnection->getOutput()->onNext(
-                    makeInvalidFrameHeader());
+                testConnection->getOutput()->onNext(makeInvalidFrameHeader());
               }
             }));
 
@@ -156,10 +143,10 @@ static void terminateTest(
     }
   }));
 
-  auto testOutput = framedTestConnection->getOutput();
+  auto testOutput = testConnection->getOutput();
 
-  framedTestConnection->setInput(testOutputSubscriber);
-  framedTestConnection->getOutput()->onSubscribe(inputSubscription);
+  testConnection->setInput(testOutputSubscriber);
+  testConnection->getOutput()->onSubscribe(inputSubscription);
 
   std::shared_ptr<ConnectionAutomaton> connectionAutomaton;
   connectionAutomaton = std::make_shared<ConnectionAutomaton>(
@@ -172,10 +159,13 @@ static void terminateTest(
   connectionAutomaton->setFrameSerializer(
       FrameSerializer::createCurrentVersion());
   connectionAutomaton->connect(
-      std::make_shared<FrameTransport>(std::move(framedAutomatonConnection)),
-      true);
+      std::make_shared<FrameTransport>(std::move(automatonConnection)), true);
   connectionAutomaton->close(
       folly::exception_wrapper(), StreamCompletionSignal::CONNECTION_END);
+
+  if (!inRequest) {
+    testConnection->getOutput()->onComplete();
+  }
 }
 
 TEST(ConnectionAutomatonTest, CleanTerminateOnSubscribe) {

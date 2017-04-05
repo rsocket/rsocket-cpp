@@ -14,6 +14,8 @@ class IOBuf;
 
 namespace reactivesocket {
 
+struct ProtocolVersion;
+
 class FramedWriter : public SubscriberBaseT<std::unique_ptr<folly::IOBuf>>,
                      public SubscriptionBase,
                      public EnableSharedFromThisBase<FramedWriter> {
@@ -21,8 +23,11 @@ class FramedWriter : public SubscriberBaseT<std::unique_ptr<folly::IOBuf>>,
   explicit FramedWriter(
       std::shared_ptr<reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
           stream,
-      folly::Executor& executor)
-      : ExecutorBase(executor), stream_(std::move(stream)) {}
+      folly::Executor& executor,
+      std::shared_ptr<ProtocolVersion> protocolVersion)
+      : ExecutorBase(executor),
+        stream_(std::move(stream)),
+        protocolVersion_(std::move(protocolVersion)) {}
 
   void onNextMultiple(std::vector<std::unique_ptr<folly::IOBuf>> element);
 
@@ -38,11 +43,16 @@ class FramedWriter : public SubscriberBaseT<std::unique_ptr<folly::IOBuf>>,
   void requestImpl(size_t n) noexcept override;
   void cancelImpl() noexcept override;
 
+  size_t getFrameSizeFieldLength() const;
+  std::unique_ptr<folly::IOBuf> appendSize(
+      std::unique_ptr<folly::IOBuf> payload);
+
   using EnableSharedFromThisBase<FramedWriter>::shared_from_this;
 
   std::shared_ptr<reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
       stream_;
   std::shared_ptr<::reactivestreams::Subscription> writerSubscription_;
+  std::shared_ptr<ProtocolVersion> protocolVersion_;
 };
 
 } // reactivesocket

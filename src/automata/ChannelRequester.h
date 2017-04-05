@@ -23,9 +23,7 @@ class ChannelRequester : public ConsumerBase,
                          public SubscriberBase {
  public:
   explicit ChannelRequester(const ConsumerBase::Parameters& params)
-      : ExecutorBase(params.executor),
-        ConsumerBase(params),
-        PublisherBase(0) {}
+      : ExecutorBase(params.executor), ConsumerBase(params), PublisherBase(0) {}
 
  private:
   /// @{

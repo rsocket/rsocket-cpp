@@ -6,8 +6,8 @@
 
 #include "src/Frame.h"
 #include "src/SubscriberBase.h"
-#include "src/automata/StreamAutomatonBase.h"
 #include "src/automata/PublisherBase.h"
+#include "src/automata/StreamAutomatonBase.h"
 
 namespace reactivesocket {
 

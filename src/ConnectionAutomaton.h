@@ -242,6 +242,8 @@ class ConnectionAutomaton final
   void onStreamClosed(StreamId streamId, StreamCompletionSignal signal)
       override;
 
+  bool ensureOrAutodetectFrameSerializer(const folly::IOBuf& firstFrame);
+
   ReactiveSocket* reactiveSocket_;
 
   const std::shared_ptr<Stats> stats_;

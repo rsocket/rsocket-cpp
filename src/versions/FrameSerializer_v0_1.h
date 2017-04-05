@@ -10,6 +10,8 @@ class FrameSerializerV0_1 : public FrameSerializerV0 {
  public:
   constexpr static const ProtocolVersion Version = ProtocolVersion(0, 1);
 
+  static ProtocolVersion detectProtocolVersion(const folly::IOBuf& firstFrame);
+
   ProtocolVersion protocolVersion() override;
 };
 } // reactivesocket

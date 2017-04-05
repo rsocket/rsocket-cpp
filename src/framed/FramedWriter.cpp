@@ -1,9 +1,57 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
-#include "FramedWriter.h"
 
+#include "src/framed/FramedWriter.h"
 #include <folly/io/Cursor.h>
+#include "src/versions/FrameSerializer_v1_0.h"
 
 namespace reactivesocket {
+
+constexpr static const auto kMaxFrameLength = 0xFFFFFF; // 24bit max value
+
+static void writeFrameLength(
+    folly::io::RWPrivateCursor& cur,
+    size_t frameLength,
+    size_t frameSizeFieldLength) {
+  DCHECK(frameSizeFieldLength > 0);
+
+  // starting from the highest byte
+  // frameSizeFieldLength == 3 => shift = [16,8,0]
+  // frameSizeFieldLength == 4 => shift = [24,16,8,0]
+  auto shift = (frameSizeFieldLength - 1) * 8;
+
+  while (frameSizeFieldLength--) {
+    auto byte = (frameLength >> shift) & 0xFF;
+    cur.write<int8_t>(static_cast<int8_t>(byte));
+    shift -= 8;
+  }
+}
+
+static void writeFrameLength(
+    folly::io::Appender& appender,
+    size_t frameLength,
+    size_t frameSizeFieldLength) {
+  DCHECK(frameSizeFieldLength > 0);
+
+  // starting from the highest byte
+  // frameSizeFieldLength == 3 => shift = [16,8,0]
+  // frameSizeFieldLength == 4 => shift = [24,16,8,0]
+  auto shift = (frameSizeFieldLength - 1) * 8;
+
+  while (frameSizeFieldLength--) {
+    auto byte = (frameLength >> shift) & 0xFF;
+    appender.write<int8_t>(static_cast<int8_t>(byte));
+    shift -= 8;
+  }
+}
+
+size_t FramedWriter::getFrameSizeFieldLength() const {
+  CHECK(*protocolVersion_ != ProtocolVersion::Unknown);
+  if (*protocolVersion_ < FrameSerializerV1_0::Version) {
+    return sizeof(int32_t);
+  } else {
+    return 3; // bytes
+  }
+}
 
 void FramedWriter::onSubscribeImpl(
     std::shared_ptr<Subscription> subscription) noexcept {
@@ -12,26 +60,27 @@ void FramedWriter::onSubscribeImpl(
   stream_->onSubscribe(shared_from_this());
 }
 
-static std::unique_ptr<folly::IOBuf> appendSize(
+std::unique_ptr<folly::IOBuf> FramedWriter::appendSize(
     std::unique_ptr<folly::IOBuf> payload) {
   CHECK(payload);
 
+  const auto frameSizeFieldLength = getFrameSizeFieldLength();
   // the frame size includes the payload size and the size value
-  auto payloadLength = payload->computeChainDataLength() + sizeof(int32_t);
-  if (payloadLength > std::numeric_limits<int32_t>::max()) {
+  auto payloadLength = payload->computeChainDataLength() + frameSizeFieldLength;
+  if (payloadLength > kMaxFrameLength) {
     return nullptr;
   }
 
-  if (payload->headroom() >= sizeof(int32_t)) {
+  if (payload->headroom() >= frameSizeFieldLength) {
     // move the data pointer back and write value to the payload
-    payload->prepend(sizeof(int32_t));
-    folly::io::RWPrivateCursor c(payload.get());
-    c.writeBE<int32_t>(static_cast<int32_t>(payloadLength));
+    payload->prepend(frameSizeFieldLength);
+    folly::io::RWPrivateCursor cur(payload.get());
+    writeFrameLength(cur, payloadLength, frameSizeFieldLength);
     return payload;
   } else {
-    auto newPayload = folly::IOBuf::createCombined(sizeof(int32_t));
+    auto newPayload = folly::IOBuf::createCombined(frameSizeFieldLength);
     folly::io::Appender appender(newPayload.get(), /* do not grow */ 0);
-    appender.writeBE<int32_t>(static_cast<int32_t>(payloadLength));
+    writeFrameLength(appender, payloadLength, frameSizeFieldLength);
     newPayload->appendChain(std::move(payload));
     return newPayload;
   }

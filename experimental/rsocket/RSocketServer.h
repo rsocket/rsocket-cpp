@@ -2,21 +2,20 @@
 
 #pragma once
 
-#include <condition_variable>
 #include <mutex>
+
+#include <folly/Baton.h>
+#include <folly/Synchronized.h>
+
 #include "rsocket/ConnectionAcceptor.h"
 #include "rsocket/ConnectionResumeRequest.h"
 #include "rsocket/ConnectionSetupRequest.h"
+
 #include "src/RequestHandler.h"
 #include "src/ServerConnectionAcceptor.h"
 #include "src/StandardReactiveSocket.h"
 
 namespace rsocket {
-
-using OnSetupNewSocket = std::function<void(
-    std::shared_ptr<reactivesocket::FrameTransport> frameTransport,
-    reactivesocket::ConnectionSetupPayload setupPayload,
-    folly::Executor&)>;
 
 using OnAccept = std::function<std::shared_ptr<reactivesocket::RequestHandler>(
     std::unique_ptr<ConnectionSetupRequest>)>;
@@ -25,17 +24,21 @@ using OnAccept = std::function<std::shared_ptr<reactivesocket::RequestHandler>(
  *
  * This listens for connections using a transport from the provided
  * ConnectionAcceptor.
+ *
+ * TODO: Resumability
+ *
+ * TODO: Concurrency (number of threads)
  */
 class RSocketServer {
-  // TODO resumability
-  // TODO concurrency (number of threads)
-
  public:
   explicit RSocketServer(std::unique_ptr<ConnectionAcceptor>);
-  RSocketServer(const RSocketServer&) = delete; // copy
-  RSocketServer(RSocketServer&&) = delete; // move
-  RSocketServer& operator=(const RSocketServer&) = delete; // copy
-  RSocketServer& operator=(RSocketServer&&) = delete; // move
+  ~RSocketServer();
+
+  RSocketServer(const RSocketServer&) = delete;
+  RSocketServer(RSocketServer&&) = delete;
+
+  RSocketServer& operator=(const RSocketServer&) = delete;
+  RSocketServer& operator=(RSocketServer&&) = delete;
 
   /**
    * Start the ConnectionAcceptor and begin handling connections.
@@ -51,6 +54,12 @@ class RSocketServer {
    */
   void startAndPark(OnAccept);
 
+  /**
+   * Unblock the server if it has called startAndPark().  Can only be called
+   * once.
+   */
+  void unpark();
+
   // TODO version supporting RESUME
   //  void start(
   //      std::function<std::shared_ptr<RequestHandler>(
@@ -63,13 +72,21 @@ class RSocketServer {
   // RSocketServer::start(OnAccept onAccept, ServerSetup setupParams)
 
  private:
+  void addSocket(std::unique_ptr<reactivesocket::ReactiveSocket>);
+  void removeSocket(reactivesocket::ReactiveSocket*);
+
+  //////////////////////////////////////////////////////////////////////////////
+
   std::unique_ptr<ConnectionAcceptor> lazyAcceptor_;
   std::unique_ptr<reactivesocket::ServerConnectionAcceptor> acceptor_;
-  std::vector<std::unique_ptr<reactivesocket::ReactiveSocket>> reactiveSockets_;
-  std::mutex m_;
-  std::condition_variable cv_;
 
-  void removeSocket(reactivesocket::ReactiveSocket& socket);
-  void addSocket(std::unique_ptr<reactivesocket::ReactiveSocket> socket);
+  /// Set of currently open ReactiveSockets.
+  folly::Synchronized<
+      std::unordered_set<std::unique_ptr<reactivesocket::ReactiveSocket>>,
+      std::mutex>
+      sockets_;
+
+  folly::Baton<> waiting_;
+  folly::Optional<folly::Baton<>> shutdown_;
 };
 }

@@ -1,6 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include <iostream>
+#include <thread>
 
 #include <folly/init/Init.h>
 
@@ -20,6 +21,18 @@ int main(int argc, char* argv[]) {
   auto rs = RSocket::createServer(TcpConnectionAcceptor::create(FLAGS_port));
   // global request handler
   auto handler = std::make_shared<HelloStreamRequestHandler>();
-  // start accepting connections
-  rs->startAndPark([handler](auto r) { return handler; });
+
+  auto rawRs = rs.get();
+  auto serverThread = std::thread([=] {
+    // start accepting connections
+    rawRs->startAndPark([handler](auto r) { return handler; });
+  });
+
+  // Wait for a newline on the console to terminate the server.
+  std::getchar();
+
+  rs->unpark();
+  serverThread.join();
+
+  return 0;
 }

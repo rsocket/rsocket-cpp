@@ -6,7 +6,6 @@
 #include <unordered_set>
 #include "src/Common.h"
 #include "src/ConnectionSetupPayload.h"
-#include "src/versions/FrameSerializer_v0_1.h"
 
 namespace folly {
 class EventBase;
@@ -18,6 +17,7 @@ class IOBuf;
 namespace reactivesocket {
 
 class DuplexConnection;
+class FrameSerializer;
 class FrameTransport;
 class Stats;
 
@@ -25,6 +25,7 @@ class Stats;
 // is received. Then either onNewSocket or onResumeSocket is invoked.
 class ServerConnectionAcceptor {
  public:
+  ServerConnectionAcceptor();
   virtual ~ServerConnectionAcceptor();
 
   /// Called when we've received a setup frame on the connection and are ready
@@ -55,8 +56,10 @@ class ServerConnectionAcceptor {
       folly::Executor&);
 
  private:
+  bool ensureOrAutodetectFrameSerializer(const folly::IOBuf& firstFrame);
+
   std::unordered_set<std::shared_ptr<FrameTransport>> connections_;
-  FrameSerializerV0_1 frameSerializer_;
+  std::unique_ptr<FrameSerializer> frameSerializer_;
 };
 
 } // reactivesocket

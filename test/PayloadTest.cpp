@@ -1,9 +1,8 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include <gtest/gtest.h>
-
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
+#include <gtest/gtest.h>
 #include "src/Frame.h"
 #include "src/Payload.h"
 #include "src/versions/FrameSerializer_v0_1.h"

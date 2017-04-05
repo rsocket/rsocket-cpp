@@ -191,7 +191,7 @@ class Observable : public std::enable_shared_from_this<Observable<T>> {
   Observable() = default;
 
  private:
-  template<typename Function>
+  template <typename Function>
   class Derived;
 
   /**
@@ -214,7 +214,8 @@ class Observable : public std::enable_shared_from_this<Observable<T>> {
   template <
       typename F,
       typename = typename std::enable_if<std::is_callable<
-        F(std::unique_ptr<yarpl::observable::Observer<T>>), void>::value>::type>
+          F(std::unique_ptr<yarpl::observable::Observer<T>>),
+          void>::value>::type>
   static std::shared_ptr<Observable> unsafeCreate(F&& function) {
     // TODO(vjn): figure out why clang complains about the cast of the shared
     // pointer to the base class.  (Also fails with std::static_pointer_cast.)

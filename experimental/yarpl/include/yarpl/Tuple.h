@@ -8,8 +8,7 @@ struct Tuple {
   const int b;
 
   Tuple(const int a, const int b) : a(a), b(b) {
-    std::cout << "Tuple (" << a << ", " << b << ") constructed."
-              << std::endl;
+    std::cout << "Tuple (" << a << ", " << b << ") constructed." << std::endl;
     instanceCount++;
     createdCount++;
   }
@@ -29,8 +28,7 @@ struct Tuple {
   }
 
   ~Tuple() {
-    std::cout << "Tuple (" << a << ", " << b << ") destroyed."
-              << std::endl;
+    std::cout << "Tuple (" << a << ", " << b << ") destroyed." << std::endl;
     std::cout << "Tuple destroyed!!" << std::endl;
     instanceCount--;
     destroyedCount++;

@@ -9,6 +9,8 @@ namespace reactivesocket {
 class FrameSerializerV0 : public FrameSerializer {
  public:
   constexpr static const ProtocolVersion Version = ProtocolVersion(0, 0);
+  constexpr static const size_t kFrameHeaderSize = 8; // bytes
+
   ProtocolVersion protocolVersion() override;
 
   FrameType peekFrameType(const folly::IOBuf& in) override;

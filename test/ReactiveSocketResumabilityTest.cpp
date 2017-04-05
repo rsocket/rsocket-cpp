@@ -29,7 +29,8 @@ TEST(ReactiveSocketResumabilityTest, Disconnect) {
       }));
 
   testConnection->setInput(testOutputSubscriber);
-  testConnection->getOutput()->onSubscribe(testInputSubscription);
+  auto sub = testConnection->getOutput();
+  sub->onSubscribe(testInputSubscription);
 
   auto stats = std::make_shared<MockStats>();
 
@@ -71,5 +72,5 @@ TEST(ReactiveSocketResumabilityTest, Disconnect) {
 
   socket->close();
   socket.reset();
-  testConnection->getOutput()->onComplete();
+  sub->onComplete();
 }

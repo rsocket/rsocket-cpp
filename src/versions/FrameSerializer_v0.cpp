@@ -6,10 +6,11 @@
 namespace reactivesocket {
 
 constexpr const ProtocolVersion FrameSerializerV0::Version;
-constexpr static const auto kFrameHeaderSize = 8;
-constexpr static const auto kMaxMetadataLength = 0xFFFFFF; // 24bit max value
+constexpr const size_t FrameSerializerV0::kFrameHeaderSize; // bytes
 
 namespace {
+constexpr static const auto kMaxMetadataLength = 0xFFFFFF; // 24bit max value
+
 enum class FrameType_V0 : uint16_t {
   RESERVED = 0x0000,
   SETUP = 0x0001,
@@ -260,7 +261,8 @@ static uint32_t payloadFramingSize(const Payload& payload) {
 static std::unique_ptr<folly::IOBuf> serializeOutInternal(
     Frame_REQUEST_Base&& frame) {
   auto queue = createBufferQueue(
-      kFrameHeaderSize + sizeof(uint32_t) + payloadFramingSize(frame.payload_));
+      FrameSerializerV0::kFrameHeaderSize + sizeof(uint32_t) +
+      payloadFramingSize(frame.payload_));
   uint16_t extraFlags = 0;
   if (!!(frame.header_.flags_ & FrameFlags::FOLLOWS)) {
     extraFlags |= FrameFlags_V0::FOLLOWS;

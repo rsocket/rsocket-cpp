@@ -434,7 +434,8 @@ TEST(ReactiveSocketTest, RequestStreamSendsOneRequest) {
       }));
 
   serverConn->setInput(testOutputSubscriber);
-  serverConn->getOutput()->onSubscribe(testInputSubscription);
+  auto sub = serverConn->getOutput();
+  sub->onSubscribe(testInputSubscription);
 
   auto socket = StandardReactiveSocket::fromClientConnection(
       defaultExecutor(),
@@ -472,7 +473,7 @@ TEST(ReactiveSocketTest, RequestStreamSendsOneRequest) {
 
   socket->disconnect();
   socket->close();
-  serverConn->getOutput()->onComplete();
+  sub->onComplete();
 }
 
 TEST(ReactiveSocketTest, RequestStreamSurplusResponse) {
@@ -641,7 +642,8 @@ TEST(ReactiveSocketTest, RequestResponseSendsOneRequest) {
       }));
 
   serverConn->setInput(testOutputSubscriber);
-  serverConn->getOutput()->onSubscribe(testInputSubscription);
+  auto sub = serverConn->getOutput();
+  sub->onSubscribe(testInputSubscription);
 
   auto socket = StandardReactiveSocket::fromClientConnection(
       defaultExecutor(),
@@ -679,7 +681,7 @@ TEST(ReactiveSocketTest, RequestResponseSendsOneRequest) {
 
   socket->disconnect();
   socket->close();
-  serverConn->getOutput()->onComplete();
+  sub->onComplete();
 }
 
 TEST(ReactiveSocketTest, RequestFireAndForget) {

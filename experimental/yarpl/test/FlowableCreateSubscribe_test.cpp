@@ -296,8 +296,8 @@ TEST(
     // ensure Subscriber and Subscription are destroyed
     EXPECT_EQ(0, subscriptionInstanceCount);
 
-    std::cout << "Finished ... remaining instances == "
-              << Tuple::instanceCount << std::endl;
+    std::cout << "Finished ... remaining instances == " << Tuple::instanceCount
+              << std::endl;
   }
   std::cout << "... after block" << std::endl;
   EXPECT_EQ(0, Tuple::instanceCount);

@@ -6,9 +6,9 @@
 namespace reactivesocket {
 
 constexpr const ProtocolVersion FrameSerializerV1_0::Version;
+constexpr const size_t FrameSerializerV1_0::kFrameHeaderSize; // bytes
 
 namespace {
-constexpr const auto kFrameHeaderSize = 6; // bytes
 constexpr const auto kMedatadaLengthSize = 3; // bytes
 constexpr const auto kMaxMetadataLength = 0xFFFFFF; // 24bit max value
 } // namespace
@@ -133,7 +133,8 @@ static uint32_t payloadFramingSize(const Payload& payload) {
 static std::unique_ptr<folly::IOBuf> serializeOutInternal(
     Frame_REQUEST_Base&& frame) {
   auto queue = createBufferQueue(
-      kFrameHeaderSize + sizeof(uint32_t) + payloadFramingSize(frame.payload_));
+      FrameSerializerV1_0::kFrameHeaderSize + sizeof(uint32_t) +
+      payloadFramingSize(frame.payload_));
 
   folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
   serializeHeaderInto(appender, frame.header_);
@@ -614,6 +615,52 @@ bool FrameSerializerV1_0::deserializeFrom(
     return false;
   }
   return true;
+}
+
+ProtocolVersion FrameSerializerV1_0::detectProtocolVersion(
+    const folly::IOBuf& firstFrame) {
+  // SETUP frame
+  //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+  //  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  //  |                         Stream ID = 0                         |
+  //  +-----------+-+-+-+-+-----------+-------------------------------+
+  //  |Frame Type |0|M|R|L|  Flags    |
+  //  +-----------+-+-+-+-+-----------+-------------------------------+
+  //  |         Major Version         |        Minor Version          |
+  //  +-------------------------------+-------------------------------+
+  //                                 ...
+  //  +-------------------------------+-------------------------------+
+
+  // RESUME frame
+  //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+  //  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  //  |                         Stream ID = 0                         |
+  //  +-----------+-+-+---------------+-------------------------------+
+  //  |Frame Type |0|0|    Flags      |
+  //  +-------------------------------+-------------------------------+
+  //  |        Major Version          |         Minor Version         |
+  //  +-------------------------------+-------------------------------+
+  //                                 ...
+  //  +-------------------------------+-------------------------------+
+
+  folly::io::Cursor cur(&firstFrame);
+  try {
+    auto streamId = cur.readBE<int32_t>();
+    auto frameType = cur.readBE<uint8_t>() >> 2;
+    cur.skip(sizeof(uint8_t)); // flags
+    auto majorVersion = cur.readBE<uint16_t>();
+    auto minorVersion = cur.readBE<uint16_t>();
+
+    constexpr auto kSETUP = 0x01;
+    constexpr auto kRESUME = 0x0D;
+
+    if (streamId == 0 && (frameType == kSETUP || frameType == kRESUME) &&
+        majorVersion == 1 && minorVersion == 0) {
+      return ProtocolVersion(1, 0);
+    }
+  } catch (...) {
+  }
+  return ProtocolVersion::Unknown;
 }
 
 } // reactivesocket

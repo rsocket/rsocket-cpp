@@ -1,9 +1,66 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
-#include "FramedReader.h"
 
+#include "src/framed/FramedReader.h"
 #include <folly/io/Cursor.h>
+#include "src/versions/FrameSerializer_v0.h"
+#include "src/versions/FrameSerializer_v1_0.h"
 
 namespace reactivesocket {
+
+size_t FramedReader::getFrameSizeFieldLength() const {
+  DCHECK(*protocolVersion_ != ProtocolVersion::Unknown);
+  if (*protocolVersion_ < FrameSerializerV1_0::Version) {
+    return sizeof(int32_t);
+  } else {
+    return 3; // bytes
+  }
+}
+
+size_t FramedReader::getFrameMinimalLength() const {
+  DCHECK(*protocolVersion_ != ProtocolVersion::Unknown);
+  if (*protocolVersion_ < FrameSerializerV1_0::Version) {
+    return FrameSerializerV0::kFrameHeaderSize + getFrameSizeFieldLength();
+  } else {
+    return FrameSerializerV1_0::kFrameHeaderSize;
+  }
+}
+
+size_t FramedReader::getFrameSizeWithLengthField(size_t frameSize) const {
+  DCHECK(*protocolVersion_ != ProtocolVersion::Unknown);
+  if (*protocolVersion_ < FrameSerializerV1_0::Version) {
+    return frameSize;
+  } else {
+    return frameSize + getFrameSizeFieldLength();
+  }
+}
+
+size_t FramedReader::getPayloadSize(size_t frameSize) const {
+  DCHECK(*protocolVersion_ != ProtocolVersion::Unknown);
+  if (*protocolVersion_ < FrameSerializerV1_0::Version) {
+    return frameSize - getFrameSizeFieldLength();
+  } else {
+    return frameSize;
+  }
+}
+
+size_t FramedReader::readFrameLength() const {
+  auto frameSizeFieldLength = getFrameSizeFieldLength();
+  DCHECK(frameSizeFieldLength > 0);
+
+  folly::io::Cursor cur(payloadQueue_.front());
+  size_t frameLength = 0;
+
+  // start reading the highest byte
+  // frameSizeFieldLength == 3 => shift = [16,8,0]
+  // frameSizeFieldLength == 4 => shift = [24,16,8,0]
+  auto shift = (frameSizeFieldLength - 1) * 8;
+
+  while (frameSizeFieldLength--) {
+    frameLength |= static_cast<uint8_t>(cur.read<uint8_t>() << shift);
+    shift -= 8;
+  }
+  return frameLength;
+}
 
 void FramedReader::onSubscribeImpl(
     std::shared_ptr<Subscription> subscription) noexcept {
@@ -30,27 +87,26 @@ void FramedReader::parseFrames() {
   dispatchingFrames_ = true;
 
   while (allowance_.canAcquire() && frames_) {
-    if (payloadQueue_.chainLength() < sizeof(int32_t)) {
+    if (payloadQueue_.chainLength() < getFrameSizeFieldLength()) {
       // we don't even have the next frame size value
       break;
     }
 
-    folly::io::Cursor c(payloadQueue_.front());
-    const auto nextFrameSize = static_cast<size_t>(c.readBE<int32_t>());
+    const auto nextFrameSize = readFrameLength();
 
-    // the frame size includes the payload size and the size value
-    // so if the size value is less than sizeof(int32_t) something is wrong
-    if (nextFrameSize < sizeof(int32_t)) {
+    // so if the size value is less than minimal frame length something is wrong
+    if (nextFrameSize < getFrameMinimalLength()) {
       onErrorImpl(std::runtime_error("invalid data stream"));
       break;
     }
 
-    if (payloadQueue_.chainLength() < nextFrameSize) {
+    if (payloadQueue_.chainLength() <
+        getFrameSizeWithLengthField(nextFrameSize)) {
       // need to accumulate more data
       break;
     }
-    payloadQueue_.trimStart(sizeof(int32_t));
-    auto payloadSize = nextFrameSize - sizeof(int32_t);
+    payloadQueue_.trimStart(getFrameSizeFieldLength());
+    auto payloadSize = getPayloadSize(nextFrameSize);
     // IOBufQueue::split(0) returns a null unique_ptr, so we create an empty
     // IOBuf object and pass a unique_ptr to it instead. This simplifies
     // clients' code because they can assume the pointer is non-null.

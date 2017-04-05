@@ -37,9 +37,6 @@ StandardReactiveSocket::StandardReactiveSocket(
           std::move(keepaliveTimer),
           mode)),
       executor_(executor) {
-  // TODO: In case of server, FrameSerializer should be ideally set after
-  // inspecting the SETUP frame from the client
-  connection_->setFrameSerializer(FrameSerializer::createCurrentVersion());
   debugCheckCorrectExecutor();
   connection_->stats().socketCreated();
 }
@@ -107,6 +104,13 @@ StandardReactiveSocket::disconnectedServer(
       std::move(stats),
       nullptr,
       executor));
+  auto protocolVersion = FrameSerializer::getCurrentProtocolVersion();
+  // if protocolVersion is unknown we will try to autodetect the version
+  // with the first frame
+  if (protocolVersion != ProtocolVersion::Unknown) {
+    socket->connection_->setFrameSerializer(
+        FrameSerializer::createFrameSerializer(protocolVersion));
+  }
   return socket;
 }
 
@@ -163,11 +167,12 @@ void StandardReactiveSocket::clientConnect(
   checkNotClosed();
   connection_->setResumable(setupPayload.resumable);
 
-  // TODO set correct version
+  auto currentProtocolVersion =
+      connection_->frameSerializer().protocolVersion();
   Frame_SETUP frame(
       setupPayload.resumable ? FrameFlags::RESUME_ENABLE : FrameFlags::EMPTY,
-      FrameSerializer::kCurrentProtocolVersion.major,
-      FrameSerializer::kCurrentProtocolVersion.minor,
+      currentProtocolVersion.major,
+      currentProtocolVersion.minor,
       connection_->getKeepaliveTime(),
       Frame_SETUP::kMaxLifetime,
       setupPayload.token,

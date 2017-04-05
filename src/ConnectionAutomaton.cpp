@@ -94,6 +94,7 @@ void ConnectionAutomaton::connect(
       outputFrameOrEnqueue(std::move(frame));
     }
 
+    // TODO: turn on only after setup frame was received
     if (keepaliveTimer_) {
       keepaliveTimer_->start(shared_from_this());
     }
@@ -231,7 +232,10 @@ void ConnectionAutomaton::closeWithError(Frame_ERROR&& error) {
 
   auto exception = std::runtime_error(
       error.payload_.data->cloneAsValue().moveToFbString().toStdString());
-  outputFrameOrEnqueue(frameSerializer().serializeOut(std::move(error)));
+
+  if (frameSerializer_) {
+    outputFrameOrEnqueue(frameSerializer_->serializeOut(std::move(error)));
+  }
   close(std::move(exception), signal);
 }
 
@@ -329,6 +333,12 @@ void ConnectionAutomaton::processFrame(std::unique_ptr<folly::IOBuf> frame) {
 void ConnectionAutomaton::processFrameImpl(
     std::unique_ptr<folly::IOBuf> frame) {
   if (isClosed()) {
+    return;
+  }
+
+  if (!ensureOrAutodetectFrameSerializer(*frame)) {
+    // Failed to autodetect protocol version
+    closeWithError(Frame_ERROR::invalidFrame());
     return;
   }
 
@@ -744,6 +754,9 @@ void ConnectionAutomaton::addClosedListener(ErrorCallback listener) {
 
 void ConnectionAutomaton::setFrameSerializer(
     std::unique_ptr<FrameSerializer> frameSerializer) {
+  CHECK(frameSerializer);
+  // serializer is not interchangeable, it would screw up resumability
+  CHECK(!frameSerializer_);
   frameSerializer_ = std::move(frameSerializer);
 }
 
@@ -847,4 +860,27 @@ void ConnectionAutomaton::onStreamClosed(
   endStream(streamId, signal);
 }
 
+bool ConnectionAutomaton::ensureOrAutodetectFrameSerializer(
+    const folly::IOBuf& firstFrame) {
+  if (frameSerializer_) {
+    return true;
+  }
+
+  if (mode_ != ReactiveSocketMode::SERVER) {
+    // this should never happen as clients are initized with FrameSerializer
+    // instance
+    DCHECK(false);
+    return false;
+  }
+
+  auto serializer = FrameSerializer::createAutodetectedSerializer(firstFrame);
+  if (!serializer) {
+    LOG(ERROR) << "unable to detect protocol version";
+    return false;
+  }
+
+  VLOG(2) << "detected protocol version" << serializer->protocolVersion();
+  frameSerializer_ = std::move(serializer);
+  return true;
+}
 } // reactivesocket
