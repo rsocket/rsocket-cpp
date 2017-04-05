@@ -8,8 +8,8 @@
 #include "src/Payload.h"
 #include "src/SubscriberBase.h"
 #include "src/SubscriptionBase.h"
-#include "src/mixins/ConsumerMixin.h"
-#include "src/mixins/PublisherMixin.h"
+#include "src/automata/ConsumerBase.h"
+#include "src/automata/PublisherBase.h"
 
 namespace folly {
 class exception_wrapper;
@@ -18,14 +18,14 @@ class exception_wrapper;
 namespace reactivesocket {
 
 /// Implementation of stream automaton that represents a Channel requester.
-class ChannelRequester : public ConsumerMixin,
-                         public PublisherMixin,
+class ChannelRequester : public ConsumerBase,
+                         public PublisherBase,
                          public SubscriberBase {
  public:
-  explicit ChannelRequester(const ConsumerMixin::Parameters& params)
+  explicit ChannelRequester(const ConsumerBase::Parameters& params)
       : ExecutorBase(params.executor),
-        ConsumerMixin(params),
-        PublisherMixin(0) {}
+        ConsumerBase(params),
+        PublisherBase(0) {}
 
  private:
   /// @{
@@ -35,7 +35,7 @@ class ChannelRequester : public ConsumerMixin,
   void onErrorImpl(folly::exception_wrapper) noexcept override;
   /// @}
 
-  // implementation from ConsumerMixin::SubscriptionBase
+  // implementation from ConsumerBase::SubscriptionBase
   void requestImpl(size_t) noexcept override;
   void cancelImpl() noexcept override;
 
@@ -53,7 +53,7 @@ class ChannelRequester : public ConsumerMixin,
     CLOSED,
   } state_{State::NEW};
   /// An allowance accumulated before the stream is initialised.
-  /// Remaining part of the allowance is forwarded to the ConsumerMixin.
+  /// Remaining part of the allowance is forwarded to the ConsumerBase.
   AllowanceSemaphore initialResponseAllowance_;
 };
 

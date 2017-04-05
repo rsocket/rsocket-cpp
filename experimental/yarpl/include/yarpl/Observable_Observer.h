@@ -31,7 +31,7 @@ class Observer {
    */
   virtual void onSubscribe(yarpl::observable::Subscription*) = 0;
   virtual void onNext(const T&) = 0;
-  virtual void onNext(T&&) = 0;
+  // virtual void onNext(T&& value) {}
   virtual void onComplete() = 0;
   virtual void onError(const std::exception_ptr error) = 0;
 };
@@ -84,11 +84,7 @@ class Observers {
         std::function<void()> c)
         : next_(std::move(n)), error_(std::move(e)), complete_(std::move(c)) {}
 
-    void onNext(const T& value) override {
-      next_(value);
-    }
-
-    void onNext(T&& value) override {
+    virtual void onNext(const T& value) override {
       next_(value);
     }
 

@@ -88,6 +88,6 @@ void StreamSubscriptionResponderBase::onNextFrame(Frame_CANCEL&& frame) {
 }
 
 void StreamSubscriptionResponderBase::onNextFrame(Frame_REQUEST_N&& frame) {
-  PublisherMixin::processRequestN(frame.requestN_);
+  PublisherBase::processRequestN(frame.requestN_);
 }
 }

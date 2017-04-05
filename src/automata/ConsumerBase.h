@@ -19,7 +19,7 @@ namespace reactivesocket {
 enum class StreamCompletionSignal;
 
 /// A class that represents a flow-control-aware consumer of data.
-class ConsumerMixin : public StreamAutomatonBase, public SubscriptionBase {
+class ConsumerBase : public StreamAutomatonBase, public SubscriptionBase {
   using Base = StreamAutomatonBase;
 
  public:
@@ -31,13 +31,13 @@ class ConsumerMixin : public StreamAutomatonBase, public SubscriptionBase {
     folly::Executor& executor;
   };
 
-  explicit ConsumerMixin(const Parameters& params)
+  explicit ConsumerBase(const Parameters& params)
       : ExecutorBase(params.executor), Base(params) {}
 
   /// Adds implicit allowance.
   ///
   /// This portion of allowance will not be synced to the remote end, but will
-  /// count towards the limit of allowance the remote PublisherMixin may use.
+  /// count towards the limit of allowance the remote PublisherBase may use.
   void addImplicitAllowance(size_t n) {
     allowance_.release(n);
   }
@@ -74,7 +74,7 @@ class ConsumerMixin : public StreamAutomatonBase, public SubscriptionBase {
   void handleFlowControlError();
 
   /// A Subscriber that will consume payloads.
-  /// This mixin is responsible for delivering a terminal signal to the
+  /// This is responsible for delivering a terminal signal to the
   /// Subscriber once the stream ends.
   std::shared_ptr<Subscriber<Payload>> consumingSubscriber_;
 

@@ -48,7 +48,11 @@ class Flowable : public reactivestreams_yarpl::Publisher<T>,
       typename = typename std::enable_if<
           std::is_callable<F(std::unique_ptr<Subscriber>), void>::value>::type>
   static std::shared_ptr<Flowable<T>> create(F&& function) {
-    return std::make_shared<Derived<F>>(std::forward<F>(function));
+    // TODO(vjn): figure out why clang complains about the cast of the shared
+    // pointer to the base class.  (Also fails with std::static_pointer_cast.)
+    // Meantime, not using std::make_shared.
+    Flowable* base = new Derived<F>(std::forward<F>(function));
+    return std::shared_ptr<Flowable>(base);
   }
 
   /**
@@ -115,19 +119,23 @@ class Flowable : public reactivestreams_yarpl::Publisher<T>,
   Flowable() = default;
 
  private:
-  template <typename Function>
-  class Derived : public Flowable {
-   public:
-    explicit Derived(Function&& function)
-        : function_(std::forward<Function>(function)) {}
+   template<typename Function>
+   class Derived;
+};
 
-    void subscribe(std::unique_ptr<Subscriber> subscriber) override {
-      (function_)(std::move(subscriber));
-    }
+template<typename T>
+template <typename Function>
+class Flowable<T>::Derived : public Flowable<T> {
+ public:
+  explicit Derived(Function&& function)
+      : function_(std::forward<Function>(function)) {}
 
-   private:
-    Function function_;
-  };
+  void subscribe(std::unique_ptr<Subscriber> subscriber) override {
+    (function_)(std::move(subscriber));
+  }
+
+ private:
+  Function function_;
 };
 
 class Flowables {

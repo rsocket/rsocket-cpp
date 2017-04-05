@@ -108,14 +108,6 @@ class FlowableSubscriptionSync : public reactivestreams_yarpl::Subscription {
     subscriber_->onNext(t);
   }
 
-  /**
-     * Send events to downstream using this from within 'emit'
-     * @param t
-     */
-  void onNext(T&& t) {
-    subscriber_->onNext(std::move(t));
-  }
-
  private:
   /**
    * thread-safe method to try and emit in response to request(n) being called.

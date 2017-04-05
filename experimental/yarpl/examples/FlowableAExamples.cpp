@@ -76,11 +76,6 @@ void FlowableAExamples::run() {
       std::cout << "onNext& " << t << std::endl;
     }
 
-    void onNext(long&& t) override {
-      acceptAndRequestMoreIfNecessary();
-      std::cout << "onNext&& " << t << std::endl;
-    }
-
     void onComplete() override {
       std::cout << "onComplete " << std::endl;
     }

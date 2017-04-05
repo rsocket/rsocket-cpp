@@ -139,10 +139,6 @@ void ObservableExamples::run() {
       std::cout << "onNext& " << t << std::endl;
     }
 
-    void onNext(int&& t) override {
-      std::cout << "onNext&& " << t << std::endl;
-    }
-
     void onComplete() override {
       std::cout << "onComplete " << std::endl;
     }

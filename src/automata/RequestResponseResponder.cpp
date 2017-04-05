@@ -88,7 +88,7 @@ void RequestResponseResponder::onNextFrame(Frame_CANCEL&& frame) {
 }
 
 void RequestResponseResponder::onNextFrame(Frame_REQUEST_N&& frame) {
-  PublisherMixin::processRequestN(frame.requestN_);
+  PublisherBase::processRequestN(frame.requestN_);
 }
 
 } // reactivesocket

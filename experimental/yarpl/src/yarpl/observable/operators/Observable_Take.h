@@ -39,15 +39,6 @@ class TakeObserver : public yarpl::observable::Observer<T> {
     }
   }
 
-  void onNext(T&& t) {
-    if (toTake_ > 0) {
-      downstream_->onNext(t);
-      if (--toTake_ == 0) {
-        completeAndCancel();
-      }
-    }
-  }
-
   void onComplete() {
     if (toTake_ > 0) {
       // only emit if we haven't already completed

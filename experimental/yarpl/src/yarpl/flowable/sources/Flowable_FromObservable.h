@@ -101,15 +101,6 @@ class FlowableFromObservableSubscription
     // drop anything else
   }
 
-  void onNext(T&& t) {
-    if (requested_ > 0) {
-      subscriber_->onNext(std::move(t));
-      yarpl::flowable::internal::SubscriptionHelper::consumeCredits(
-          &requested_, 1);
-    }
-    // drop anything else
-  }
-
   void onComplete() {
     subscriber_->onComplete();
   }
@@ -139,10 +130,6 @@ class FlowableFromObservableSubscription
     }
 
     void onNext(const T& t) override {
-      fs_->onNext(t);
-    }
-
-    void onNext(T&& t) override {
       fs_->onNext(t);
     }
 

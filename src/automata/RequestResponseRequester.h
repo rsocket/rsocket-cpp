@@ -56,7 +56,7 @@ class RequestResponseRequester : public StreamAutomatonBase,
   Payload payload_;
 
   /// A Subscriber that will consume payloads.
-  /// This mixin is responsible for delivering a terminal signal to the
+  /// This is responsible for delivering a terminal signal to the
   /// Subscriber once the stream ends.
   std::shared_ptr<Subscriber<Payload>> consumingSubscriber_;
 

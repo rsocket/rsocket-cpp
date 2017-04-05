@@ -2,6 +2,9 @@
 
 #pragma once
 
+#include <climits>
+#include <condition_variable>
+#include <mutex>
 #include <sstream>
 #include <vector>
 #include "reactivestreams/ReactiveStreams.h"
@@ -70,7 +73,6 @@ class TestSubscriber : public reactivestreams_yarpl::Subscriber<T>,
 
   void onSubscribe(Subscription* s) override;
   void onNext(const T& t) override;
-  void onNext(T&& t) override;
   void onComplete() override;
   void onError(const std::exception_ptr ex) override;
 
@@ -193,21 +195,6 @@ void TestSubscriber<T>::onNext(const T& t) {
 }
 
 template <typename T>
-void TestSubscriber<T>::onNext(T&& t) {
-  if (delegate_) {
-    //    std::cout << "TestSubscriber onNext&& => copy then delegate" <<
-    //    std::endl;
-    // copy with push_back rather than emplace
-    // since we pass the ref into the delegate
-    values_.push_back(t);
-    delegate_->onNext(std::move(t));
-  } else {
-    //    std::cout << "TestSubscriber onNext&& => move" << std::endl;
-    values_.emplace_back(std::move(t));
-  }
-}
-
-template <typename T>
 void TestSubscriber<T>::onComplete() {
   if (delegate_) {
     delegate_->onComplete();
@@ -255,9 +242,6 @@ TestSubscriber<T>::unique_subscriber() {
     }
     void onNext(const T& t) override {
       ts_->onNext(t);
-    }
-    void onNext(T&& t) override {
-      ts_->onNext(std::move(t));
     }
     void onError(const std::exception_ptr e) override {
       ts_->onError(e);

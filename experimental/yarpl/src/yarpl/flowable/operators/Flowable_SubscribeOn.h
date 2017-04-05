@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include <experimental/yarpl/include/yarpl/Scheduler.h>
 #include "reactivestreams/ReactiveStreams.h"
+#include "yarpl/Scheduler.h"
 
 namespace yarpl {
 namespace operators {
@@ -56,10 +56,6 @@ class SubscribeOnSubscriber : public reactivestreams_yarpl::Subscriber<T> {
   }
 
   void onNext(const T& t) {
-    downstream_->onNext(t);
-  }
-
-  void onNext(T&& t) {
     downstream_->onNext(t);
   }
 

@@ -111,19 +111,23 @@ class FlowableC : public reactivestreams_yarpl::Publisher<T> {
 
  private:
   template <typename Function>
-  class Derived : public FlowableC {
-   public:
-    explicit Derived(Function&& function)
-        : function_(
-              std::make_unique<Function>(std::forward<Function>(function))) {}
+  class Derived;
+};
 
-    void subscribe(std::unique_ptr<Subscriber> subscriber) override {
-      (*function_)(std::move(subscriber));
-    }
+template <typename T>
+template <typename Function>
+class FlowableC<T>::Derived : public FlowableC<T> {
+ public:
+  explicit Derived(Function&& function)
+      : function_(
+        std::make_unique<Function>(std::forward<Function>(function))) {}
 
-   private:
-    std::unique_ptr<Function> function_;
-  };
+  void subscribe(std::unique_ptr<Subscriber> subscriber) override {
+    (*function_)(std::move(subscriber));
+  }
+
+ private:
+  std::unique_ptr<Function> function_;
 };
 
 template <typename T>

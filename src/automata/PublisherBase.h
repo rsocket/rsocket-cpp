@@ -19,9 +19,9 @@ namespace reactivesocket {
 enum class StreamCompletionSignal;
 
 /// A class that represents a flow-control-aware producer of data.
-class PublisherMixin {
+class PublisherBase {
  public:
-  explicit PublisherMixin(uint32_t initialRequestN)
+  explicit PublisherBase(uint32_t initialRequestN)
       : initialRequestN_(initialRequestN) {}
 
   /// @{
@@ -93,7 +93,7 @@ class PublisherMixin {
   }
 
   /// A Subscription that constrols production of payloads.
-  /// This mixin is responsible for delivering a terminal signal to the
+  /// This is responsible for delivering a terminal signal to the
   /// Subscription once the stream ends.
   std::shared_ptr<Subscription> producingSubscription_;
   AllowanceSemaphore initialRequestN_;

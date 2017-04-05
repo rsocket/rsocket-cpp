@@ -32,8 +32,8 @@ struct Payload;
 class StreamAutomatonBase {
  public:
   /// A dependent type which encapsulates all parameters needed to initialise
-  /// any of the mixins and the final automata. Must be the only argument to the
-  /// constructor of any mixin and must be passed by const& to mixin's Base.
+  /// any of the classes and the final automata. Must be the only argument to the
+  /// constructor of any class and must be passed by const& to class's Base.
   struct Parameters {
     Parameters() = default;
     Parameters(std::shared_ptr<StreamsWriter> _writer, StreamId _streamId)

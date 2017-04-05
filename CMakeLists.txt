@@ -153,9 +153,9 @@ add_library(
   src/FrameProcessor.h
   src/FrameTransport.cpp
   src/FrameTransport.h
-  src/mixins/ConsumerMixin.cpp
-  src/mixins/ConsumerMixin.h
-  src/mixins/PublisherMixin.h
+  src/automata/ConsumerBase.cpp
+  src/automata/ConsumerBase.h
+  src/automata/PublisherBase.h
   src/NullRequestHandler.cpp
   src/NullRequestHandler.h
   src/Payload.cpp
@@ -212,7 +212,7 @@ add_executable(
   test/ConnectionAutomatonTest.cpp
   test/framed/FramedReaderTest.cpp
   test/framed/FramedWriterTest.cpp
-  test/mixins/PublisherMixinTest.cpp
+  test/automata/PublisherBaseTest.cpp
   test/FrameTest.cpp
   test/InlineConnection.cpp
   test/InlineConnection.h

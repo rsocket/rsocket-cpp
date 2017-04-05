@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/mixins/ConsumerMixin.h"
+#include "src/automata/ConsumerBase.h"
 
 #include <glog/logging.h>
 #include <algorithm>
@@ -10,7 +10,7 @@
 
 namespace reactivesocket {
 
-void ConsumerMixin::subscribe(std::shared_ptr<Subscriber<Payload>> subscriber) {
+void ConsumerBase::subscribe(std::shared_ptr<Subscriber<Payload>> subscriber) {
   if (Base::isTerminated()) {
     subscriber->onSubscribe(std::make_shared<NullSubscription>());
     subscriber->onComplete();
@@ -22,13 +22,13 @@ void ConsumerMixin::subscribe(std::shared_ptr<Subscriber<Payload>> subscriber) {
   consumingSubscriber_->onSubscribe(shared_from_this());
 }
 
-void ConsumerMixin::generateRequest(size_t n) {
+void ConsumerBase::generateRequest(size_t n) {
   allowance_.release(n);
   pendingAllowance_.release(n);
   sendRequests();
 }
 
-void ConsumerMixin::endStream(StreamCompletionSignal signal) {
+void ConsumerBase::endStream(StreamCompletionSignal signal) {
   if (auto subscriber = std::move(consumingSubscriber_)) {
     if (signal == StreamCompletionSignal::COMPLETE ||
         signal == StreamCompletionSignal::CANCEL) { // TODO: remove CANCEL
@@ -40,19 +40,19 @@ void ConsumerMixin::endStream(StreamCompletionSignal signal) {
   Base::endStream(signal);
 }
 
-void ConsumerMixin::pauseStream(RequestHandler& requestHandler) {
+void ConsumerBase::pauseStream(RequestHandler& requestHandler) {
   if (consumingSubscriber_) {
     requestHandler.onSubscriberPaused(consumingSubscriber_);
   }
 }
 
-void ConsumerMixin::resumeStream(RequestHandler& requestHandler) {
+void ConsumerBase::resumeStream(RequestHandler& requestHandler) {
   if (consumingSubscriber_) {
     requestHandler.onSubscriberResumed(consumingSubscriber_);
   }
 }
 
-void ConsumerMixin::processPayload(Payload&& payload) {
+void ConsumerBase::processPayload(Payload&& payload) {
   if (payload) {
     // Frames carry application-level payloads are taken into account when
     // figuring out flow control allowance.
@@ -66,13 +66,13 @@ void ConsumerMixin::processPayload(Payload&& payload) {
   }
 }
 
-void ConsumerMixin::onError(folly::exception_wrapper ex) {
+void ConsumerBase::onError(folly::exception_wrapper ex) {
   if (auto subscriber = std::move(consumingSubscriber_)) {
     subscriber->onError(std::move(ex));
   }
 }
 
-void ConsumerMixin::sendRequests() {
+void ConsumerBase::sendRequests() {
   // TODO(stupaq): batch if remote end has some spare allowance
   // TODO(stupaq): limit how much is synced to the other end
   size_t toSync = Frame_REQUEST_N::kMaxRequestN;
@@ -82,7 +82,7 @@ void ConsumerMixin::sendRequests() {
   }
 }
 
-void ConsumerMixin::handleFlowControlError() {
+void ConsumerBase::handleFlowControlError() {
   if (auto subscriber = std::move(consumingSubscriber_)) {
     subscriber->onError(std::runtime_error("surplus response"));
   }

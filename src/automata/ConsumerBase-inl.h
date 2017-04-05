@@ -1,7 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #pragma once
-#include "src/mixins/ConsumerMixin.h"
+#include "src/automata/ConsumerBase.h"
 
 #include <glog/logging.h>
 #include <algorithm>
@@ -12,12 +12,12 @@
 
 namespace reactivesocket {
 template <typename Frame>
-void ConsumerMixin<Frame>::onError(folly::exception_wrapper ex) {
+void ConsumerBase<Frame>::onError(folly::exception_wrapper ex) {
   consumingSubscriber_.onError(std::move(ex));
 }
 
 template <typename Frame>
-void ConsumerMixin<Frame>::processPayload(Frame&& frame) {
+void ConsumerBase<Frame>::processPayload(Frame&& frame) {
   if (frame.payload_) {
     // Frames carry application-level payloads are taken into account when
     // figuring out flow control allowance.
@@ -32,7 +32,7 @@ void ConsumerMixin<Frame>::processPayload(Frame&& frame) {
 }
 
 template <typename Frame>
-void ConsumerMixin<Frame>::sendRequests() {
+void ConsumerBase<Frame>::sendRequests() {
   // TODO(stupaq): batch if remote end has some spare allowance
   // TODO(stupaq): limit how much is synced to the other end
   size_t toSync = Frame_REQUEST_N::kMaxRequestN;
@@ -45,7 +45,7 @@ void ConsumerMixin<Frame>::sendRequests() {
 }
 
 template <typename Frame>
-void ConsumerMixin<Frame>::handleFlowControlError() {
+void ConsumerBase<Frame>::handleFlowControlError() {
   consumingSubscriber_.onError(std::runtime_error("surplus response"));
   Base::connection_->outputFrameOrEnqueue(
       Frame_CANCEL(Base::streamId_).serializeOut());

@@ -7,14 +7,14 @@
 #include "src/Frame.h"
 #include "src/SubscriberBase.h"
 #include "src/automata/StreamAutomatonBase.h"
-#include "src/mixins/PublisherMixin.h"
+#include "src/automata/PublisherBase.h"
 
 namespace reactivesocket {
 
 /// Implementation of stream automaton that represents a Stream/Subscription
 /// responder.
 class StreamSubscriptionResponderBase : public StreamAutomatonBase,
-                                        public PublisherMixin,
+                                        public PublisherBase,
                                         public SubscriberBase {
  public:
   struct Parameters : StreamAutomatonBase::Parameters {
@@ -32,7 +32,7 @@ class StreamSubscriptionResponderBase : public StreamAutomatonBase,
       const Parameters& params)
       : ExecutorBase(params.executor),
         StreamAutomatonBase(params),
-        PublisherMixin(initialRequestN) {}
+        PublisherBase(initialRequestN) {}
 
  protected:
   using StreamAutomatonBase::onNextFrame;

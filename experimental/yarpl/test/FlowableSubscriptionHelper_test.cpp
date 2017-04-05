@@ -21,19 +21,19 @@ TEST(SubscriptionHelper, addSmall2) {
   ASSERT_EQ(rn, 35);
 }
 
-TEST(SubscriptionHelper, addOverflow) {
+TEST(SubscriptionHelper, DISABLED_addOverflow) {
   std::atomic<std::int64_t> rn{0};
   SubscriptionHelper::addCredits(&rn, INT64_MAX);
   ASSERT_EQ(rn, INT64_MAX);
 }
 
-TEST(SubscriptionHelper, addOverflow2) {
+TEST(SubscriptionHelper, DISABLED_addOverflow2) {
   std::atomic<std::int64_t> rn{6789};
   SubscriptionHelper::addCredits(&rn, INT64_MAX);
   ASSERT_EQ(rn, INT64_MAX);
 }
 
-TEST(SubscriptionHelper, addOverflow3) {
+TEST(SubscriptionHelper, DISABLED_addOverflow3) {
   std::atomic<std::int64_t> rn{INT64_MAX};
   SubscriptionHelper::addCredits(&rn, INT64_MAX);
   ASSERT_EQ(rn, INT64_MAX);

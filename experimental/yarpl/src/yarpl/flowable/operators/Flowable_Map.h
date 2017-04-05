@@ -31,11 +31,6 @@ class TransformSubscriber : public reactivestreams_yarpl::Subscriber<T> {
     // TODO catch error and send via onError
   }
 
-  void onNext(T&& t) {
-    downstream_->onNext((*f_)(std::move(t)));
-    // TODO catch error and send via onError
-  }
-
   void onComplete() {
     downstream_->onComplete();
   }

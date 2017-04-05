@@ -191,19 +191,8 @@ class Observable : public std::enable_shared_from_this<Observable<T>> {
   Observable() = default;
 
  private:
-  template <typename Function>
-  class Derived : public Observable {
-   public:
-    explicit Derived(Function&& function)
-        : function_(std::forward<Function>(function)) {}
-
-    void subscribe(std::unique_ptr<Observer<T>> subscriber) override {
-      (function_)(std::move(subscriber));
-    }
-
-   private:
-    Function function_;
-  };
+  template<typename Function>
+  class Derived;
 
   /**
    * Private creator of an Observable.
@@ -225,11 +214,29 @@ class Observable : public std::enable_shared_from_this<Observable<T>> {
   template <
       typename F,
       typename = typename std::enable_if<std::is_callable<
-          F(std::unique_ptr<yarpl::observable::Observer<T>>),
-          void>::value>::type>
-  static std::shared_ptr<Observable<T>> unsafeCreate(F&& function) {
-    return std::make_shared<Derived<F>>(std::forward<F>(function));
+        F(std::unique_ptr<yarpl::observable::Observer<T>>), void>::value>::type>
+  static std::shared_ptr<Observable> unsafeCreate(F&& function) {
+    // TODO(vjn): figure out why clang complains about the cast of the shared
+    // pointer to the base class.  (Also fails with std::static_pointer_cast.)
+    // Meantime, not using std::make_shared.
+    Observable* base = new Derived<F>(std::forward<F>(function));
+    return std::shared_ptr<Observable>(base);
   }
+};
+
+template <typename T>
+template <typename Function>
+class Observable<T>::Derived : public Observable<T> {
+ public:
+  explicit Derived(Function&& function)
+      : function_(std::forward<Function>(function)) {}
+
+  void subscribe(std::unique_ptr<Observer<T>> subscriber) override {
+    (function_)(std::move(subscriber));
+  }
+
+ private:
+  Function function_;
 };
 
 class Observables {
@@ -294,9 +301,9 @@ class ObservableEmitter {
     emitter_->onNext(t);
   }
 
-  void onNext(T&& t) {
-    emitter_->onNext(t);
-  }
+  // void onNext(T&& t) {
+  //   emitter_->onNext(t);
+  // }
 
   void onComplete() {
     emitter_->onComplete();

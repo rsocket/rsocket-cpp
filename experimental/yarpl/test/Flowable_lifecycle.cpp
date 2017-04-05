@@ -47,7 +47,7 @@ auto runHandlerFlowable(Scheduler& scheduler) {
   return Flowable<long>::create(Handler())->subscribeOn(scheduler)->take(50);
 }
 
-TEST(FlowableLifecycle, HandlerClass) {
+TEST(FlowableLifecycle, DISABLED_HandlerClass) {
   ThreadScheduler scheduler;
 
   /**

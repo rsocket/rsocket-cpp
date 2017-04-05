@@ -31,11 +31,6 @@ class TransformSubscriber : public yarpl::observable::Observer<T> {
     // TODO catch error and send via onError
   }
 
-  void onNext(T&& t) {
-    downstream_->onNext((*f_)(std::move(t)));
-    // TODO catch error and send via onError
-  }
-
   void onComplete() {
     downstream_->onComplete();
   }

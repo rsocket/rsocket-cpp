@@ -24,10 +24,6 @@ class SubscriberWithOnNext : public reactivestreams_yarpl::Subscriber<T> {
     f_(t);
   }
 
-  void onNext(T&& t) override {
-    f_(std::move(t));
-  }
-
   void onComplete() override {}
 
   void onError(const std::exception_ptr error) override {}

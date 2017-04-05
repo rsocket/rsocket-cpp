@@ -7,22 +7,22 @@
 #include "src/Frame.h"
 #include "src/SubscriberBase.h"
 #include "src/SubscriptionBase.h"
-#include "src/mixins/ConsumerMixin.h"
-#include "src/mixins/PublisherMixin.h"
+#include "src/automata/ConsumerBase.h"
+#include "src/automata/PublisherBase.h"
 
 namespace reactivesocket {
 
 /// Implementation of stream automaton that represents a Channel responder.
-class ChannelResponder : public ConsumerMixin,
-                         public PublisherMixin,
+class ChannelResponder : public ConsumerBase,
+                         public PublisherBase,
                          public SubscriberBase {
  public:
   explicit ChannelResponder(
       uint32_t initialRequestN,
-      const ConsumerMixin::Parameters& params)
+      const ConsumerBase::Parameters& params)
       : ExecutorBase(params.executor),
-        ConsumerMixin(params),
-        PublisherMixin(initialRequestN) {}
+        ConsumerBase(params),
+        PublisherBase(initialRequestN) {}
 
   void processInitialFrame(Frame_REQUEST_CHANNEL&&);
 
@@ -32,7 +32,7 @@ class ChannelResponder : public ConsumerMixin,
   void onCompleteImpl() noexcept override;
   void onErrorImpl(folly::exception_wrapper) noexcept override;
 
-  // implementation from ConsumerMixin::SubscriptionBase
+  // implementation from ConsumerBase::SubscriptionBase
   void requestImpl(size_t n) noexcept override;
   void cancelImpl() noexcept override;
 

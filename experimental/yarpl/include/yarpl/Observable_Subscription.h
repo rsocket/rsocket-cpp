@@ -104,14 +104,6 @@ class ObservableSubscription : public Subscription {
     observer_->onNext(t);
   }
 
-  /**
-     * Send events to downstream using this from within 'emit'
-     * @param t
-     */
-  void onNext(T&& t) {
-    observer_->onNext(std::move(t));
-  }
-
   void onComplete() {
     if (~terminated_ && ~cancelled_) {
       observer_->onComplete();

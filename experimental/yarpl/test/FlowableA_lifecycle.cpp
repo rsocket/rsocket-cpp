@@ -50,7 +50,7 @@ auto getFlowableAwithHandler(Scheduler& scheduler) {
       .take(50);
 }
 
-TEST(FlowableALifecycle, AsStackAllocated) {
+TEST(FlowableALifecycle, DISABLED_AsStackAllocated) {
   ThreadScheduler scheduler;
 
   /**
@@ -132,7 +132,7 @@ auto getFlowableAwithHandlerAsUniquePtr(Scheduler& scheduler) {
       .as_unique_ptr();
 }
 
-TEST(FlowableALifecycle, AsUniquePtr) {
+TEST(FlowableALifecycle, DISABLED_AsUniquePtr) {
   ThreadScheduler scheduler;
 
   /**

@@ -6,7 +6,7 @@ namespace reactivesocket {
 
 void ChannelResponder::onSubscribeImpl(
     std::shared_ptr<Subscription> subscription) noexcept {
-  if (ConsumerMixin::isTerminated()) {
+  if (ConsumerBase::isTerminated()) {
     subscription->cancel();
     return;
   }
@@ -50,7 +50,7 @@ void ChannelResponder::onErrorImpl(folly::exception_wrapper ex) noexcept {
 void ChannelResponder::requestImpl(size_t n) noexcept {
   switch (state_) {
     case State::RESPONDING:
-      ConsumerMixin::generateRequest(n);
+      ConsumerBase::generateRequest(n);
       break;
     case State::CLOSED:
       break;
@@ -80,7 +80,7 @@ void ChannelResponder::endStream(StreamCompletionSignal signal) {
       break;
   }
   terminatePublisher(signal);
-  ConsumerMixin::endStream(signal);
+  ConsumerBase::endStream(signal);
 }
 
 void ChannelResponder::processInitialFrame(Frame_REQUEST_CHANNEL&& frame) {
@@ -134,6 +134,6 @@ void ChannelResponder::onNextFrame(Frame_CANCEL&& frame) {
 }
 
 void ChannelResponder::onNextFrame(Frame_REQUEST_N&& frame) {
-  PublisherMixin::processRequestN(frame.requestN_);
+  PublisherBase::processRequestN(frame.requestN_);
 }
 }

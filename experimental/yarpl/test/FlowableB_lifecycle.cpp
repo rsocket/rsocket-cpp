@@ -48,7 +48,7 @@ auto getFlowableBwithHandler(Scheduler& scheduler) {
   return FlowableB<long>(Handler()).subscribeOn(scheduler).take(50);
 }
 
-TEST(FlowableBLifecycle, AsStackAllocated) {
+TEST(FlowableBLifecycle, DISABLED_AsStackAllocated) {
   ThreadScheduler scheduler;
 
   /**

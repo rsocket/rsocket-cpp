@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 #include "yarpl/Observable.h"
+#include "yarpl/Tuple.h"
 
 using namespace yarpl::observable;
 
@@ -63,30 +64,12 @@ TEST(Observable, OnError) {
   EXPECT_EQ("something broke!", errorMessage);
 }
 
+  static std::atomic<int> instanceCount;
+
 /**
  * Assert that all items passed through the Observable get destroyed
  */
 TEST(Observable, ItemsCollectedSynchronously) {
-  static std::atomic<int> instanceCount;
-
-  struct Tuple {
-    const int a;
-    const int b;
-
-    Tuple(const int a, const int b) : a(a), b(b) {
-      std::cout << "Tuple created!!" << std::endl;
-      instanceCount++;
-    }
-    Tuple(const Tuple& t) : a(t.a), b(t.b) {
-      std::cout << "Tuple copy constructed!!" << std::endl;
-      instanceCount++;
-    }
-    ~Tuple() {
-      std::cout << "Tuple destroyed!!" << std::endl;
-      instanceCount--;
-    }
-  };
-
   auto a = Observables::unsafeCreate<Tuple>(
       [](std::unique_ptr<Observer<Tuple>> obs) {
         auto s = Subscriptions::create();
@@ -107,7 +90,7 @@ TEST(Observable, ItemsCollectedSynchronously) {
   std::cout << "Finished ... remaining instances == " << instanceCount
             << std::endl;
 
-  EXPECT_EQ(0, instanceCount);
+  EXPECT_EQ(0, Tuple::instanceCount);
   std::cout << "-----------------------------" << std::endl;
 }
 
@@ -119,27 +102,6 @@ TEST(Observable, ItemsCollectedSynchronously) {
  * in a Vector which could then be consumed on another thread.
  */
 TEST(Observable, ItemsCollectedAsynchronously) {
-  static std::atomic<int> createdCount;
-  static std::atomic<int> destroyedCount;
-
-  struct Tuple {
-    const int a;
-    const int b;
-
-    Tuple(const int a, const int b) : a(a), b(b) {
-      std::cout << "Tuple " << a << " created!!" << std::endl;
-      createdCount++;
-    }
-    Tuple(const Tuple& t) : a(t.a), b(t.b) {
-      std::cout << "Tuple " << a << " copy constructed!!" << std::endl;
-      createdCount++;
-    }
-    ~Tuple() {
-      std::cout << "Tuple " << a << " destroyed!!" << std::endl;
-      destroyedCount++;
-    }
-  };
-
   // scope this so we can check destruction of Vector after this block
   {
     auto a = Observables::unsafeCreate<Tuple>(
@@ -166,16 +128,16 @@ TEST(Observable, ItemsCollectedAsynchronously) {
     }));
 
     // expect that 3 instances were originally created, then 3 more when copying
-    EXPECT_EQ(6, createdCount);
+    EXPECT_EQ(6, Tuple::createdCount);
     // expect that 3 instances still exist in the vector, so only 3 destroyed so
     // far
-    EXPECT_EQ(3, destroyedCount);
+    EXPECT_EQ(3, Tuple::destroyedCount);
 
     std::cout << "Leaving block now so Vector should release Tuples..."
               << std::endl;
   }
 
-  EXPECT_EQ(0, (createdCount - destroyedCount));
+  EXPECT_EQ(0, Tuple::instanceCount);
   std::cout << "-----------------------------" << std::endl;
 }
 
@@ -194,17 +156,9 @@ class TakeObserver : public Observer<int> {
   void onSubscribe(Subscription* s) override {
     subscription_ = s;
   }
+
   void onNext(const int& value) override {
     v.push_back(value);
-    if (++count >= limit) {
-      //      std::cout << "Cancelling subscription after receiving " << count
-      //                << " items." << std::endl;
-      subscription_->cancel();
-    }
-  }
-
-  void onNext(int&& value) override {
-    v.emplace_back(std::move(value));
     if (++count >= limit) {
       //      std::cout << "Cancelling subscription after receiving " << count
       //                << " items." << std::endl;

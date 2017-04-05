@@ -37,13 +37,6 @@ class TakeSubscriber : public reactivestreams_yarpl::Subscriber<T> {
     }
   }
 
-  void onNext(T&& t) {
-    downstream_->onNext(t);
-    if (--toTake_ == 0) {
-      completeAndCancel();
-    }
-  }
-
   void onComplete() {
     downstream_->onComplete();
   }

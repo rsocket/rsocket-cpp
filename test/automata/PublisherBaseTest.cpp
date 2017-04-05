@@ -2,7 +2,7 @@
 
 #include "src/StandardReactiveSocket.h"
 #include "src/SubscriberBase.h"
-#include "src/mixins/PublisherMixin.h"
+#include "src/automata/PublisherBase.h"
 #include "test/MockRequestHandler.h"
 
 #include <gmock/gmock.h>
@@ -13,11 +13,11 @@ using namespace ::reactivesocket;
 
 namespace {
 
-class UserSubscriber : public SubscriberBase, private PublisherMixin {
+class UserSubscriber : public SubscriberBase, private PublisherBase {
  public:
-  UserSubscriber() : ExecutorBase(inlineExecutor()), PublisherMixin(5) {}
-  using PublisherMixin::pausePublisherStream;
-  using PublisherMixin::publisherSubscribe;
+  UserSubscriber() : ExecutorBase(inlineExecutor()), PublisherBase(5) {}
+  using PublisherBase::pausePublisherStream;
+  using PublisherBase::publisherSubscribe;
 
  protected:
   void onSubscribeImpl(
@@ -49,7 +49,7 @@ class UserSubscription : public Subscription {
 };
 }
 
-TEST(PublisherMixinTest, GetsPassedOriginalSubscription) {
+TEST(PublisherBaseTest, GetsPassedOriginalSubscription) {
   MockRequestHandler requestHandler;
   auto subscription = std::make_shared<UserSubscription>();
   auto userSubscriber = std::make_shared<UserSubscriber>();
