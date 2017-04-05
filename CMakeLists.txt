@@ -116,6 +116,9 @@ add_library(
   src/automata/ChannelRequester.h
   src/automata/ChannelResponder.cpp
   src/automata/ChannelResponder.h
+  src/automata/ConsumerBase.cpp
+  src/automata/ConsumerBase.h
+  src/automata/PublisherBase.h
   src/automata/RequestResponseRequester.cpp
   src/automata/RequestResponseRequester.h
   src/automata/RequestResponseResponder.cpp
@@ -151,11 +154,10 @@ add_library(
   src/framed/FramedWriter.cpp
   src/framed/FramedWriter.h
   src/FrameProcessor.h
+  src/FrameSerializer.cpp
+  src/FrameSerializer.h
   src/FrameTransport.cpp
   src/FrameTransport.h
-  src/automata/ConsumerBase.cpp
-  src/automata/ConsumerBase.h
-  src/automata/PublisherBase.h
   src/NullRequestHandler.cpp
   src/NullRequestHandler.h
   src/Payload.cpp
@@ -182,8 +184,6 @@ add_library(
   src/SubscriptionBase.h
   src/tcp/TcpDuplexConnection.cpp
   src/tcp/TcpDuplexConnection.h
-  src/FrameSerializer.cpp
-  src/FrameSerializer.h
   src/versions/FrameSerializer_v0.cpp
   src/versions/FrameSerializer_v0.h
   src/versions/FrameSerializer_v0_1.cpp

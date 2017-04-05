@@ -119,11 +119,11 @@ class Flowable : public reactivestreams_yarpl::Publisher<T>,
   Flowable() = default;
 
  private:
-   template<typename Function>
-   class Derived;
+  template <typename Function>
+  class Derived;
 };
 
-template<typename T>
+template <typename T>
 template <typename Function>
 class Flowable<T>::Derived : public Flowable<T> {
  public:

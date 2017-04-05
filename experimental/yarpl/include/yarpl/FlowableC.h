@@ -120,7 +120,7 @@ class FlowableC<T>::Derived : public FlowableC<T> {
  public:
   explicit Derived(Function&& function)
       : function_(
-        std::make_unique<Function>(std::forward<Function>(function))) {}
+            std::make_unique<Function>(std::forward<Function>(function))) {}
 
   void subscribe(std::unique_ptr<Subscriber> subscriber) override {
     (*function_)(std::move(subscriber));

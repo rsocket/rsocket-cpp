@@ -64,7 +64,7 @@ TEST(Observable, OnError) {
   EXPECT_EQ("something broke!", errorMessage);
 }
 
-  static std::atomic<int> instanceCount;
+static std::atomic<int> instanceCount;
 
 /**
  * Assert that all items passed through the Observable get destroyed
