@@ -11,8 +11,8 @@
 int main() {
   std::cout << "*** Run yarpl::flowable::v examples ***" << std::endl;
   FlowableVExamples::run();
-  // std::cout << "*** Run ObservableExamples ***" << std::endl;
-  // ObservableExamples::run();
+  //  std::cout << "*** Run ObservableExamples ***" << std::endl;
+  //  ObservableExamples::run();
   //  std::cout << "*** Run FlowableExamples ***" << std::endl;
   //  FlowableExamples::run();
   //  std::cout << "*** Run FlowableExamplesA ***" << std::endl;
