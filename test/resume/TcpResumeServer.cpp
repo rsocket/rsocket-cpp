@@ -133,16 +133,15 @@ class ServerRequestHandler : public DefaultRequestHandler {
   std::shared_ptr<StreamState> streamState_;
 };
 
-class MyServerConnectionAcceptor : public ServerConnectionAcceptor {
- public:
-  MyServerConnectionAcceptor(EventBase& eventBase, std::shared_ptr<Stats> stats)
+class MyConnectionHandler : public ConnectionHandler {
+public:
+  MyConnectionHandler(EventBase& eventBase, std::shared_ptr<Stats> stats)
       : eventBase_(eventBase), stats_(std::move(stats)) {}
 
   void setupNewSocket(
       std::shared_ptr<FrameTransport> frameTransport,
-      ConnectionSetupPayload setupPayload,
-      folly::Executor& executor) override {
-    LOG(INFO) << "MyServerConnectionAcceptor::setupNewSocket " << setupPayload;
+      ConnectionSetupPayload setupPayload) override {
+    LOG(INFO) << "MyConnectionHandler::setupNewSocket " << setupPayload;
 
     std::unique_ptr<RequestHandler> requestHandler =
         std::make_unique<ServerRequestHandler>(nullptr);
@@ -164,33 +163,41 @@ class MyServerConnectionAcceptor : public ServerConnectionAcceptor {
 
     if (g_reactiveSockets.empty()) {
       LOG(INFO) << "requestStream";
-      rs->requestStream(
-          Payload("from server"), std::make_shared<PrintSubscriber>());
+      // not permited to make requests at this moment
+      // rs->requestStream(
+      //     Payload("from server"), std::make_shared<PrintSubscriber>());
     }
 
     LOG(INFO) << "serverConnecting ...";
-    rs->serverConnect(std::move(frameTransport), true);
+    rs->serverConnect(std::move(frameTransport), setupPayload);
 
     LOG(INFO) << "RS " << rs.get();
 
     g_reactiveSockets.emplace_back(std::move(rs), setupPayload.token);
   }
 
-  void resumeSocket(
+  bool resumeSocket(
       std::shared_ptr<FrameTransport> frameTransport,
-      ResumeParameters resumeParams,
-      folly::Executor& executor) override {
-    LOG(INFO) << "MyServerConnectionAcceptor::resumeSocket resume token ["
+      ResumeParameters resumeParams) override {
+    LOG(INFO) << "MyConnectionHandler::resumeSocket resume token ["
               << resumeParams.token << "]";
 
-    CHECK(g_reactiveSockets.size() == 1);
+    CHECK_EQ(1, g_reactiveSockets.size());
     CHECK(g_reactiveSockets[0].second == resumeParams.token);
 
     LOG(INFO) << "tryResumeServer...";
     auto result = g_reactiveSockets[0].first->tryResumeServer(
         frameTransport, resumeParams);
     LOG(INFO) << "resume " << (result ? "SUCCEEDED" : "FAILED");
+
+    return true;
   }
+
+  void connectionError(
+      std::shared_ptr<FrameTransport>,
+      folly::exception_wrapper ex) override {
+    LOG(WARNING) << "Connection failed: " << ex.what();
+  };
 
  private:
   EventBase& eventBase_;
@@ -201,8 +208,10 @@ class Callback : public AsyncServerSocket::AcceptCallback {
  public:
   Callback(EventBase& eventBase, std::shared_ptr<Stats> stats)
       : eventBase_(eventBase),
-        stats_(stats),
-        connectionAcceptor_(eventBase, stats) {}
+        stats_(std::move(stats)),
+        connectionHandler_(
+            std::make_shared<MyConnectionHandler>(eventBase, stats)),
+        connectionAcceptor_(ProtocolVersion::Unknown) {}
 
   virtual void connectionAccepted(
       int fd,
@@ -212,15 +221,12 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     auto socket =
         folly::AsyncSocket::UniquePtr(new AsyncSocket(&eventBase_, fd));
 
-    std::unique_ptr<DuplexConnection> connection =
-        std::make_unique<TcpDuplexConnection>(
-            std::move(socket), inlineExecutor(), stats_);
-    std::unique_ptr<DuplexConnection> framedConnection =
-        std::make_unique<FramedDuplexConnection>(
-            std::move(connection), eventBase_);
+    auto connection = std::make_unique<TcpDuplexConnection>(
+        std::move(socket), inlineExecutor(), stats_);
+    auto framedConnection = std::make_unique<FramedDuplexConnection>(
+        std::move(connection), ProtocolVersion::Unknown, eventBase_);
 
-    connectionAcceptor_.acceptConnection(
-        std::move(framedConnection), eventBase_);
+    connectionAcceptor_.accept(std::move(framedConnection), connectionHandler_);
   }
 
   virtual void acceptError(const std::exception& ex) noexcept override {
@@ -238,7 +244,8 @@ class Callback : public AsyncServerSocket::AcceptCallback {
   EventBase& eventBase_;
   std::shared_ptr<Stats> stats_;
   bool shuttingDown{false};
-  MyServerConnectionAcceptor connectionAcceptor_;
+  std::shared_ptr<MyConnectionHandler> connectionHandler_;
+  ServerConnectionAcceptor connectionAcceptor_;
 };
 }
 

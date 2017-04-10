@@ -3,6 +3,9 @@
 #pragma once
 
 #include <folly/io/async/EventBase.h>
+
+#include "yarpl/Flowable.h"
+
 #include "src/ReactiveStreamsCompat.h"
 #include "src/StandardReactiveSocket.h"
 
@@ -42,6 +45,14 @@ class RSocketRequester {
       reactivesocket::Payload payload,
       std::shared_ptr<reactivesocket::Subscriber<reactivesocket::Payload>>
           responseSink);
+
+  /**
+   * TODO: This is a temporary hack to bridge instances of the old
+   * reactivesocket::Subscri{ber,ption} to
+   * reactivestreams_yarpl::Subscri{ber,ption}.
+   */
+  std::shared_ptr<yarpl::flowable::Flowable<reactivesocket::Payload>>
+  requestStream(reactivesocket::Payload request);
 
   /**
     * Start a channel (streams in both directions).

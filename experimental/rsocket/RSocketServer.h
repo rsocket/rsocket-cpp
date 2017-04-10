@@ -78,7 +78,8 @@ class RSocketServer {
   //////////////////////////////////////////////////////////////////////////////
 
   std::unique_ptr<ConnectionAcceptor> lazyAcceptor_;
-  std::unique_ptr<reactivesocket::ServerConnectionAcceptor> acceptor_;
+  reactivesocket::ServerConnectionAcceptor acceptor_;
+  std::shared_ptr<reactivesocket::ConnectionHandler> connectionHandler_;
 
   /// Set of currently open ReactiveSockets.
   folly::Synchronized<

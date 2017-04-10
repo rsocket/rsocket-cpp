@@ -10,10 +10,13 @@ class FrameSerializerV1_0 : public FrameSerializer {
  public:
   constexpr static const ProtocolVersion Version = ProtocolVersion(1, 0);
   constexpr static const size_t kFrameHeaderSize = 6; // bytes
+  constexpr static const size_t kMinBytesNeededForAutodetection = 10; // bytes
 
   ProtocolVersion protocolVersion() override;
 
-  static ProtocolVersion detectProtocolVersion(const folly::IOBuf& firstFrame);
+  static ProtocolVersion detectProtocolVersion(
+      const folly::IOBuf& firstFrame,
+      size_t skipBytes = 0);
 
   FrameType peekFrameType(const folly::IOBuf& in) override;
   folly::Optional<StreamId> peekStreamId(const folly::IOBuf& in) override;

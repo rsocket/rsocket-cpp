@@ -38,11 +38,12 @@ TEST(ConnectionAutomatonTest, InvalidFrameHeader) {
   // Dump 1 invalid frame and expect an error
 
   auto inputSubscription = std::make_shared<MockSubscription>();
+  auto testConnectionOutput = testConnection->getOutput();
 
   EXPECT_CALL(*inputSubscription, request_(_))
       .Times(AtMost(2))
       .WillOnce(Invoke([&](size_t n) {
-        testConnection->getOutput()->onNext(makeInvalidFrameHeader());
+        testConnectionOutput->onNext(makeInvalidFrameHeader());
       }))
       .WillOnce(
           /*this call is because of async scheduling on executor*/ Return());
@@ -69,7 +70,7 @@ TEST(ConnectionAutomatonTest, InvalidFrameHeader) {
   EXPECT_CALL(*testOutputSubscriber, onError_(_)).Times(0);
 
   testConnection->setInput(testOutputSubscriber);
-  testConnection->getOutput()->onSubscribe(inputSubscription);
+  testConnectionOutput->onSubscribe(inputSubscription);
 
   std::shared_ptr<ConnectionAutomaton> connectionAutomaton;
   connectionAutomaton = std::make_shared<ConnectionAutomaton>(
@@ -79,13 +80,13 @@ TEST(ConnectionAutomatonTest, InvalidFrameHeader) {
       Stats::noop(),
       nullptr,
       ReactiveSocketMode::CLIENT);
-  connectionAutomaton->setFrameSerializer(
-      FrameSerializer::createCurrentVersion());
   connectionAutomaton->connect(
-      std::make_shared<FrameTransport>(std::move(automatonConnection)), true);
+      std::make_shared<FrameTransport>(std::move(automatonConnection)),
+      true,
+      FrameSerializer::getCurrentProtocolVersion());
   connectionAutomaton->close(
       folly::exception_wrapper(), StreamCompletionSignal::CONNECTION_END);
-  testConnection->getOutput()->onComplete();
+  testConnectionOutput->onComplete();
 }
 
 static void terminateTest(
@@ -99,6 +100,7 @@ static void terminateTest(
   automatonConnection->connectTo(*testConnection);
 
   auto inputSubscription = std::make_shared<MockSubscription>();
+  auto testConnectionOutput = testConnection->getOutput();
 
   if (!inOnSubscribe) {
     auto&& expexctation =
@@ -106,9 +108,9 @@ static void terminateTest(
             .Times(AtMost(2))
             .WillOnce(Invoke([&](size_t n) {
               if (inRequest) {
-                testConnection->getOutput()->onComplete();
+                testConnectionOutput->onComplete();
               } else {
-                testConnection->getOutput()->onNext(makeInvalidFrameHeader());
+                testConnectionOutput->onNext(makeInvalidFrameHeader());
               }
             }));
 
@@ -143,10 +145,8 @@ static void terminateTest(
     }
   }));
 
-  auto testOutput = testConnection->getOutput();
-
   testConnection->setInput(testOutputSubscriber);
-  testConnection->getOutput()->onSubscribe(inputSubscription);
+  testConnectionOutput->onSubscribe(inputSubscription);
 
   std::shared_ptr<ConnectionAutomaton> connectionAutomaton;
   connectionAutomaton = std::make_shared<ConnectionAutomaton>(
@@ -156,15 +156,15 @@ static void terminateTest(
       Stats::noop(),
       nullptr,
       ReactiveSocketMode::CLIENT);
-  connectionAutomaton->setFrameSerializer(
-      FrameSerializer::createCurrentVersion());
   connectionAutomaton->connect(
-      std::make_shared<FrameTransport>(std::move(automatonConnection)), true);
+      std::make_shared<FrameTransport>(std::move(automatonConnection)),
+      true,
+      FrameSerializer::getCurrentProtocolVersion());
   connectionAutomaton->close(
       folly::exception_wrapper(), StreamCompletionSignal::CONNECTION_END);
 
   if (!inRequest) {
-    testConnection->getOutput()->onComplete();
+    testConnectionOutput->onComplete();
   }
 }
 
@@ -195,6 +195,7 @@ TEST(ConnectionAutomatonTest, RefuseFrame) {
 
   auto framedTestConnection = std::make_unique<FramedDuplexConnection>(
       std::move(testConnection), inlineExecutor());
+  auto framedTestConnectionOutput = framedTestConnection->getOutput();
 
   // dump 3 frames to ConnectionAutomaton
   // the first frame should be refused and the connection closed
@@ -219,8 +220,8 @@ TEST(ConnectionAutomatonTest, RefuseFrame) {
       .Times(AtMost(2))
       .InSequence(s)
       .WillOnce(Invoke([&](size_t n) {
-        auto framedWriter = std::dynamic_pointer_cast<FramedWriter>(
-            framedTestConnection->getOutput());
+        auto framedWriter =
+            std::dynamic_pointer_cast<FramedWriter>(framedTestConnectionOutput);
         CHECK(framedWriter);
         auto frameSerializer = FrameSerializer::createCurrentVersion();
         std::vector<std::unique_ptr<folly::IOBuf>> frames;
@@ -245,7 +246,7 @@ TEST(ConnectionAutomatonTest, RefuseFrame) {
   EXPECT_CALL(*testOutputSubscriber, onComplete_()).Times(1).InSequence(s);
 
   framedTestConnection->setInput(testOutputSubscriber);
-  framedTestConnection->getOutput()->onSubscribe(inputSubscription);
+  framedTestConnectionOutput->onSubscribe(inputSubscription);
 
   std::shared_ptr<ConnectionAutomaton> connectionAutomaton;
   connectionAutomaton = std::make_shared<ConnectionAutomaton>(
@@ -255,11 +256,10 @@ TEST(ConnectionAutomatonTest, RefuseFrame) {
       Stats::noop(),
       nullptr,
       ReactiveSocketMode::CLIENT);
-  connectionAutomaton->setFrameSerializer(
-      FrameSerializer::createCurrentVersion());
   connectionAutomaton->connect(
       std::make_shared<FrameTransport>(std::move(framedAutomatonConnection)),
-      true);
+      true,
+      FrameSerializer::getCurrentProtocolVersion());
   connectionAutomaton->close(
       folly::exception_wrapper(), StreamCompletionSignal::CONNECTION_END);
 }

@@ -9,14 +9,50 @@
 #include "src/FrameTransport.h"
 #include "src/Stats.h"
 
+#include <iostream>
+
 namespace reactivesocket {
 
-ServerConnectionAcceptor::ServerConnectionAcceptor() {
-  auto protocolVersion = FrameSerializer::getCurrentProtocolVersion();
+class OneFrameProcessor
+    : public FrameProcessor,
+      public std::enable_shared_from_this<OneFrameProcessor> {
+ public:
+  OneFrameProcessor(
+      ServerConnectionAcceptor& acceptor,
+      std::shared_ptr<FrameTransport> transport,
+      std::shared_ptr<ConnectionHandler> connectionHandler)
+      : acceptor_(acceptor),
+        transport_(std::move(transport)),
+        connectionHandler_(std::move(connectionHandler)) {
+    DCHECK(transport_);
+  }
+
+  void processFrame(std::unique_ptr<folly::IOBuf> buf) override {
+    acceptor_.processFrame(connectionHandler_, transport_, std::move(buf));
+    // no more code here as the instance might be gone by now
+  }
+
+  void onTerminal(folly::exception_wrapper ex) override {
+    acceptor_.closeAndRemoveConnection(
+      connectionHandler_,
+      transport_,
+      std::move(ex));
+    // no more code here as the instance might be gone by now
+  }
+
+ private:
+  ServerConnectionAcceptor& acceptor_;
+  std::shared_ptr<FrameTransport> transport_;
+  std::shared_ptr<ConnectionHandler> connectionHandler_;
+};
+
+ServerConnectionAcceptor::ServerConnectionAcceptor(
+    ProtocolVersion protocolVersion) {
   // if protocolVersion is unknown we will try to autodetect the version
   // with the first frame
   if (protocolVersion != ProtocolVersion::Unknown) {
-    frameSerializer_ = FrameSerializer::createFrameSerializer(protocolVersion);
+    defaultFrameSerializer_ =
+        FrameSerializer::createFrameSerializer(protocolVersion);
   }
 }
 
@@ -27,52 +63,87 @@ ServerConnectionAcceptor::~ServerConnectionAcceptor() {
 }
 
 void ServerConnectionAcceptor::processFrame(
+    std::shared_ptr<ConnectionHandler> connectionHandler,
     std::shared_ptr<FrameTransport> transport,
-    std::unique_ptr<folly::IOBuf> frame,
-    folly::Executor& executor) {
-  removeConnection(transport);
-
-  if (!ensureOrAutodetectFrameSerializer(*frame)) {
-    transport->close(std::runtime_error(
-        "unable to detect protocol version in connection acceptor"));
+    std::unique_ptr<folly::IOBuf> frame) {
+  auto frameSerializer = getOrAutodetectFrameSerializer(*frame);
+  if (!frameSerializer) {
+    closeAndRemoveConnection(
+      connectionHandler,
+      transport,
+      std::runtime_error("Unable to detect protocol version"));
     return;
   }
 
-  switch (frameSerializer_->peekFrameType(*frame)) {
+  switch (frameSerializer->peekFrameType(*frame)) {
     case FrameType::SETUP: {
       Frame_SETUP setupFrame;
-      if (!frameSerializer_->deserializeFrom(setupFrame, std::move(frame))) {
+      if (!frameSerializer->deserializeFrom(setupFrame, std::move(frame))) {
         transport->outputFrameOrEnqueue(
-            frameSerializer_->serializeOut(Frame_ERROR::invalidFrame()));
-        transport->close(folly::exception_wrapper());
+            frameSerializer->serializeOut(Frame_ERROR::invalidFrame()));
+        closeAndRemoveConnection(
+          connectionHandler,
+          std::move(transport),
+          std::runtime_error("invalid"));
         break;
       }
 
       ConnectionSetupPayload setupPayload;
       setupFrame.moveToSetupPayload(setupPayload);
 
-      transport->setFrameProcessor(nullptr);
-      setupNewSocket(std::move(transport), std::move(setupPayload), executor);
+      removeConnection(transport);
+
+      if (frameSerializer->protocolVersion() != setupPayload.protocolVersion) {
+        transport->outputFrameOrEnqueue(frameSerializer->serializeOut(
+            Frame_ERROR::badSetupFrame("invalid protocol version")));
+        transport->close(folly::exception_wrapper());
+        break;
+      }
+
+      connectionHandler->setupNewSocket(
+        std::move(transport),
+        std::move(setupPayload));
       break;
     }
 
     case FrameType::RESUME: {
       Frame_RESUME resumeFrame;
-      if (!frameSerializer_->deserializeFrom(resumeFrame, std::move(frame))) {
+      if (!frameSerializer->deserializeFrom(resumeFrame, std::move(frame))) {
         transport->outputFrameOrEnqueue(
-            frameSerializer_->serializeOut(Frame_ERROR::invalidFrame()));
-        transport->close(folly::exception_wrapper());
+            frameSerializer->serializeOut(Frame_ERROR::invalidFrame()));
+        closeAndRemoveConnection(
+          connectionHandler,
+          std::move(transport),
+          std::runtime_error("invalid"));
+      }
+
+      ResumeParameters resumeParams(
+          std::move(resumeFrame.token_),
+          resumeFrame.lastReceivedServerPosition_,
+          resumeFrame.clientPosition_,
+          ProtocolVersion(
+              resumeFrame.versionMajor_, resumeFrame.versionMinor_));
+
+      if (frameSerializer->protocolVersion() != resumeParams.protocolVersion) {
+        transport->outputFrameOrEnqueue(frameSerializer->serializeOut(
+            Frame_ERROR::badSetupFrame("invalid protocol version")));
+        closeAndRemoveConnection(
+            connectionHandler,
+            std::move(transport),
+            std::runtime_error("invalid protocol version"));
         break;
       }
 
-      transport->setFrameProcessor(nullptr);
-      resumeSocket(
-          std::move(transport),
-          ResumeParameters(
-              std::move(resumeFrame.token_),
-              resumeFrame.lastReceivedServerPosition_,
-              resumeFrame.clientPosition_),
-          executor);
+      auto triedResume =
+          connectionHandler->resumeSocket(transport, std::move(resumeParams));
+      if (triedResume) {
+        removeConnection(transport);
+      } else {
+        transport->outputFrameOrEnqueue(frameSerializer->serializeOut(
+            Frame_ERROR::connectionError("can not resume")));
+        transport->close(std::runtime_error("can not resume"));
+        connections_.erase(transport);
+      }
     } break;
 
     case FrameType::CANCEL:
@@ -91,75 +162,61 @@ void ServerConnectionAcceptor::processFrame(
     case FrameType::EXT:
     default: {
       transport->outputFrameOrEnqueue(
-          frameSerializer_->serializeOut(Frame_ERROR::unexpectedFrame()));
-      transport->close(folly::exception_wrapper());
+          frameSerializer->serializeOut(Frame_ERROR::unexpectedFrame()));
+      closeAndRemoveConnection(
+        connectionHandler,
+        std::move(transport),
+        std::runtime_error("invalid"));
       break;
     }
   }
 }
 
-void ServerConnectionAcceptor::removeConnection(
-    const std::shared_ptr<FrameTransport>& transport) {
-  connections_.erase(transport);
-}
-
-class OneFrameProcessor
-    : public FrameProcessor,
-      public std::enable_shared_from_this<OneFrameProcessor> {
- public:
-  OneFrameProcessor(
-      ServerConnectionAcceptor& acceptor,
-      std::shared_ptr<FrameTransport> transport,
-      folly::Executor& executor)
-      : acceptor_(acceptor),
-        transport_(std::move(transport)),
-        executor_(executor) {
-    DCHECK(transport_);
-  }
-
-  void processFrame(std::unique_ptr<folly::IOBuf> buf) override {
-    acceptor_.processFrame(transport_, std::move(buf), executor_);
-    // no more code here as the instance might be gone by now
-  }
-
-  void onTerminal(folly::exception_wrapper ex) override {
-    acceptor_.removeConnection(transport_);
-    transport_->close(std::move(ex));
-    // no more code here as the instance might be gone by now
-  }
-
- private:
-  ServerConnectionAcceptor& acceptor_;
-  std::shared_ptr<FrameTransport> transport_;
-  folly::Executor& executor_;
-};
-
-void ServerConnectionAcceptor::acceptConnection(
+void ServerConnectionAcceptor::accept(
     std::unique_ptr<DuplexConnection> connection,
-    folly::Executor& executor) {
+    std::shared_ptr<ConnectionHandler> connectionHandler) {
   auto transport = std::make_shared<FrameTransport>(std::move(connection));
-  auto processor =
-      std::make_shared<OneFrameProcessor>(*this, transport, executor);
+  auto processor = std::make_shared<OneFrameProcessor>(
+    *this,
+    transport,
+    std::move(connectionHandler));
   connections_.insert(transport);
   // transport can receive frames right away
   transport->setFrameProcessor(std::move(processor));
 }
 
-bool ServerConnectionAcceptor::ensureOrAutodetectFrameSerializer(
+std::shared_ptr<FrameSerializer>
+ServerConnectionAcceptor::getOrAutodetectFrameSerializer(
     const folly::IOBuf& firstFrame) {
-  if (frameSerializer_) {
-    return true;
+  if (defaultFrameSerializer_) {
+    return defaultFrameSerializer_;
   }
 
   auto serializer = FrameSerializer::createAutodetectedSerializer(firstFrame);
   if (!serializer) {
     LOG(ERROR) << "unable to detect protocol version";
-    return false;
+    return nullptr;
   }
 
   VLOG(2) << "detected protocol version" << serializer->protocolVersion();
-  frameSerializer_ = std::move(serializer);
-  return true;
+  return std::move(serializer);
+}
+
+void ServerConnectionAcceptor::closeAndRemoveConnection(
+    const std::shared_ptr<ConnectionHandler>& connectionHandler,
+    std::shared_ptr<FrameTransport> transport,
+    folly::exception_wrapper ex) {
+  transport->close(ex);
+  connections_.erase(transport);
+  connectionHandler->connectionError(
+    std::move(transport),
+    std::move(ex));
+}
+
+void ServerConnectionAcceptor::removeConnection(
+    const std::shared_ptr<FrameTransport>& transport) {
+  transport->setFrameProcessor(nullptr);
+  connections_.erase(transport);
 }
 
 } // reactivesocket

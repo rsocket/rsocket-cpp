@@ -2,6 +2,7 @@
 
 #include "src/Common.h"
 #include <folly/Random.h>
+#include <folly/String.h>
 #include <folly/io/IOBuf.h>
 #include <random>
 
@@ -10,6 +11,10 @@ namespace reactivesocket {
 namespace {
 constexpr const char* HEX_CHARS = {"0123456789abcdef"};
 }
+
+constexpr const ProtocolVersion ProtocolVersion::Unknown = ProtocolVersion(
+    std::numeric_limits<uint16_t>::max(),
+    std::numeric_limits<uint16_t>::max());
 
 static const char* getTerminatingSignalErrorMessage(int terminatingSignal) {
   switch (static_cast<StreamCompletionSignal>(terminatingSignal)) {
@@ -101,4 +106,7 @@ std::ostream& operator<<(
   return out;
 }
 
+std::string hexDump(folly::StringPiece s) {
+  return folly::hexDump(s.data(), s.size());
+}
 } // reactivesocket

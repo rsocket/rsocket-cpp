@@ -229,6 +229,7 @@ add_executable(
   test/ReactiveSocketResumabilityTest.cpp
   test/AllowanceSemaphoreTest.cpp
   test/ResumeIdentificationTokenTest.cpp
+  test/ServerConnectionAcceptorTest.cpp
   test/PayloadTest.cpp
   test/ResumeCacheTest.cpp
   test/StreamStateTest.cpp)

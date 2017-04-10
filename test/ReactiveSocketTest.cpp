@@ -995,7 +995,8 @@ TEST(ReactiveSocketTest, CloseWithError) {
   });
 
   serverSock->serverConnect(
-      std::make_shared<FrameTransport>(std::move(serverConn)), false);
+      std::make_shared<FrameTransport>(std::move(serverConn)),
+      SocketParameters(false, FrameSerializer::getCurrentProtocolVersion()));
 }
 
 class ReactiveSocketIgnoreRequestTest : public testing::Test {
@@ -1234,7 +1235,9 @@ class ReactiveSocketRegressionTest : public Test {
     socket_ = StandardReactiveSocket::fromServerConnection(
         defaultExecutor(),
         std::move(connectionPtr),
-        std::move(requestHandlerPtr_));
+        std::move(requestHandlerPtr_),
+        Stats::noop(),
+        SocketParameters(false, FrameSerializer::getCurrentProtocolVersion()));
   }
 
   MockRequestHandler& requestHandler_;

@@ -17,8 +17,14 @@ DEFINE_int32(port, 9898, "port to connect to");
 int main(int argc, char* argv[]) {
   folly::init(&argc, &argv);
 
+  TcpConnectionAcceptor::Options opts;
+  opts.port = FLAGS_port;
+  opts.threads = 2;
+
   // RSocket server accepting on TCP
-  auto rs = RSocket::createServer(TcpConnectionAcceptor::create(FLAGS_port));
+  auto rs = RSocket::createServer(
+      std::make_unique<TcpConnectionAcceptor>(std::move(opts)));
+
   // global request handler
   auto handler = std::make_shared<HelloStreamRequestHandler>();
 

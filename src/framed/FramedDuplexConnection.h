@@ -15,12 +15,13 @@ struct ProtocolVersion;
 
 class FramedDuplexConnection : public virtual DuplexConnection {
  public:
+  // TODO: remove this ctor overload
   FramedDuplexConnection(
       std::unique_ptr<DuplexConnection> connection,
       folly::Executor& executor);
   FramedDuplexConnection(
       std::unique_ptr<DuplexConnection> connection,
-      const ProtocolVersion& protocolVersion,
+      ProtocolVersion protocolVersion,
       folly::Executor& executor);
 
   ~FramedDuplexConnection();

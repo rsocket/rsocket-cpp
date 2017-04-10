@@ -259,7 +259,7 @@ class ServerSideConcurrencyTest : public testing::Test {
           std::move(serverConn),
           std::move(serverHandler),
           Stats::noop(),
-          false);
+          SocketParameters(false, ProtocolVersion::Unknown));
     });
 
     EXPECT_CALL(*clientInput, onSubscribe_(_))
@@ -451,6 +451,7 @@ class InitialRequestNDeliveredTest : public testing::Test {
     testConnection = std::make_unique<FramedDuplexConnection>(
         std::move(testInlineConnection), inlineExecutor());
 
+    testConnectionSub = testConnection->getOutput();
     testInputSubscription = std::make_shared<MockSubscription>();
 
     auto testOutputSubscriber =
@@ -465,7 +466,7 @@ class InitialRequestNDeliveredTest : public testing::Test {
     }));
 
     testConnection->setInput(testOutputSubscriber);
-    testConnection->getOutput()->onSubscribe(testInputSubscription);
+    testConnectionSub->onSubscribe(testInputSubscription);
 
     validatingSubscription = std::make_shared<MockSubscription>();
 
@@ -512,7 +513,7 @@ class InitialRequestNDeliveredTest : public testing::Test {
             std::move(serverSocketConnection), inlineExecutor()),
         std::move(serverHandler),
         Stats::noop(),
-        false);
+        SocketParameters(false, ProtocolVersion::Unknown));
 
     Frame_SETUP frameSetup(
         FrameFlags::EMPTY,
@@ -525,7 +526,7 @@ class InitialRequestNDeliveredTest : public testing::Test {
         "",
         Payload());
     FrameSerializerV0_1 frameSerializer;
-    testConnection->getOutput()->onNext(
+    testConnectionSub->onNext(
         frameSerializer.serializeOut(std::move(frameSetup)));
   }
 
@@ -541,6 +542,7 @@ class InitialRequestNDeliveredTest : public testing::Test {
   std::unique_ptr<StandardReactiveSocket> serverSocket;
   std::shared_ptr<MockSubscription> testInputSubscription;
   std::unique_ptr<DuplexConnection> testConnection;
+  std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>> testConnectionSub;
   std::shared_ptr<MockSubscription> validatingSubscription;
 
   const size_t kStreamId{1};
@@ -555,7 +557,7 @@ class InitialRequestNDeliveredTest : public testing::Test {
 TEST_F(InitialRequestNDeliveredTest, RequestResponse) {
   expectedRequestN = 1;
   Frame_REQUEST_RESPONSE requestFrame(kStreamId, FrameFlags::EMPTY, Payload());
-  testConnection->getOutput()->onNext(
+  testConnectionSub->onNext(
       frameSerializer.serializeOut(std::move(requestFrame)));
   loopEventBaseUntilDone();
 }
@@ -563,7 +565,7 @@ TEST_F(InitialRequestNDeliveredTest, RequestResponse) {
 TEST_F(InitialRequestNDeliveredTest, RequestStream) {
   Frame_REQUEST_STREAM requestFrame(
       kStreamId, FrameFlags::EMPTY, kRequestN, Payload());
-  testConnection->getOutput()->onNext(
+  testConnectionSub->onNext(
       frameSerializer.serializeOut(std::move(requestFrame)));
   loopEventBaseUntilDone();
 }

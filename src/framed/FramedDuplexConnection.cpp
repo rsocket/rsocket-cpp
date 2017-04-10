@@ -10,9 +10,17 @@ namespace reactivesocket {
 FramedDuplexConnection::FramedDuplexConnection(
     std::unique_ptr<DuplexConnection> connection,
     folly::Executor& executor)
+    : FramedDuplexConnection(
+          std::move(connection),
+          FrameSerializer::getCurrentProtocolVersion(),
+          executor) {}
+
+FramedDuplexConnection::FramedDuplexConnection(
+    std::unique_ptr<DuplexConnection> connection,
+    ProtocolVersion protocolVersion,
+    folly::Executor& executor)
     : connection_(std::move(connection)),
-      protocolVersion_(std::make_shared<ProtocolVersion>(
-          FrameSerializer::getCurrentProtocolVersion())),
+      protocolVersion_(std::make_shared<ProtocolVersion>(protocolVersion)),
       executor_(executor) {}
 
 FramedDuplexConnection::~FramedDuplexConnection() {
@@ -27,10 +35,8 @@ FramedDuplexConnection::~FramedDuplexConnection() {
 
 std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>>
 FramedDuplexConnection::getOutput() noexcept {
-  if (!outputWriter_) {
-    outputWriter_ = std::make_shared<FramedWriter>(
-        connection_->getOutput(), executor_, protocolVersion_);
-  }
+  outputWriter_ = std::make_shared<FramedWriter>(
+    connection_->getOutput(), executor_, protocolVersion_);
   return outputWriter_;
 }
 

@@ -193,6 +193,7 @@ void Frame_SETUP::moveToSetupPayload(ConnectionSetupPayload& setupPayload) {
   setupPayload.payload = std::move(payload_);
   setupPayload.token = std::move(token_);
   setupPayload.resumable = !!(header_.flags_ & FrameFlags::RESUME_ENABLE);
+  setupPayload.protocolVersion = ProtocolVersion(versionMajor_, versionMinor_);
 }
 
 std::ostream& operator<<(std::ostream& os, const Frame_LEASE& frame) {

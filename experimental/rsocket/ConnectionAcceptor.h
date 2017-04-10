@@ -2,7 +2,9 @@
 
 #pragma once
 
+#include <folly/futures/Future.h>
 #include <folly/io/async/EventBase.h>
+
 #include "src/DuplexConnection.h"
 
 namespace rsocket {
@@ -20,22 +22,26 @@ class ConnectionAcceptor {
  public:
   ConnectionAcceptor() = default;
   virtual ~ConnectionAcceptor() = default;
-  ConnectionAcceptor(const ConnectionAcceptor&) = delete; // copy
-  ConnectionAcceptor(ConnectionAcceptor&&) = delete; // move
-  ConnectionAcceptor& operator=(const ConnectionAcceptor&) = delete; // copy
-  ConnectionAcceptor& operator=(ConnectionAcceptor&&) = delete; // move
+
+  ConnectionAcceptor(const ConnectionAcceptor&) = delete;
+  ConnectionAcceptor(ConnectionAcceptor&&) = delete;
+
+  ConnectionAcceptor& operator=(const ConnectionAcceptor&) = delete;
+  ConnectionAcceptor& operator=(ConnectionAcceptor&&) = delete;
 
   /**
    * Allocate/start required resources (threads, sockets, etc) and begin
    * listening for new connections.
    *
-   * This can only be called once.
+   * Will return an empty future on success, otherwise the future will contain
+   * the error.
    *
-   *@param onAccept
+   * This can only be called once.
    */
-  virtual void start(std::function<void(
-                         std::unique_ptr<reactivesocket::DuplexConnection>,
-                         folly::EventBase&)> onAccept) = 0;
+  virtual folly::Future<folly::Unit> start(
+      std::function<void(
+          std::unique_ptr<reactivesocket::DuplexConnection>,
+          folly::EventBase&)> onAccept) = 0;
   // TODO need to add numThreads option (either overload or arg with default=1)
 };
 }

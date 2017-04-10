@@ -86,7 +86,6 @@ enum class FrameFlags : uint16_t {
   // SETUP frame
   RESUME_ENABLE = 0x80,
   LEASE = 0x40,
-  STRICT = 0x20,
 
   // KEEPALIVE frame
   KEEPALIVE_RESPOND = 0x80,
@@ -411,8 +410,8 @@ class ConnectionSetupPayload;
 
 class Frame_SETUP {
  public:
-  constexpr static const FrameFlags AllowedFlags = FrameFlags::METADATA |
-      FrameFlags::RESUME_ENABLE | FrameFlags::LEASE | FrameFlags::STRICT;
+  constexpr static const FrameFlags AllowedFlags =
+      FrameFlags::METADATA | FrameFlags::RESUME_ENABLE | FrameFlags::LEASE;
 
   constexpr static const uint32_t kMaxKeepaliveTime =
       std::numeric_limits<int32_t>::max();
@@ -504,8 +503,11 @@ class Frame_RESUME {
   Frame_RESUME(
       const ResumeIdentificationToken& token,
       ResumePosition lastReceivedServerPosition,
-      ResumePosition clientPosition)
+      ResumePosition clientPosition,
+      ProtocolVersion protocolVersion)
       : header_(FrameType::RESUME, FrameFlags::EMPTY, 0),
+        versionMajor_(protocolVersion.major),
+        versionMinor_(protocolVersion.minor),
         token_(token),
         lastReceivedServerPosition_(lastReceivedServerPosition),
         clientPosition_(clientPosition) {}

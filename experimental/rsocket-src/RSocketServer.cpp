@@ -2,6 +2,7 @@
 
 #include "rsocket/RSocketServer.h"
 #include <folly/ExceptionWrapper.h>
+#include <folly/io/async/EventBase.h>
 #include <folly/io/async/EventBaseManager.h>
 #include "rsocket/RSocketErrors.h"
 #include "src/FrameTransport.h"
@@ -15,26 +16,34 @@ using OnSetupNewSocket = std::function<void(
     ConnectionSetupPayload setupPayload,
     folly::Executor&)>;
 
-class RSocketConnection : public reactivesocket::ServerConnectionAcceptor {
+class RSocketConnectionHandler : public reactivesocket::ConnectionHandler {
  public:
-  explicit RSocketConnection(OnSetupNewSocket onSetup)
+  explicit RSocketConnectionHandler(OnSetupNewSocket onSetup)
       : onSetup_(std::move(onSetup)) {}
 
-  ~RSocketConnection() {
-    LOG(INFO) << "RSocketServer => destroy the connection acceptor";
+  ~RSocketConnectionHandler() {
+    LOG(INFO) << "RSocketServer => destroy the connection handler";
   }
 
   void setupNewSocket(
       std::shared_ptr<FrameTransport> frameTransport,
-      ConnectionSetupPayload setupPayload,
-      folly::Executor& executor) override {
-    onSetup_(std::move(frameTransport), std::move(setupPayload), executor);
+      ConnectionSetupPayload setupPayload) override {
+    // FIXME(alexanderm): Handler should be tied to specific executor
+    auto executor = folly::EventBaseManager::get()->getExistingEventBase();
+    onSetup_(std::move(frameTransport), std::move(setupPayload), *executor);
   }
-  void resumeSocket(
+
+  bool resumeSocket(
       std::shared_ptr<FrameTransport> frameTransport,
-      ResumeParameters,
-      folly::Executor& executor) override {
+      ResumeParameters) override {
     //      onSetup_(std::move(frameTransport), std::move(setupPayload));
+    return false;
+  }
+
+  void connectionError(
+      std::shared_ptr<FrameTransport>,
+      folly::exception_wrapper ex) override {
+    LOG(WARNING) << "Connection failed before first frame: " << ex.what();
   }
 
  private:
@@ -43,7 +52,8 @@ class RSocketConnection : public reactivesocket::ServerConnectionAcceptor {
 
 RSocketServer::RSocketServer(
     std::unique_ptr<ConnectionAcceptor> connectionAcceptor)
-    : lazyAcceptor_(std::move(connectionAcceptor)) {}
+    : lazyAcceptor_(std::move(connectionAcceptor)),
+      acceptor_(ProtocolVersion::Unknown) {}
 
 RSocketServer::~RSocketServer() {
   {
@@ -65,51 +75,55 @@ RSocketServer::~RSocketServer() {
 }
 
 void RSocketServer::start(OnAccept onAccept) {
-  if (acceptor_) {
+  if (connectionHandler_) {
     throw std::runtime_error("RSocketServer::start() already called.");
   }
 
   LOG(INFO) << "RSocketServer => initialize connection acceptor on start";
 
-  acceptor_ = std::make_unique<RSocketConnection>(
-      [ this, onAccept = std::move(onAccept) ](
-          std::shared_ptr<FrameTransport> frameTransport,
-          ConnectionSetupPayload setupPayload,
-          folly::Executor & executor) mutable {
-        LOG(INFO) << "RSocketServer => received new setup payload";
+  LOG(INFO) << "RSocketServer => initialize connection acceptor on start";
+  connectionHandler_ = std::make_unique<RSocketConnectionHandler>([
+    this,
+    onAccept = std::move(onAccept)
+  ](std::shared_ptr<FrameTransport> frameTransport,
+    ConnectionSetupPayload setupPayload,
+    folly::Executor & executor_) {
+    LOG(INFO) << "RSocketServer => received new setup payload";
 
-        std::shared_ptr<RequestHandler> requestHandler;
-        try {
-          requestHandler = onAccept(std::make_unique<ConnectionSetupRequest>(
-              std::move(setupPayload)));
-        } catch (const RSocketError& e) {
-          // TODO emit ERROR ... but how do I do that here?
-          frameTransport->close(
-              folly::exception_wrapper{std::current_exception(), e});
-          return;
-        }
-        LOG(INFO) << "RSocketServer => received request handler";
+    std::shared_ptr<RequestHandler> requestHandler;
+    try {
+      requestHandler = onAccept(std::make_unique<ConnectionSetupRequest>(
+          std::move(setupPayload)));
+    } catch (const RSocketError& e) {
+      // TODO emit ERROR ... but how do I do that here?
+      frameTransport->close(
+          folly::exception_wrapper{std::current_exception(), e});
+      return;
+    }
+    LOG(INFO) << "RSocketServer => received request handler";
 
-        auto rs = StandardReactiveSocket::disconnectedServer(
-            // we know this callback is on a specific EventBase
-            executor,
-            std::move(requestHandler),
-            Stats::noop());
+    auto rs = StandardReactiveSocket::disconnectedServer(
+        // we know this callback is on a specific EventBase
+        executor_,
+        std::move(requestHandler),
+        Stats::noop());
 
-        rs->onClosed([ this, rs = rs.get() ](const folly::exception_wrapper&) {
-          // Enqueue another event to remove and delete it.  We cannot delete
-          // the ReactiveSocket now as it still needs to finish processing the
-          // onClosed handlers in the stack frame above us.
-          rs->executor().add([this, rs] { removeSocket(rs); });
-        });
+    rs->onClosed([ this, rs = rs.get() ](const folly::exception_wrapper&) {
+      // Enqueue another event to remove and delete it.  We cannot delete
+      // the ReactiveSocket now as it still needs to finish processing the
+      // onClosed handlers in the stack frame above us.
+      rs->executor().add([this, rs] { removeSocket(rs); });
+    });
 
-        auto rawRs = rs.get();
+    auto rawRs = rs.get();
 
-        addSocket(std::move(rs));
+    addSocket(std::move(rs));
 
-        // Connect last, after all state has been set up.
-        rawRs->serverConnect(std::move(frameTransport), true /* resumable */);
-      });
+    // Connect last, after all state has been set up.
+    rawRs->serverConnect(
+        std::move(frameTransport),
+        SocketParameters(true /* resumable */, ProtocolVersion::Unknown));
+  });
 
   lazyAcceptor_->start([this](
       std::unique_ptr<DuplexConnection> conn, folly::Executor& executor) {
@@ -117,7 +131,8 @@ void RSocketServer::start(OnAccept onAccept) {
 
     LOG(INFO) << "RSocketServer => going to accept duplex connection";
     // the callbacks above are wired up, now accept the connection
-    acceptor_->acceptConnection(std::move(conn), executor);
+    // FIXME(alexanderm): This isn't thread safe
+    acceptor_.accept(std::move(conn), connectionHandler_);
   });
 }
 

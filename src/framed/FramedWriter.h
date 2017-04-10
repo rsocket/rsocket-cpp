@@ -44,6 +44,8 @@ class FramedWriter : public SubscriberBaseT<std::unique_ptr<folly::IOBuf>>,
   void cancelImpl() noexcept override;
 
   size_t getFrameSizeFieldLength() const;
+  size_t getPayloadLength(size_t payloadLength) const;
+
   std::unique_ptr<folly::IOBuf> appendSize(
       std::unique_ptr<folly::IOBuf> payload);
 

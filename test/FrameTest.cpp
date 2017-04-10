@@ -167,9 +167,7 @@ TEST(FrameTest, Frame_SETUP) {
   uint16_t versionMinor = 5;
   uint32_t keepaliveTime = Frame_SETUP::kMaxKeepaliveTime;
   uint32_t maxLifetime = Frame_SETUP::kMaxLifetime;
-  std::vector<uint8_t> tokenData(16, 1);
-  ResumeIdentificationToken token;
-  token.set(std::move(tokenData));
+  ResumeIdentificationToken token = ResumeIdentificationToken::generateNew();
   auto data = folly::IOBuf::copyBuffer("424242");
   auto frame = reserialize<Frame_SETUP>(
       flags,
@@ -200,9 +198,7 @@ TEST(FrameTest, Frame_SETUP_resume) {
   uint16_t versionMinor = 0;
   uint32_t keepaliveTime = Frame_SETUP::kMaxKeepaliveTime;
   uint32_t maxLifetime = Frame_SETUP::kMaxLifetime;
-  std::vector<uint8_t> tokenData(16, 1);
-  ResumeIdentificationToken token;
-  token.set(std::move(tokenData));
+  ResumeIdentificationToken token = ResumeIdentificationToken::generateNew();
   auto data = folly::IOBuf::copyBuffer("424242");
   auto frame = reserialize<Frame_SETUP>(
       flags,
@@ -270,4 +266,37 @@ TEST(FrameTest, Frame_METADATA_PUSH) {
 
   expectHeader(FrameType::METADATA_PUSH, flags, 0, frame);
   EXPECT_TRUE(folly::IOBufEqual()(*metadata, *frame.metadata_));
+}
+
+TEST(FrameTest, Frame_RESUME) {
+  FrameFlags flags = FrameFlags::EMPTY;
+  uint16_t versionMajor = 4;
+  uint16_t versionMinor = 5;
+  ResumeIdentificationToken token = ResumeIdentificationToken::generateNew();
+  ResumePosition serverPosition = 6;
+  ResumePosition clientPosition = 7;
+  auto frame = reserialize<Frame_RESUME>(
+      token,
+      serverPosition,
+      clientPosition,
+      ProtocolVersion(versionMajor, versionMinor));
+
+  expectHeader(FrameType::RESUME, flags, 0, frame);
+  // TODO: enable when v1.0 is enabled by default
+  // EXPECT_EQ(versionMajor, frame.versionMajor_);
+  // EXPECT_EQ(versionMinor, frame.versionMinor_);
+  // Token should be default constructed
+  EXPECT_EQ(token, frame.token_);
+  EXPECT_EQ(serverPosition, frame.lastReceivedServerPosition_);
+  // TODO: enable when v1.0 is enabled by default
+  // EXPECT_EQ(clientPosition, frame.clientPosition_);
+}
+
+TEST(FrameTest, Frame_RESUME_OK) {
+  FrameFlags flags = FrameFlags::EMPTY;
+  ResumePosition position = 6;
+  auto frame = reserialize<Frame_RESUME_OK>(position);
+
+  expectHeader(FrameType::RESUME_OK, flags, 0, frame);
+  EXPECT_EQ(position, frame.position_);
 }

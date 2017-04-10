@@ -21,8 +21,12 @@ int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
 
+  TcpConnectionAcceptor::Options opts;
+  opts.port = FLAGS_port;
+
   // RSocket server accepting on TCP
-  auto rs = RSocket::createServer(TcpConnectionAcceptor::create(FLAGS_port));
+  auto rs = RSocket::createServer(
+      std::make_unique<TcpConnectionAcceptor>(std::move(opts)));
   // global request handlers
   auto textHandler = std::make_shared<TextRequestHandler>();
   auto jsonHandler = std::make_shared<JsonRequestHandler>();

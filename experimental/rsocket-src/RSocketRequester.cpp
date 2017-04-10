@@ -2,6 +2,10 @@
 
 #include "rsocket/RSocketRequester.h"
 
+#include "rsocket/OldNewBridge.h"
+
+#include <folly/ExceptionWrapper.h>
+
 using namespace reactivesocket;
 using namespace folly;
 
@@ -44,6 +48,23 @@ void RSocketRequester::requestStream(
       [ this, request = std::move(request), responseSink ]() mutable {
         standardReactiveSocket_->requestStream(
             std::move(request), std::move(responseSink));
+      });
+}
+
+std::shared_ptr<yarpl::flowable::Flowable<reactivesocket::Payload>>
+RSocketRequester::requestStream(reactivesocket::Payload request) {
+  auto& eb = eventBase_;
+  auto srs = standardReactiveSocket_;
+  return yarpl::flowable::Flowable<reactivesocket::Payload>::create(
+      [&eb, request = std::move(request), srs = std::move(srs) ](
+          auto uptr_subscriber) mutable {
+        auto os =
+            std::make_shared<OldToNewSubscriber>(std::move(uptr_subscriber));
+        eb.runInEventBaseThread([
+          request = std::move(request),
+          os = std::move(os),
+          srs = std::move(srs)
+        ]() mutable { srs->requestStream(std::move(request), std::move(os)); });
       });
 }
 

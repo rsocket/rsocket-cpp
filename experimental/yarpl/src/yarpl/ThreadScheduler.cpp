@@ -1,9 +1,12 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "yarpl/ThreadScheduler.h"
+
+#include <atomic>
 #include <functional>
 #include <iostream>
 #include <thread>
+
 #include "yarpl/Disposable.h"
 
 /**
