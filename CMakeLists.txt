@@ -70,6 +70,15 @@ endif()
 # Common configuration for all build modes.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++${META_CXX_STD}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter -Woverloaded-virtual")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-undefined-func-template")
+
+string(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_LOWER)
+if("${BUILD_TYPE_LOWER}" MATCHES "debug")
+  message("debug mode was set")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unreachable-code")
+else()
+  message("release mode was set")
+endif()
 
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
   set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Werror -Weverything -pedantic-errors)
