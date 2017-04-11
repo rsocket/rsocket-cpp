@@ -25,6 +25,9 @@ auto printer() {
 }  // namespace
 
 void FlowableVExamples::run() {
+  std::cout << "create a flowable" << std::endl;
+  Flowables::range(2, 2);
+
   std::cout << "just: single value" << std::endl;
   Flowables::just<long>(23)
       ->subscribe(printer<long>());
@@ -52,36 +55,12 @@ void FlowableVExamples::run() {
       ->map([](int64_t v) { return std::to_string(v); })
       ->map([](std::string v) { return "-> " + v + " <-"; })
       ->subscribe(printer<std::string>());
+
+  std::cout << "take example: 3 out of 10 items" << std::endl;
+  Flowables::range(1, 11)
+      ->take(3)
+      ->subscribe(printer<int64_t>());
 }
-
-//std::unique_ptr<FlowableV<long>> getC() {
-//  return FlowablesV::range(1, 10);
-//}
-
-//void FlowableVExamples::run() {
-//  FlowableV<long>::create([](auto subscriber) {
-//    auto subscription = new yarpl::flowable::sources::RangeSubscription(
-//        1, 10, std::move(subscriber));
-//    subscription->start();
-//  })->subscribe(Subscribers::create<long>([](auto t) {
-//    std::cout << "Value received: " << t << std::endl;
-//  }));
-
-//  FlowablesC::range(1, 5)->subscribe(Subscribers::create<long>(
-//      [](auto t) { std::cout << "Value received: " << t << std::endl; }));
-
-//  getC()
-//      ->map([](auto i) { return "mapped value => " + std::to_string(i); })
-//      ->subscribe(Subscribers::create<std::string>(
-//          [](auto t) { std::cout << "from getC => " << t << std::endl; }));
-
-//  FlowablesC::range(1, 5)
-//      ->map([](auto i) { return "mapped value => " + std::to_string(i); })
-//      ->subscribe(Subscribers::create<std::string>(
-//          [](auto t) { std::cout << "Value received: " << t << std::endl; }));
-
-//  FlowablesC::range(1, 5)->take(2)->subscribe(Subscribers::create<long>(
-//      [](auto t) { std::cout << "Value received: " << t << std::endl; }));
 
 //  ThreadScheduler scheduler;
 

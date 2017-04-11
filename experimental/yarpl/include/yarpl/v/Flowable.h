@@ -7,12 +7,10 @@
 #include <type_traits>
 #include <utility>
 
-#include <boost/intrusive_ptr.hpp>
-#include <boost/smart_ptr/intrusive_ref_counter.hpp>
-
 #include "reactivestreams/ReactiveStreams.h"
 #include "yarpl/utils/type_traits.h"
 
+#include "Refcounted.h"
 #include "Subscriber.h"
 
 namespace yarpl {
@@ -21,16 +19,16 @@ namespace yarpl {
 #pragma clang diagnostic ignored "-Wpadded"
 
 template<typename T>
-class Flowable : public boost::intrusive_ref_counter<Flowable<T>> {
+class Flowable : public virtual Refcounted {
 public:
-  using Handle = boost::intrusive_ptr<Flowable<T>>;
   using Subscriber = Subscriber<T>;
 
-  virtual ~Flowable() = default;
-  virtual void subscribe(std::unique_ptr<Subscriber>) = 0;
+  virtual void subscribe(Reference<Subscriber>) = 0;
 
   template<typename Function>
   auto map(Function&& function);
+
+  auto take(int64_t);
 
   /**
    * Create a flowable from an emitter.
@@ -51,9 +49,7 @@ public:
   template<typename Emitter, typename = typename std::enable_if<
       std::is_callable<Emitter(Subscriber&, int64_t),
                        std::tuple<int64_t, bool>>::value>::type>
-  static Handle create(Emitter&& emitter) {
-    return Handle(new Wrapper<Emitter>(std::forward<Emitter>(emitter)));
-  }
+  static auto create(Emitter&& emitter);
 
 private:
   virtual std::tuple<int64_t, bool> emit(Subscriber&, int64_t) = 0;
@@ -64,7 +60,7 @@ private:
     Wrapper(Emitter&& emitter)
       : emitter_(std::forward<Emitter>(emitter)) {}
 
-    virtual void subscribe(std::unique_ptr<Subscriber> subscriber) {
+    virtual void subscribe(Reference<Subscriber> subscriber) {
       new SynchronousSubscription(this, std::move(subscriber));
     }
 
@@ -86,9 +82,13 @@ private:
   class SynchronousSubscription : public Subscription, public Subscriber {
   public:
     SynchronousSubscription(
-        Flowable::Handle handle, std::unique_ptr<Subscriber> subscriber)
-      : flowable_(handle), subscriber_(std::move(subscriber)) {
-      subscriber_->onSubscribe(Handle(this));
+        Reference<Flowable> flowable, Reference<Subscriber> subscriber)
+      : flowable_(flowable), subscriber_(subscriber) {
+      subscriber_->onSubscribe(Reference<Subscription>(this));
+    }
+
+    virtual ~SynchronousSubscription() {
+      subscriber_.reset();
     }
 
     virtual void request(int64_t delta) override {
@@ -125,7 +125,7 @@ private:
     }
 
     // Subscriber methods.
-    virtual void onSubscribe(Subscription::Handle) override {
+    virtual void onSubscribe(Reference<Subscription>) override {
       // Not actually expected to be called.
     }
 
@@ -203,8 +203,8 @@ private:
     // We don't want to recursively invoke process(); one loop should do.
     std::mutex processing_;
 
-    Flowable::Handle flowable_;
-    std::unique_ptr<Subscriber> subscriber_;
+    Reference<Flowable> flowable_;
+    Reference<Subscriber> subscriber_{nullptr};
   };
 };
 
@@ -217,11 +217,24 @@ private:
 namespace yarpl {
 
 template<typename T>
+template<typename Emitter, typename>
+auto Flowable<T>::create(Emitter&& emitter) {
+  return Reference<Flowable<T>>(new Flowable<T>::Wrapper<Emitter>(
+                                  std::forward<Emitter>(emitter)));
+}
+
+template<typename T>
 template<typename Function>
 auto Flowable<T>::map(Function&& function) {
   using D = typename std::result_of<Function(T)>::type;
-  return typename Flowable<D>::Handle(new MapOperator<T, D, Function>(
-      Flowable<T>::Handle(this), std::forward<Function>(function)));
+  return Reference<Flowable<D>>(new MapOperator<T, D, Function>(
+      Reference<Flowable<T>>(this), std::forward<Function>(function)));
+}
+
+template<typename T>
+auto Flowable<T>::take(int64_t limit) {
+  return Reference<Flowable<T>>(
+      new TakeOperator<T>(Reference<Flowable<T>>(this), limit));
 }
 
 }  // yarpl

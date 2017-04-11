@@ -17,7 +17,7 @@ public:
       Derived(N&& next, int64_t batch)
         : next_(std::forward<N>(next)), batch_(batch), pending_(0) {}
 
-      virtual void onSubscribe(Subscription::Handle subscription) override {
+      virtual void onSubscribe(Reference<Subscription> subscription) override {
         Subscriber<T>::onSubscribe(subscription);
         pending_ += batch_;
         subscription->request(batch_);
@@ -38,7 +38,7 @@ public:
       int64_t pending_;
     };
 
-    return std::make_unique<Derived>(std::forward<N>(next), batch);
+    return Reference<Derived>(new Derived(std::forward<N>(next), batch));
   }
 
 private:

@@ -1,19 +1,22 @@
 #pragma once
 
 #include "reactivestreams/ReactiveStreams.h"
+
+#include "Refcounted.h"
 #include "Subscription.h"
 
 namespace yarpl {
 
 template<typename T>
-class Subscriber : public reactivestreams_yarpl::Subscriber<T> {
+class Subscriber : public reactivestreams_yarpl::Subscriber<T>,
+    public virtual Refcounted {
 protected:
   static const auto max = std::numeric_limits<int64_t>::max();
 
 public:
   // Note: if any of the following methods is overridden in a subclass,
   // the new methods SHOULD ensure that these are invoked as well.
-  virtual void onSubscribe(Subscription::Handle subscription) {
+  virtual void onSubscribe(Reference<Subscription> subscription) {
     subscription_ = subscription;
   }
 
@@ -38,7 +41,7 @@ protected:
 private:
   // "Our" reference to the subscription, to ensure that it is retained
   // while calls to its methods are in-flight.
-  Subscription::Handle subscription_;
+  Reference<Subscription> subscription_{nullptr};
 
   // Note: we've overridden the signature of onSubscribe with yarpl's
   // Subscriber.  Keep this definition, making it private, to keep the

@@ -8,7 +8,7 @@ namespace yarpl {
 
 class Flowables {
 public:
-  static Flowable<int64_t>::Handle range(int64_t start, int64_t end) {
+  static Reference<Flowable<int64_t>> range(int64_t start, int64_t end) {
     auto lambda = [start, end, i = start](
         Subscriber<int64_t>& subscriber, int64_t requested) mutable {
       int64_t emitted = 0;
@@ -31,7 +31,7 @@ public:
   }
 
   template<typename T>
-  static typename Flowable<T>::Handle just(const T& value) {
+  static Reference<Flowable<T>> just(const T& value) {
     auto lambda = [value](Subscriber<T>& subscriber, int64_t) {
       // # requested should be > 0.  Ignoring the actual parameter.
       subscriber.onNext(value);
@@ -43,7 +43,7 @@ public:
   }
 
   template<typename T>
-  static typename Flowable<T>::Handle just(std::initializer_list<T> list) {
+  static Reference<Flowable<T>> just(std::initializer_list<T> list) {
     auto lambda = [list, it = list.begin()](
         Subscriber<T>& subscriber, int64_t requested) mutable {
       int64_t emitted = 0;

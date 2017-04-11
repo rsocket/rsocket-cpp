@@ -1,4 +1,8 @@
 cmake_minimum_required (VERSION 3.4)
+
+# To debug the project, set the build type.
+set(CMAKE_BUILD_TYPE Debug)
+
 project (yarpl)
 
 # CMake Config
@@ -76,6 +80,7 @@ add_library(
         include/yarpl/v/Flowables.h
         include/yarpl/v/FlowableV.h
         include/yarpl/v/Operator.h
+        include/yarpl/v/Refcounted.h
         include/yarpl/v/Subscriber.h
         include/yarpl/v/Subscribers.h
         include/yarpl/v/Subscription.h
