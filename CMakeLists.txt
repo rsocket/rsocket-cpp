@@ -70,6 +70,15 @@ endif()
 # Common configuration for all build modes.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++${META_CXX_STD}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter -Woverloaded-virtual")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-undefined-func-template")
+
+string(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_LOWER)
+if("${BUILD_TYPE_LOWER}" MATCHES "debug")
+  message("debug mode was set")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unreachable-code")
+else()
+  message("release mode was set")
+endif()
 
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
   set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Werror -Weverything -pedantic-errors)
@@ -127,11 +136,8 @@ add_library(
   src/automata/StreamAutomatonBase.h
   src/automata/StreamRequester.cpp
   src/automata/StreamRequester.h
+  src/automata/StreamResponder.cpp
   src/automata/StreamResponder.h
-  src/automata/StreamSubscriptionRequesterBase.cpp
-  src/automata/StreamSubscriptionRequesterBase.h
-  src/automata/StreamSubscriptionResponderBase.cpp
-  src/automata/StreamSubscriptionResponderBase.h
   src/ClientResumeStatusCallback.h
   src/Common.cpp
   src/Common.h

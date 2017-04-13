@@ -44,9 +44,6 @@ void ChannelRequester::onNextImpl(Payload request) noexcept {
     } break;
     case State::REQUESTED: {
       debugCheckOnNextOnCompleteOnError();
-
-      // TODO(t16487710): Subsequent messages from requester to responder MUST
-      // be sent as PAYLOAD frames
       writePayload(std::move(request), 0);
       break;
     }
@@ -64,10 +61,7 @@ void ChannelRequester::onCompleteImpl() noexcept {
       break;
     case State::REQUESTED: {
       state_ = State::CLOSED;
-      // TODO(t16487710): Subsequent messages from requester to responder MUST
-      // be sent as PAYLOAD frames
-      newStream(StreamType::REQUEST_RESPONSE, 0, Payload(), true);
-      closeStream(StreamCompletionSignal::COMPLETE);
+      completeStream();
     } break;
     case State::CLOSED:
       break;

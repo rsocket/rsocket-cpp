@@ -90,6 +90,8 @@ void RSocketServer::start(OnAccept onAccept) {
     folly::Executor & executor_) {
     LOG(INFO) << "RSocketServer => received new setup payload";
 
+    auto socketParams =
+        SocketParameters(setupPayload.resumable, setupPayload.protocolVersion);
     std::shared_ptr<RequestHandler> requestHandler;
     try {
       requestHandler = onAccept(std::make_unique<ConnectionSetupRequest>(
@@ -120,9 +122,7 @@ void RSocketServer::start(OnAccept onAccept) {
     addSocket(std::move(rs));
 
     // Connect last, after all state has been set up.
-    rawRs->serverConnect(
-        std::move(frameTransport),
-        SocketParameters(true /* resumable */, ProtocolVersion::Unknown));
+    rawRs->serverConnect(std::move(frameTransport), socketParams);
   });
 
   lazyAcceptor_->start([this](

@@ -1,10 +1,10 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/automata/StreamSubscriptionResponderBase.h"
+#include "src/automata/StreamResponder.h"
 
 namespace reactivesocket {
 
-void StreamSubscriptionResponderBase::onSubscribeImpl(
+void StreamResponder::onSubscribeImpl(
     std::shared_ptr<Subscription> subscription) noexcept {
   if (StreamAutomatonBase::isTerminated()) {
     subscription->cancel();
@@ -13,7 +13,7 @@ void StreamSubscriptionResponderBase::onSubscribeImpl(
   publisherSubscribe(subscription);
 }
 
-void StreamSubscriptionResponderBase::onNextImpl(Payload response) noexcept {
+void StreamResponder::onNextImpl(Payload response) noexcept {
   debugCheckOnNextOnCompleteOnError();
   switch (state_) {
     case State::RESPONDING: {
@@ -26,7 +26,7 @@ void StreamSubscriptionResponderBase::onNextImpl(Payload response) noexcept {
   }
 }
 
-void StreamSubscriptionResponderBase::onCompleteImpl() noexcept {
+void StreamResponder::onCompleteImpl() noexcept {
   debugCheckOnNextOnCompleteOnError();
   switch (state_) {
     case State::RESPONDING: {
@@ -38,7 +38,7 @@ void StreamSubscriptionResponderBase::onCompleteImpl() noexcept {
   }
 }
 
-void StreamSubscriptionResponderBase::onErrorImpl(
+void StreamResponder::onErrorImpl(
     folly::exception_wrapper ex) noexcept {
   debugCheckOnNextOnCompleteOnError();
   switch (state_) {
@@ -51,17 +51,17 @@ void StreamSubscriptionResponderBase::onErrorImpl(
   }
 }
 
-void StreamSubscriptionResponderBase::pauseStream(
+void StreamResponder::pauseStream(
     RequestHandler& requestHandler) {
   pausePublisherStream(requestHandler);
 }
 
-void StreamSubscriptionResponderBase::resumeStream(
+void StreamResponder::resumeStream(
     RequestHandler& requestHandler) {
   resumePublisherStream(requestHandler);
 }
 
-void StreamSubscriptionResponderBase::endStream(StreamCompletionSignal signal) {
+void StreamResponder::endStream(StreamCompletionSignal signal) {
   switch (state_) {
     case State::RESPONDING:
       // Spontaneous ::endStream signal means an error.
@@ -76,7 +76,7 @@ void StreamSubscriptionResponderBase::endStream(StreamCompletionSignal signal) {
   StreamAutomatonBase::endStream(signal);
 }
 
-void StreamSubscriptionResponderBase::onNextFrame(Frame_CANCEL&& frame) {
+void StreamResponder::onNextFrame(Frame_CANCEL&& frame) {
   switch (state_) {
     case State::RESPONDING:
       state_ = State::CLOSED;
@@ -87,7 +87,7 @@ void StreamSubscriptionResponderBase::onNextFrame(Frame_CANCEL&& frame) {
   }
 }
 
-void StreamSubscriptionResponderBase::onNextFrame(Frame_REQUEST_N&& frame) {
+void StreamResponder::onNextFrame(Frame_REQUEST_N&& frame) {
   PublisherBase::processRequestN(frame.requestN_);
 }
 }
