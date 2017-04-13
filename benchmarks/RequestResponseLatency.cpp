@@ -25,11 +25,9 @@ class BM_Subscription : public SubscriptionBase {
 public:
     explicit BM_Subscription(
         std::shared_ptr<Subscriber<Payload>> subscriber,
-        std::string name,
         size_t length)
         : ExecutorBase(defaultExecutor()),
         subscriber_(std::move(subscriber)),
-        name_(std::move(name)),
         data_(length, 'a'),
         cancelled_(false)
     {
@@ -56,7 +54,6 @@ private:
     }
 
     std::shared_ptr<Subscriber<Payload>> subscriber_;
-    std::string name_;
     std::string data_;
     std::atomic_bool cancelled_;
 };
@@ -69,11 +66,8 @@ public:
     {
         LOG(INFO) << "BM_RequestHandler.handleRequestResponse " << request;
 
-        const char* p = reinterpret_cast<const char*>(request.data->data());
-        auto requestString = std::string(p, request.data->length());
-
         response->onSubscribe(
-            std::make_shared<BM_Subscription>(response, requestString, MESSAGE_LENGTH));
+            std::make_shared<BM_Subscription>(response, MESSAGE_LENGTH));
     }
 
     std::shared_ptr<StreamState> handleSetupPayload(
@@ -182,11 +176,11 @@ public:
     {
     }
 
-    virtual void SetUp(benchmark::State &state)
+    void SetUp(benchmark::State &state) noexcept override
     {
     }
 
-    virtual void TearDown(benchmark::State &state)
+    void TearDown(benchmark::State &state) noexcept override
     {
     }
 
