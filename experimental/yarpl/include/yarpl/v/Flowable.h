@@ -60,11 +60,13 @@ class Flowable : public virtual Refcounted {
 
   template <typename Emitter>
   class Wrapper : public Flowable {
-   public:
-    Wrapper(Emitter&& emitter) : emitter_(std::forward<Emitter>(emitter)) {}
+  public:
+    explicit Wrapper(Emitter&& emitter)
+      : emitter_(std::forward<Emitter>(emitter)) {}
 
     virtual void subscribe(Reference<Subscriber> subscriber) {
-      new SynchronousSubscription(this, std::move(subscriber));
+      new SynchronousSubscription(
+            Reference<Flowable>(this), std::move(subscriber));
     }
 
     virtual std::tuple<int64_t, bool> emit(
