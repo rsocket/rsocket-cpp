@@ -15,12 +15,12 @@
 
 namespace yarpl {
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpadded"
-
 template<typename T>
 class Flowable : public virtual Refcounted {
 public:
+  static const auto CANCELED = std::numeric_limits<int64_t>::min();
+  static const auto NO_FLOW_CONTROL = std::numeric_limits<int64_t>::max();
+
   using Subscriber = Subscriber<T>;
 
   virtual void subscribe(Reference<Subscriber>) = 0;
@@ -52,7 +52,9 @@ public:
   static auto create(Emitter&& emitter);
 
 private:
-  virtual std::tuple<int64_t, bool> emit(Subscriber&, int64_t) = 0;
+  virtual std::tuple<int64_t, bool> emit(Subscriber&, int64_t) {
+    return std::make_tuple(static_cast<int64_t>(0), false);
+  }
 
   template<typename Emitter>
   class Wrapper : public Flowable {
@@ -83,7 +85,7 @@ private:
   public:
     SynchronousSubscription(
         Reference<Flowable> flowable, Reference<Subscriber> subscriber)
-      : flowable_(flowable), subscriber_(subscriber) {
+      : flowable_(std::move(flowable)), subscriber_(std::move(subscriber)) {
       subscriber_->onSubscribe(Reference<Subscription>(this));
     }
 
@@ -92,7 +94,6 @@ private:
     }
 
     virtual void request(int64_t delta) override {
-      static auto max = std::numeric_limits<int64_t>::max();
       if (delta <= 0) {
         auto message = "request(n): " + std::to_string(delta) + " <= 0";
         throw std::logic_error(message);
@@ -103,7 +104,7 @@ private:
         auto total = current + delta;
         if (total < current) {
           // overflow; cap at max (turn flow control off).
-          total = max;
+          total = NO_FLOW_CONTROL;
         }
 
         if (requested_.compare_exchange_strong(current, total))
@@ -114,13 +115,7 @@ private:
     }
 
     virtual void cancel() override {
-      static auto min = std::numeric_limits<int64_t>::min();
-      auto previous = requested_.exchange(min, std::memory_order_relaxed);
-      if (previous != min) {
-        // we're first to mark the cancellation.  Cancel the upstream.
-      }
-
-      // Note: process() will finalize: releasing our reference on this.
+      requested_.exchange(CANCELED, std::memory_order_relaxed);
       process();
     }
 
@@ -134,9 +129,8 @@ private:
     }
 
     virtual void onComplete() override {
-      static auto min = std::numeric_limits<int64_t>::min();
       subscriber_->onComplete();
-      requested_.store(min, std::memory_order_relaxed);
+      requested_.store(CANCELED, std::memory_order_relaxed);
       // We should already be in process(); nothing more to do.
       //
       // Note: we're not invoking the Subscriber superclass' method:
@@ -144,9 +138,8 @@ private:
     }
 
     virtual void onError(const std::exception_ptr error) override {
-      static auto min = std::numeric_limits<int64_t>::min();
       subscriber_->onError(error);
-      requested_.store(min, std::memory_order_relaxed);
+      requested_.store(CANCELED, std::memory_order_relaxed);
       // We should already be in process(); nothing more to do.
       //
       // Note: we're not invoking the Subscriber superclass' method:
@@ -157,10 +150,15 @@ private:
     // Processing loop.  Note: this can delete `this` upon completion,
     // error, or cancellation; thus, no fields should be accessed once
     // this method returns.
+    //
+    // Thread-Safety: there is no guarantee as to which thread this is
+    // invoked on.  However, there is a strong guarantee on cancel and
+    // request(n) calls: no more than one instance of either of these
+    // can be outstanding at any time.
     void process() {
-      static auto min = std::numeric_limits<int64_t>::min();
-      static auto max = std::numeric_limits<int64_t>::max();
-
+      // This lock guards against re-entrancy in request(n) calls.  By
+      // the strict terms of the subscriber guarantees, this could be
+      // replaced by a re-entrancy count.
       std::unique_lock<std::mutex> lock(processing_, std::defer_lock);
       if (!lock.try_lock()) {
         return;
@@ -168,12 +166,14 @@ private:
 
       while (true) {
         auto current = requested_.load(std::memory_order_relaxed);
-        if (current == min) {
+        if (current == CANCELED) {
           // Subscription was canceled, completed, or had an error.
           return release();
         }
 
         // If no more items can be emitted now, wait for a request(n).
+        // See note above re: thread-safety.  We are guaranteed that
+        // request(n) is not simultaneously invoked on another thread.
         if (current <= 0) return;
 
         int64_t emitted;
@@ -184,10 +184,10 @@ private:
 
         while (true) {
           auto current = requested_.load(std::memory_order_relaxed);
-          if (current == min || (current == max && !done))
+          if (current == CANCELED || (current == NO_FLOW_CONTROL && !done))
             break;
 
-          auto updated = done ? min : current - emitted;
+          auto updated = done ? CANCELED : current - emitted;
           if (requested_.compare_exchange_strong(current, updated))
             break;
         }
@@ -204,11 +204,9 @@ private:
     std::mutex processing_;
 
     Reference<Flowable> flowable_;
-    Reference<Subscriber> subscriber_{nullptr};
+    Reference<Subscriber> subscriber_;
   };
 };
-
-#pragma clang diagnostic pop
 
 }  // yarpl
 

@@ -16,7 +16,7 @@ namespace yarpl {
 template<typename U, typename D>
 class Operator : public Flowable<D> {
 public:
-  Operator(Reference<Flowable<U>> upstream) : upstream_(upstream) {}
+  Operator(Reference<Flowable<U>> upstream) : upstream_(std::move(upstream)) {}
 
   virtual void subscribe(Reference<Subscriber<D>> subscriber) override {
     upstream_->subscribe(Reference<Subscription>(new Subscription(
@@ -28,7 +28,7 @@ protected:
   public:
     Subscription(
         Reference<Flowable<D>> flowable, Reference<Subscriber<D>> subscriber)
-      : flowable_(flowable), subscriber_(subscriber) {
+      : flowable_(std::move(flowable)), subscriber_(std::move(subscriber)) {
     }
 
     ~Subscription() {
@@ -37,7 +37,7 @@ protected:
 
     virtual void onSubscribe(Reference<::yarpl::Subscription> subscription)
         override {
-      upstream_ = subscription;
+      upstream_ = std::move(subscription);
       subscriber_->onSubscribe(Reference<::yarpl::Subscription>(this));
     }
 
@@ -50,6 +50,7 @@ protected:
     virtual void onError(const std::exception_ptr error) override {
       subscriber_->onError(error);
       upstream_.reset();
+      release();
     }
 
     virtual void  request(int64_t delta) override {
@@ -58,6 +59,7 @@ protected:
 
     virtual void cancel() override {
       upstream_->cancel();
+      release();
     }
 
   protected:
@@ -67,12 +69,6 @@ protected:
   };
 
   Reference<Flowable<U>> upstream_;
-
-private:
-  // TODO(vjn): fix: this shouldn't be needed.
-  virtual std::tuple<int64_t, bool> emit(Subscriber<D>&, int64_t) override {
-    return std::make_tuple(0, false);
-  }
 };
 
 template<typename U, typename D, typename F, typename = typename
@@ -80,24 +76,29 @@ template<typename U, typename D, typename F, typename = typename
 class MapOperator : public Operator<U, D> {
 public:
   MapOperator(Reference<Flowable<U>> upstream, F&& function)
-    : Operator<U, D>(upstream), function_(std::forward<F>(function)) {}
+    : Operator<U, D>(std::move(upstream)),
+      function_(std::forward<F>(function)) {}
 
   virtual void subscribe(Reference<Subscriber<D>> subscriber) override {
-    Operator<U, D>::upstream_->subscribe(Reference<Subscription>(
-        new Subscription(Reference<Flowable<D>>(this), std::move(subscriber))));
+    Operator<U, D>::upstream_->subscribe(
+        // Note: implicit cast to a reference to a subscriber.
+        Reference<Subscription>(new Subscription(Reference<Flowable<D>>(this),
+                                                 std::move(subscriber))));
   }
 
 private:
   class Subscription : public Operator<U, D>::Subscription {
   public:
-    Subscription(Reference<Flowable<D>> handle,
+    Subscription(Reference<Flowable<D>> flowable,
                  Reference<Subscriber<D>> subscriber)
-      : Operator<U, D>::Subscription(handle, std::move(subscriber)) {}
+      : Operator<U, D>::Subscription(std::move(flowable),
+                                     std::move(subscriber)) {}
 
     virtual void onNext(const U& value) override {
-      MapOperator& map = *static_cast<MapOperator*>(
-            Operator<U, D>::Subscription::flowable_.get());
-      Operator<U, D>::Subscription::subscriber_->onNext(map.function_(value));
+      auto* subscriber = Operator<U, D>::Subscription::subscriber_.get();
+      auto* flowable = Operator<U, D>::Subscription::flowable_.get();
+      auto* map = static_cast<MapOperator*>(flowable);
+      subscriber->onNext(map->function_(value));
     }
   };
 
@@ -108,7 +109,7 @@ template<typename T>
 class TakeOperator : public Operator<T, T> {
 public:
   TakeOperator(Reference<Flowable<T>> upstream, int64_t limit)
-    : Operator<T, T>(upstream), limit_(limit) {}
+    : Operator<T, T>(std::move(upstream)), limit_(limit) {}
 
   virtual void subscribe(Reference<Subscriber<T>> subscriber) override {
     Operator<T, T>::upstream_->subscribe(
@@ -119,25 +120,34 @@ public:
 private:
   class Subscription : public Operator<T, T>::Subscription {
   public:
-    Subscription(Reference<Flowable<T>> handle, int64_t limit,
+    Subscription(Reference<Flowable<T>> flowable, int64_t limit,
                  Reference<Subscriber<T>> subscriber)
-      : Operator<T, T>::Subscription(handle, std::move(subscriber)),
+      : Operator<T, T>::Subscription(
+          std::move(flowable), std::move(subscriber)),
         limit_(limit) {}
 
     virtual void onNext(const T& value) {
-      if (processed_++ < limit_) {
+      if (limit_-- > 0) {
+        if (pending_ > 0) --pending_;
         Operator<T, T>::Subscription::subscriber_->onNext(value);
-        if (processed_ == limit_) {
+        if (limit_ == 0) {
           Operator<T, T>::Subscription::cancel();
           Operator<T, T>::Subscription::onComplete();
         }
       }
     }
 
+    virtual void request(int64_t delta) {
+      delta = std::min(delta, limit_ - pending_);
+      if (delta > 0) {
+        pending_ += delta;
+        Operator<T, T>::Subscription::upstream_->request(delta);
+      }
+    }
+
   private:
-    int64_t requested_{0};
-    int64_t processed_{0};
-    const int64_t limit_;
+    int64_t pending_{0};
+    int64_t limit_;
   };
 
   const int64_t limit_;

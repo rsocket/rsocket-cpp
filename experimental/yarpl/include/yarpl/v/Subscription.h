@@ -5,22 +5,19 @@
 
 namespace yarpl {
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wweak-vtables"
-
 class Subscription : public reactivestreams_yarpl::Subscription,
     public virtual Refcounted {
 public:
   virtual void request(int64_t n) = 0;
   virtual void cancel() = 0;
 
+protected:
+  Subscription() : reference_(this) {}
+
   // Drop the reference we're holding on the subscription (handle).
   void release() {
     reference_.reset();
   }
-
-protected:
-  Subscription() : reference_(this) {}
 
 private:
   // We expect to be heap-allocated; until this subscription finishes
@@ -28,7 +25,5 @@ private:
   // not deallocated (by the subscriber).
   Reference<Refcounted> reference_;
 };
-
-#pragma clang diagnostic pop
 
 }  // yarpl

@@ -10,9 +10,6 @@ namespace yarpl {
 template<typename T>
 class Subscriber : public reactivestreams_yarpl::Subscriber<T>,
     public virtual Refcounted {
-protected:
-  static const auto max = std::numeric_limits<int64_t>::max();
-
 public:
   // Note: if any of the following methods is overridden in a subclass,
   // the new methods SHOULD ensure that these are invoked as well.

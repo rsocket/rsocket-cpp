@@ -19,7 +19,7 @@ template<typename T>
 auto printer() {
   return Subscribers::create<T>([](T value) {
     std::cout << "  next: " << value << std::endl;
-  }, 2);
+  }, 2 /* low [optional] batch size for demo */);
 }
 
 }  // namespace

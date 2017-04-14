@@ -5,9 +5,6 @@
 
 namespace yarpl {
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wweak-vtables"
-
 class Refcounted {
 public:
   virtual ~Refcounted() = default;
@@ -29,8 +26,6 @@ private:
 
   mutable std::atomic_int refcount_{0};
 };
-
-#pragma clang diagnostic pop
 
 template<typename T, typename = typename std::enable_if<
     std::is_base_of<Refcounted, T>::value>::type>

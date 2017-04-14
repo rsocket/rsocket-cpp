@@ -7,11 +7,9 @@
 namespace yarpl {
 
 class Subscribers {
-  static const auto max = std::numeric_limits<int64_t>::max();
-
 public:
   template<typename T, typename N>
-  static auto create(N&& next, int64_t batch = max) {
+  static auto create(N&& next, int64_t batch = Flowable<T>::NO_FLOW_CONTROL) {
     class Derived : public Subscriber<T> {
     public:
       Derived(N&& next, int64_t batch)
