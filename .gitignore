@@ -2,7 +2,8 @@
 
 ### CMake ###
 CMakeCache.txt
-CMakeFiles
+CMakeFiles/
+CMakeLists.txt.user
 CMakeScripts
 Makefile
 cmake_install.cmake
