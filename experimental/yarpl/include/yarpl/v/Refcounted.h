@@ -35,9 +35,8 @@ class Reference {
  public:
   Reference() : pointer_(nullptr) {}
 
-  Reference(T* pointer) : pointer_(pointer) {
-    if (pointer_)
-      pointer_->incRef();
+  explicit Reference(T* pointer) : pointer_(pointer) {
+    if (pointer_) pointer_->incRef();
   }
 
   ~Reference() {

@@ -15,8 +15,9 @@ namespace yarpl {
  */
 template <typename U, typename D>
 class Operator : public Flowable<D> {
- public:
-  Operator(Reference<Flowable<U>> upstream) : upstream_(std::move(upstream)) {}
+public:
+  explicit Operator(Reference<Flowable<U>> upstream)
+    : upstream_(std::move(upstream)) {}
 
   virtual void subscribe(Reference<Subscriber<D>> subscriber) override {
     upstream_->subscribe(Reference<Subscription>(
