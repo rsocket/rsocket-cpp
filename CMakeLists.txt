@@ -71,7 +71,8 @@ endif()
 
 # Common configuration for all build modes.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++${META_CXX_STD}")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter -Woverloaded-virtual")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Woverloaded-virtual")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-undefined-func-template")
 
 string(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_LOWER)
@@ -202,6 +203,7 @@ add_library(
 target_link_libraries(
   ReactiveSocket
   ${FOLLY_LIBRARIES}
+  ${GFLAGS_LIBRARY}
   ${GLOG_LIBRARY})
 
 add_dependencies(ReactiveSocket ReactiveStreams)
@@ -374,7 +376,7 @@ target_link_libraries(
 
 add_dependencies(tcpresumeserver gmock)
 
-# add_subdirectory(experimental/yarpl)
+add_subdirectory(experimental/yarpl)
 
 ########################################
 # Examples
