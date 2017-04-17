@@ -23,7 +23,7 @@ class Stats;
 class OneFrameProcessor;
 
 class ConnectionHandler {
-public:
+ public:
   virtual ~ConnectionHandler() = default;
 
   /// Called when we've received a setup frame on the connection and are ready
@@ -32,8 +32,8 @@ public:
   /// ReactiveSocket or closed otherwise it will be leaked (until the
   /// connection fails)
   virtual void setupNewSocket(
-    std::shared_ptr<FrameTransport> frameTransport,
-    ConnectionSetupPayload setupPayload) = 0;
+      std::shared_ptr<FrameTransport> frameTransport,
+      ConnectionSetupPayload setupPayload) = 0;
 
   /// Called when we've received a resume frame on the connection and are ready
   /// to resume an existing ReactiveSocket.
@@ -46,8 +46,8 @@ public:
       ResumeParameters resumeParameters) = 0;
 
   virtual void connectionError(
-    std::shared_ptr<FrameTransport>,
-    folly::exception_wrapper ex) = 0;
+      std::shared_ptr<FrameTransport>,
+      folly::exception_wrapper ex) = 0;
 };
 
 // This class allows to store duplex connection and wait until the first frame
@@ -58,8 +58,8 @@ class ServerConnectionAcceptor final {
   ~ServerConnectionAcceptor();
 
   void accept(
-    std::unique_ptr<DuplexConnection> connection,
-    std::shared_ptr<ConnectionHandler> connectionHandler);
+      std::unique_ptr<DuplexConnection> connection,
+      std::shared_ptr<ConnectionHandler> connectionHandler);
 
  protected:
   friend OneFrameProcessor;
@@ -70,9 +70,9 @@ class ServerConnectionAcceptor final {
       std::unique_ptr<folly::IOBuf> frame);
 
   void closeAndRemoveConnection(
-    const std::shared_ptr<ConnectionHandler>& connectionHandler,
-    std::shared_ptr<FrameTransport> transport,
-    folly::exception_wrapper ex);
+      const std::shared_ptr<ConnectionHandler>& connectionHandler,
+      std::shared_ptr<FrameTransport> transport,
+      folly::exception_wrapper ex);
   void removeConnection(const std::shared_ptr<FrameTransport>& transport);
 
  private:

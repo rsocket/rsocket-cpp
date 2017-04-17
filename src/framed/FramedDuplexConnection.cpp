@@ -36,7 +36,7 @@ FramedDuplexConnection::~FramedDuplexConnection() {
 std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>>
 FramedDuplexConnection::getOutput() noexcept {
   outputWriter_ = std::make_shared<FramedWriter>(
-    connection_->getOutput(), executor_, protocolVersion_);
+      connection_->getOutput(), executor_, protocolVersion_);
   return outputWriter_;
 }
 

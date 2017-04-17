@@ -34,9 +34,7 @@ class OneFrameProcessor
 
   void onTerminal(folly::exception_wrapper ex) override {
     acceptor_.closeAndRemoveConnection(
-      connectionHandler_,
-      transport_,
-      std::move(ex));
+        connectionHandler_, transport_, std::move(ex));
     // no more code here as the instance might be gone by now
   }
 
@@ -69,9 +67,9 @@ void ServerConnectionAcceptor::processFrame(
   auto frameSerializer = getOrAutodetectFrameSerializer(*frame);
   if (!frameSerializer) {
     closeAndRemoveConnection(
-      connectionHandler,
-      transport,
-      std::runtime_error("Unable to detect protocol version"));
+        connectionHandler,
+        transport,
+        std::runtime_error("Unable to detect protocol version"));
     return;
   }
 
@@ -82,9 +80,9 @@ void ServerConnectionAcceptor::processFrame(
         transport->outputFrameOrEnqueue(
             frameSerializer->serializeOut(Frame_ERROR::invalidFrame()));
         closeAndRemoveConnection(
-          connectionHandler,
-          std::move(transport),
-          std::runtime_error("invalid"));
+            connectionHandler,
+            std::move(transport),
+            std::runtime_error("invalid"));
         break;
       }
 
@@ -101,8 +99,7 @@ void ServerConnectionAcceptor::processFrame(
       }
 
       connectionHandler->setupNewSocket(
-        std::move(transport),
-        std::move(setupPayload));
+          std::move(transport), std::move(setupPayload));
       break;
     }
 
@@ -112,9 +109,9 @@ void ServerConnectionAcceptor::processFrame(
         transport->outputFrameOrEnqueue(
             frameSerializer->serializeOut(Frame_ERROR::invalidFrame()));
         closeAndRemoveConnection(
-          connectionHandler,
-          std::move(transport),
-          std::runtime_error("invalid"));
+            connectionHandler,
+            std::move(transport),
+            std::runtime_error("invalid"));
       }
 
       ResumeParameters resumeParams(
@@ -163,9 +160,9 @@ void ServerConnectionAcceptor::processFrame(
       transport->outputFrameOrEnqueue(
           frameSerializer->serializeOut(Frame_ERROR::unexpectedFrame()));
       closeAndRemoveConnection(
-        connectionHandler,
-        std::move(transport),
-        std::runtime_error("invalid"));
+          connectionHandler,
+          std::move(transport),
+          std::runtime_error("invalid"));
       break;
     }
   }
@@ -176,9 +173,7 @@ void ServerConnectionAcceptor::accept(
     std::shared_ptr<ConnectionHandler> connectionHandler) {
   auto transport = std::make_shared<FrameTransport>(std::move(connection));
   auto processor = std::make_shared<OneFrameProcessor>(
-    *this,
-    transport,
-    std::move(connectionHandler));
+      *this, transport, std::move(connectionHandler));
   connections_.insert(transport);
   // transport can receive frames right away
   transport->setFrameProcessor(std::move(processor));
@@ -207,9 +202,7 @@ void ServerConnectionAcceptor::closeAndRemoveConnection(
     folly::exception_wrapper ex) {
   transport->close(ex);
   connections_.erase(transport);
-  connectionHandler->connectionError(
-    std::move(transport),
-    std::move(ex));
+  connectionHandler->connectionError(std::move(transport), std::move(ex));
 }
 
 void ServerConnectionAcceptor::removeConnection(

@@ -82,48 +82,47 @@ void RSocketServer::start(OnAccept onAccept) {
   LOG(INFO) << "RSocketServer => initialize connection acceptor on start";
 
   LOG(INFO) << "RSocketServer => initialize connection acceptor on start";
-  connectionHandler_ = std::make_unique<RSocketConnectionHandler>([
-    this,
-    onAccept = std::move(onAccept)
-  ](std::shared_ptr<FrameTransport> frameTransport,
-    ConnectionSetupPayload setupPayload,
-    folly::Executor & executor_) {
-    LOG(INFO) << "RSocketServer => received new setup payload";
+  connectionHandler_ = std::make_unique<RSocketConnectionHandler>(
+      [ this, onAccept = std::move(onAccept) ](
+          std::shared_ptr<FrameTransport> frameTransport,
+          ConnectionSetupPayload setupPayload,
+          folly::Executor & executor_) {
+        LOG(INFO) << "RSocketServer => received new setup payload";
 
-    auto socketParams =
-        SocketParameters(setupPayload.resumable, setupPayload.protocolVersion);
-    std::shared_ptr<RequestHandler> requestHandler;
-    try {
-      requestHandler = onAccept(std::make_unique<ConnectionSetupRequest>(
-          std::move(setupPayload)));
-    } catch (const RSocketError& e) {
-      // TODO emit ERROR ... but how do I do that here?
-      frameTransport->close(
-          folly::exception_wrapper{std::current_exception(), e});
-      return;
-    }
-    LOG(INFO) << "RSocketServer => received request handler";
+        auto socketParams = SocketParameters(
+            setupPayload.resumable, setupPayload.protocolVersion);
+        std::shared_ptr<RequestHandler> requestHandler;
+        try {
+          requestHandler = onAccept(std::make_unique<ConnectionSetupRequest>(
+              std::move(setupPayload)));
+        } catch (const RSocketError& e) {
+          // TODO emit ERROR ... but how do I do that here?
+          frameTransport->close(
+              folly::exception_wrapper{std::current_exception(), e});
+          return;
+        }
+        LOG(INFO) << "RSocketServer => received request handler";
 
-    auto rs = StandardReactiveSocket::disconnectedServer(
-        // we know this callback is on a specific EventBase
-        executor_,
-        std::move(requestHandler),
-        Stats::noop());
+        auto rs = StandardReactiveSocket::disconnectedServer(
+            // we know this callback is on a specific EventBase
+            executor_,
+            std::move(requestHandler),
+            Stats::noop());
 
-    rs->onClosed([ this, rs = rs.get() ](const folly::exception_wrapper&) {
-      // Enqueue another event to remove and delete it.  We cannot delete
-      // the ReactiveSocket now as it still needs to finish processing the
-      // onClosed handlers in the stack frame above us.
-      rs->executor().add([this, rs] { removeSocket(rs); });
-    });
+        rs->onClosed([ this, rs = rs.get() ](const folly::exception_wrapper&) {
+          // Enqueue another event to remove and delete it.  We cannot delete
+          // the ReactiveSocket now as it still needs to finish processing the
+          // onClosed handlers in the stack frame above us.
+          rs->executor().add([this, rs] { removeSocket(rs); });
+        });
 
-    auto rawRs = rs.get();
+        auto rawRs = rs.get();
 
-    addSocket(std::move(rs));
+        addSocket(std::move(rs));
 
-    // Connect last, after all state has been set up.
-    rawRs->serverConnect(std::move(frameTransport), socketParams);
-  });
+        // Connect last, after all state has been set up.
+        rawRs->serverConnect(std::move(frameTransport), socketParams);
+      });
 
   lazyAcceptor_
       ->start([this](
@@ -137,7 +136,7 @@ void RSocketServer::start(OnAccept onAccept) {
       })
       .onError([](const folly::exception_wrapper& ex) {
         LOG(FATAL) << "RSocketServer => failed to start HttpAcceptor: "
-                  << ex.what();
+                   << ex.what();
       });
 }
 

@@ -13,30 +13,30 @@ namespace yarpl {
  * D and U.
  *
  */
-template<typename U, typename D>
+template <typename U, typename D>
 class Operator : public Flowable<D> {
-public:
+ public:
   Operator(Reference<Flowable<U>> upstream) : upstream_(std::move(upstream)) {}
 
   virtual void subscribe(Reference<Subscriber<D>> subscriber) override {
-    upstream_->subscribe(Reference<Subscription>(new Subscription(
-        Reference<Flowable<D>>(this), std::move(subscriber))));
+    upstream_->subscribe(Reference<Subscription>(
+        new Subscription(Reference<Flowable<D>>(this), std::move(subscriber))));
   }
 
-protected:
+ protected:
   class Subscription : public ::yarpl::Subscription, public Subscriber<U> {
-  public:
+   public:
     Subscription(
-        Reference<Flowable<D>> flowable, Reference<Subscriber<D>> subscriber)
-      : flowable_(std::move(flowable)), subscriber_(std::move(subscriber)) {
-    }
+        Reference<Flowable<D>> flowable,
+        Reference<Subscriber<D>> subscriber)
+        : flowable_(std::move(flowable)), subscriber_(std::move(subscriber)) {}
 
     ~Subscription() {
       subscriber_.reset();
     }
 
-    virtual void onSubscribe(Reference<::yarpl::Subscription> subscription)
-        override {
+    virtual void onSubscribe(
+        Reference<::yarpl::Subscription> subscription) override {
       upstream_ = std::move(subscription);
       subscriber_->onSubscribe(Reference<::yarpl::Subscription>(this));
     }
@@ -53,7 +53,7 @@ protected:
       release();
     }
 
-    virtual void  request(int64_t delta) override {
+    virtual void request(int64_t delta) override {
       upstream_->request(delta);
     }
 
@@ -62,7 +62,7 @@ protected:
       release();
     }
 
-  protected:
+   protected:
     Reference<Flowable<D>> flowable_;
     Reference<Subscriber<D>> subscriber_;
     Reference<::yarpl::Subscription> upstream_;
@@ -71,28 +71,33 @@ protected:
   Reference<Flowable<U>> upstream_;
 };
 
-template<typename U, typename D, typename F, typename = typename
-         std::enable_if<std::is_callable<F(U), D>::value>::type>
+template <
+    typename U,
+    typename D,
+    typename F,
+    typename = typename std::enable_if<std::is_callable<F(U), D>::value>::type>
 class MapOperator : public Operator<U, D> {
-public:
+ public:
   MapOperator(Reference<Flowable<U>> upstream, F&& function)
-    : Operator<U, D>(std::move(upstream)),
-      function_(std::forward<F>(function)) {}
+      : Operator<U, D>(std::move(upstream)),
+        function_(std::forward<F>(function)) {}
 
   virtual void subscribe(Reference<Subscriber<D>> subscriber) override {
     Operator<U, D>::upstream_->subscribe(
         // Note: implicit cast to a reference to a subscriber.
-        Reference<Subscription>(new Subscription(Reference<Flowable<D>>(this),
-                                                 std::move(subscriber))));
+        Reference<Subscription>(new Subscription(
+            Reference<Flowable<D>>(this), std::move(subscriber))));
   }
 
-private:
+ private:
   class Subscription : public Operator<U, D>::Subscription {
-  public:
-    Subscription(Reference<Flowable<D>> flowable,
-                 Reference<Subscriber<D>> subscriber)
-      : Operator<U, D>::Subscription(std::move(flowable),
-                                     std::move(subscriber)) {}
+   public:
+    Subscription(
+        Reference<Flowable<D>> flowable,
+        Reference<Subscriber<D>> subscriber)
+        : Operator<U, D>::Subscription(
+              std::move(flowable),
+              std::move(subscriber)) {}
 
     virtual void onNext(const U& value) override {
       auto* subscriber = Operator<U, D>::Subscription::subscriber_.get();
@@ -105,11 +110,11 @@ private:
   F function_;
 };
 
-template<typename T>
+template <typename T>
 class TakeOperator : public Operator<T, T> {
-public:
+ public:
   TakeOperator(Reference<Flowable<T>> upstream, int64_t limit)
-    : Operator<T, T>(std::move(upstream)), limit_(limit) {}
+      : Operator<T, T>(std::move(upstream)), limit_(limit) {}
 
   virtual void subscribe(Reference<Subscriber<T>> subscriber) override {
     Operator<T, T>::upstream_->subscribe(
@@ -117,18 +122,22 @@ public:
             Reference<Flowable<T>>(this), limit_, std::move(subscriber))));
   }
 
-private:
+ private:
   class Subscription : public Operator<T, T>::Subscription {
-  public:
-    Subscription(Reference<Flowable<T>> flowable, int64_t limit,
-                 Reference<Subscriber<T>> subscriber)
-      : Operator<T, T>::Subscription(
-          std::move(flowable), std::move(subscriber)),
-        limit_(limit) {}
+   public:
+    Subscription(
+        Reference<Flowable<T>> flowable,
+        int64_t limit,
+        Reference<Subscriber<T>> subscriber)
+        : Operator<T, T>::Subscription(
+              std::move(flowable),
+              std::move(subscriber)),
+          limit_(limit) {}
 
     virtual void onNext(const T& value) {
       if (limit_-- > 0) {
-        if (pending_ > 0) --pending_;
+        if (pending_ > 0)
+          --pending_;
         Operator<T, T>::Subscription::subscriber_->onNext(value);
         if (limit_ == 0) {
           Operator<T, T>::Subscription::cancel();
@@ -145,7 +154,7 @@ private:
       }
     }
 
-  private:
+   private:
     int64_t pending_{0};
     int64_t limit_;
   };
@@ -153,4 +162,4 @@ private:
   const int64_t limit_;
 };
 
-}  // yarpl
+} // yarpl

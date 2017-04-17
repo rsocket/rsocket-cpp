@@ -15,26 +15,24 @@ using namespace yarpl;
 
 namespace {
 
-template<typename T>
+template <typename T>
 auto printer() {
-  return Subscribers::create<T>([](T value) {
-    std::cout << "  next: " << value << std::endl;
-  }, 2 /* low [optional] batch size for demo */);
+  return Subscribers::create<T>(
+      [](T value) { std::cout << "  next: " << value << std::endl; },
+      2 /* low [optional] batch size for demo */);
 }
 
-}  // namespace
+} // namespace
 
 void FlowableVExamples::run() {
   std::cout << "create a flowable" << std::endl;
   Flowables::range(2, 2);
 
   std::cout << "just: single value" << std::endl;
-  Flowables::just<long>(23)
-      ->subscribe(printer<long>());
+  Flowables::just<long>(23)->subscribe(printer<long>());
 
   std::cout << "just: multiple values." << std::endl;
-  Flowables::just<long>({1, 4, 7, 11})
-      ->subscribe(printer<long>());
+  Flowables::just<long>({1, 4, 7, 11})->subscribe(printer<long>());
 
   std::cout << "just: string values." << std::endl;
   Flowables::just<std::string>({"the", "quick", "brown", "fox"})
@@ -45,21 +43,19 @@ void FlowableVExamples::run() {
 
   std::cout << "map example: squares" << std::endl;
   Flowables::range(1, 4)
-      ->map([](int64_t v) { return v*v; })
+      ->map([](int64_t v) { return v * v; })
       ->subscribe(printer<int64_t>());
 
   std::cout << "map example: convert to string" << std::endl;
   Flowables::range(1, 4)
-      ->map([](int64_t v) { return v*v; })
-      ->map([](int64_t v) { return v*v; })
+      ->map([](int64_t v) { return v * v; })
+      ->map([](int64_t v) { return v * v; })
       ->map([](int64_t v) { return std::to_string(v); })
       ->map([](std::string v) { return "-> " + v + " <-"; })
       ->subscribe(printer<std::string>());
 
   std::cout << "take example: 3 out of 10 items" << std::endl;
-  Flowables::range(1, 11)
-      ->take(3)
-      ->subscribe(printer<int64_t>());
+  Flowables::range(1, 11)->take(3)->subscribe(printer<int64_t>());
 }
 
 //  ThreadScheduler scheduler;

@@ -7,10 +7,10 @@
 
 namespace yarpl {
 
-template<typename T>
+template <typename T>
 class Subscriber : public reactivestreams_yarpl::Subscriber<T>,
-    public virtual Refcounted {
-public:
+                   public virtual Refcounted {
+ public:
   // Note: if any of the following methods is overridden in a subclass,
   // the new methods SHOULD ensure that these are invoked as well.
   virtual void onSubscribe(Reference<Subscription> subscription) {
@@ -28,14 +28,16 @@ public:
   }
 
   virtual void onNext(const T&) {}
-  virtual void onNext(T&& value) { onNext(value); }
+  virtual void onNext(T&& value) {
+    onNext(value);
+  }
 
-protected:
+ protected:
   Subscription* subscription() {
     return subscription_.operator->();
   }
 
-private:
+ private:
   // "Our" reference to the subscription, to ensure that it is retained
   // while calls to its methods are in-flight.
   Reference<Subscription> subscription_{nullptr};
@@ -46,4 +48,4 @@ private:
   virtual void onSubscribe(reactivestreams_yarpl::Subscription*) {}
 };
 
-}  // yarpl
+} // yarpl

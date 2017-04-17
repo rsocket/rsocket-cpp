@@ -15,9 +15,9 @@
 
 namespace yarpl {
 
-template<typename T>
+template <typename T>
 class Flowable : public virtual Refcounted {
-public:
+ public:
   static const auto CANCELED = std::numeric_limits<int64_t>::min();
   static const auto NO_FLOW_CONTROL = std::numeric_limits<int64_t>::max();
 
@@ -25,7 +25,7 @@ public:
 
   virtual void subscribe(Reference<Subscriber>) = 0;
 
-  template<typename Function>
+  template <typename Function>
   auto map(Function&& function);
 
   auto take(int64_t);
@@ -46,32 +46,34 @@ public:
    *
    * \return a handle to a flowable that will use the emitter.
    */
-  template<typename Emitter, typename = typename std::enable_if<
-      std::is_callable<Emitter(Subscriber&, int64_t),
-                       std::tuple<int64_t, bool>>::value>::type>
+  template <
+      typename Emitter,
+      typename = typename std::enable_if<std::is_callable<
+          Emitter(Subscriber&, int64_t),
+          std::tuple<int64_t, bool>>::value>::type>
   static auto create(Emitter&& emitter);
 
-private:
+ private:
   virtual std::tuple<int64_t, bool> emit(Subscriber&, int64_t) {
     return std::make_tuple(static_cast<int64_t>(0), false);
   }
 
-  template<typename Emitter>
+  template <typename Emitter>
   class Wrapper : public Flowable {
-  public:
-    Wrapper(Emitter&& emitter)
-      : emitter_(std::forward<Emitter>(emitter)) {}
+   public:
+    Wrapper(Emitter&& emitter) : emitter_(std::forward<Emitter>(emitter)) {}
 
     virtual void subscribe(Reference<Subscriber> subscriber) {
       new SynchronousSubscription(this, std::move(subscriber));
     }
 
     virtual std::tuple<int64_t, bool> emit(
-        Subscriber& subscriber, int64_t requested) {
+        Subscriber& subscriber,
+        int64_t requested) {
       return emitter_(subscriber, requested);
     }
 
-  private:
+   private:
     Emitter emitter_;
   };
 
@@ -82,10 +84,11 @@ private:
    * of a request(n) call.
    */
   class SynchronousSubscription : public Subscription, public Subscriber {
-  public:
+   public:
     SynchronousSubscription(
-        Reference<Flowable> flowable, Reference<Subscriber> subscriber)
-      : flowable_(std::move(flowable)), subscriber_(std::move(subscriber)) {
+        Reference<Flowable> flowable,
+        Reference<Subscriber> subscriber)
+        : flowable_(std::move(flowable)), subscriber_(std::move(subscriber)) {
       subscriber_->onSubscribe(Reference<Subscription>(this));
     }
 
@@ -146,7 +149,7 @@ private:
       // we're following the Subscription's protocol instead.
     }
 
-  private:
+   private:
     // Processing loop.  Note: this can delete `this` upon completion,
     // error, or cancellation; thus, no fields should be accessed once
     // this method returns.
@@ -174,13 +177,14 @@ private:
         // If no more items can be emitted now, wait for a request(n).
         // See note above re: thread-safety.  We are guaranteed that
         // request(n) is not simultaneously invoked on another thread.
-        if (current <= 0) return;
+        if (current <= 0)
+          return;
 
         int64_t emitted;
         bool done;
 
         std::tie(emitted, done) = flowable_->emit(
-              *this /* implicit conversion to subscriber */, current);
+            *this /* implicit conversion to subscriber */, current);
 
         while (true) {
           auto current = requested_.load(std::memory_order_relaxed);
@@ -208,31 +212,31 @@ private:
   };
 };
 
-}  // yarpl
+} // yarpl
 
 #include "Operator.h"
 
 namespace yarpl {
 
-template<typename T>
-template<typename Emitter, typename>
+template <typename T>
+template <typename Emitter, typename>
 auto Flowable<T>::create(Emitter&& emitter) {
-  return Reference<Flowable<T>>(new Flowable<T>::Wrapper<Emitter>(
-                                  std::forward<Emitter>(emitter)));
+  return Reference<Flowable<T>>(
+      new Flowable<T>::Wrapper<Emitter>(std::forward<Emitter>(emitter)));
 }
 
-template<typename T>
-template<typename Function>
+template <typename T>
+template <typename Function>
 auto Flowable<T>::map(Function&& function) {
   using D = typename std::result_of<Function(T)>::type;
   return Reference<Flowable<D>>(new MapOperator<T, D, Function>(
       Reference<Flowable<T>>(this), std::forward<Function>(function)));
 }
 
-template<typename T>
+template <typename T>
 auto Flowable<T>::take(int64_t limit) {
   return Reference<Flowable<T>>(
       new TakeOperator<T>(Reference<Flowable<T>>(this), limit));
 }
 
-}  // yarpl
+} // yarpl

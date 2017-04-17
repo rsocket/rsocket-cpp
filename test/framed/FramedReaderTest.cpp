@@ -194,8 +194,7 @@ TEST(FramedReaderTest, InvalidDataStream) {
   // Dump 1 invalid frame and expect an error
   auto inputSubscription = std::make_shared<MockSubscription>();
   auto sub = testConnection->getOutput();
-  EXPECT_CALL(*inputSubscription, request_(_))
-      .WillOnce(Invoke([&](auto) {
+  EXPECT_CALL(*inputSubscription, request_(_)).WillOnce(Invoke([&](auto) {
     auto invalidFrameSizePayload =
         folly::IOBuf::createCombined(sizeof(int32_t));
     folly::io::Appender appender(

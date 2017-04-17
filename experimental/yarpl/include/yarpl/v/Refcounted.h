@@ -6,11 +6,11 @@
 namespace yarpl {
 
 class Refcounted {
-public:
+ public:
   virtual ~Refcounted() = default;
 
-private:
-  template<typename T, typename>
+ private:
+  template <typename T, typename>
   friend class Reference;
 
   void incRef() {
@@ -27,29 +27,33 @@ private:
   mutable std::atomic_int refcount_{0};
 };
 
-template<typename T, typename = typename std::enable_if<
-    std::is_base_of<Refcounted, T>::value>::type>
+template <
+    typename T,
+    typename =
+        typename std::enable_if<std::is_base_of<Refcounted, T>::value>::type>
 class Reference {
-public:
+ public:
   Reference() : pointer_(nullptr) {}
 
   Reference(T* pointer) : pointer_(pointer) {
-    if (pointer_) pointer_->incRef();
+    if (pointer_)
+      pointer_->incRef();
   }
 
   ~Reference() {
-    if (pointer_) pointer_->decRef();
+    if (pointer_)
+      pointer_->decRef();
   }
 
-  template<typename U, typename>
+  template <typename U, typename>
   friend class Reference;
 
-  template<typename U>
+  template <typename U>
   Reference(Reference<U>&& other) : pointer_(other.pointer_) {
     other.pointer_ = nullptr;
   }
 
-  template<typename U>
+  template <typename U>
   Reference& operator=(Reference<U>&& other) {
     Reference(static_cast<Reference<U>&&>(other)).swap(*this);
     return *this;
@@ -66,7 +70,8 @@ public:
   }
 
   Reference(const Reference& other) : pointer_(other.pointer_) {
-    if (pointer_) pointer_->incRef();
+    if (pointer_)
+      pointer_->incRef();
   }
 
   T* get() const {
@@ -85,7 +90,7 @@ public:
     Reference().swap(*this);
   }
 
-private:
+ private:
   void swap(Reference& other) {
     T* temp = pointer_;
     pointer_ = other.pointer_;
@@ -95,4 +100,4 @@ private:
   T* pointer_;
 };
 
-}  // yarpl
+} // yarpl
