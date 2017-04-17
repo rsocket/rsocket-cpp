@@ -24,7 +24,7 @@ using namespace reactivestreams_yarpl;
  * @param scheduler
  * @param subscriber
  */
-auto getFlowableAwithHandler(Scheduler& scheduler) {
+static auto getFlowableAwithHandler(Scheduler& scheduler) {
   class Handler {
    public:
     Handler() = default;
@@ -43,7 +43,7 @@ auto getFlowableAwithHandler(Scheduler& scheduler) {
       auto s_ =
           new yarpl::flowable::sources::RangeSubscription(1, 100, std::move(s));
       s_->start();
-    };
+    }
   };
   return unsafeCreateUniqueFlowableA<long>(Handler())
       .subscribeOn(scheduler)
@@ -105,7 +105,7 @@ TEST(FlowableALifecycle, DISABLED_AsStackAllocated) {
   ts->assertValueCount(50);
 }
 
-auto getFlowableAwithHandlerAsUniquePtr(Scheduler& scheduler) {
+static auto getFlowableAwithHandlerAsUniquePtr(Scheduler& scheduler) {
   class Handler {
    public:
     Handler() = default;
@@ -124,7 +124,7 @@ auto getFlowableAwithHandlerAsUniquePtr(Scheduler& scheduler) {
       auto s_ =
           new yarpl::flowable::sources::RangeSubscription(1, 100, std::move(s));
       s_->start();
-    };
+    }
   };
   return unsafeCreateUniqueFlowableA<long>(Handler())
       .subscribeOn(scheduler)

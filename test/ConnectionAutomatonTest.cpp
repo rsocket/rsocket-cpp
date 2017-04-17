@@ -9,7 +9,6 @@
 #include <src/NullRequestHandler.h>
 #include "src/ConnectionAutomaton.h"
 #include "src/FrameTransport.h"
-#include "src/StreamState.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/framed/FramedWriter.h"
 #include "test/InlineConnection.h"

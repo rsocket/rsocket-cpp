@@ -4,14 +4,17 @@
 #include <chrono>
 #include <thread>
 
+#include <folly/Baton.h>
 #include <folly/Memory.h>
 #include <folly/io/IOBuf.h>
+#include <folly/io/async/ScopedEventBaseThread.h>
 #include <gmock/gmock.h>
 
 #include "MockStats.h"
 #include "src/FrameTransport.h"
 #include "src/NullRequestHandler.h"
 #include "src/StandardReactiveSocket.h"
+#include "src/folly/FollyKeepaliveTimer.h"
 #include "test/InlineConnection.h"
 #include "test/MockKeepaliveTimer.h"
 #include "test/MockRequestHandler.h"
@@ -830,6 +833,48 @@ TEST(ReactiveSocketTest, SetupWithKeepaliveAndStats) {
 
   auto serverSock = StandardReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
+}
+
+TEST(ReactiveSocketTest, GoodKeepalive) {
+  // When a socket is closed with an error (e.g., no response to keepalive)
+  // ensure that clients can reset their pointers and rsocket can finish
+  // cleanups and exit
+  folly::Baton<> baton;
+  auto th = std::make_unique<folly::ScopedEventBaseThread>();
+
+  auto serverConn = std::make_unique<InlineConnection>();
+  std::unique_ptr<ReactiveSocket> clientSock;
+  auto keepalive_time = 10;
+
+  th->getEventBase()->runInEventBaseThreadAndWait([&]() {
+    auto clientConn = std::make_unique<InlineConnection>();
+    clientConn->connectTo(*serverConn);
+    auto clientStats = std::make_shared<NiceMock<MockStats>>();
+
+    auto clientKeepalive = std::make_unique<FollyKeepaliveTimer>(
+        *th->getEventBase(), std::chrono::milliseconds(keepalive_time));
+
+    clientSock = StandardReactiveSocket::fromClientConnection(
+        *th->getEventBase(),
+        std::move(clientConn),
+        // No interactions on this mock, the client will not accept any
+        // requests.
+        std::make_unique<StrictMock<MockRequestHandler>>(),
+        ConnectionSetupPayload(
+            "text/plain", "text/plain", Payload("meta", "data")),
+        clientStats,
+        std::move(clientKeepalive));
+
+    clientSock->onClosed([&](const folly::exception_wrapper& ex) {
+      // socket is closed, time to cleanup
+      clientSock.reset();
+      baton.post();
+    });
+
+  });
+  // wait for keepalive failure to happen
+  baton.wait();
+  ASSERT_EQ(nullptr, clientSock);
 }
 
 TEST(ReactiveSocketTest, Destructor) {

@@ -46,7 +46,7 @@ TEST(Observable, OnError) {
       Observables::unsafeCreate<int>([](std::unique_ptr<Observer<int>> obs) {
         try {
           throw std::runtime_error("something broke!");
-        } catch (const std::exception& e) {
+        } catch (const std::exception&) {
           obs->onError(std::current_exception());
         }
       });
@@ -149,7 +149,7 @@ class TakeObserver : public Observer<int> {
   std::vector<int>& v;
 
  public:
-  TakeObserver(int limit, std::vector<int>& v) : limit(limit), v(v) {
+  TakeObserver(int _limit, std::vector<int>& _v) : limit(_limit), v(_v) {
     v.reserve(5);
   }
 

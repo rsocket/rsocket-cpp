@@ -106,7 +106,7 @@ TEST(FlowableCreateSubscribe, OnError) {
       try {
         // simulate user function throwing and being caught
         throw std::runtime_error("something broke!");
-      } catch (const std::exception& e) {
+      } catch (const std::exception&) {
         subscriber_->onError(std::current_exception());
       }
     }
@@ -306,7 +306,8 @@ TEST(
   std::cout << "-----------------------------" << std::endl;
 }
 
-std::shared_ptr<reactivestreams_yarpl::Publisher<long>> getDataAsPublisher() {
+static std::shared_ptr<reactivestreams_yarpl::Publisher<long>>
+getDataAsPublisher() {
   return Flowables::range(1, 4);
 }
 
@@ -324,7 +325,7 @@ TEST(FlowableCreateSubscribe, TestReturnTypePublisherToFlowable) {
   ts->assertValueCount(3);
 }
 
-std::shared_ptr<Flowable<long>> getDataAsFlowable() {
+static std::shared_ptr<Flowable<long>> getDataAsFlowable() {
   return Flowables::range(1, 4);
 }
 

@@ -12,6 +12,7 @@
 #include "src/DuplexConnection.h"
 #include "src/FrameTransport.h"
 #include "src/RequestHandler.h"
+#include "src/ResumeCache.h"
 #include "src/Stats.h"
 #include "src/StreamState.h"
 #include "src/automata/ChannelResponder.h"
@@ -28,9 +29,10 @@ ConnectionAutomaton::ConnectionAutomaton(
     ReactiveSocketMode mode)
     : ExecutorBase(executor),
       reactiveSocket_(reactiveSocket),
-      stats_(std::move(stats)),
+      stats_(stats),
       mode_(mode),
-      streamState_(std::make_shared<StreamState>(*this)),
+      resumeCache_(std::make_shared<ResumeCache>(stats)),
+      streamState_(std::make_shared<StreamState>(*stats)),
       requestHandler_(std::move(requestHandler)),
       keepaliveTimer_(std::move(keepaliveTimer)),
       streamsFactory_(*this, mode) {
@@ -364,12 +366,13 @@ void ConnectionAutomaton::processFrameImpl(
     return;
   }
 
-  stats_->frameRead(frameSerializer().peekFrameType(*frame));
+  auto frameType = frameSerializer().peekFrameType(*frame);
+  stats_->frameRead(frameType);
 
   // TODO(tmont): If a frame is invalid, it will still be tracked. However, we
   // actually want that. We want to keep
   // each side in sync, even if a frame is invalid.
-  streamState_->resumeTracker_.trackReceivedFrame(*frame);
+  resumeCache_->trackReceivedFrame(*frame, frameType);
 
   auto streamIdPtr = frameSerializer().peekStreamId(*frame);
   if (!streamIdPtr) {
@@ -432,7 +435,7 @@ void ConnectionAutomaton::onConnectionFrame(
         return;
       }
 
-      streamState_->resumeCache_.resetUpToPosition(frame.position_);
+      resumeCache_->resetUpToPosition(frame.position_);
       if (mode_ == ReactiveSocketMode::SERVER) {
         if (!!(frame.header_.flags_ & FrameFlags::KEEPALIVE_RESPOND)) {
           sendKeepalive(FrameFlags::EMPTY, std::move(frame.data_));
@@ -514,7 +517,7 @@ void ConnectionAutomaton::onConnectionFrame(
         return;
       }
       if (resumeCallback_) {
-        if (streamState_->resumeCache_.isPositionAvailable(frame.position_)) {
+        if (resumeCache_->isPositionAvailable(frame.position_)) {
           resumeCallback_->onResumeOk();
           resumeCallback_.reset();
           resumeFromPosition(frame.position_);
@@ -653,7 +656,7 @@ void ConnectionAutomaton::sendKeepalive(
     std::unique_ptr<folly::IOBuf> data) {
   debugCheckCorrectExecutor();
   Frame_KEEPALIVE pingFrame(
-      flags, streamState_->resumeTracker_.impliedPosition(), std::move(data));
+      flags, resumeCache_->impliedPosition(), std::move(data));
   outputFrameOrEnqueue(
       frameSerializer().serializeOut(std::move(pingFrame), remoteResumeable_));
 }
@@ -662,14 +665,14 @@ Frame_RESUME ConnectionAutomaton::createResumeFrame(
     const ResumeIdentificationToken& token) const {
   return Frame_RESUME(
       token,
-      streamState_->resumeTracker_.impliedPosition(),
-      streamState_->resumeCache_.lastResetPosition(),
+      resumeCache_->impliedPosition(),
+      resumeCache_->lastResetPosition(),
       frameSerializer().protocolVersion());
 }
 
 bool ConnectionAutomaton::isPositionAvailable(ResumePosition position) {
   debugCheckCorrectExecutor();
-  return streamState_->resumeCache_.isPositionAvailable(position);
+  return resumeCache_->isPositionAvailable(position);
 }
 
 bool ConnectionAutomaton::resumeFromPositionOrClose(
@@ -681,12 +684,12 @@ bool ConnectionAutomaton::resumeFromPositionOrClose(
   DCHECK(mode_ == ReactiveSocketMode::SERVER);
 
   bool clientPositionExist = (clientPosition == kUnspecifiedResumePosition) ||
-      streamState_->resumeTracker_.canResumeFrom(clientPosition);
+      resumeCache_->canResumeFrom(clientPosition);
 
   if (clientPositionExist &&
-      streamState_->resumeCache_.isPositionAvailable(serverPosition)) {
+      resumeCache_->isPositionAvailable(serverPosition)) {
     frameTransport_->outputFrameOrEnqueue(frameSerializer().serializeOut(
-        Frame_RESUME_OK(streamState_->resumeTracker_.impliedPosition())));
+        Frame_RESUME_OK(resumeCache_->impliedPosition())));
     resumeFromPosition(serverPosition);
     return true;
   } else {
@@ -696,7 +699,7 @@ bool ConnectionAutomaton::resumeFromPositionOrClose(
         " firstClientPosition=",
         clientPosition,
         " is not available. Last reset position is ",
-        streamState_->resumeCache_.lastResetPosition())));
+        resumeCache_->lastResetPosition())));
     return false;
   }
 }
@@ -704,10 +707,10 @@ bool ConnectionAutomaton::resumeFromPositionOrClose(
 void ConnectionAutomaton::resumeFromPosition(ResumePosition position) {
   DCHECK(!resumeCallback_);
   DCHECK(!isDisconnectedOrClosed());
-  DCHECK(streamState_->resumeCache_.isPositionAvailable(position));
+  DCHECK(resumeCache_->isPositionAvailable(position));
 
   resumeStreams();
-  streamState_->resumeCache_.sendFramesFromPosition(position, *frameTransport_);
+  resumeCache_->sendFramesFromPosition(position, *frameTransport_);
 
   for (auto& frame : streamState_->moveOutputPendingFrames()) {
     outputFrameOrEnqueue(std::move(frame));
@@ -736,7 +739,8 @@ void ConnectionAutomaton::outputFrame(std::unique_ptr<folly::IOBuf> frame) {
   stats_->frameWritten(frameType);
 
   if (isResumable_) {
-    streamState_->resumeCache_.trackSentFrame(*frame);
+    auto streamIdPtr = frameSerializer().peekStreamId(*frame);
+    resumeCache_->trackSentFrame(*frame, frameType, streamIdPtr);
   }
   frameTransport_->outputFrameOrEnqueue(std::move(frame));
 }

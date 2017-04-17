@@ -159,7 +159,7 @@ class ClientSideConcurrencyTest : public testing::Test {
 
   static std::unique_ptr<folly::IOBuf> originalPayload() {
     return folly::IOBuf::copyBuffer("foo");
-  };
+  }
 
   // we want these to be the first members, to be destroyed as last
   folly::ScopedEventBaseThread thread1;
@@ -525,9 +525,9 @@ class InitialRequestNDeliveredTest : public testing::Test {
         "",
         "",
         Payload());
-    FrameSerializerV0_1 frameSerializer;
     testConnectionSub->onNext(
-        frameSerializer.serializeOut(std::move(frameSetup)));
+        FrameSerializer::createCurrentVersion()->serializeOut(
+            std::move(frameSetup)));
   }
 
   void loopEventBaseUntilDone() {

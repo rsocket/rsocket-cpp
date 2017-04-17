@@ -56,7 +56,7 @@ class TcpConnectionAcceptor::SocketCallback
 ////////////////////////////////////////////////////////////////////////////////
 
 TcpConnectionAcceptor::TcpConnectionAcceptor(Options options)
-    : options_{std::move(options)} {}
+    : options_(std::move(options)) {}
 
 TcpConnectionAcceptor::~TcpConnectionAcceptor() {
   LOG(INFO) << "Shutting down TCP listener";

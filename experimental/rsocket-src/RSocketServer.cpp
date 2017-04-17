@@ -125,15 +125,20 @@ void RSocketServer::start(OnAccept onAccept) {
     rawRs->serverConnect(std::move(frameTransport), socketParams);
   });
 
-  lazyAcceptor_->start([this](
-      std::unique_ptr<DuplexConnection> conn, folly::Executor& executor) {
-    LOG(INFO) << "RSocketServer => received new connection";
+  lazyAcceptor_
+      ->start([this](
+          std::unique_ptr<DuplexConnection> conn, folly::Executor& executor) {
+        LOG(INFO) << "RSocketServer => received new connection";
 
-    LOG(INFO) << "RSocketServer => going to accept duplex connection";
-    // the callbacks above are wired up, now accept the connection
-    // FIXME(alexanderm): This isn't thread safe
-    acceptor_.accept(std::move(conn), connectionHandler_);
-  });
+        LOG(INFO) << "RSocketServer => going to accept duplex connection";
+        // the callbacks above are wired up, now accept the connection
+        // FIXME(alexanderm): This isn't thread safe
+        acceptor_.accept(std::move(conn), connectionHandler_);
+      })
+      .onError([](const folly::exception_wrapper& ex) {
+        LOG(FATAL) << "RSocketServer => failed to start HttpAcceptor: "
+                  << ex.what();
+      });
 }
 
 void RSocketServer::startAndPark(OnAccept onAccept) {

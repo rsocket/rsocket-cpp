@@ -1,11 +1,42 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
+
 #include "src/ResumeCache.h"
-#include <folly/Optional.h>
+
 #include <algorithm>
+
 #include "src/ConnectionAutomaton.h"
+#include "src/Frame.h"
 #include "src/FrameTransport.h"
-#include "src/ResumeTracker.h"
-#include "src/Stats.h"
+
+namespace {
+
+using reactivesocket::FrameType;
+
+bool shouldTrackFrame(const FrameType frameType) {
+  switch (frameType) {
+    case FrameType::REQUEST_CHANNEL:
+    case FrameType::REQUEST_STREAM:
+    case FrameType::REQUEST_RESPONSE:
+    case FrameType::REQUEST_FNF:
+    case FrameType::REQUEST_N:
+    case FrameType::CANCEL:
+    case FrameType::ERROR:
+    case FrameType::PAYLOAD:
+      return true;
+    case FrameType::RESERVED:
+    case FrameType::SETUP:
+    case FrameType::LEASE:
+    case FrameType::KEEPALIVE:
+    case FrameType::METADATA_PUSH:
+    case FrameType::RESUME:
+    case FrameType::RESUME_OK:
+    case FrameType::EXT:
+    default:
+      return false;
+  }
+}
+
+} // anonymous
 
 namespace reactivesocket {
 
@@ -13,10 +44,22 @@ ResumeCache::~ResumeCache() {
   clearFrames(position_);
 }
 
-void ResumeCache::trackSentFrame(const folly::IOBuf& serializedFrame) {
-  if (ResumeTracker::shouldTrackFrame(
-          serializedFrame, connection_.frameSerializer())) {
-    // TODO(tmont): this could be expensive, find a better way to determine
+void ResumeCache::trackReceivedFrame(
+    const folly::IOBuf& serializedFrame,
+    const FrameType frameType) {
+  if (shouldTrackFrame(frameType)) {
+    VLOG(6) << "received frame " << frameType;
+    // TODO(tmont): this could be expensive, find a better way to get length
+    impliedPosition_ += serializedFrame.computeChainDataLength();
+  }
+}
+
+void ResumeCache::trackSentFrame(
+    const folly::IOBuf& serializedFrame,
+    const FrameType frameType,
+    const folly::Optional<StreamId> streamIdPtr) {
+  if (shouldTrackFrame(frameType)) {
+    // TODO(tmont): this could be expensive, find a better way to get length
     auto frameDataLength = serializedFrame.computeChainDataLength();
 
     // if the frame is too huge, we don't cache it
@@ -28,15 +71,10 @@ void ResumeCache::trackSentFrame(const folly::IOBuf& serializedFrame) {
     }
 
     addFrame(serializedFrame, frameDataLength);
-
     position_ += frameDataLength;
 
-    // TODO(tmont): this is not ideal, but memory usage is more important
-    auto streamIdPtr =
-        connection_.frameSerializer().peekStreamId(serializedFrame);
     if (streamIdPtr) {
       const StreamId streamId = *streamIdPtr;
-
       streamMap_[streamId] = position_;
     }
   }
@@ -100,7 +138,7 @@ void ResumeCache::addFrame(const folly::IOBuf& frame, size_t frameDataLength) {
     evictFrame();
   }
   frames_.emplace_back(position_, frame.clone());
-  connection_.stats().resumeBufferChanged(1, static_cast<int>(frameDataLength));
+  stats_->resumeBufferChanged(1, static_cast<int>(frameDataLength));
 }
 
 void ResumeCache::evictFrame() {
@@ -127,7 +165,7 @@ void ResumeCache::clearFrames(ResumePosition position) {
       });
   DCHECK(end == frames_.end() || end->first >= resetPosition_);
   auto pos = end == frames_.end() ? position : end->first;
-  connection_.stats().resumeBufferChanged(
+  stats_->resumeBufferChanged(
       -static_cast<int>(std::distance(frames_.begin(), end)),
       -static_cast<int>(pos - resetPosition_));
 

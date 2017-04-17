@@ -23,6 +23,8 @@ if(NOT REACTIVE_STREAMS_GIT_URL)
   set(REACTIVE_STREAMS_GIT_URL "https://github.com/ReactiveSocket/reactive-streams-cpp.git" CACHE STRING "Location of the ReactiveStreams C++ git repo" FORCE)
 endif(NOT REACTIVE_STREAMS_GIT_URL)
 
+option(BUILD_BENCHMARKS "Build benchmarks" OFF)
+
 enable_testing()
 
 # Add a OSS macro.  This is mainly to get gflags working with travis.
@@ -69,8 +71,8 @@ endif()
 
 # Common configuration for all build modes.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++${META_CXX_STD}")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter -Woverloaded-virtual")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-undefined-func-template")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Woverloaded-virtual")
 
 string(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_LOWER)
 if("${BUILD_TYPE_LOWER}" MATCHES "debug")
@@ -173,8 +175,6 @@ add_library(
   src/RequestHandler.h
   src/ResumeCache.cpp
   src/ResumeCache.h
-  src/ResumeTracker.cpp
-  src/ResumeTracker.h
   src/ServerConnectionAcceptor.cpp
   src/ServerConnectionAcceptor.h
   src/StandardReactiveSocket.cpp
@@ -200,6 +200,7 @@ add_library(
 target_link_libraries(
   ReactiveSocket
   ${FOLLY_LIBRARIES}
+  ${GFLAGS_LIBRARY}
   ${GLOG_LIBRARY})
 
 add_dependencies(ReactiveSocket ReactiveStreams)
@@ -502,5 +503,9 @@ target_link_libraries(
 ########################################
 # End Examples
 ########################################
+
+if(BUILD_BENCHMARKS)
+  add_subdirectory(benchmarks)
+endif(BUILD_BENCHMARKS)
 
 # EOF

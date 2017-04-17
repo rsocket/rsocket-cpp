@@ -24,7 +24,7 @@ using namespace reactivestreams_yarpl;
  * @param scheduler
  * @param subscriber
  */
-auto getFlowableBwithHandler(Scheduler& scheduler) {
+static auto getFlowableBwithHandler(Scheduler& scheduler) {
   class Handler {
    public:
     Handler() = default;
@@ -43,7 +43,7 @@ auto getFlowableBwithHandler(Scheduler& scheduler) {
       auto s_ =
           new yarpl::flowable::sources::RangeSubscription(1, 100, std::move(s));
       s_->start();
-    };
+    }
   };
   return FlowableB<long>(Handler()).subscribeOn(scheduler).take(50);
 }

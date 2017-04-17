@@ -1,4 +1,8 @@
 cmake_minimum_required (VERSION 3.4)
+
+# To debug the project, set the build type.
+set(CMAKE_BUILD_TYPE Debug)
+
 project (yarpl)
 
 # CMake Config
@@ -11,7 +15,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 # Common configuration for all build modes.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -momit-leaf-frame-pointer")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-weak-vtables -Wpadded")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -momit-leaf-frame-pointer")
 
 # Configuration for Debug build mode.
 #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
@@ -46,6 +52,8 @@ add_library(
         include/yarpl/Flowable_Subscriber.h
         include/yarpl/Flowable_SubscriptionSync.h
         include/yarpl/Flowable_TestSubscriber.h
+        # hack-y extraction of test code
+        include/yarpl/Tuple.h
         # Flowable sources
         src/yarpl/flowable/sources/Flowable_RangeSubscription.h
         src/yarpl/flowable/sources/Flowable_RangeSubscription.cpp
@@ -64,6 +72,17 @@ add_library(
         src/yarpl/ThreadScheduler.h
         # move this out at some point
         include/reactivestreams/ReactiveStreams.h
+        # hack-y extraction of test code
+        src/yarpl/Tuple.cpp
+        # The "v" version of Flowable.
+        include/yarpl/v/Flowable.h
+        include/yarpl/v/Flowables.h
+        include/yarpl/v/FlowableV.h
+        include/yarpl/v/Operator.h
+        include/yarpl/v/Refcounted.h
+        include/yarpl/v/Subscriber.h
+        include/yarpl/v/Subscribers.h
+        include/yarpl/v/Subscription.h
 )
 
 target_include_directories(
@@ -85,6 +104,8 @@ add_executable(
         examples/FlowableBExamples.h
         examples/FlowableCExamples.cpp
         examples/FlowableCExamples.h
+        examples/FlowableVExamples.cpp
+        examples/FlowableVExamples.h
 )
 
 target_link_libraries(

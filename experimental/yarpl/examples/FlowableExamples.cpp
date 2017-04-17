@@ -11,7 +11,7 @@ using namespace reactivestreams_yarpl;
 using namespace yarpl::flowable;
 using namespace yarpl;
 
-std::shared_ptr<Flowable<std::string>> getFlowable() {
+static std::shared_ptr<Flowable<std::string>> getFlowable() {
   return Flowables::range(1, 5)->map(
       [](auto i) { return "Data=>" + std::to_string(i); });
 }

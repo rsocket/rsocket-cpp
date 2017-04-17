@@ -12,7 +12,7 @@ using namespace yarpl::flowable;
 using namespace yarpl::flowableB;
 using namespace yarpl;
 
-FlowableB<std::string> getFlowableB() {
+static FlowableB<std::string> getFlowableB() {
   return FlowablesB::range(1, 5).map(
       [](auto i) { return "Data=>" + std::to_string(i); });
 }

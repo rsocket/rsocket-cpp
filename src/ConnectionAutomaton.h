@@ -26,6 +26,7 @@ class Frame_ERROR;
 class FrameTransport;
 class KeepaliveTimer;
 class RequestHandler;
+class ResumeCache;
 class Stats;
 class StreamState;
 class SocketParameters;
@@ -256,6 +257,7 @@ class ConnectionAutomaton final
   bool remoteResumeable_{false};
   bool isClosed_{false};
 
+  std::shared_ptr<ResumeCache> resumeCache_;
   std::shared_ptr<StreamState> streamState_;
   std::shared_ptr<RequestHandler> requestHandler_;
   std::shared_ptr<FrameTransport> frameTransport_;

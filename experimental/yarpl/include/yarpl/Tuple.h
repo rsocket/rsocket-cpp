@@ -1,3 +1,5 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
 #pragma once
 
 #include <atomic>
@@ -7,7 +9,7 @@ struct Tuple {
   const int a;
   const int b;
 
-  Tuple(const int a, const int b) : a(a), b(b) {
+  Tuple(const int _a, const int _b) : a(_a), b(_b) {
     std::cout << "Tuple (" << a << ", " << b << ") constructed." << std::endl;
     instanceCount++;
     createdCount++;
@@ -20,7 +22,7 @@ struct Tuple {
     createdCount++;
   }
 
-  Tuple(Tuple&& t) : a(std::move(t.a)), b(std::move(t.b)) {
+  Tuple(Tuple&& t) noexcept : a(std::move(t.a)), b(std::move(t.b)) {
     std::cout << "Tuple (" << a << ", " << b << ") move-constructed."
               << std::endl;
     instanceCount++;

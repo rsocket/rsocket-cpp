@@ -23,7 +23,7 @@ using namespace reactivestreams_yarpl;
  * @param scheduler
  * @param subscriber
  */
-auto runHandlerFlowable(Scheduler& scheduler) {
+static auto runHandlerFlowable(Scheduler& scheduler) {
   class Handler {
    public:
     Handler() = default;
@@ -42,7 +42,7 @@ auto runHandlerFlowable(Scheduler& scheduler) {
       auto s_ =
           new yarpl::flowable::sources::RangeSubscription(1, 100, std::move(s));
       s_->start();
-    };
+    }
   };
   return Flowable<long>::create(Handler())->subscribeOn(scheduler)->take(50);
 }

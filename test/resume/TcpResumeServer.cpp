@@ -197,7 +197,7 @@ public:
       std::shared_ptr<FrameTransport>,
       folly::exception_wrapper ex) override {
     LOG(WARNING) << "Connection failed: " << ex.what();
-  };
+  }
 
  private:
   EventBase& eventBase_;

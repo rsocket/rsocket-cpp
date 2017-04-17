@@ -2,15 +2,11 @@
 
 #include "src/StreamState.h"
 
-#include "src/ConnectionAutomaton.h"
 #include "src/Stats.h"
 
 namespace reactivesocket {
 
-StreamState::StreamState(ConnectionAutomaton& connection)
-    : resumeTracker_(connection),
-      resumeCache_(connection),
-      stats_(connection.stats()) {}
+StreamState::StreamState(Stats& stats) : stats_(stats) {}
 
 StreamState::~StreamState() {
   onClearFrames();

@@ -15,7 +15,7 @@ using namespace yarpl::flowable;
 using namespace yarpl::flowableC;
 using namespace yarpl;
 
-std::unique_ptr<FlowableC<long>> getC() {
+static std::unique_ptr<FlowableC<long>> getC() {
   return FlowablesC::range(1, 10);
 }
 

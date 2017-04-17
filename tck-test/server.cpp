@@ -91,7 +91,7 @@ class ServerSubscription : public SubscriptionBase {
 
 class Callback : public AsyncServerSocket::AcceptCallback {
  public:
-  explicit Callback(EventBase& eventBase) : eventBase_(eventBase){};
+  explicit Callback(EventBase& eventBase) : eventBase_(eventBase) {}
 
   virtual ~Callback() = default;
 
@@ -148,10 +148,11 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     std::cout << "AcceptError " << ex.what() << std::endl;
   }
 
-  void shutdown() {
-    shuttingDown_ = true;
-    reactiveSockets_.clear();
-  }
+  // unused
+  // void shutdown() {
+  //   shuttingDown_ = true;
+  //   reactiveSockets_.clear();
+  // }
 
  private:
   class ServerRequestHandler : public DefaultRequestHandler {
@@ -234,7 +235,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
 };
 }
 
-void signal_handler(int signal) {
+[[noreturn]] static void signal_handler(int signal) {
   LOG(INFO) << "Terminating program after receiving signal " << signal;
   exit(signal);
 }

@@ -7,7 +7,6 @@
 #include "src/Common.h"
 #include "src/FrameSerializer.h"
 #include "src/Payload.h"
-#include "src/StreamState.h"
 
 namespace reactivesocket {
 
