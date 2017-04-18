@@ -53,4 +53,7 @@ ret=$?
 # terminate server
 kill $!
 
+# wait for server to relinquish its socket resources
+sleep 2
+
 exit $ret
