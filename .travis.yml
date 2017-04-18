@@ -72,3 +72,4 @@ script:
   - ./scripts/prepare_tck_drivers.sh
   - ./scripts/tck_test.sh -c cpp -s cpp 
   - ./scripts/tck_test.sh -c java -s java 
+  - ./scripts/tck_test.sh -c java -s cpp 
