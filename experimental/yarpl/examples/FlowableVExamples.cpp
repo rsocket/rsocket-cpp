@@ -3,6 +3,7 @@
 #include "FlowableVExamples.h"
 
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <thread>
 
@@ -20,6 +21,12 @@ auto printer() {
   return Subscribers::create<T>(
       [](T value) { std::cout << "  next: " << value << std::endl; },
       2 /* low [optional] batch size for demo */);
+}
+
+std::string getThreadId() {
+  std::ostringstream oss;
+  oss << std::this_thread::get_id();
+  return oss.str();
 }
 
 } // namespace
@@ -56,22 +63,44 @@ void FlowableVExamples::run() {
 
   std::cout << "take example: 3 out of 10 items" << std::endl;
   Flowables::range(1, 11)->take(3)->subscribe(printer<int64_t>());
+
+  auto flowable = Flowable<int>::create(
+    [total=0](Subscriber<int>& subscriber, int64_t requested) mutable {
+      subscriber.onNext(12345678);
+      subscriber.onError(std::make_exception_ptr(
+          std::runtime_error("error")));
+      return std::make_tuple(int64_t{1}, false);
+    }
+  );
+
+  auto subscriber = Subscribers::create<int>(
+    [](int next) {
+      std::cout << "@next: " << next << std::endl;
+    },
+    [](std::exception_ptr eptr) {
+      try {
+        std::rethrow_exception(eptr);
+      } catch (const std::exception& exception) {
+       std::cerr << "  exception: " << exception.what() << std::endl;
+      } catch (...) {
+       std::cerr << "  !unknown exception!" << std::endl;
+      }
+    },
+    [] {
+      std::cout << "Completed." << std::endl;
+    }
+  );
+
+  flowable->subscribe(subscriber);
+
+  ThreadScheduler scheduler;
+
+  std::cout << "subscribe_on example" << std::endl;
+  Flowables::just({ "0: ", "1: ", "2: " })
+      ->map([](const char* p) { return std::string(p); })
+      ->map([](std::string log) { return log + " on " + getThreadId(); })
+      ->subscribeOn(scheduler)
+      ->subscribe(printer<std::string>());
+  std::cout << "  waiting   on " << getThreadId() << std::endl;
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
-
-//  ThreadScheduler scheduler;
-
-//  FlowablesC::range(1, 10)
-//      ->subscribeOn(scheduler)
-//      ->map([](auto i) {
-//        std::this_thread::sleep_for(std::chrono::milliseconds(400));
-//        return "mapped->" + std::to_string(i);
-//      })
-//      ->take(2)
-//      ->subscribe(Subscribers::create<std::string>([](auto t) {
-//        std::cout << "Value received after scheduling: " << t << std::endl;
-//      }));
-
-//  // wait to see above async example
-//  /* sleep override */
-//  std::this_thread::sleep_for(std::chrono::milliseconds(1300));
-//}

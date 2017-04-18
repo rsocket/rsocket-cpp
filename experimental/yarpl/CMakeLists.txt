@@ -15,13 +15,15 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 # Common configuration for all build modes.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-weak-vtables -Wpadded")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-weak-vtables -Wno-padded")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -momit-leaf-frame-pointer")
 
 # Configuration for Debug build mode.
 #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG")
 
 include_directories(${CMAKE_SOURCE_DIR})
 
@@ -83,6 +85,7 @@ add_library(
         include/yarpl/v/Subscriber.h
         include/yarpl/v/Subscribers.h
         include/yarpl/v/Subscription.h
+        src/yarpl/v/Refcounted.cpp
 )
 
 target_include_directories(
@@ -147,6 +150,21 @@ target_include_directories(
         PUBLIC "${PROJECT_SOURCE_DIR}/include" # allow include paths such as "yarpl/observable.h" can be used
 )
 
+add_executable(yarpl-v-tests
+        test/v/RefcountedTest.cpp
+        test/v/FlowableTest.cpp
+)
+
+target_link_libraries(
+        yarpl-v-tests
+        yarpl
+        ${GMOCK_LIBS}
+)
+
+target_include_directories(
+        yarpl-v-tests
+        PUBLIC "${PROJECT_SOURCE_DIR}/include" # allow include paths such as "yarpl/observable.h" can be used
+)
 ## perf tests
 #add_executable(
 #        yarpl-perf

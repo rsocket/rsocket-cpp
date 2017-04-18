@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "reactivestreams/ReactiveStreams.h"
+#include "yarpl/Scheduler.h"
 #include "yarpl/utils/type_traits.h"
 
 #include "Refcounted.h"
@@ -30,8 +31,10 @@ class Flowable : public virtual Refcounted {
 
   auto take(int64_t);
 
+  auto subscribeOn(Scheduler&);
+
   /**
-   * Create a flowable from an emitter.
+   * \brief Create a flowable from an emitter.
    *
    * \param emitter function that is invoked to emit values to a subscriber.
    * The emitter's signature is:
@@ -239,6 +242,12 @@ template <typename T>
 auto Flowable<T>::take(int64_t limit) {
   return Reference<Flowable<T>>(
       new TakeOperator<T>(Reference<Flowable<T>>(this), limit));
+}
+
+template<typename T>
+auto Flowable<T>::subscribeOn(Scheduler& scheduler) {
+  return Reference<Flowable<T>>(
+      new SubscribeOnOperator<T>(Reference<Flowable<T>>(this), scheduler));
 }
 
 } // yarpl
