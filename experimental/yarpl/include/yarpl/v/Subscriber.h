@@ -28,9 +28,6 @@ class Subscriber : public reactivestreams_yarpl::Subscriber<T>,
   }
 
   virtual void onNext(const T&) {}
-  virtual void onNext(T&& value) {
-    onNext(value);
-  }
 
  protected:
   Subscription* subscription() {
