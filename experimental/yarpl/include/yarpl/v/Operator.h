@@ -10,8 +10,9 @@ namespace yarpl {
 
 /**
  * Base (helper) class for operators.  Operators are templated on two types:
- * D and U.
- *
+ * D (downstream) and U (upstream).  Operators are created by method calls on
+ * an upstream Flowable, and are Flowables themselves.  Multi-stage pipelines
+ * can be built: a Flowable heading a sequence of Operators.
  */
 template <typename U, typename D>
 class Operator : public Flowable<D> {
@@ -25,6 +26,14 @@ public:
   }
 
  protected:
+  ///
+  /// \brief An Operator's subscription.
+  ///
+  /// When a pipeline chain is active, each Flowable has a corresponding
+  /// subscription.  Except for the first one, the subscriptions are created
+  /// against Operators.  Each operator subscription has two functions: as a
+  /// subscriber for the previous stage; as a subscription for the next one,
+  /// the user-supplied subscriber being the last of the pipeline stages.
   class Subscription : public ::yarpl::Subscription, public Subscriber<U> {
    public:
     Subscription(
@@ -64,8 +73,19 @@ public:
     }
 
    protected:
+    /// The Flowable has the lambda, and other creation parameters.
     Reference<Flowable<D>> flowable_;
+
+    /// This subscription controls the life-cycle of the subscriber.  The
+    /// subscriber is retained as long as calls on it can be made.  (Note:
+    /// the subscriber in turn maintains a reference on this subscription
+    /// object until cancellation and/or completion.)
     Reference<Subscriber<D>> subscriber_;
+
+    /// In an active pipeline, cancel and (possibly modified) request(n)
+    /// calls should be forwarded upstream.  Note that `this` is also a
+    /// subscriber for the upstream stage: thus, there are cycles; all of
+    /// the objects drop their references at cancel/complete.
     Reference<::yarpl::Subscription> upstream_;
   };
 
@@ -161,6 +181,55 @@ class TakeOperator : public Operator<T, T> {
   };
 
   const int64_t limit_;
+};
+
+template<typename T>
+class SubscribeOnOperator : public Operator<T, T> {
+public:
+  SubscribeOnOperator(Reference<Flowable<T>> upstream, Scheduler& scheduler)
+    : Operator<T, T>(std::move(upstream)), worker_(scheduler.createWorker()) {}
+
+  virtual void subscribe(Reference<Subscriber<T>> subscriber) override {
+    Operator<T, T>::upstream_->subscribe(
+        Reference<Subscription>(
+            new Subscription(
+                Reference<Flowable<T>>(this),
+                std::move(worker_),
+                std::move(subscriber))));
+  }
+
+private:
+  class Subscription : public Operator<T, T>::Subscription {
+  public:
+    Subscription(Reference<Flowable<T>> flowable,
+                 std::unique_ptr<Worker> worker,
+                 Reference<Subscriber<T>> subscriber)
+      : Operator<T, T>::Subscription(
+            std::move(flowable), std::move(subscriber)),
+        worker_(std::move(worker)) {}
+
+    virtual void request(int64_t delta) override {
+      worker_->schedule([delta, this] {
+        Operator<T, T>::Subscription::request(delta);
+      });
+    }
+
+    virtual void cancel() override {
+      worker_->schedule([this] {
+        Operator<T, T>::Subscription::cancel();
+      });
+    }
+
+    virtual void onNext(const T& value) override {
+      auto* subscriber = Operator<T, T>::Subscription::subscriber_.get();
+      subscriber->onNext(value);
+    }
+
+  private:
+    std::unique_ptr<Worker> worker_;
+  };
+
+  std::unique_ptr<Worker> worker_;
 };
 
 } // yarpl
