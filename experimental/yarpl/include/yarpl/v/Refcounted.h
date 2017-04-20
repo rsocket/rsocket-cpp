@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <cstddef>
 #include <type_traits>
 
 namespace yarpl {
@@ -17,10 +18,10 @@ public:
   virtual ~Refcounted();
 
   // Return the number of live refcounted objects.  For testing.
-  static size_t objects();
+  static std::size_t objects();
 
   // Return the current count.  For testing.
-  size_t count() const { return refcount_; }
+  std::size_t count() const { return refcount_; }
 #else  /* NDEBUG */
   virtual ~Refcounted() = default;
 #endif  /* NDEBUG */
