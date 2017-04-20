@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.4)
+cmake_minimum_required (VERSION 3.2)
 
 # To debug the project, set the build type.
 set(CMAKE_BUILD_TYPE Debug)
