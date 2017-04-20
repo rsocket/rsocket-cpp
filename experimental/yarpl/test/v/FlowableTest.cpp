@@ -1,5 +1,4 @@
 #include <future>
-#include <iostream>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -13,10 +12,6 @@ namespace {
 template<typename T>
 class CollectingSubscriber : public Subscriber<T> {
 public:
-  virtual ~CollectingSubscriber() {
-    std::cout << "~collectingsubscriber" << std::endl;
-  }
-
   virtual void onSubscribe(Reference<Subscription> subscription) override {
     Subscriber<T>::onSubscribe(subscription);
     subscription->request(100);
@@ -25,12 +20,6 @@ public:
   virtual void onNext(const T& next) override {
     Subscriber<T>::onNext(next);
     values_.push_back(next);
-    std::cout << "next: " << next << std::endl;
-  }
-
-  virtual void onComplete() override {
-    std::cout << "complete." << std::endl;
-    Subscriber<T>::onComplete();
   }
 
   const std::vector<T>& values() const {
@@ -91,6 +80,15 @@ TEST(FlowableTest, RangeWithMap) {
       ->map([](int64_t v) { return std::to_string(v); });
   EXPECT_EQ(run(std::move(flowable)),
             std::vector<std::string>({"1", "16", "81"}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(FlowableTest, SimpleTake) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  EXPECT_EQ(run(Flowables::range(0, 100)->take(3)),
+            std::vector<int64_t>({0, 1, 2}));
+  EXPECT_EQ(run(Flowables::range(10, 15)), std::vector<int64_t>(
+      {10, 11, 12, 13, 14}));
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
