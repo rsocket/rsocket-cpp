@@ -1,13 +1,12 @@
 #pragma once
 
 #include "Refcounted.h"
-#include "reactivestreams/ReactiveStreams.h"
 
 namespace yarpl {
 
-class Subscription : public reactivestreams_yarpl::Subscription,
-                     public virtual Refcounted {
+class Subscription : public virtual Refcounted {
  public:
+  virtual ~Subscription() = default;
   virtual void request(int64_t n) = 0;
   virtual void cancel() = 0;
 

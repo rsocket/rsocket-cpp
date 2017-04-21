@@ -2,28 +2,18 @@
 
 #include <stdexcept>
 
-#include "reactivestreams/ReactiveStreams.h"
-
 #include "Refcounted.h"
 #include "Subscription.h"
 
 namespace yarpl {
 
 template <typename T>
-class Subscriber : public reactivestreams_yarpl::Subscriber<T>,
-                   public virtual Refcounted {
+class Subscriber : public virtual Refcounted {
  public:
   // Note: if any of the following methods is overridden in a subclass,
   // the new methods SHOULD ensure that these are invoked as well.
   virtual void onSubscribe(Reference<Subscription> subscription) {
     subscription_ = subscription;
-  }
-
-  // Note: we've overridden the signature of onSubscribe with yarpl's
-  // Subscriber.  Keep this definition, making it private, to keep the
-  // compiler from issuing a warning about the override.
-  virtual void onSubscribe(reactivestreams_yarpl::Subscription*) {
-    throw std::logic_error("unimplemented, switch to override");
   }
 
   // No further calls to the subscription after this method is invoked.
