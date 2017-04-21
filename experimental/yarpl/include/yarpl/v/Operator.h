@@ -210,13 +210,13 @@ private:
 
     virtual void request(int64_t delta) override {
       worker_->schedule([delta, this] {
-        Operator<T, T>::Subscription::request(delta);
+        this->callSuperRequest(delta);
       });
     }
 
     virtual void cancel() override {
       worker_->schedule([this] {
-        Operator<T, T>::Subscription::cancel();
+        this->callSuperCancel();
       });
     }
 
@@ -226,6 +226,16 @@ private:
     }
 
   private:
+    // Trampoline to call superclass method; gcc bug 58972.
+    void callSuperRequest(int64_t delta) {
+      Operator<T, T>::Subscription::request(delta);
+    }
+
+    // Trampoline to call superclass method; gcc bug 58972.
+    void callSuperCancel() {
+      Operator<T, T>::Subscription::cancel();
+    }
+
     std::unique_ptr<Worker> worker_;
   };
 
