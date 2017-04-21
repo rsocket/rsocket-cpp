@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdexcept>
+
 #include "reactivestreams/ReactiveStreams.h"
 
 #include "Refcounted.h"
@@ -15,6 +17,13 @@ class Subscriber : public reactivestreams_yarpl::Subscriber<T>,
   // the new methods SHOULD ensure that these are invoked as well.
   virtual void onSubscribe(Reference<Subscription> subscription) {
     subscription_ = subscription;
+  }
+
+  // Note: we've overridden the signature of onSubscribe with yarpl's
+  // Subscriber.  Keep this definition, making it private, to keep the
+  // compiler from issuing a warning about the override.
+  virtual void onSubscribe(reactivestreams_yarpl::Subscription*) {
+    throw std::logic_error("unimplemented, switch to override");
   }
 
   // No further calls to the subscription after this method is invoked.
@@ -38,11 +47,6 @@ class Subscriber : public reactivestreams_yarpl::Subscriber<T>,
   // "Our" reference to the subscription, to ensure that it is retained
   // while calls to its methods are in-flight.
   Reference<Subscription> subscription_{nullptr};
-
-  // Note: we've overridden the signature of onSubscribe with yarpl's
-  // Subscriber.  Keep this definition, making it private, to keep the
-  // compiler from issuing a warning about the override.
-  virtual void onSubscribe(reactivestreams_yarpl::Subscription*) {}
 };
 
 } // yarpl
