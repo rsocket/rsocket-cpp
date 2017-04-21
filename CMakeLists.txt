@@ -248,7 +248,7 @@ target_link_libraries(
   ${GMOCK_LIBS}
   ${GFLAGS_LIBRARY}
   ${GLOG_LIBRARY}
-  ${CMAKE_THREAD_LIBS_INIT} pthread)
+  ${CMAKE_THREAD_LIBS_INIT})
 
 add_dependencies(tests gmock ReactiveSocket)
 

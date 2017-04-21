@@ -143,6 +143,7 @@ target_link_libraries(
         yarpl-tests
         yarpl
         ${GMOCK_LIBS} # inherited from reactivesocket-cpp CMake
+        ${CMAKE_THREAD_LIBS_INIT}
 )
 
 target_include_directories(
@@ -159,6 +160,7 @@ target_link_libraries(
         yarpl-v-tests
         yarpl
         ${GMOCK_LIBS}
+        ${CMAKE_THREAD_LIBS_INIT}
 )
 
 target_include_directories(
