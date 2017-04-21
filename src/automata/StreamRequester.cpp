@@ -85,7 +85,7 @@ void StreamRequester::onNextFrame(Frame_PAYLOAD&& frame) {
       CHECK(false);
       break;
     case State::REQUESTED:
-      if (!!(frame.header_.flags_ & FrameFlags::COMPLETE)) {
+      if (frame.header_.flagsComplete()) {
         state_ = State::CLOSED;
         end = true;
       }
@@ -94,7 +94,7 @@ void StreamRequester::onNextFrame(Frame_PAYLOAD&& frame) {
       break;
   }
 
-  processPayload(std::move(frame.payload_));
+  processPayload(std::move(frame.payload_), frame.header_.flagsNext());
 
   if (end) {
     closeStream(StreamCompletionSignal::COMPLETE);

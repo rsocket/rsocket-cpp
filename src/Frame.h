@@ -139,6 +139,14 @@ class FrameHeader {
   FrameHeader(FrameType type, FrameFlags flags, StreamId streamId)
       : type_(type), flags_(flags), streamId_(streamId) {}
 
+  bool flagsComplete() const {
+    return !!(flags_ & FrameFlags::COMPLETE);
+  }
+
+  bool flagsNext() const {
+    return !!(flags_ & FrameFlags::NEXT);
+  }
+
   FrameType type_{};
   FrameFlags flags_{};
   StreamId streamId_{};

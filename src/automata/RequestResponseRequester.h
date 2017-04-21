@@ -50,11 +50,6 @@ class RequestResponseRequester : public StreamAutomatonBase,
     CLOSED,
   } state_{State::NEW};
 
-  // Whether the Subscriber made the request(1) call and thus is
-  // ready to accept the payload.
-  bool waitingForPayload_{false};
-  Payload payload_;
-
   /// A Subscriber that will consume payloads.
   /// This is responsible for delivering a terminal signal to the
   /// Subscriber once the stream ends.

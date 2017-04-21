@@ -85,7 +85,10 @@ void ChannelResponder::endStream(StreamCompletionSignal signal) {
 
 void ChannelResponder::processInitialFrame(Frame_REQUEST_CHANNEL&& frame) {
   onNextPayloadFrame(
-      frame.header_.flags_, frame.requestN_, std::move(frame.payload_));
+      frame.requestN_,
+      std::move(frame.payload_),
+      frame.header_.flagsComplete(),
+      true);
 }
 
 void ChannelResponder::onNextFrame(Frame_REQUEST_CHANNEL&& frame) {
@@ -95,17 +98,22 @@ void ChannelResponder::onNextFrame(Frame_REQUEST_CHANNEL&& frame) {
 }
 
 void ChannelResponder::onNextFrame(Frame_PAYLOAD&& frame) {
-  onNextPayloadFrame(frame.header_.flags_, 0, std::move(frame.payload_));
+  onNextPayloadFrame(
+      0,
+      std::move(frame.payload_),
+      frame.header_.flagsComplete(),
+      frame.header_.flagsNext());
 }
 
 void ChannelResponder::onNextPayloadFrame(
-    FrameFlags flags,
     uint32_t requestN,
-    Payload&& payload) {
+    Payload&& payload,
+    bool complete,
+    bool next) {
   bool end = false;
   switch (state_) {
     case State::RESPONDING:
-      if (!!(flags & FrameFlags::COMPLETE)) {
+      if (complete) {
         state_ = State::CLOSED;
         end = true;
       }
@@ -115,7 +123,7 @@ void ChannelResponder::onNextPayloadFrame(
   }
 
   processRequestN(requestN);
-  processPayload(std::move(payload));
+  processPayload(std::move(payload), next);
 
   if (end) {
     closeStream(StreamCompletionSignal::COMPLETE);

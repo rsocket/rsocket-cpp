@@ -52,8 +52,8 @@ void ConsumerBase::resumeStream(RequestHandler& requestHandler) {
   }
 }
 
-void ConsumerBase::processPayload(Payload&& payload) {
-  if (payload) {
+void ConsumerBase::processPayload(Payload&& payload, bool onNext) {
+  if (payload || onNext) {
     // Frames carry application-level payloads are taken into account when
     // figuring out flow control allowance.
     if (allowance_.tryAcquire()) {

@@ -58,14 +58,12 @@
 // protected:
 //  FlowableV() = default;
 
-
-//template <typename T>
-//template <typename F, typename Default>
-//std::unique_ptr<FlowableV<typename std::result_of<F(T)>::type>>
-//FlowableV<T>::map(F&& function) {
+// template <typename T>
+// template <typename F, typename Default>
+// std::unique_ptr<FlowableV<typename std::result_of<F(T)>::type>>
+// FlowableV<T>::map(F&& function) {
 //  return lift<typename std::result_of<F(T)>::type>(
 //      yarpl::operators::
 //          FlowableMapOperator<T, typename std::result_of<F(T)>::type, F>(
 //              std::forward<F>(function)));
 //}
-

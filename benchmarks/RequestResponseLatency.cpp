@@ -163,8 +163,10 @@ class BM_RsFixture : public benchmark::Fixture
 public:
     BM_RsFixture() :
         host_(FLAGS_host),
-        port_(FLAGS_port),
-        serverRs_(RSocket::createServer(TcpConnectionAcceptor::create(port_))),
+        port_(static_cast<uint16_t>(FLAGS_port)),
+        serverRs_(RSocket::createServer(
+            std::make_unique<TcpConnectionAcceptor>(
+                TcpConnectionAcceptor::Options{port_}))),
         handler_(std::make_shared<BM_RequestHandler>())
     {
         FLAGS_v = 0;
@@ -185,14 +187,15 @@ public:
     }
 
     std::string host_;
-    int port_;
+    uint16_t port_;
     std::unique_ptr<RSocketServer> serverRs_;
     std::shared_ptr<BM_RequestHandler> handler_;
 };
 
 BENCHMARK_F(BM_RsFixture, BM_RequestResponse_Latency)(benchmark::State &state)
 {
-    auto clientRs = RSocket::createClient(TcpConnectionFactory::create(host_, port_));
+    auto clientRs = RSocket::createClient(
+        std::make_unique<TcpConnectionFactory>(host_, port_));
     int reqs = 0;
 
     auto rs = clientRs->connect().get();

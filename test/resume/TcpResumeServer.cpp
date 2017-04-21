@@ -134,7 +134,7 @@ class ServerRequestHandler : public DefaultRequestHandler {
 };
 
 class MyConnectionHandler : public ConnectionHandler {
-public:
+ public:
   MyConnectionHandler(EventBase& eventBase, std::shared_ptr<Stats> stats)
       : eventBase_(eventBase), stats_(std::move(stats)) {}
 

@@ -1,17 +1,17 @@
 #pragma once
 
-#include "reactivestreams/ReactiveStreams.h"
 #include "Refcounted.h"
+#include "reactivestreams/ReactiveStreams.h"
 
 namespace yarpl {
 
 class Subscription : public reactivestreams_yarpl::Subscription,
-    public virtual Refcounted {
-public:
+                     public virtual Refcounted {
+ public:
   virtual void request(int64_t n) = 0;
   virtual void cancel() = 0;
 
-protected:
+ protected:
   Subscription() : reference_(this) {}
 
   // Drop the reference we're holding on the subscription (handle).
@@ -19,11 +19,11 @@ protected:
     reference_.reset();
   }
 
-private:
+ private:
   // We expect to be heap-allocated; until this subscription finishes
   // (is canceled; completes; error's out), hold a reference so we are
   // not deallocated (by the subscriber).
   Reference<Refcounted> reference_;
 };
 
-}  // yarpl
+} // yarpl

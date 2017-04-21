@@ -147,7 +147,7 @@ void ChannelRequester::onNextFrame(Frame_PAYLOAD&& frame) {
       break;
   }
 
-  processPayload(std::move(frame.payload_));
+  processPayload(std::move(frame.payload_), frame.header_.flagsNext());
 
   if (end) {
     closeStream(StreamCompletionSignal::COMPLETE);

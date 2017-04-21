@@ -38,8 +38,7 @@ void StreamResponder::onCompleteImpl() noexcept {
   }
 }
 
-void StreamResponder::onErrorImpl(
-    folly::exception_wrapper ex) noexcept {
+void StreamResponder::onErrorImpl(folly::exception_wrapper ex) noexcept {
   debugCheckOnNextOnCompleteOnError();
   switch (state_) {
     case State::RESPONDING: {
@@ -51,13 +50,11 @@ void StreamResponder::onErrorImpl(
   }
 }
 
-void StreamResponder::pauseStream(
-    RequestHandler& requestHandler) {
+void StreamResponder::pauseStream(RequestHandler& requestHandler) {
   pausePublisherStream(requestHandler);
 }
 
-void StreamResponder::resumeStream(
-    RequestHandler& requestHandler) {
+void StreamResponder::resumeStream(RequestHandler& requestHandler) {
   resumePublisherStream(requestHandler);
 }
 

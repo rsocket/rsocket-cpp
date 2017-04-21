@@ -55,6 +55,17 @@ void FrameTransport::setFrameProcessor(
   }
 
   drainOutputFramesQueue();
+  if (frameProcessor_) {
+    while (!pendingReads_.empty()) {
+      auto frame = std::move(pendingReads_.front());
+      pendingReads_.pop_front();
+      frameProcessor_->processFrame(std::move(frame));
+    }
+    if (pendingTerminal_) {
+      terminateFrameProcessor(std::move(*pendingTerminal_));
+      pendingTerminal_ = folly::none;
+    }
+  }
 }
 
 void FrameTransport::close(folly::exception_wrapper ex) {
@@ -101,11 +112,10 @@ void FrameTransport::onSubscribe(
 void FrameTransport::onNext(std::unique_ptr<folly::IOBuf> frame) noexcept {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
 
-  if (connection_) {
-    // if *this is not closed and is pulling frames, it should have
-    // frameProcessor
-    CHECK(frameProcessor_);
+  if (connection_ && frameProcessor_) {
     frameProcessor_->processFrame(std::move(frame));
+  } else {
+    pendingReads_.emplace_back(std::move(frame));
   }
 }
 
@@ -115,6 +125,10 @@ void FrameTransport::terminateFrameProcessor(folly::exception_wrapper ex) {
   std::shared_ptr<FrameProcessor> frameProcessor;
   {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
+    if (!frameProcessor_) {
+      pendingTerminal_ = std::move(ex);
+      return;
+    }
     frameProcessor = std::move(frameProcessor_);
   }
 
@@ -159,9 +173,9 @@ void FrameTransport::cancel() noexcept {
 void FrameTransport::outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf> frame) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
 
-  // we don't want to be sending frames when frameProcessor_ is not set because
-  // we wont have a way to process error/terminating signals
-  if (connection_ && frameProcessor_) {
+  // We allow sending frames even without a frame processor so it's possible
+  // to send terminal frames without expecting anything in return
+  if (connection_) {
     drainOutputFramesQueue();
     if (pendingWrites_.empty() && writeAllowance_.tryAcquire()) {
       // TODO: temporary disabling VLOG as we don't know the correct
@@ -187,7 +201,7 @@ void FrameTransport::outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf> frame) {
 void FrameTransport::drainOutputFramesQueue() {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
 
-  if (connection_ && frameProcessor_) {
+  if (connection_) {
     // Drain the queue or the allowance.
     while (!pendingWrites_.empty() && writeAllowance_.tryAcquire()) {
       auto frame = std::move(pendingWrites_.front());

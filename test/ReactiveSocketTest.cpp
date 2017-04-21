@@ -1,16 +1,14 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include <array>
-#include <chrono>
-#include <thread>
-
 #include <folly/Baton.h>
 #include <folly/Memory.h>
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
+#include <folly/portability/GFlags.h>
 #include <gmock/gmock.h>
-
-#include "MockStats.h"
+#include <array>
+#include <chrono>
+#include <thread>
 #include "src/FrameTransport.h"
 #include "src/NullRequestHandler.h"
 #include "src/StandardReactiveSocket.h"
@@ -18,6 +16,7 @@
 #include "test/InlineConnection.h"
 #include "test/MockKeepaliveTimer.h"
 #include "test/MockRequestHandler.h"
+#include "test/MockStats.h"
 #include "test/ReactiveStreamsMocksCompat.h"
 
 using namespace ::testing;
@@ -37,6 +36,8 @@ MATCHER_P(
     "Payloads " + std::string(negation ? "don't" : "") + "match") {
   return folly::IOBufEqual()(*payload, arg);
 }
+
+DECLARE_string(rs_use_protocol_version);
 
 TEST(ReactiveSocketTest, RequestChannel) {
   // InlineConnection forwards appropriate calls in-line, hence the order of
@@ -1301,4 +1302,141 @@ TEST_F(ReactiveSocketRegressionTest, MetadataFrameWithoutMetadataFlag) {
   EXPECT_CALL(requestHandler_, handleMetadataPush_(_)).Times(0);
   input_->onNext(folly::IOBuf::copyBuffer(
       "\x00\x0d\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"s));
+}
+
+class ReactiveSocketEmptyPayloadTest : public testing::Test {
+ public:
+  ReactiveSocketEmptyPayloadTest() {
+    auto clientConn = std::make_unique<InlineConnection>();
+    auto serverConn = std::make_unique<InlineConnection>();
+    clientConn->connectTo(*serverConn);
+
+    auto connectionSetup = ConnectionSetupPayload("", "", Payload());
+    connectionSetup.protocolVersion = ProtocolVersion(1, 0);
+
+    clientSock = StandardReactiveSocket::fromClientConnection(
+        defaultExecutor(),
+        std::move(clientConn),
+        // No interactions on this mock, the client will not accept any
+        // requests.
+        std::make_unique<StrictMock<MockRequestHandler>>(),
+        std::move(connectionSetup));
+
+    auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+    auto& serverHandlerRef = *serverHandler;
+
+    EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+        .WillRepeatedly(Return(nullptr));
+
+    serverSock = StandardReactiveSocket::fromServerConnection(
+        defaultExecutor(), std::move(serverConn), std::move(serverHandler));
+
+    EXPECT_CALL(*clientInput, onSubscribe_(_))
+        .WillOnce(Invoke([&](std::shared_ptr<Subscription> sub) {
+          clientInputSub = sub;
+          sub->request(2);
+        }));
+
+    EXPECT_CALL(serverHandlerRef, handleRequestResponse_(_, _, _))
+        .Times(AtMost(1))
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                std::shared_ptr<Subscriber<Payload>> response) {
+              CHECK(!request) << "incoming request is expected to be empty";
+              serverOutput = response;
+              serverOutput->onSubscribe(serverOutputSub);
+            }));
+    EXPECT_CALL(serverHandlerRef, handleRequestStream_(_, _, _))
+        .Times(AtMost(1))
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                std::shared_ptr<Subscriber<Payload>> response) {
+              CHECK(!request) << "incoming request is expected to be empty";
+              serverOutput = response;
+              serverOutput->onSubscribe(serverOutputSub);
+            }));
+    EXPECT_CALL(serverHandlerRef, handleRequestChannel_(_, _, _))
+        .Times(AtMost(1))
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                std::shared_ptr<Subscriber<Payload>> response) {
+              CHECK(!request) << "incoming request is expected to be empty";
+
+              EXPECT_CALL(*serverInput, onSubscribe_(_))
+                  .WillOnce(Invoke([&](std::shared_ptr<Subscription> sub) {
+                    serverInputSub = sub;
+                    sub->request(2);
+                  }));
+
+              EXPECT_CALL(*serverInput, onComplete_()).Times(1);
+              EXPECT_CALL(*serverInput, onError_(_)).Times(0);
+
+              serverOutput = response;
+              serverOutput->onSubscribe(serverOutputSub);
+
+              return serverInput;
+            }));
+
+    EXPECT_CALL(*clientInput, onComplete_()).Times(1);
+    EXPECT_CALL(*clientInput, onError_(_)).Times(0);
+
+    EXPECT_CALL(*serverOutputSub, request_(_)).WillOnce(Invoke([&](size_t n) {
+      CHECK_GT(n, 0);
+      EXPECT_CALL(*clientInput, onNext_(_))
+          .Times(n)
+          .WillRepeatedly(Invoke([&](Payload& p) { CHECK(!p); }));
+      while (n--) {
+        serverOutput->onNext(Payload());
+      }
+      serverOutput->onComplete();
+      serverOutput = nullptr;
+    }));
+  }
+
+  std::unique_ptr<StandardReactiveSocket> clientSock;
+  std::unique_ptr<StandardReactiveSocket> serverSock;
+
+  std::shared_ptr<StrictMock<MockSubscriber<Payload>>> clientInput{
+      std::make_shared<StrictMock<MockSubscriber<Payload>>>()};
+  std::shared_ptr<Subscription> clientInputSub;
+
+  std::shared_ptr<Subscriber<Payload>> serverOutput;
+  std::shared_ptr<NiceMock<MockSubscription>> serverOutputSub{
+      std::make_shared<NiceMock<MockSubscription>>()};
+
+  std::shared_ptr<StrictMock<MockSubscriber<Payload>>> serverInput{
+      std::make_shared<StrictMock<MockSubscriber<Payload>>>()};
+  std::shared_ptr<Subscription> serverInputSub;
+};
+
+TEST_F(ReactiveSocketEmptyPayloadTest, RequestResponse) {
+  clientSock->requestResponse(Payload(), clientInput);
+}
+
+TEST_F(ReactiveSocketEmptyPayloadTest, RequestStream) {
+  clientSock->requestStream(Payload(), clientInput);
+}
+
+TEST_F(ReactiveSocketEmptyPayloadTest, RequestChannel) {
+  auto clientOutput = clientSock->requestChannel(clientInput);
+  auto clientOutputSub = std::make_shared<NiceMock<MockSubscription>>();
+
+  int send = 3;
+  EXPECT_CALL(*clientOutputSub, request_(_))
+      .WillRepeatedly(Invoke([&](size_t n) {
+        CHECK(n >= 1);
+        while (n > 0 && send > 0) {
+          clientOutput->onNext(Payload());
+          --n;
+          --send;
+        }
+
+        if (!send) {
+          clientOutput->onComplete();
+        }
+      }));
+  clientOutput->onSubscribe(clientOutputSub);
 }

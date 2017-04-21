@@ -56,7 +56,7 @@ class ConsumerBase : public StreamAutomatonBase, public SubscriptionBase {
 
   void resumeStream(RequestHandler& requestHandler) override;
 
-  void processPayload(Payload&&);
+  void processPayload(Payload&&, bool onNext);
 
   void onError(folly::exception_wrapper ex);
   /// @}

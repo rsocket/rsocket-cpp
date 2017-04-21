@@ -109,13 +109,9 @@ void StreamAutomatonBase::newStream(
     StreamType streamType,
     uint32_t initialRequestN,
     Payload payload,
-    bool TEMP_completed) {
+    bool completed) {
   writer_->writeNewStream(
-      streamId_,
-      streamType,
-      initialRequestN,
-      std::move(payload),
-      TEMP_completed);
+      streamId_, streamType, initialRequestN, std::move(payload), completed);
 }
 
 void StreamAutomatonBase::writePayload(Payload&& payload, bool complete) {

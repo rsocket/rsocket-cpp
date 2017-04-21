@@ -93,7 +93,7 @@ class StreamAutomatonBase {
       StreamType streamType,
       uint32_t initialRequestN,
       Payload payload,
-      bool TEMP_completed = false);
+      bool completed = false);
   void writePayload(Payload&& payload, bool complete);
   void writeRequestN(uint32_t n);
   void applicationError(std::string errorPayload);

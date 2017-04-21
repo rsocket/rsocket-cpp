@@ -42,8 +42,11 @@ class ChannelResponder : public ConsumerBase,
   void onNextFrame(Frame_REQUEST_N&&) override;
   void onNextFrame(Frame_PAYLOAD&& frame) override;
 
-  void
-  onNextPayloadFrame(FrameFlags flags, uint32_t requestN, Payload&& payload);
+  void onNextPayloadFrame(
+      uint32_t requestN,
+      Payload&& payload,
+      bool complete,
+      bool next);
 
   void endStream(StreamCompletionSignal) override;
 

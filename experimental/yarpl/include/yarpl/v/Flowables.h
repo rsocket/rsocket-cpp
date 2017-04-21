@@ -7,10 +7,10 @@
 namespace yarpl {
 
 class Flowables {
-public:
+ public:
   static Reference<Flowable<int64_t>> range(int64_t start, int64_t end) {
-    auto lambda = [start, end, i = start](
-        Subscriber<int64_t>& subscriber, int64_t requested) mutable {
+    auto lambda = [ start, end, i = start ](
+        Subscriber<int64_t> & subscriber, int64_t requested) mutable {
       int64_t emitted = 0;
       bool done = false;
 
@@ -30,7 +30,7 @@ public:
     return Flowable<int64_t>::create(std::move(lambda));
   }
 
-  template<typename T>
+  template <typename T>
   static Reference<Flowable<T>> just(const T& value) {
     auto lambda = [value](Subscriber<T>& subscriber, int64_t) {
       // # requested should be > 0.  Ignoring the actual parameter.
@@ -42,10 +42,10 @@ public:
     return Flowable<T>::create(std::move(lambda));
   }
 
-  template<typename T>
+  template <typename T>
   static Reference<Flowable<T>> just(std::initializer_list<T> list) {
-    auto lambda = [list, it = list.begin()](
-        Subscriber<T>& subscriber, int64_t requested) mutable {
+    auto lambda = [ list, it = list.begin() ](
+        Subscriber<T> & subscriber, int64_t requested) mutable {
       int64_t emitted = 0;
       bool done = false;
 
@@ -65,8 +65,8 @@ public:
     return Flowable<T>::create(std::move(lambda));
   }
 
-private:
+ private:
   Flowables() = delete;
 };
 
-}  // yarpl
+} // yarpl

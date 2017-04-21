@@ -804,12 +804,12 @@ void ConnectionAutomaton::writeNewStream(
     StreamType streamType,
     uint32_t initialRequestN,
     Payload payload,
-    bool TEMP_completed) {
+    bool completed) {
   switch (streamType) {
     case StreamType::CHANNEL:
       outputFrameOrEnqueue(frameSerializer().serializeOut(Frame_REQUEST_CHANNEL(
           streamId,
-          TEMP_completed ? FrameFlags::COMPLETE : FrameFlags::EMPTY,
+          completed ? FrameFlags::COMPLETE : FrameFlags::EMPTY,
           initialRequestN,
           std::move(payload))));
       break;
@@ -846,7 +846,7 @@ void ConnectionAutomaton::writePayload(
     bool complete) {
   Frame_PAYLOAD frame(
       streamId,
-      complete ? FrameFlags::COMPLETE : FrameFlags::EMPTY,
+      FrameFlags::NEXT | (complete ? FrameFlags::COMPLETE : FrameFlags::EMPTY),
       std::move(payload));
   outputFrameOrEnqueue(frameSerializer().serializeOut(std::move(frame)));
 }

@@ -237,7 +237,7 @@ class ConnectionAutomaton final
       StreamType streamType,
       uint32_t initialRequestN,
       Payload payload,
-      bool TEMP_completed) override;
+      bool completed) override;
   void writeRequestN(StreamId streamId, uint32_t n) override;
   void writePayload(StreamId streamId, Payload payload, bool complete) override;
   void writeCloseStream(
