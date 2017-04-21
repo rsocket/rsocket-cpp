@@ -137,6 +137,8 @@ add_executable(
         test/flowable_operators/Flowable_Take_test.cpp
         test/flowable_operators/Flowable_SubscribeOn_test.cpp
         test/Scheduler_test.cpp
+        test/v/RefcountedTest.cpp
+        test/v/FlowableTest.cpp
 )
 
 target_link_libraries(
@@ -151,22 +153,6 @@ target_include_directories(
         PUBLIC "${PROJECT_SOURCE_DIR}/include" # allow include paths such as "yarpl/observable.h" can be used
 )
 
-add_executable(yarpl-v-tests
-        test/v/RefcountedTest.cpp
-        test/v/FlowableTest.cpp
-)
-
-target_link_libraries(
-        yarpl-v-tests
-        yarpl
-        ${GMOCK_LIBS}
-        ${CMAKE_THREAD_LIBS_INIT}
-)
-
-target_include_directories(
-        yarpl-v-tests
-        PUBLIC "${PROJECT_SOURCE_DIR}/include" # allow include paths such as "yarpl/observable.h" can be used
-)
 ## perf tests
 #add_executable(
 #        yarpl-perf
