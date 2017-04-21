@@ -21,9 +21,7 @@ class Flowable : public virtual Refcounted {
   static const auto CANCELED = std::numeric_limits<int64_t>::min();
   static const auto NO_FLOW_CONTROL = std::numeric_limits<int64_t>::max();
 
-  using Subscriber = Subscriber<T>;
-
-  virtual void subscribe(Reference<Subscriber>) = 0;
+  virtual void subscribe(Reference<Subscriber<T>>) = 0;
 
   template <typename Function>
   auto map(Function&& function);
@@ -51,12 +49,12 @@ class Flowable : public virtual Refcounted {
   template <
       typename Emitter,
       typename = typename std::enable_if<std::is_callable<
-          Emitter(Subscriber&, int64_t),
+          Emitter(Subscriber<T>&, int64_t),
           std::tuple<int64_t, bool>>::value>::type>
   static auto create(Emitter&& emitter);
 
  private:
-  virtual std::tuple<int64_t, bool> emit(Subscriber&, int64_t) {
+  virtual std::tuple<int64_t, bool> emit(Subscriber<T>&, int64_t) {
     return std::make_tuple(static_cast<int64_t>(0), false);
   }
 
@@ -66,13 +64,13 @@ class Flowable : public virtual Refcounted {
     explicit Wrapper(Emitter&& emitter)
       : emitter_(std::forward<Emitter>(emitter)) {}
 
-    virtual void subscribe(Reference<Subscriber> subscriber) {
+    virtual void subscribe(Reference<Subscriber<T>> subscriber) {
       new SynchronousSubscription(
             Reference<Flowable>(this), std::move(subscriber));
     }
 
     virtual std::tuple<int64_t, bool> emit(
-        Subscriber& subscriber,
+        Subscriber<T>& subscriber,
         int64_t requested) {
       return emitter_(subscriber, requested);
     }
@@ -87,11 +85,11 @@ class Flowable : public virtual Refcounted {
    * This is synchronous: the emit calls are triggered within the context
    * of a request(n) call.
    */
-  class SynchronousSubscription : public Subscription, public Subscriber {
+  class SynchronousSubscription : public Subscription, public Subscriber<T> {
    public:
     SynchronousSubscription(
         Reference<Flowable> flowable,
-        Reference<Subscriber> subscriber)
+        Reference<Subscriber<T>> subscriber)
         : flowable_(std::move(flowable)), subscriber_(std::move(subscriber)) {
       subscriber_->onSubscribe(Reference<Subscription>(this));
     }
@@ -212,7 +210,7 @@ class Flowable : public virtual Refcounted {
     std::mutex processing_;
 
     Reference<Flowable> flowable_;
-    Reference<Subscriber> subscriber_;
+    Reference<Subscriber<T>> subscriber_;
   };
 };
 
