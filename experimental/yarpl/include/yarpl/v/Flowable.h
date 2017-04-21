@@ -46,6 +46,9 @@ class Flowable : public virtual Refcounted {
    *
    * \return a handle to a flowable that will use the emitter.
    */
+  template<typename Emitter>
+  class EmitterWrapper;
+
   template <
       typename Emitter,
       typename = typename std::enable_if<std::is_callable<
@@ -57,27 +60,6 @@ class Flowable : public virtual Refcounted {
   virtual std::tuple<int64_t, bool> emit(Subscriber<T>&, int64_t) {
     return std::make_tuple(static_cast<int64_t>(0), false);
   }
-
-  template <typename Emitter>
-  class Wrapper : public Flowable {
-  public:
-    explicit Wrapper(Emitter&& emitter)
-      : emitter_(std::forward<Emitter>(emitter)) {}
-
-    virtual void subscribe(Reference<Subscriber<T>> subscriber) {
-      new SynchronousSubscription(
-            Reference<Flowable>(this), std::move(subscriber));
-    }
-
-    virtual std::tuple<int64_t, bool> emit(
-        Subscriber<T>& subscriber,
-        int64_t requested) {
-      return emitter_(subscriber, requested);
-    }
-
-   private:
-    Emitter emitter_;
-  };
 
   /**
    * Manager for a flowable subscription.
@@ -221,10 +203,33 @@ class Flowable : public virtual Refcounted {
 namespace yarpl {
 
 template <typename T>
+template <typename Emitter>
+class Flowable<T>::EmitterWrapper : public Flowable<T> {
+public:
+  explicit EmitterWrapper(Emitter&& emitter)
+    : emitter_(std::forward<Emitter>(emitter)) {}
+
+  virtual void subscribe(Reference<Subscriber<T>> subscriber) {
+    new SynchronousSubscription(
+          Reference<Flowable>(this), std::move(subscriber));
+  }
+
+  virtual std::tuple<int64_t, bool> emit(
+      Subscriber<T>& subscriber,
+      int64_t requested) {
+    return emitter_(subscriber, requested);
+  }
+
+ private:
+  Emitter emitter_;
+};
+
+template <typename T>
 template <typename Emitter, typename>
 auto Flowable<T>::create(Emitter&& emitter) {
   return Reference<Flowable<T>>(
-      new Flowable<T>::Wrapper<Emitter>(std::forward<Emitter>(emitter)));
+      new Flowable<T>::EmitterWrapper<Emitter>(
+          std::forward<Emitter>(emitter)));
 }
 
 template <typename T>
