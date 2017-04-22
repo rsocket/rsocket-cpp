@@ -376,14 +376,8 @@ add_dependencies(tcpresumeserver gmock)
 add_subdirectory(experimental/yarpl)
 
 ########################################
-# Examples
+# RSocket Experimental
 ########################################
-
-add_library(
-        reactivesocket_examples_util
-        examples/util/ExampleSubscriber.cpp
-        examples/util/ExampleSubscriber.h
-)
 
 add_library(
         rsocket_experimental
@@ -406,7 +400,7 @@ add_library(
         experimental/rsocket-src/transports/TcpConnectionAcceptor.cpp
         experimental/rsocket/transports/TcpConnectionFactory.h
         experimental/rsocket-src/transports/TcpConnectionFactory.cpp
-        )
+)
 
 add_dependencies(rsocket_experimental ReactiveStreams)
 
@@ -417,6 +411,39 @@ target_include_directories(rsocket_experimental PUBLIC "${PROJECT_SOURCE_DIR}/ex
 target_include_directories(rsocket_experimental PUBLIC "${PROJECT_SOURCE_DIR}/experimental/yarpl/src")
 #include_directories(${CMAKE_CURRENT_BINARY_DIR}/experimental)
 
+
+add_executable(
+        rsocket_tests
+        experimental/rsocket-test/RSocketClientServerTest.cpp
+        experimental/rsocket-test/handlers/HelloStreamRequestHandler.h
+        experimental/rsocket-test/handlers/HelloStreamRequestHandler.cpp
+        experimental/rsocket-test/handlers/HelloStreamSubscription.h
+        experimental/rsocket-test/handlers/HelloStreamSubscription.cpp
+)
+
+target_link_libraries(
+        rsocket_tests
+        rsocket_experimental
+        ReactiveSocket
+        ${FOLLY_LIBRARIES}
+        ${GMOCK_LIBS}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
+
+add_dependencies(rsocket_tests gmock rsocket_experimental)
+
+add_test(NAME RSocketTests COMMAND rsocket_tests)
+
+########################################
+# Examples
+########################################
+
+add_library(
+        reactivesocket_examples_util
+        examples/util/ExampleSubscriber.cpp
+        examples/util/ExampleSubscriber.h
+)
 
 target_link_libraries(
         reactivesocket_examples_util
