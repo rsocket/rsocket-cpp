@@ -12,7 +12,7 @@
 
 using namespace yarpl::flowable;
 
-TEST(FlowableSubscribeOn, SubscribeToRangeOnThread) {
+TEST(DISABLED_FlowableSubscribeOn, SubscribeToRangeOnThread) {
   std::stringstream mt;
   mt << std::this_thread::get_id();
   std::string mainThreadId = mt.str();
