@@ -3,6 +3,8 @@
 #include "rsocket/RSocketRequester.h"
 
 #include "rsocket/OldNewBridge.h"
+#include "yarpl/v/Flowable.h"
+#include "yarpl/v/Flowables.h"
 
 #include <folly/ExceptionWrapper.h>
 
@@ -41,31 +43,29 @@ std::shared_ptr<Subscriber<Payload>> RSocketRequester::requestChannel(
   return standardReactiveSocket_->requestChannel(std::move(responseSink));
 }
 
-void RSocketRequester::requestStream(
-    Payload request,
-    std::shared_ptr<Subscriber<Payload>> responseSink) {
-  eventBase_.runInEventBaseThread(
-      [ this, request = std::move(request), responseSink ]() mutable {
-        standardReactiveSocket_->requestStream(
-            std::move(request), std::move(responseSink));
-      });
-}
+yarpl::Reference<yarpl::Flowable<Payload>> RSocketRequester::requestStream(
+    Payload request) {
+  auto flowable = yarpl::Flowable<Payload>::create([total = 0](
+      yarpl::Subscriber<Payload> & subscriber, int64_t requested) mutable {
+    subscriber.onNext(Payload());
+    return std::make_tuple(int64_t{1}, false);
+  });
+  return flowable;
 
-std::shared_ptr<yarpl::flowable::Flowable<reactivesocket::Payload>>
-RSocketRequester::requestStream(reactivesocket::Payload request) {
-  auto& eb = eventBase_;
-  auto srs = standardReactiveSocket_;
-  return yarpl::flowable::Flowable<reactivesocket::Payload>::create(
-      [&eb, request = std::move(request), srs = std::move(srs) ](
-          auto uptr_subscriber) mutable {
-        auto os =
-            std::make_shared<OldToNewSubscriber>(std::move(uptr_subscriber));
-        eb.runInEventBaseThread([
-          request = std::move(request),
-          os = std::move(os),
-          srs = std::move(srs)
-        ]() mutable { srs->requestStream(std::move(request), std::move(os)); });
-      });
+  //  auto& eb = eventBase_;
+  //  auto srs = standardReactiveSocket_;
+  //  return yarpl::Flowable<Payload>::create(
+  //      [&eb, request = std::move(request), srs = std::move(srs) ](
+  //          auto uptr_subscriber) mutable {
+  //        auto os =
+  //            std::make_shared<OldToNewSubscriber>(std::move(uptr_subscriber));
+  //        eb.runInEventBaseThread([
+  //          request = std::move(request),
+  //          os = std::move(os),
+  //          srs = std::move(srs)
+  //        ]() mutable { srs->requestStream(std::move(request), std::move(os));
+  //        });
+  //      });
 }
 
 void RSocketRequester::requestResponse(

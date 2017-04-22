@@ -43,6 +43,13 @@ std::string Payload::moveDataToString() {
   return data->moveToFbString().toStdString();
 }
 
+std::string Payload::cloneDataToString() const {
+    if (!data) {
+        return "";
+    }
+    return data->cloneAsValue().moveToFbString().toStdString();
+}
+
 void Payload::clear() {
   data.reset();
   metadata.reset();

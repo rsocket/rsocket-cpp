@@ -23,6 +23,10 @@ auto printer() {
       2 /* low [optional] batch size for demo */);
 }
 
+Reference<Flowable<int64_t>> getData() {
+  return Flowables::range(2, 5);
+}
+
 std::string getThreadId() {
   std::ostringstream oss;
   oss << std::this_thread::get_id();
@@ -34,6 +38,9 @@ std::string getThreadId() {
 void FlowableVExamples::run() {
   std::cout << "create a flowable" << std::endl;
   Flowables::range(2, 2);
+
+  std::cout << "get a flowable from a method" << std::endl;
+  getData()->subscribe(printer<int64_t>());
 
   std::cout << "just: single value" << std::endl;
   Flowables::just<long>(23)->subscribe(printer<long>());
@@ -64,39 +71,32 @@ void FlowableVExamples::run() {
   std::cout << "take example: 3 out of 10 items" << std::endl;
   Flowables::range(1, 11)->take(3)->subscribe(printer<int64_t>());
 
-  auto flowable = Flowable<int>::create(
-    [total=0](Subscriber<int>& subscriber, int64_t requested) mutable {
-      subscriber.onNext(12345678);
-      subscriber.onError(std::make_exception_ptr(
-          std::runtime_error("error")));
-      return std::make_tuple(int64_t{1}, false);
-    }
-  );
+  auto flowable = Flowable<int>::create([total = 0](
+      Subscriber<int> & subscriber, int64_t requested) mutable {
+    subscriber.onNext(12345678);
+    subscriber.onError(std::make_exception_ptr(std::runtime_error("error")));
+    return std::make_tuple(int64_t{1}, false);
+  });
 
   auto subscriber = Subscribers::create<int>(
-    [](int next) {
-      std::cout << "@next: " << next << std::endl;
-    },
-    [](std::exception_ptr eptr) {
-      try {
-        std::rethrow_exception(eptr);
-      } catch (const std::exception& exception) {
-       std::cerr << "  exception: " << exception.what() << std::endl;
-      } catch (...) {
-       std::cerr << "  !unknown exception!" << std::endl;
-      }
-    },
-    [] {
-      std::cout << "Completed." << std::endl;
-    }
-  );
+      [](int next) { std::cout << "@next: " << next << std::endl; },
+      [](std::exception_ptr eptr) {
+        try {
+          std::rethrow_exception(eptr);
+        } catch (const std::exception& exception) {
+          std::cerr << "  exception: " << exception.what() << std::endl;
+        } catch (...) {
+          std::cerr << "  !unknown exception!" << std::endl;
+        }
+      },
+      [] { std::cout << "Completed." << std::endl; });
 
   flowable->subscribe(subscriber);
 
   ThreadScheduler scheduler;
 
   std::cout << "subscribe_on example" << std::endl;
-  Flowables::just({ "0: ", "1: ", "2: " })
+  Flowables::just({"0: ", "1: ", "2: "})
       ->map([](const char* p) { return std::string(p); })
       ->map([](std::string log) { return log + " on " + getThreadId(); })
       ->subscribeOn(scheduler)

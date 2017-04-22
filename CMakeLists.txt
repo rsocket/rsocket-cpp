@@ -388,6 +388,8 @@ add_library(
 add_library(
         rsocket_experimental
         experimental/rsocket/RSocket.h
+        # TODO remove when ReactiveStreams all synced
+        experimental/rsocket/OldNewBridge.h
         experimental/rsocket-src/RSocket.cpp
         experimental/rsocket/RSocketServer.h
         experimental/rsocket-src/RSocketServer.cpp
@@ -408,7 +410,7 @@ add_library(
         experimental/rsocket-src/transports/TcpConnectionFactory.cpp
         )
 
-add_dependencies(rsocket_experimental ReactiveStreams)
+add_dependencies(rsocket_experimental ReactiveStreams yarpl)
 
 # include the experimental includes for usage
 target_include_directories(rsocket_experimental PUBLIC "${PROJECT_SOURCE_DIR}/experimental")
@@ -443,6 +445,7 @@ target_link_libraries(
         ReactiveSocket
         rsocket_experimental
         reactivesocket_examples_util
+        yarpl
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
         ${GLOG_LIBRARY}
@@ -458,6 +461,7 @@ target_link_libraries(
         ReactiveSocket
         rsocket_experimental
         reactivesocket_examples_util
+        yarpl
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
         ${GLOG_LIBRARY}
@@ -479,6 +483,7 @@ target_link_libraries(
         ReactiveSocket
         rsocket_experimental
         reactivesocket_examples_util
+        yarpl
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
         ${GLOG_LIBRARY}
@@ -494,6 +499,7 @@ target_link_libraries(
         ReactiveSocket
         rsocket_experimental
         reactivesocket_examples_util
+        yarpl
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
         ${GLOG_LIBRARY}
