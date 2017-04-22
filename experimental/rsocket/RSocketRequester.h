@@ -4,7 +4,8 @@
 
 #include <folly/io/async/EventBase.h>
 
-#include "yarpl/Flowable.h"
+// TODO migrate yarpl/v/Flowable to yarpl/Flowable
+#include "yarpl/v/Flowable.h"
 
 #include "src/ReactiveStreamsCompat.h"
 #include "src/ReactiveSocket.h"
@@ -41,18 +42,8 @@ class RSocketRequester {
    * @param payload
    * @param responseSink
    */
-  void requestStream(
-      reactivesocket::Payload payload,
-      std::shared_ptr<reactivesocket::Subscriber<reactivesocket::Payload>>
-          responseSink);
-
-  /**
-   * TODO: This is a temporary hack to bridge instances of the old
-   * reactivesocket::Subscri{ber,ption} to
-   * reactivestreams_yarpl::Subscri{ber,ption}.
-   */
-  std::shared_ptr<yarpl::flowable::Flowable<reactivesocket::Payload>>
-  requestStream(reactivesocket::Payload request);
+  yarpl::Reference<yarpl::Flowable<reactivesocket::Payload>> requestStream(
+      reactivesocket::Payload payload);
 
   /**
     * Start a channel (streams in both directions).

@@ -6,7 +6,6 @@
 #include "src/NullRequestHandler.h"
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
-#include "src/StandardReactiveSocket.h"
 #include "src/SubscriptionBase.h"
 
 namespace rsocket {

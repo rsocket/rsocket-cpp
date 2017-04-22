@@ -31,6 +31,7 @@ struct Payload {
   void checkFlags(FrameFlags flags) const;
 
   std::string moveDataToString();
+  std::string cloneDataToString() const;
   void clear();
 
   std::unique_ptr<folly::IOBuf> data;

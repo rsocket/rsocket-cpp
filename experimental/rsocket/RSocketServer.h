@@ -10,14 +10,14 @@
 #include "rsocket/ConnectionAcceptor.h"
 #include "rsocket/ConnectionResumeRequest.h"
 #include "rsocket/ConnectionSetupRequest.h"
+#include "rsocket/RSocketRequestHandler.h"
 
-#include "src/RequestHandler.h"
 #include "src/ServerConnectionAcceptor.h"
 #include "src/ReactiveSocket.h"
 
 namespace rsocket {
 
-using OnAccept = std::function<std::shared_ptr<reactivesocket::RequestHandler>(
+using OnAccept = std::function<std::shared_ptr<RSocketRequestHandler>(
     std::unique_ptr<ConnectionSetupRequest>)>;
 /**
  * API for starting an RSocket server. Returned from RSocket::createServer.

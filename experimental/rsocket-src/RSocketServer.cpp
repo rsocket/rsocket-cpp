@@ -4,8 +4,10 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/EventBaseManager.h>
+#include "rsocket/OldNewBridge.h"
 #include "rsocket/RSocketErrors.h"
 #include "src/FrameTransport.h"
+#include "src/NullRequestHandler.h"
 
 using namespace reactivesocket;
 
@@ -50,6 +52,28 @@ class RSocketConnectionHandler : public reactivesocket::ConnectionHandler {
   OnSetupNewSocket onSetup_;
 };
 
+class RSocketHandlerBridge : public reactivesocket::DefaultRequestHandler {
+ public:
+  RSocketHandlerBridge(std::shared_ptr<RSocketRequestHandler> handler)
+      : handler_(std::move(handler)){};
+
+  void handleRequestStream(
+      Payload request,
+      StreamId streamId,
+      const std::shared_ptr<Subscriber<Payload>>&
+          subscriber) noexcept override {
+    auto flowable =
+        handler_->handleRequestStream(std::move(request), std::move(streamId));
+    // bridge from the existing eager RequestHandler and old Subscriber type
+    // to the lazy Flowable and new Subscriber type
+    flowable->subscribe(yarpl::Reference<yarpl::Subscriber<Payload>>(
+        new NewToOldSubscriber(std::move(subscriber))));
+  }
+
+ private:
+  std::shared_ptr<RSocketRequestHandler> handler_;
+};
+
 RSocketServer::RSocketServer(
     std::unique_ptr<ConnectionAcceptor> connectionAcceptor)
     : lazyAcceptor_(std::move(connectionAcceptor)),
@@ -91,7 +115,7 @@ void RSocketServer::start(OnAccept onAccept) {
 
         auto socketParams = SocketParameters(
             setupPayload.resumable, setupPayload.protocolVersion);
-        std::shared_ptr<RequestHandler> requestHandler;
+        std::shared_ptr<RSocketRequestHandler> requestHandler;
         try {
           requestHandler = onAccept(std::make_unique<ConnectionSetupRequest>(
               std::move(setupPayload)));
@@ -103,10 +127,11 @@ void RSocketServer::start(OnAccept onAccept) {
         }
         LOG(INFO) << "RSocketServer => received request handler";
 
+        auto handlerBridge = std::make_shared<RSocketHandlerBridge>(std::move(requestHandler));
         auto rs = ReactiveSocket::disconnectedServer(
             // we know this callback is on a specific EventBase
             executor_,
-            std::move(requestHandler),
+            std::move(handlerBridge),
             Stats::noop());
 
         rs->onClosed([ this, rs = rs.get() ](const folly::exception_wrapper&) {

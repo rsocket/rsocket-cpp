@@ -22,16 +22,16 @@ ExampleSubscriber::ExampleSubscriber(int initialRequest, int numToTake)
 }
 
 void ExampleSubscriber::onSubscribe(
-    std::shared_ptr<Subscription> subscription) noexcept {
+        yarpl::Reference<yarpl::Subscription> subscription) noexcept {
   LOG(INFO) << "ExampleSubscriber " << this << " onSubscribe";
   subscription_ = std::move(subscription);
   requested_ = initialRequest_;
   subscription_->request(initialRequest_);
 }
 
-void ExampleSubscriber::onNext(Payload element) noexcept {
+void ExampleSubscriber::onNext(const Payload& element) noexcept {
   LOG(INFO) << "ExampleSubscriber " << this
-            << " onNext as string: " << element.moveDataToString();
+            << " onNext as string: " << element.cloneDataToString();
   received_++;
   if (--requested_ == thresholdForRequest_) {
     int toRequest = (initialRequest_ - thresholdForRequest_);
@@ -53,8 +53,8 @@ void ExampleSubscriber::onComplete() noexcept {
   terminalEventCV_.notify_all();
 }
 
-void ExampleSubscriber::onError(folly::exception_wrapper ex) noexcept {
-  LOG(INFO) << "ExampleSubscriber " << this << " onError " << ex.what();
+void ExampleSubscriber::onError(const std::exception_ptr ex) noexcept {
+  LOG(INFO) << "ExampleSubscriber " << this << " onError";
   terminated_ = true;
   terminalEventCV_.notify_all();
 }

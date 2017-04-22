@@ -2,24 +2,14 @@
 
 #pragma once
 
-#include <folly/ExceptionWrapper.h>
-#include "src/NullRequestHandler.h"
 #include "src/Payload.h"
-#include "src/ReactiveStreamsCompat.h"
-#include "src/ReactiveSocket.h"
-#include "src/SubscriptionBase.h"
+#include "rsocket/RSocket.h"
 
-class JsonRequestHandler : public reactivesocket::DefaultRequestHandler {
+class JsonRequestHandler : public rsocket::RSocketRequestHandler {
  public:
   /// Handles a new inbound Stream requested by the other end.
-  void handleRequestStream(
-      reactivesocket::Payload request,
-      reactivesocket::StreamId streamId,
-      const std::shared_ptr<
-          reactivesocket::Subscriber<reactivesocket::Payload>>&
-          response) noexcept override;
-
-  std::shared_ptr<reactivesocket::StreamState> handleSetupPayload(
-      reactivesocket::ReactiveSocket&,
-      reactivesocket::ConnectionSetupPayload request) noexcept override;
+  yarpl::Reference<yarpl::Flowable<reactivesocket::Payload>>
+  handleRequestStream(
+          reactivesocket::Payload request,
+          reactivesocket::StreamId streamId) override;
 };

@@ -3,6 +3,8 @@
 #include "rsocket/RSocketRequester.h"
 
 #include "rsocket/OldNewBridge.h"
+#include "yarpl/v/Flowable.h"
+#include "yarpl/v/Flowables.h"
 
 #include <folly/ExceptionWrapper.h>
 
@@ -41,25 +43,15 @@ std::shared_ptr<Subscriber<Payload>> RSocketRequester::requestChannel(
   return reactiveSocket_->requestChannel(std::move(responseSink));
 }
 
-void RSocketRequester::requestStream(
-    Payload request,
-    std::shared_ptr<Subscriber<Payload>> responseSink) {
-  eventBase_.runInEventBaseThread(
-      [ this, request = std::move(request), responseSink ]() mutable {
-        reactiveSocket_->requestStream(
-            std::move(request), std::move(responseSink));
-      });
-}
-
-std::shared_ptr<yarpl::flowable::Flowable<reactivesocket::Payload>>
-RSocketRequester::requestStream(reactivesocket::Payload request) {
+yarpl::Reference<yarpl::Flowable<Payload>> RSocketRequester::requestStream(
+    Payload request) {
   auto& eb = eventBase_;
   auto srs = reactiveSocket_;
-  return yarpl::flowable::Flowable<reactivesocket::Payload>::create(
+
+  return yarpl::Flowables::fromPublisher<Payload>(
       [&eb, request = std::move(request), srs = std::move(srs) ](
-          auto uptr_subscriber) mutable {
-        auto os =
-            std::make_shared<OldToNewSubscriber>(std::move(uptr_subscriber));
+          yarpl::Reference<yarpl::Subscriber<Payload>> subscriber) mutable {
+        auto os = std::make_shared<OldToNewSubscriber>(std::move(subscriber));
         eb.runInEventBaseThread([
           request = std::move(request),
           os = std::move(os),

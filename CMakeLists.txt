@@ -381,6 +381,8 @@ add_subdirectory(experimental/yarpl)
 add_library(
         rsocket_experimental
         experimental/rsocket/RSocket.h
+        # TODO remove when ReactiveStreams all synced
+        experimental/rsocket/OldNewBridge.h
         experimental/rsocket-src/RSocket.cpp
         experimental/rsocket/RSocketServer.h
         experimental/rsocket-src/RSocketServer.cpp
@@ -399,9 +401,10 @@ add_library(
         experimental/rsocket-src/transports/TcpConnectionAcceptor.cpp
         experimental/rsocket/transports/TcpConnectionFactory.h
         experimental/rsocket-src/transports/TcpConnectionFactory.cpp
+        experimental/rsocket/RSocketRequestHandler.h
 )
 
-add_dependencies(rsocket_experimental ReactiveStreams)
+add_dependencies(rsocket_experimental ReactiveStreams yarpl)
 
 # include the experimental includes for usage
 target_include_directories(rsocket_experimental PUBLIC "${PROJECT_SOURCE_DIR}/experimental")
@@ -459,16 +462,14 @@ target_link_libraries(
 add_executable(
         example_stream-hello-world-server
         examples/stream-hello-world/StreamHelloWorld_Server.cpp
-        examples/stream-hello-world/HelloStreamSubscription.cpp
-        examples/stream-hello-world/HelloStreamSubscription.h
-        examples/stream-hello-world/HelloStreamRequestHandler.cpp
-        examples/stream-hello-world/HelloStreamRequestHandler.h)
+)
 
 target_link_libraries(
         example_stream-hello-world-server
         ReactiveSocket
         rsocket_experimental
         reactivesocket_examples_util
+        yarpl
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
         ${GLOG_LIBRARY}
@@ -484,6 +485,7 @@ target_link_libraries(
         ReactiveSocket
         rsocket_experimental
         reactivesocket_examples_util
+        yarpl
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
         ${GLOG_LIBRARY}
@@ -496,15 +498,16 @@ add_executable(
         examples/conditional-request-handling/ConditionalRequestHandling_Server.cpp
         examples/conditional-request-handling/TextRequestHandler.h
         examples/conditional-request-handling/TextRequestHandler.cpp
-        examples/conditional-request-handling/ConditionalRequestSubscription.h
-        examples/conditional-request-handling/ConditionalRequestSubscription.cpp
-        examples/conditional-request-handling/JsonRequestHandler.cpp examples/conditional-request-handling/JsonRequestHandler.h)
+        examples/conditional-request-handling/JsonRequestHandler.cpp
+        examples/conditional-request-handling/JsonRequestHandler.h
+)
 
 target_link_libraries(
         example_conditional-request-handling-server
         ReactiveSocket
         rsocket_experimental
         reactivesocket_examples_util
+        yarpl
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
         ${GLOG_LIBRARY}
@@ -520,6 +523,7 @@ target_link_libraries(
         ReactiveSocket
         rsocket_experimental
         reactivesocket_examples_util
+        yarpl
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
         ${GLOG_LIBRARY}
