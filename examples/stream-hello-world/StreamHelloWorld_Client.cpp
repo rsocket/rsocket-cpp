@@ -19,6 +19,8 @@ DEFINE_string(host, "localhost", "host to connect to");
 DEFINE_int32(port, 9898, "host:port to connect to");
 
 int main(int argc, char* argv[]) {
+  FLAGS_logtostderr = true;
+  FLAGS_minloglevel = 0;
   folly::init(&argc, &argv);
 
   // create a client which can then make connections below

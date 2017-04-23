@@ -408,7 +408,7 @@ add_library(
         experimental/rsocket-src/transports/TcpConnectionAcceptor.cpp
         experimental/rsocket/transports/TcpConnectionFactory.h
         experimental/rsocket-src/transports/TcpConnectionFactory.cpp
-        )
+        experimental/rsocket/RSocketRequestHandler.h)
 
 add_dependencies(rsocket_experimental ReactiveStreams yarpl)
 
@@ -435,10 +435,7 @@ target_link_libraries(
 add_executable(
         example_stream-hello-world-server
         examples/stream-hello-world/StreamHelloWorld_Server.cpp
-        examples/stream-hello-world/HelloStreamSubscription.cpp
-        examples/stream-hello-world/HelloStreamSubscription.h
-        examples/stream-hello-world/HelloStreamRequestHandler.cpp
-        examples/stream-hello-world/HelloStreamRequestHandler.h)
+)
 
 target_link_libraries(
         example_stream-hello-world-server
