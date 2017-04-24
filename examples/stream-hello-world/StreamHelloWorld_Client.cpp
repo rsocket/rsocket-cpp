@@ -9,7 +9,7 @@
 #include "rsocket/RSocket.h"
 #include "rsocket/transports/TcpConnectionFactory.h"
 
-#include "yarpl/v/Flowable.h"
+#include "yarpl/Flowable.h"
 
 using namespace reactivesocket;
 using namespace rsocket_example;
@@ -30,23 +30,24 @@ int main(int argc, char* argv[]) {
   {
     // this example runs inside the Future.then lambda
     LOG(INFO) << "------------------ Run in future.then";
-    auto s = yarpl::Reference<yarpl::Subscriber<Payload>>(
-        new ExampleSubscriber(5, 6));
-    rsf->connect().then([s](std::shared_ptr<RSocketRequester> rs) {
-      rs->requestStream(Payload("Bob"))->subscribe(s);
+    rsf->connect().then([](std::shared_ptr<RSocketRequester> rs) {
+      rs->requestStream(Payload("Bob"))
+          ->subscribe(std::make_unique<ExampleSubscriber>(5, 6));
     });
     //    s->awaitTerminalEvent();
   }
 
-  {
-    // this example extracts from the Future.get and runs in the main thread
-    LOG(INFO) << "------------------ Run after future.get";
-    auto s = yarpl::Reference<yarpl::Subscriber<Payload>>(
-        new ExampleSubscriber(5, 6));
-    auto rs = rsf->connect().get();
-    rs->requestStream(Payload("Jane"))->subscribe(s);
-    //    s->awaitTerminalEvent();
-  }
+  //  {
+  //    // this example extracts from the Future.get and runs in the main
+  //    thread
+  //    LOG(INFO) << "------------------ Run after future.get";
+  //    auto rs = rsf->connect().get();
+  //    rs->requestStream(Payload("Jane"))
+  //        ->subscribe(std::make_unique<ExampleSubscriber>(5, 6));
+  //    //    s->awaitTerminalEvent();
+  //  }
+
+  std::getchar();
   LOG(INFO) << "------------- main() terminating -----------------";
 
   // TODO on shutdown the destruction of

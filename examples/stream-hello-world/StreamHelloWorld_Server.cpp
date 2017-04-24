@@ -7,19 +7,18 @@
 
 #include "rsocket/RSocket.h"
 #include "rsocket/transports/TcpConnectionAcceptor.h"
-#include "yarpl/v/Flowable.h"
-#include "yarpl/v/Flowables.h"
+#include "yarpl/Flowable.h"
 
 using namespace reactivesocket;
 using namespace rsocket;
-using namespace yarpl;
+using namespace yarpl::flowable;
 
 DEFINE_int32(port, 9898, "port to connect to");
 
 class HelloStreamRequestHandler : public rsocket::RSocketRequestHandler {
  public:
   /// Handles a new inbound Stream requested by the other end.
-  yarpl::Reference<yarpl::Flowable<reactivesocket::Payload>>
+  std::shared_ptr<yarpl::flowable::Flowable<reactivesocket::Payload>>
   handleRequestStream(
       reactivesocket::Payload request,
       reactivesocket::StreamId streamId) override {

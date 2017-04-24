@@ -66,8 +66,8 @@ class RSocketHandlerBridge : public reactivesocket::DefaultRequestHandler {
         handler_->handleRequestStream(std::move(request), std::move(streamId));
     // bridge from the existing eager RequestHandler and old Subscriber type
     // to the lazy Flowable and new Subscriber type
-    flowable->subscribe(yarpl::Reference<yarpl::Subscriber<Payload>>(
-        new NewToOldSubscriber(std::move(subscriber))));
+
+    flowable->subscribe(std::make_unique<NewToOldSubscriber>(std::move(subscriber)));
   }
 
  private:
