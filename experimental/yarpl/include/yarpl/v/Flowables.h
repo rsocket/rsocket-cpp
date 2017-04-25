@@ -65,6 +65,16 @@ class Flowables {
     return Flowable<T>::create(std::move(lambda));
   }
 
+  template<typename T, typename OnSubscribe,
+           typename = typename std::enable_if<std::is_callable<
+      OnSubscribe(Reference<Subscriber<T>>),
+      void>::value>::type>
+  static Reference<Flowable<T>> fromPublisher(OnSubscribe&& function) {
+    return Reference<Flowable<T>>(
+        new FromPublisherOperator<T, OnSubscribe>(
+            std::forward<OnSubscribe>(function)));
+  }
+
  private:
   Flowables() = delete;
 };
