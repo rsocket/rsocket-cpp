@@ -26,7 +26,7 @@ public:
   virtual ~Refcounted() = default;
 #endif  /* NDEBUG */
 
- private:
+private:
   template <typename T, typename>
   friend class Reference;
 

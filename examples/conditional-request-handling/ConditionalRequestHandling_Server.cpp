@@ -1,11 +1,12 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include <iostream>
-#include "JsonRequestHandler.h"
-#include "TextRequestHandler.h"
+#include <folly/init/Init.h>
 #include "rsocket/RSocket.h"
 #include "rsocket/RSocketErrors.h"
 #include "rsocket/transports/TcpConnectionAcceptor.h"
+#include "JsonRequestHandler.h"
+#include "TextRequestHandler.h"
 
 using namespace ::reactivesocket;
 using namespace ::folly;
@@ -33,7 +34,7 @@ int main(int argc, char* argv[]) {
   // start accepting connections
   rs->startAndPark(
       [textHandler, jsonHandler](std::unique_ptr<ConnectionSetupRequest> r)
-          -> std::shared_ptr<RequestHandler> {
+          -> std::shared_ptr<RSocketRequestHandler> {
             if (r->getDataMimeType() == "text/plain") {
               LOG(INFO) << "Connection Request => text/plain MimeType";
               return textHandler;

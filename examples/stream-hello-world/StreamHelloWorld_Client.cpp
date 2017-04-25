@@ -9,6 +9,9 @@
 #include "rsocket/RSocket.h"
 #include "rsocket/transports/TcpConnectionFactory.h"
 
+#include "yarpl/v/Flowable.h"
+#include "yarpl/v/Subscriber.h"
+
 using namespace reactivesocket;
 using namespace rsocket_example;
 using namespace rsocket;
@@ -17,6 +20,8 @@ DEFINE_string(host, "localhost", "host to connect to");
 DEFINE_int32(port, 9898, "host:port to connect to");
 
 int main(int argc, char* argv[]) {
+  FLAGS_logtostderr = true;
+  FLAGS_minloglevel = 0;
   folly::init(&argc, &argv);
 
   // create a client which can then make connections below
@@ -26,9 +31,10 @@ int main(int argc, char* argv[]) {
   {
     // this example runs inside the Future.then lambda
     LOG(INFO) << "------------------ Run in future.then";
-    auto s = std::make_shared<ExampleSubscriber>(5, 6);
+    auto s = yarpl::Reference<ExampleSubscriber>(new ExampleSubscriber(5, 6));
     rsf->connect().then([s](std::shared_ptr<RSocketRequester> rs) {
-      rs->requestStream(Payload("Bob"), s);
+      rs->requestStream(Payload("Bob"))
+          ->subscribe(yarpl::Reference<yarpl::Subscriber<Payload>>(s.get()));
     });
     s->awaitTerminalEvent();
   }
@@ -36,9 +42,10 @@ int main(int argc, char* argv[]) {
   {
     // this example extracts from the Future.get and runs in the main thread
     LOG(INFO) << "------------------ Run after future.get";
-    auto s = std::make_shared<ExampleSubscriber>(5, 6);
+    auto s = yarpl::Reference<ExampleSubscriber>(new ExampleSubscriber(5, 6));
     auto rs = rsf->connect().get();
-    rs->requestStream(Payload("Jane"), s);
+    rs->requestStream(Payload("Jane"))
+        ->subscribe(yarpl::Reference<yarpl::Subscriber<Payload>>(s.get()));
     s->awaitTerminalEvent();
   }
   LOG(INFO) << "------------- main() terminating -----------------";
