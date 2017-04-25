@@ -101,7 +101,7 @@ TEST(Observable, ItemsCollectedSynchronously) {
  * This is simulating "async" by having an Observer store the items
  * in a Vector which could then be consumed on another thread.
  */
-TEST(Observable, ItemsCollectedAsynchronously) {
+TEST(DISABLED_Observable, ItemsCollectedAsynchronously) {
   // scope this so we can check destruction of Vector after this block
   {
     auto a = Observables::unsafeCreate<Tuple>(

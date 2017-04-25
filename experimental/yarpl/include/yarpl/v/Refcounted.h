@@ -1,13 +1,30 @@
 #pragma once
 
 #include <atomic>
+#include <cstddef>
 #include <type_traits>
 
 namespace yarpl {
 
+/// Base of refcounted objects.  The intention is the same as that
+/// of boost::intrusive_ptr<>, except that we have virtual methods
+/// anyway, and want to avoid argument-dependent lookup.
+///
+/// NOTE: only derive using "virtual public" inheritance.
 class Refcounted {
- public:
+public:
+#if !defined(NDEBUG)
+  Refcounted();
+  virtual ~Refcounted();
+
+  // Return the number of live refcounted objects.  For testing.
+  static std::size_t objects();
+
+  // Return the current count.  For testing.
+  std::size_t count() const { return refcount_; }
+#else  /* NDEBUG */
   virtual ~Refcounted() = default;
+#endif  /* NDEBUG */
 
  private:
   template <typename T, typename>
@@ -24,20 +41,24 @@ class Refcounted {
     }
   }
 
-  mutable std::atomic_int refcount_{0};
+  mutable std::atomic_size_t refcount_{0};
+
+#if !defined (NDEBUG)
+  static std::atomic_size_t objects_;
+#endif  /* NDEBUG */
 };
 
-template <
-    typename T,
-    typename =
-        typename std::enable_if<std::is_base_of<Refcounted, T>::value>::type>
+/// RAII-enabling smart pointer for refcounted objects.  Each reference
+/// constructed against a target refcounted object increases its count
+/// by 1 during its lifetime.
+template<typename T, typename = typename std::enable_if<
+    std::is_base_of<Refcounted, T>::value>::type>
 class Reference {
  public:
   Reference() : pointer_(nullptr) {}
 
-  Reference(T* pointer) : pointer_(pointer) {
-    if (pointer_)
-      pointer_->incRef();
+  explicit Reference(T* pointer) : pointer_(pointer) {
+    if (pointer_) pointer_->incRef();
   }
 
   ~Reference() {

@@ -8,19 +8,15 @@
 namespace yarpl {
 
 class ThreadScheduler : public Scheduler {
- public:
-  ThreadScheduler() {
-    std::cout << "Create ThreadScheduler" << std::endl;
-  }
-  ~ThreadScheduler() {
-    // TODO remove this once happy with it
-    std::cout << "Destroy ThreadScheduler" << std::endl;
-  }
+public:
+  ThreadScheduler() {}
+
+  std::unique_ptr<Worker> createWorker() override;
+
+private:
   ThreadScheduler(ThreadScheduler&&) = delete;
   ThreadScheduler(const ThreadScheduler&) = delete;
   ThreadScheduler& operator=(ThreadScheduler&&) = delete;
   ThreadScheduler& operator=(const ThreadScheduler&) = delete;
-
-  std::unique_ptr<Worker> createWorker() override;
 };
 }

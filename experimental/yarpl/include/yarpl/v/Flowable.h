@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "reactivestreams/ReactiveStreams.h"
+#include "yarpl/Scheduler.h"
 #include "yarpl/utils/type_traits.h"
 
 #include "Refcounted.h"
@@ -21,17 +21,17 @@ class Flowable : public virtual Refcounted {
   static const auto CANCELED = std::numeric_limits<int64_t>::min();
   static const auto NO_FLOW_CONTROL = std::numeric_limits<int64_t>::max();
 
-  using Subscriber = Subscriber<T>;
-
-  virtual void subscribe(Reference<Subscriber>) = 0;
+  virtual void subscribe(Reference<Subscriber<T>>) = 0;
 
   template <typename Function>
   auto map(Function&& function);
 
   auto take(int64_t);
 
+  auto subscribeOn(Scheduler&);
+
   /**
-   * Create a flowable from an emitter.
+   * \brief Create a flowable from an emitter.
    *
    * \param emitter function that is invoked to emit values to a subscriber.
    * The emitter's signature is:
@@ -46,36 +46,20 @@ class Flowable : public virtual Refcounted {
    *
    * \return a handle to a flowable that will use the emitter.
    */
+  template<typename Emitter>
+  class EmitterWrapper;
+
   template <
       typename Emitter,
       typename = typename std::enable_if<std::is_callable<
-          Emitter(Subscriber&, int64_t),
+          Emitter(Subscriber<T>&, int64_t),
           std::tuple<int64_t, bool>>::value>::type>
   static auto create(Emitter&& emitter);
 
  private:
-  virtual std::tuple<int64_t, bool> emit(Subscriber&, int64_t) {
+  virtual std::tuple<int64_t, bool> emit(Subscriber<T>&, int64_t) {
     return std::make_tuple(static_cast<int64_t>(0), false);
   }
-
-  template <typename Emitter>
-  class Wrapper : public Flowable {
-   public:
-    Wrapper(Emitter&& emitter) : emitter_(std::forward<Emitter>(emitter)) {}
-
-    virtual void subscribe(Reference<Subscriber> subscriber) {
-      new SynchronousSubscription(this, std::move(subscriber));
-    }
-
-    virtual std::tuple<int64_t, bool> emit(
-        Subscriber& subscriber,
-        int64_t requested) {
-      return emitter_(subscriber, requested);
-    }
-
-   private:
-    Emitter emitter_;
-  };
 
   /**
    * Manager for a flowable subscription.
@@ -83,11 +67,11 @@ class Flowable : public virtual Refcounted {
    * This is synchronous: the emit calls are triggered within the context
    * of a request(n) call.
    */
-  class SynchronousSubscription : public Subscription, public Subscriber {
+  class SynchronousSubscription : public Subscription, public Subscriber<T> {
    public:
     SynchronousSubscription(
         Reference<Flowable> flowable,
-        Reference<Subscriber> subscriber)
+        Reference<Subscriber<T>> subscriber)
         : flowable_(std::move(flowable)), subscriber_(std::move(subscriber)) {
       subscriber_->onSubscribe(Reference<Subscription>(this));
     }
@@ -208,7 +192,7 @@ class Flowable : public virtual Refcounted {
     std::mutex processing_;
 
     Reference<Flowable> flowable_;
-    Reference<Subscriber> subscriber_;
+    Reference<Subscriber<T>> subscriber_;
   };
 };
 
@@ -219,10 +203,33 @@ class Flowable : public virtual Refcounted {
 namespace yarpl {
 
 template <typename T>
+template <typename Emitter>
+class Flowable<T>::EmitterWrapper : public Flowable<T> {
+public:
+  explicit EmitterWrapper(Emitter&& emitter)
+    : emitter_(std::forward<Emitter>(emitter)) {}
+
+  virtual void subscribe(Reference<Subscriber<T>> subscriber) {
+    new SynchronousSubscription(
+          Reference<Flowable>(this), std::move(subscriber));
+  }
+
+  virtual std::tuple<int64_t, bool> emit(
+      Subscriber<T>& subscriber,
+      int64_t requested) {
+    return emitter_(subscriber, requested);
+  }
+
+ private:
+  Emitter emitter_;
+};
+
+template <typename T>
 template <typename Emitter, typename>
 auto Flowable<T>::create(Emitter&& emitter) {
   return Reference<Flowable<T>>(
-      new Flowable<T>::Wrapper<Emitter>(std::forward<Emitter>(emitter)));
+      new Flowable<T>::EmitterWrapper<Emitter>(
+          std::forward<Emitter>(emitter)));
 }
 
 template <typename T>
@@ -237,6 +244,12 @@ template <typename T>
 auto Flowable<T>::take(int64_t limit) {
   return Reference<Flowable<T>>(
       new TakeOperator<T>(Reference<Flowable<T>>(this), limit));
+}
+
+template<typename T>
+auto Flowable<T>::subscribeOn(Scheduler& scheduler) {
+  return Reference<Flowable<T>>(
+      new SubscribeOnOperator<T>(Reference<Flowable<T>>(this), scheduler));
 }
 
 } // yarpl

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "reactivestreams/ReactiveStreams.h"
+#include <stdexcept>
 
 #include "Refcounted.h"
 #include "Subscription.h"
@@ -8,8 +8,7 @@
 namespace yarpl {
 
 template <typename T>
-class Subscriber : public reactivestreams_yarpl::Subscriber<T>,
-                   public virtual Refcounted {
+class Subscriber : public virtual Refcounted {
  public:
   // Note: if any of the following methods is overridden in a subclass,
   // the new methods SHOULD ensure that these are invoked as well.
@@ -28,9 +27,6 @@ class Subscriber : public reactivestreams_yarpl::Subscriber<T>,
   }
 
   virtual void onNext(const T&) {}
-  virtual void onNext(T&& value) {
-    onNext(value);
-  }
 
  protected:
   Subscription* subscription() {
@@ -41,11 +37,6 @@ class Subscriber : public reactivestreams_yarpl::Subscriber<T>,
   // "Our" reference to the subscription, to ensure that it is retained
   // while calls to its methods are in-flight.
   Reference<Subscription> subscription_{nullptr};
-
-  // Note: we've overridden the signature of onSubscribe with yarpl's
-  // Subscriber.  Keep this definition, making it private, to keep the
-  // compiler from issuing a warning about the override.
-  virtual void onSubscribe(reactivestreams_yarpl::Subscription*) {}
 };
 
 } // yarpl
