@@ -2,29 +2,27 @@
 
 #include "JsonRequestHandler.h"
 #include <string>
-#include "ConditionalRequestSubscription.h"
+#include "yarpl/v/Flowable.h"
+#include "yarpl/v/Flowables.h"
 
-using namespace ::reactivesocket;
+using namespace reactivesocket;
+using namespace rsocket;
+using namespace yarpl;
 
 /// Handles a new inbound Stream requested by the other end.
-void JsonRequestHandler::handleRequestStream(
-    Payload request,
-    StreamId streamId,
-    const std::shared_ptr<Subscriber<Payload>>& response) noexcept {
+yarpl::Reference<yarpl::Flowable<reactivesocket::Payload>>
+JsonRequestHandler::handleRequestStream(Payload request, StreamId streamId) {
   LOG(INFO) << "JsonRequestHandler.handleRequestStream " << request;
 
   // string from payload data
-  auto pds = request.moveDataToString();
-  auto requestString = std::string(pds, request.data->length());
+  const char* p = reinterpret_cast<const char*>(request.data->data());
+  auto requestString = std::string(p, request.data->length());
 
-  response->onSubscribe(std::make_shared<ConditionalRequestSubscription>(
-      response, requestString, 10));
-}
-
-std::shared_ptr<StreamState> JsonRequestHandler::handleSetupPayload(
-    ReactiveSocket& socket,
-    ConnectionSetupPayload request) noexcept {
-  LOG(INFO) << "JsonRequestHandler.handleSetupPayload " << request;
-  // TODO what should this do?
-  return nullptr;
+  return Flowables::range(1, 100)->map([name = std::move(requestString)](
+      int64_t v) {
+    std::stringstream ss;
+    ss << "Hello (should be JSON) " << name << " " << v << "!";
+    std::string s = ss.str();
+    return Payload(s);
+  });
 }

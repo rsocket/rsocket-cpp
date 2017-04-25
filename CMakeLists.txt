@@ -471,9 +471,9 @@ add_executable(
         examples/conditional-request-handling/ConditionalRequestHandling_Server.cpp
         examples/conditional-request-handling/TextRequestHandler.h
         examples/conditional-request-handling/TextRequestHandler.cpp
-        examples/conditional-request-handling/ConditionalRequestSubscription.h
-        examples/conditional-request-handling/ConditionalRequestSubscription.cpp
-        examples/conditional-request-handling/JsonRequestHandler.cpp examples/conditional-request-handling/JsonRequestHandler.h)
+        examples/conditional-request-handling/JsonRequestHandler.cpp
+        examples/conditional-request-handling/JsonRequestHandler.h
+)
 
 target_link_libraries(
         example_conditional-request-handling-server
