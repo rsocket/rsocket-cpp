@@ -26,8 +26,7 @@ class HelloStreamRequestHandler : public rsocket::RSocketRequestHandler {
     LOG(INFO) << "HelloStreamRequestHandler.handleRequestStream " << request;
 
     // string from payload data
-    const char* p = reinterpret_cast<const char*>(request.data->data());
-    auto requestString = std::string(p, request.data->length());
+    auto requestString = request.moveDataToString();
 
     return Flowables::range(1, 10)->map([name = std::move(requestString)](
         int64_t v) {
