@@ -419,8 +419,6 @@ add_executable(
         experimental/rsocket-test/RSocketClientServerTest.cpp
         experimental/rsocket-test/handlers/HelloStreamRequestHandler.h
         experimental/rsocket-test/handlers/HelloStreamRequestHandler.cpp
-        experimental/rsocket-test/handlers/HelloStreamSubscription.h
-        experimental/rsocket-test/handlers/HelloStreamSubscription.cpp
 )
 
 target_link_libraries(
