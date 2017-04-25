@@ -23,6 +23,6 @@ JsonRequestHandler::handleRequestStream(Payload request, StreamId streamId) {
     std::stringstream ss;
     ss << "Hello (should be JSON) " << name << " " << v << "!";
     std::string s = ss.str();
-    return Payload(s);
+    return Payload(s, "metadata");
   });
 }

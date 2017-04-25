@@ -34,7 +34,7 @@ class HelloStreamRequestHandler : public rsocket::RSocketRequestHandler {
       std::stringstream ss;
       ss << "Hello " << name << " " << v << "!";
       std::string s = ss.str();
-      return Payload(s);
+      return Payload(s, "metadata");
     });
   }
 };
