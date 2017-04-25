@@ -242,4 +242,17 @@ private:
   std::unique_ptr<Worker> worker_;
 };
 
+template<typename T, typename OnSubscribe>
+class FromPublisherOperator : public Flowable<T> {
+public:
+  FromPublisherOperator(OnSubscribe&& function)
+    : function_(function) {}
+
+  void subscribe(Reference<Subscriber<T>> subscriber) {
+    function_(std::move(subscriber));
+  }
+private:
+  OnSubscribe function_;
+};
+
 } // yarpl
