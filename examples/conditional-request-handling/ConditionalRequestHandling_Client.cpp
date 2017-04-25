@@ -34,12 +34,12 @@ int main(int argc, char* argv[]) {
       ->subscribe(yarpl::Reference<yarpl::Subscriber<Payload>>(s1.get()));
   s1->awaitTerminalEvent();
 
-  LOG(INFO) << "------------------ Hello Jane!";
-  auto s2 = yarpl::Reference<ExampleSubscriber>(new ExampleSubscriber(5, 6));
-  rs->requestStream(Payload("Jane"))
-      ->take(3)
-      ->subscribe(yarpl::Reference<yarpl::Subscriber<Payload>>(s2.get()));
-  s2->awaitTerminalEvent();
+//  LOG(INFO) << "------------------ Hello Jane!";
+//  auto s2 = yarpl::Reference<ExampleSubscriber>(new ExampleSubscriber(5, 6));
+//  rs->requestStream(Payload("Jane"))
+//      ->take(3)
+//      ->subscribe(yarpl::Reference<yarpl::Subscriber<Payload>>(s2.get()));
+//  s2->awaitTerminalEvent();
 
   // TODO on shutdown the destruction of
   // ScopedEventBaseThread spits out a stacktrace
