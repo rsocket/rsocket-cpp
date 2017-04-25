@@ -403,17 +403,20 @@ class ServerSideConcurrencyTest : public testing::Test {
   bool isDone_{false};
 };
 
-TEST_F(ServerSideConcurrencyTest, RequestResponseTest) {
+// TODO(t17618830): please fix and enable
+TEST_F(ServerSideConcurrencyTest, DISABLED_RequestResponseTest) {
   clientSock->requestResponse(Payload(originalPayload()), clientInput);
   wainUntilDone();
 }
 
-TEST_F(ServerSideConcurrencyTest, RequestStreamTest) {
+// TODO(t17618830): please fix and enable
+TEST_F(ServerSideConcurrencyTest, DISABLED_RequestStreamTest) {
   clientSock->requestStream(Payload(originalPayload()), clientInput);
   wainUntilDone();
 }
 
-TEST_F(ServerSideConcurrencyTest, RequestChannelTest) {
+// TODO(t17618830): please fix and enable
+TEST_F(ServerSideConcurrencyTest, DISABLED_RequestChannelTest) {
   auto clientOutput = clientSock->requestChannel(clientInput);
 
   auto clientOutputSub = std::make_shared<StrictMock<MockSubscription>>();
