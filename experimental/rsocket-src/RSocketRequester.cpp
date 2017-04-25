@@ -45,30 +45,19 @@ std::shared_ptr<Subscriber<Payload>> RSocketRequester::requestChannel(
 
 yarpl::Reference<yarpl::Flowable<Payload>> RSocketRequester::requestStream(
     Payload request) {
+  auto& eb = eventBase_;
+  auto srs = standardReactiveSocket_;
 
-    auto& eb = eventBase_;
-    auto srs = standardReactiveSocket_;
-
-  auto flowable = yarpl::Flowable<Payload>::create([total = 0](
-      yarpl::Subscriber<Payload> & subscriber, int64_t requested) mutable {
-    subscriber.onNext(Payload("hello there everyone!!!"));
-    return std::make_tuple(int64_t{1}, false);
-  });
-  return flowable;
-
-
-//    return yarpl::Flowable<Payload>::create(
-//        [&eb, request = std::move(request), srs = std::move(srs) ](
-//            auto uptr_subscriber) mutable {
-//          auto os =
-//              std::make_shared<OldToNewSubscriber>(std::move(uptr_subscriber));
-//          eb.runInEventBaseThread([
-//            request = std::move(request),
-//            os = std::move(os),
-//            srs = std::move(srs)
-//          ]() mutable { srs->requestStream(std::move(request), std::move(os));
-//          });
-//        });
+  return yarpl::Flowables::fromPublisher<Payload>(
+      [&eb, request = std::move(request), srs = std::move(srs) ](
+          yarpl::Reference<yarpl::Subscriber<Payload>> subscriber) mutable {
+        auto os = std::make_shared<OldToNewSubscriber>(std::move(subscriber));
+        eb.runInEventBaseThread([
+          request = std::move(request),
+          os = std::move(os),
+          srs = std::move(srs)
+        ]() mutable { srs->requestStream(std::move(request), std::move(os)); });
+      });
 }
 
 void RSocketRequester::requestResponse(

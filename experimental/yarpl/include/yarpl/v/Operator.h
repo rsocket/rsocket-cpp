@@ -246,7 +246,7 @@ template<typename T, typename OnSubscribe>
 class FromPublisherOperator : public Flowable<T> {
 public:
   FromPublisherOperator(OnSubscribe&& function)
-    : function_(function) {}
+    : function_(std::move(function)) {}
 
   void subscribe(Reference<Subscriber<T>> subscriber) {
     function_(std::move(subscriber));

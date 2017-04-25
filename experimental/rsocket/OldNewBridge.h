@@ -41,7 +41,7 @@ class OldToNewSubscriber
     : public reactivesocket::Subscriber<reactivesocket::Payload> {
  public:
   explicit OldToNewSubscriber(
-      std::unique_ptr<yarpl::Subscriber<reactivesocket::Payload>> inner)
+      yarpl::Reference<yarpl::Subscriber<reactivesocket::Payload>> inner)
       : inner_{std::move(inner)} {}
 
   void onSubscribe(
@@ -64,7 +64,7 @@ class OldToNewSubscriber
   }
 
  private:
-  std::unique_ptr<yarpl::Subscriber<reactivesocket::Payload>> inner_;
+  yarpl::Reference<yarpl::Subscriber<reactivesocket::Payload>> inner_;
   yarpl::Reference<yarpl::Subscription> bridge_;
 };
 
