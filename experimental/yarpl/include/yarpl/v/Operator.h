@@ -242,4 +242,62 @@ private:
   std::unique_ptr<Worker> worker_;
 };
 
+template<typename T, typename OnSubscribe>
+class FromPublisherOperator : public Flowable<T> {
+public:
+  FromPublisherOperator(OnSubscribe&& function) : function_(function) {}
+
+  void subscribe(Reference<Subscriber<T>> subscriber) {
+     function_(std::make_unique<Subscription>(std::move(subscriber)));
+  }
+
+private:
+  // function_ ('s subscription) controls the lifetime of this.  We
+  // just release susbcriber_ when destroyed.
+  class Subscription : public ::reactivestreams_yarpl::Subscriber<T>,
+      public ::yarpl::Subscription {
+  public:
+    explicit Subscription(Reference<Subscriber<T>> subscriber)
+      : subscriber_(std::move(subscriber)) {
+      // Hack: Add an extra reference, since we're going to be deleted
+      // by the owning unique_ptr<>, instead of the normal Reference<>.
+      // Want to disable the Reference<> semantic.
+      incRef();
+    }
+
+    virtual void onSubscribe(
+        ::reactivestreams_yarpl::Subscription* subscription) override {
+      upstream_ = subscription;
+      subscriber_->onSubscribe(Reference<::yarpl::Subscription>(this));
+    }
+
+    virtual void onNext(const T& value) override {
+      subscriber_->onNext(value);
+    }
+
+    virtual void onComplete() override {
+      subscriber_->onComplete();
+    }
+
+    virtual void onError(const std::exception_ptr error) override {
+      subscriber_->onError(error);
+    }
+
+    virtual void request(int64_t delta) override {
+      upstream_->request(delta);
+    }
+
+    virtual void cancel() override {
+      upstream_->cancel();
+    }
+
+  private:
+    ::reactivestreams_yarpl::Subscription* upstream_{nullptr};
+    Reference<Subscriber<T>> subscriber_;
+  };
+
+  OnSubscribe function_;
+};
+
+
 } // yarpl

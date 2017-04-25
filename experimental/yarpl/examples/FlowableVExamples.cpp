@@ -29,6 +29,31 @@ std::string getThreadId() {
   return oss.str();
 }
 
+void fromPublisherExample() {
+  auto onSubscribe = [](
+      std::unique_ptr<reactivestreams_yarpl::Subscriber<int>> subscriber) {
+    class Subscription : public reactivestreams_yarpl::Subscription {
+    public:
+      virtual void request(int64_t n) {
+        std::cout << "request(" << n << ")" << std::endl;
+      }
+
+      virtual void cancel() {
+        std::cout << "cancel" << std::endl;
+      }
+    };
+
+    Subscription subscription;
+    subscriber->onSubscribe(&subscription);
+    subscriber->onNext(1234);
+    subscriber->onNext(5678);
+    subscriber->onComplete();
+  };
+
+  Flowables::fromPublisher<int>(std::move(onSubscribe))
+      ->subscribe(printer<int>());
+}
+
 } // namespace
 
 void FlowableVExamples::run() {
@@ -103,4 +128,7 @@ void FlowableVExamples::run() {
       ->subscribe(printer<std::string>());
   std::cout << "  waiting   on " << getThreadId() << std::endl;
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+  std::cout << "from_publisher example" << std::endl;
+  fromPublisherExample();
 }
