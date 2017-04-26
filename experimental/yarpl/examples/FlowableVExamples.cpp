@@ -29,6 +29,31 @@ std::string getThreadId() {
   return oss.str();
 }
 
+void fromPublisherExample() {
+  auto onSubscribe = [](Reference<Subscriber<int>> subscriber) {
+    class Subscription : public ::yarpl::Subscription {
+    public:
+      virtual void request(int64_t delta) override {
+        // TODO
+      }
+
+      virtual void cancel() override {
+        // TODO
+      }
+    };
+
+    Reference<::yarpl::Subscription> subscription(new Subscription);
+    subscriber->onSubscribe(subscription);
+    subscriber->onNext(1234);
+    subscriber->onNext(5678);
+    subscriber->onNext(1234);
+    subscriber->onComplete();
+  };
+
+  Flowables::fromPublisher<int>(std::move(onSubscribe))
+      ->subscribe(printer<int>());
+}
+
 } // namespace
 
 void FlowableVExamples::run() {
@@ -96,4 +121,7 @@ void FlowableVExamples::run() {
       ->subscribe(printer<std::string>());
   std::cout << "  waiting   on " << getThreadId() << std::endl;
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+  std::cout << "fromPublisher - delegate to onSubscribe" << std::endl;
+  fromPublisherExample();
 }
