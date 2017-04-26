@@ -28,13 +28,15 @@ class Refcounted {
   virtual ~Refcounted() = default;
 #endif /* NDEBUG */
 
- private:
-  template <typename T, typename>
-  friend class Reference;
-
+protected:
   void incRef() {
     refcount_.fetch_add(1, std::memory_order_relaxed);
   }
+
+private:
+  template <typename T, typename>
+  friend class Reference;
+
 
   void decRef() {
     if (refcount_.fetch_sub(1, std::memory_order_relaxed) == 1) {
