@@ -3,6 +3,8 @@
 #include <folly/init/Init.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <iostream>
+#include <gflags/gflags.h>
+
 #include "examples/util/ExampleSubscriber.h"
 #include "rsocket/RSocket.h"
 #include "rsocket/transports/TcpConnectionFactory.h"

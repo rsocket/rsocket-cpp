@@ -3,6 +3,8 @@
 #include <folly/Memory.h>
 #include <folly/io/async/AsyncServerSocket.h>
 #include <gmock/gmock.h>
+#include <gflags/gflags.h>
+
 #include "src/FrameTransport.h"
 #include "src/NullRequestHandler.h"
 #include "src/ServerConnectionAcceptor.h"
