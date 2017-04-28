@@ -2,8 +2,8 @@
 
 #include <folly/init/Init.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
+#include <folly/portability/GFlags.h>
 #include <iostream>
-#include <gflags/gflags.h>
 
 #include "examples/util/ExampleSubscriber.h"
 #include "rsocket/RSocket.h"

@@ -4,7 +4,7 @@
 
 #include <folly/init/Init.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
-#include <gflags/gflags.h>
+#include <folly/portability/GFlags.h>
 
 #include "examples/util/ExampleSubscriber.h"
 #include "rsocket/RSocket.h"
