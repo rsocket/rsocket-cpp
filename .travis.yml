@@ -7,6 +7,7 @@ language: cpp
 
 # Test matrix:
 matrix:
+
    include:
     - env: CLANG_VERSION=3.9 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
       os: linux
@@ -57,6 +58,14 @@ before_script:
   - which $CC
   - which valgrind
   - $CXX --version
+  # install latest LCOV (1.9 was failing for me) [1]
+  - wget http://ftp.de.debian.org/debian/pool/main/l/lcov/lcov_1.11.orig.tar.gz
+  - tar xf lcov_1.11.orig.tar.gz
+  - sudo make -C lcov-1.11/ install
+  # install lcov to coveralls conversion + upload tool
+  - gem install coveralls-lcov
+  - lcov --directory . --zerocounters
+
 
 script:
   - mkdir -p build
@@ -65,6 +74,7 @@ script:
   - if [ -n "$CLANG_VERSION" -a "$ASAN" == "On" ]; then CXX_FLAGS="${CXX_FLAGS} -fsanitize=address,undefined,integer -fno-sanitize=unsigned-integer-overflow"; fi
   - if [ -n "$GCC_VERSION" -a "$ASAN" == "On" ]; then echo "turning on ASAN sanitize=address,undefined"; fi
   - if [ -n "$GCC_VERSION" -a "$ASAN" == "On" ]; then CXX_FLAGS="${CXX_FLAGS} -fsanitize=address,undefined -fuse-ld=gold"; fi
+  - if [ -n "$GCC_VERSION" ]; then CXX_FLAGS="${CXX_FLAGS} --coverage"; fi # enable code coverage on GCC builds
   - cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_FLAGS="${CXX_FLAGS}" -DCMAKE_EXE_LINKER_FLAGS="${CXX_LINKER_FLAGS}" -DMETA_CXX_STD=$CPP_VERSION
   - make -j8
   - ./tests
@@ -74,3 +84,13 @@ script:
   - ./scripts/tck_test.sh -c cpp -s cpp
   - ./scripts/tck_test.sh -c java -s java
   - ./scripts/tck_test.sh -c java -s cpp
+  
+after_success:
+  - if [ -n "$GCC_VERSION" ]; then lcov --directory . --capture --output-file coverage.info; fi # capture coverage info
+  - if [ -n "$GCC_VERSION" ]; then lcov --remove coverage.info 'tests/*' '/usr/*' --output-file coverage.info; fi # filter out system and test code
+  - if [ -n "$GCC_VERSION" ]; then lcov --list coverage.info; fi # debug before upload
+  - if [ -n "$GCC_VERSION" ]; then coveralls-lcov --repo-token ${COVERALLS_TOKEN} coverage.info; fi # uploads to coveralls
+ 
+env:
+  global:
+    secure: DOPCvF/oFMkzTHcE1U7jJ1z3isJYKySiJfuzZQqY6IUmjvVxJuE2k4rvz1pURdqYIXs/3kOHhtf59q0VJcCsdurpGXrF+E51JLQyG6SM1L3JzjVjEZ60a7laUyPer7rNnrj6g4K7CK0KcSZKOAsrRxBGGllR5XnxYE9p6zEEPuDxbPJLS8ruDNI2LBCx0eMW/pzTvY4IA+pc2TlGBSh85LH+p+aelp6Q5GKRFWxxy8ju3FcUI4LfJChEgn9Wb9dZ9VsBX1gZjUgXZ1gs0yp2WcohkJuITsb1oRINA0DnwpADlAHpl/+t8NZZKwknTsEHW5KQtvnuqM4nnN4KszkMZQDhlOxgNpvnvcS2lWlbeAE3f7lgtPZDWkmo8SaR+MRH0F1/+nnC7pdMvWoFRfkq5VsXDOiCMrXEJMZFCokHdtxhfNRpwvqchD2BaYQ9xOAToi2GhbV4k/5Zc5bO+bxnTmlFR6fWtHtChCIXLrkKyGLFlDvU4lS9eeaYzv4OaXL/HZ3HPn91/F96ZSVm8X17NmYwD1wfj+ad3D8YMXhWnnBQYpfFeHz/lHAoLXWg/BhtgQbPmMYYKRrQaH7EKzBbqEHv6PhOk7vLMtdx5X7KmhVuFjpAMbaYojzwxxH0u+VAnVB5iazzyjhySjvzkvx6pGzZtTnjLJHxKcp9633z4OU=

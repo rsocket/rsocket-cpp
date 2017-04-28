@@ -424,6 +424,7 @@ add_executable(
 target_link_libraries(
         rsocket_tests
         rsocket_experimental
+        yarpl
         ReactiveSocket
         ${FOLLY_LIBRARIES}
         ${GMOCK_LIBS}
