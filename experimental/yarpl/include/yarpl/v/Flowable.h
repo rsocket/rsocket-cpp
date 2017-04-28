@@ -1,5 +1,6 @@
 #pragma once
 
+#include <limits>
 #include <memory>
 #include <mutex>
 #include <stdexcept>
@@ -88,11 +89,12 @@ class Flowable : public virtual Refcounted {
 
       while (true) {
         auto current = requested_.load(std::memory_order_relaxed);
-        auto total = current + delta;
-        if (total < current) {
-          // overflow; cap at max (turn flow control off).
-          total = NO_FLOW_CONTROL;
-        }
+
+        // Turn flow control off for overflow.
+        auto const total =
+          (current > std::numeric_limits<int64_t>::max() - delta)
+          ? NO_FLOW_CONTROL
+          : current + delta;
 
         if (requested_.compare_exchange_strong(current, total))
           break;
