@@ -6,8 +6,6 @@
 
 #include <folly/ExceptionWrapper.h>
 
-// using the "v" Flowable types
-// since they don't have ReactiveStreams right now
 #include "yarpl/Subscriber.h"
 #include "yarpl/Subscription.h"
 
@@ -26,11 +24,16 @@ class NewToOldSubscription : public yarpl::Subscription {
   ~NewToOldSubscription() = default;
 
   void request(int64_t n) override {
-    inner_->request(n);
+    if (inner_) {
+      inner_->request(n);
+    }
   }
 
   void cancel() override {
     inner_->cancel();
+
+    inner_.reset();
+    release();
   }
 
  private:
@@ -57,10 +60,16 @@ class OldToNewSubscriber
 
   void onComplete() noexcept {
     inner_->onComplete();
+
+    inner_.reset();
+    bridge_.reset();
   }
 
   void onError(folly::exception_wrapper ex) noexcept {
     inner_->onError(ex.to_exception_ptr());
+
+    inner_.reset();
+    bridge_.reset();
   }
 
  private:
@@ -76,24 +85,24 @@ class OldToNewSubscription : public reactivesocket::Subscription {
       : inner_{inner} {}
 
   void request(size_t n) noexcept override {
-    if (!terminated_) {
+    if (inner_) {
       inner_->request(n);
     }
   }
 
   void cancel() noexcept override {
-    if (!terminated_) {
+    if (inner_) {
       inner_->cancel();
     }
+    inner_.reset();
   }
 
   void terminate() {
-    terminated_ = true;
+    inner_.reset();
   }
 
  private:
   yarpl::Reference<yarpl::Subscription> inner_{nullptr};
-  bool terminated_{false};
 };
 
 class NewToOldSubscriber : public yarpl::Subscriber<reactivesocket::Payload> {
@@ -122,6 +131,9 @@ class NewToOldSubscriber : public yarpl::Subscriber<reactivesocket::Payload> {
       bridge_->terminate();
     }
     inner_->onComplete();
+
+    inner_.reset();
+    bridge_.reset();
   }
 
   void onError(std::exception_ptr eptr) override {
@@ -129,6 +141,9 @@ class NewToOldSubscriber : public yarpl::Subscriber<reactivesocket::Payload> {
       bridge_->terminate();
     }
     inner_->onError(folly::exception_wrapper(std::move(eptr)));
+
+    inner_.reset();
+    bridge_.reset();
   }
 
  private:

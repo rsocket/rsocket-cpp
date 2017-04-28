@@ -117,6 +117,10 @@ class Reference {
     Reference().swap(*this);
   }
 
+  explicit operator bool() const {
+    return pointer_;
+  }
+
  private:
   void swap(Reference& other) {
     T* temp = pointer_;
