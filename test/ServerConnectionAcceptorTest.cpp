@@ -23,32 +23,20 @@ class MockConnectionHandler : public ConnectionHandler {
   void setupNewSocket(
       std::shared_ptr<FrameTransport> frameTransport,
       ConnectionSetupPayload setupPayload) override {
-    setupNewSocket_(std::move(frameTransport), setupPayload);
-  }
-
-  bool resumeSocket(
-      std::shared_ptr<FrameTransport> transport,
-      ResumeParameters params) override {
-    return resumeSocket_(std::move(transport), params);
-  }
-
-  void connectionError(
-      std::shared_ptr<FrameTransport> transport,
-      folly::exception_wrapper ew) override {
-    connectionError_(std::move(transport), ew);
+    doSetupNewSocket(std::move(frameTransport), setupPayload);
   }
 
   MOCK_METHOD2(
-      setupNewSocket_,
+      doSetupNewSocket,
       void(std::shared_ptr<FrameTransport>, ConnectionSetupPayload&));
 
   MOCK_METHOD2(
-      resumeSocket_,
+      resumeSocket,
       bool(std::shared_ptr<FrameTransport>, ResumeParameters));
 
   MOCK_METHOD2(
-      connectionError_,
-      void(std::shared_ptr<FrameTransport>, folly::exception_wrapper&));
+      connectionError,
+      void(std::shared_ptr<FrameTransport>, folly::exception_wrapper ex));
 };
 
 struct MockFrameProcessor : public FrameProcessor {
@@ -56,12 +44,8 @@ struct MockFrameProcessor : public FrameProcessor {
     processFrame_(frame);
   }
 
-  void onTerminal(folly::exception_wrapper ew) override {
-    onTerminal_(ew);
-  }
-
   MOCK_METHOD1(processFrame_, void(std::unique_ptr<folly::IOBuf>&));
-  MOCK_METHOD1(onTerminal_, void(folly::exception_wrapper&));
+  MOCK_METHOD1(onTerminal, void(folly::exception_wrapper));
 };
 
 class ServerConnectionAcceptorTest : public Test {
@@ -97,7 +81,7 @@ class ServerConnectionAcceptorTest : public Test {
 };
 
 TEST_F(ServerConnectionAcceptorTest, BrokenFrame) {
-  EXPECT_CALL(*handler_, connectionError_(_, _));
+  EXPECT_CALL(*handler_, connectionError(_, _));
   EXPECT_CALL(*clientInput_, onError_(_));
 
   acceptor_.accept(std::move(serverConnection_), handler_);
@@ -106,7 +90,7 @@ TEST_F(ServerConnectionAcceptorTest, BrokenFrame) {
 }
 
 TEST_F(ServerConnectionAcceptorTest, EarlyDisconnect) {
-  EXPECT_CALL(*handler_, connectionError_(_, _));
+  EXPECT_CALL(*handler_, connectionError(_, _));
   EXPECT_CALL(*clientInput_, onComplete_());
 
   acceptor_.accept(std::move(serverConnection_), handler_);
@@ -114,7 +98,7 @@ TEST_F(ServerConnectionAcceptorTest, EarlyDisconnect) {
 }
 
 TEST_F(ServerConnectionAcceptorTest, EarlyError) {
-  EXPECT_CALL(*handler_, connectionError_(_, _));
+  EXPECT_CALL(*handler_, connectionError(_, _));
   EXPECT_CALL(*clientInput_, onError_(_));
 
   acceptor_.accept(std::move(serverConnection_), handler_);
@@ -124,14 +108,15 @@ TEST_F(ServerConnectionAcceptorTest, EarlyError) {
 TEST_F(ServerConnectionAcceptorTest, SetupFrame) {
   ConnectionSetupPayload setupPayload(
       "metadataMimeType", "dataMimeType", Payload(), true);
-  EXPECT_CALL(*handler_, setupNewSocket_(_, _))
-      .WillOnce(Invoke([&](std::shared_ptr<FrameTransport> transport,
-                           ConnectionSetupPayload& payload) {
-        ASSERT_EQ(setupPayload.token, payload.token);
-        ASSERT_EQ(setupPayload.metadataMimeType, payload.metadataMimeType);
-        ASSERT_EQ(setupPayload.dataMimeType, payload.dataMimeType);
-        transport->close(folly::exception_wrapper());
-      }));
+  EXPECT_CALL(*handler_, doSetupNewSocket(_, _))
+      .WillOnce(Invoke(
+          [&](std::shared_ptr<FrameTransport> transport,
+              ConnectionSetupPayload& payload) {
+            ASSERT_EQ(setupPayload.token, payload.token);
+            ASSERT_EQ(setupPayload.metadataMimeType, payload.metadataMimeType);
+            ASSERT_EQ(setupPayload.dataMimeType, payload.dataMimeType);
+            transport->close(folly::exception_wrapper());
+          }));
 
   auto frameSerializer = FrameSerializer::createCurrentVersion();
   acceptor_.accept(std::move(serverConnection_), handler_);
@@ -153,16 +138,18 @@ TEST_F(ServerConnectionAcceptorTest, SetupFrame) {
 TEST_F(ServerConnectionAcceptorTest, ResumeFrameNoSession) {
   std::unique_ptr<folly::IOBuf> data;
   EXPECT_CALL(*clientInput_, onNext_(_))
-      .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& buffer) {
-        data = std::move(buffer);
-      }));
+    .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& buffer) {
+      data = std::move(buffer);
+    }));
+
 
   ResumeParameters resumeParams(
       ResumeIdentificationToken::generateNew(),
       1,
       2,
       FrameSerializer::getCurrentProtocolVersion());
-  EXPECT_CALL(*handler_, resumeSocket_(_, _)).WillOnce(Return(false));
+  EXPECT_CALL(*handler_, resumeSocket(_, _))
+      .WillOnce(Return(false));
 
   auto frameSerializer = FrameSerializer::createCurrentVersion();
   acceptor_.accept(std::move(serverConnection_), handler_);
@@ -186,7 +173,7 @@ TEST_F(ServerConnectionAcceptorTest, ResumeFrame) {
       1,
       2,
       FrameSerializer::getCurrentProtocolVersion());
-  EXPECT_CALL(*handler_, resumeSocket_(_, _))
+  EXPECT_CALL(*handler_, resumeSocket(_, _))
       .WillOnce(Invoke(
           [&](std::shared_ptr<FrameTransport> transport,
               ResumeParameters params) -> bool {
@@ -216,7 +203,7 @@ TEST_F(ServerConnectionAcceptorTest, VerifyTransport) {
       FrameSerializer::getCurrentProtocolVersion());
   std::weak_ptr<MockFrameProcessor> wfp;
   std::shared_ptr<FrameTransport> transport_;
-  EXPECT_CALL(*handler_, resumeSocket_(_, _))
+  EXPECT_CALL(*handler_, resumeSocket(_, _))
       .WillOnce(Invoke(
           [&](std::shared_ptr<FrameTransport> transport,
               ResumeParameters params) -> bool {
@@ -246,7 +233,7 @@ TEST_F(ServerConnectionAcceptorTest, VerifyAsyncProcessorFrame) {
       2,
       FrameSerializer::getCurrentProtocolVersion());
   std::shared_ptr<FrameTransport> transport_;
-  EXPECT_CALL(*handler_, resumeSocket_(_, _))
+  EXPECT_CALL(*handler_, resumeSocket(_, _))
       .WillOnce(Invoke(
           [&](std::shared_ptr<FrameTransport> transport,
               ResumeParameters params) -> bool {
@@ -264,17 +251,19 @@ TEST_F(ServerConnectionAcceptorTest, VerifyAsyncProcessorFrame) {
       FrameSerializer::getCurrentProtocolVersion())));
 
   // The transport won't have a processor now, try sending a frame
-  clientOutput_->onNext(frameSerializer->serializeOut(
-      Frame_REQUEST_FNF(1, FrameFlags::EMPTY, Payload())));
+  clientOutput_->onNext(frameSerializer->serializeOut(Frame_REQUEST_FNF(
+      1,
+      FrameFlags::EMPTY,
+      Payload())));
 
   auto processor = std::make_shared<NiceMock<MockFrameProcessor>>();
-  EXPECT_CALL(*processor, onTerminal_(_)).Times(Exactly(0));
+  EXPECT_CALL(*processor, onTerminal(_))
+    .Times(Exactly(0));
   EXPECT_CALL(*processor, processFrame_(_))
-      .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& frame) {
-        Frame_REQUEST_FNF fnfFrame;
-        EXPECT_TRUE(
-            frameSerializer->deserializeFrom(fnfFrame, std::move(frame)));
-      }));
+    .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& frame) {
+      Frame_REQUEST_FNF fnfFrame;
+      EXPECT_TRUE(frameSerializer->deserializeFrom(fnfFrame, std::move(frame)));
+    }));
 
   transport_->setFrameProcessor(processor);
 
@@ -291,7 +280,7 @@ TEST_F(ServerConnectionAcceptorTest, VerifyAsyncProcessorTerminal) {
       2,
       FrameSerializer::getCurrentProtocolVersion());
   std::shared_ptr<FrameTransport> transport_;
-  EXPECT_CALL(*handler_, resumeSocket_(_, _))
+  EXPECT_CALL(*handler_, resumeSocket(_, _))
       .WillOnce(Invoke(
           [&](std::shared_ptr<FrameTransport> transport,
               ResumeParameters params) -> bool {
@@ -312,10 +301,10 @@ TEST_F(ServerConnectionAcceptorTest, VerifyAsyncProcessorTerminal) {
   clientOutput_->onError(std::runtime_error("too bad"));
 
   auto processor = std::make_shared<StrictMock<MockFrameProcessor>>();
-  EXPECT_CALL(*processor, onTerminal_(_))
-      .WillOnce(Invoke([&](folly::exception_wrapper ex) {
-        EXPECT_THAT(ex.what().toStdString(), HasSubstr("too bad"));
-      }));
+  EXPECT_CALL(*processor, onTerminal(_))
+    .WillOnce(Invoke([&](folly::exception_wrapper ex) {
+      EXPECT_THAT(ex.what().toStdString(), HasSubstr("too bad"));
+    }));
 
   transport_->setFrameProcessor(processor);
 
