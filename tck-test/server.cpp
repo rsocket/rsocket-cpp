@@ -6,6 +6,7 @@
 #include <folly/io/async/AsyncServerSocket.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <gmock/gmock.h>
+#include <gflags/gflags.h>
 
 #include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"
