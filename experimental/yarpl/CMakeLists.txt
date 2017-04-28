@@ -95,11 +95,12 @@ add_executable(
 #        test/Flowable_range_test.cpp
 #        test/Flowable_lifecycle.cpp
 #        test/FlowableChaining_test.cpp
-        test/Scheduler_test.cpp
-        test/RefcountedTest.cpp
         test/FlowableTest.cpp
-        test/Tuple.h
+        test/RefcountedTest.cpp
+        test/ReferenceTest.cpp
+        test/Scheduler_test.cpp
         test/Tuple.cpp
+        test/Tuple.h
 )
 
 target_link_libraries(
