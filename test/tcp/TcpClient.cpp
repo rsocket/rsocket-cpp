@@ -3,8 +3,8 @@
 #include <folly/Memory.h>
 #include <folly/io/async/EventBaseManager.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
+#include <folly/portability/GFlags.h>
 #include <gmock/gmock.h>
-#include <gflags/gflags.h>
 
 #include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"

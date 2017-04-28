@@ -4,7 +4,7 @@
 #include <thread>
 
 #include <folly/init/Init.h>
-#include <gflags/gflags.h>
+#include <folly/portability/GFlags.h>
 
 #include "rsocket/RSocket.h"
 #include "rsocket/transports/TcpConnectionAcceptor.h"

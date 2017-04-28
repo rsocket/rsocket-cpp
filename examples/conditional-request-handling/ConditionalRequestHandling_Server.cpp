@@ -1,8 +1,8 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include <iostream>
 #include <folly/init/Init.h>
-#include <gflags/gflags.h>
+#include <folly/portability/GFlags.h>
+#include <iostream>
 
 #include "rsocket/RSocket.h"
 #include "rsocket/RSocketErrors.h"
