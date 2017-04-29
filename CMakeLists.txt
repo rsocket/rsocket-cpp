@@ -91,7 +91,7 @@ if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
   set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Wno-c++98-compat -Wno-c++98-compat-pedantic)
   set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Wno-abstract-vbase-init)
 
-  set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} -Wno-inconsistent-override")
+  set(TEST_CXX_FLAGS ${TEST_CXX_FLAGS} -Wno-inconsistent-missing-override)
 elseif(CMAKE_COMPILER_IS_GNUCXX)
   set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Werror -pedantic -pedantic-errors)
 endif()
