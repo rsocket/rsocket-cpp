@@ -7,8 +7,8 @@
 
 #include "rsocket/RSocket.h"
 #include "rsocket/transports/TcpConnectionAcceptor.h"
-#include "yarpl/v/Flowable.h"
-#include "yarpl/v/Flowables.h"
+#include "yarpl/Flowable.h"
+#include "yarpl/Flowables.h"
 
 using namespace reactivesocket;
 using namespace rsocket;

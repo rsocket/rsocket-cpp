@@ -8,8 +8,8 @@
 
 // using the "v" Flowable types
 // since they don't have ReactiveStreams right now
-#include "yarpl/v/Subscriber.h"
-#include "yarpl/v/Subscription.h"
+#include "yarpl/Subscriber.h"
+#include "yarpl/Subscription.h"
 
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"

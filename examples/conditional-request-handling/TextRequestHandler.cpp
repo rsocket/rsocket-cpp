@@ -2,8 +2,8 @@
 
 #include "TextRequestHandler.h"
 #include <string>
-#include "yarpl/v/Flowable.h"
-#include "yarpl/v/Flowables.h"
+#include "yarpl/Flowable.h"
+#include "yarpl/Flowables.h"
 
 using namespace reactivesocket;
 using namespace rsocket;

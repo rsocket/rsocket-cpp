@@ -5,7 +5,7 @@
 
 #include <gtest/gtest.h>
 
-#include "yarpl/v/Refcounted.h"
+#include "yarpl/Refcounted.h"
 
 namespace yarpl {
 

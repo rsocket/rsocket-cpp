@@ -8,7 +8,7 @@
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
 #include "src/SubscriptionBase.h"
-#include "yarpl/v/Flowable.h"
+#include "yarpl/Flowable.h"
 
 namespace rsocket {
 namespace tests {
