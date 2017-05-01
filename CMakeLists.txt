@@ -406,6 +406,8 @@ add_library(
         experimental/rsocket/transports/TcpConnectionFactory.h
         experimental/rsocket-src/transports/TcpConnectionFactory.cpp
         experimental/rsocket/RSocketRequestHandler.h
+        experimental/rsocket/RSocketConnectionHandler.h
+        experimental/rsocket-src/RSocketConnectionHandler.cpp
 )
 
 add_dependencies(rsocket_experimental ReactiveStreams yarpl)
