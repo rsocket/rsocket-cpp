@@ -2,14 +2,14 @@
 
 #include <limits>
 
-#include "Flowable.h"
+#include "Observable.h"
 
 namespace yarpl {
-namespace flowable {
+namespace observable {
 
-class Flowables {
+class Observables {
  public:
-  static Reference<Flowable<int64_t>> range(int64_t start, int64_t end) {
+  static Reference<Observable<int64_t>> range(int64_t start, int64_t end) {
     auto lambda = [ start, end, i = start ](
         Subscriber<int64_t> & subscriber, int64_t requested) mutable {
       int64_t emitted = 0;
@@ -28,11 +28,11 @@ class Flowables {
       return std::make_tuple(requested, done);
     };
 
-    return Flowable<int64_t>::create(std::move(lambda));
+    return Observable<int64_t>::create(std::move(lambda));
   }
 
   template <typename T>
-  static Reference<Flowable<T>> just(const T& value) {
+  static Reference<Observable<T>> just(const T& value) {
     auto lambda = [value](Subscriber<T>& subscriber, int64_t) {
       // # requested should be > 0.  Ignoring the actual parameter.
       subscriber.onNext(value);
@@ -40,11 +40,11 @@ class Flowables {
       return std::make_tuple(static_cast<int64_t>(1), true);
     };
 
-    return Flowable<T>::create(std::move(lambda));
+    return Observable<T>::create(std::move(lambda));
   }
 
   template <typename T>
-  static Reference<Flowable<T>> just(std::initializer_list<T> list) {
+  static Reference<Observable<T>> just(std::initializer_list<T> list) {
     auto lambda = [ list, it = list.begin() ](
         Subscriber<T> & subscriber, int64_t requested) mutable {
       int64_t emitted = 0;
@@ -63,7 +63,7 @@ class Flowables {
       return std::make_tuple(static_cast<int64_t>(emitted), done);
     };
 
-    return Flowable<T>::create(std::move(lambda));
+    return Observable<T>::create(std::move(lambda));
   }
 
   template <
@@ -72,14 +72,15 @@ class Flowables {
       typename = typename std::enable_if<std::is_callable<
           OnSubscribe(Reference<Subscriber<T>>),
           void>::value>::type>
-  static Reference<Flowable<T>> fromPublisher(OnSubscribe&& function) {
-    return Reference<Flowable<T>>(new FromPublisherOperator<T, OnSubscribe>(
+
+  static Reference<Observable<T>> create(OnSubscribe&& function) {
+    return Reference<Observable<T>>(new FromPublisherOperator<T, OnSubscribe>(
         std::forward<OnSubscribe>(function)));
   }
 
  private:
-  Flowables() = delete;
+  Observables() = delete;
 };
 
-} // flowable
+} // observable
 } // yarpl

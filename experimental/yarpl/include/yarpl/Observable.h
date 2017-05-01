@@ -1,343 +1,115 @@
-// Copyright 2004-present Facebook. All Rights Reserved.
-
 #pragma once
 
 #include <memory>
+#include <mutex>
+#include <stdexcept>
+#include <string>
 #include <type_traits>
 #include <utility>
+
+#include "yarpl/Scheduler.h"
 #include "yarpl/utils/type_traits.h"
 
-#include "yarpl/Flowable.h"
-#include "yarpl/Flowables.h"
-
-#include "yarpl/Disposable.h"
-#include "yarpl/Observable_Observer.h"
-#include "yarpl/Observable_Subscription.h"
-
-#include "yarpl/observable/sources/Observable_RangeSubscription.h"
-
-#include "yarpl/flowable/sources/Flowable_FromObservable.h"
-#include "yarpl/observable/operators/Observable_Map.h"
-#include "yarpl/observable/operators/Observable_Take.h"
+#include "observable/Observer.h"
+#include "Refcounted.h"
+#include "observable/Subscription.h"
 
 namespace yarpl {
 namespace observable {
-
-// forward declarations
-template <typename T>
-class ObservableEmitter;
-template <typename T, typename OF>
-class EmitterSubscription;
 
 /**
 *Strategy for backpressure when converting from Observable to Flowable.
 */
 enum class BackpressureStrategy { DROP };
 
-/**
- * Observable type for async push streams.
- *
- * Use Flowable if the data source can be pulled from.
- *
- * Convert from Observable with a BackpressureStrategy if a Flowable
- * is needed for sending over async boundaries, such as a network.
- *
- * For example:
- *
- * someObservable->toFlowable(BackpressureStategy::Drop)
- *
- * @tparam T
- */
 template <typename T>
-class Observable : public std::enable_shared_from_this<Observable<T>> {
-  friend class Observables;
-
+class Observable : public virtual Refcounted {
  public:
-  Observable(Observable&&) = delete;
-  Observable(const Observable&) = delete;
-  Observable& operator=(Observable&&) = delete;
-  Observable& operator=(const Observable&) = delete;
-  virtual ~Observable() = default;
+  static const auto CANCELED = std::numeric_limits<int64_t>::min();
+  static const auto NO_FLOW_CONTROL = std::numeric_limits<int64_t>::max();
 
-  virtual void subscribe(std::unique_ptr<Observer<T>>) = 0;
+  virtual void subscribe(Reference<Observer<T>>) = 0;
 
-  /**
-   * Create an Observable<T> with a function that is executed when
-   * Observable.subscribe is called.
-   *
-   * The function receives an ObservableEmitter for emitting events
-   * and that allows checking for cancellation.
-   *
-   * The ObservableEmitter will heap allocation on subscribe, and it
-   * automatically manages the memory lifecycle.
-   *
-   * Rule: Do NOT call onNext methods on ObservableEmitter AFTER any of:
-   *
-   * - calling onComplete
-   * - calling onError
-   * - receiving a cancellation
-   *
-   * For example:
-   *
-   *   Observable<int>::create([](auto oe) {
-   *    int i = 1;
-   *    while (!oe.isCancelled()) {
-   *      oe.onNext(i++);
-   *   }
-   *  })
-   *
-   * The onComplete and onError methods do protect themselves
-   * so that this can be written:
-   *
-   *  Observable<int>::create([](auto oe) {
-   *    for (int i = 1; i <= 10 && !oe.isCancelled(); ++i) {
-   *      oe.onNext(i);
-   *    }
-   *    oe.onComplete();
-   *  })
-   *
-   * onNext does not protect itself similarly due to the performance overhead
-   * of conditional branching on every onNext.
-   *
-   *
-   *@tparam F
-   *@param function
-   *@return
-   */
   template <
-      typename F,
+      typename OnSubscribe,
       typename = typename std::enable_if<
-          std::is_callable<F(ObservableEmitter<T>&), void>::value>::type>
-  static std::shared_ptr<Observable<T>> create(F&& function) {
-    return unsafeCreate([f = std::move(function)](auto observer) mutable {
-      auto e = new EmitterSubscription<T, F>(std::move(observer), std::move(f));
-      e->start();
-    });
-  }
-
-  /**
-   * Lift an operator into O<T> and return O<R>
-   * @tparam R
-   * @tparam F
-   * @param onSubscribeLift
-   * @return
-   */
-  template <
-      typename R,
-      typename F,
-      typename = typename std::enable_if<std::is_callable<
-          F(std::unique_ptr<yarpl::observable::Observer<R>>),
-          std::unique_ptr<yarpl::observable::Observer<T>>>::value>::type>
-  std::shared_ptr<Observable<R>> lift(F&& onSubscribeLift) {
-    return Observable<R>::unsafeCreate([
-      shared_this = this->shared_from_this(),
-      onSub = std::move(onSubscribeLift)
-    ](auto sOfR) mutable {
-      shared_this->subscribe(std::move(onSub(std::move(sOfR))));
-    });
-  }
-
-  /**
-   * Map O<T> -> O<R>
-   *
-   * @tparam F
-   * @param function
-   * @return
-   */
-  template <
-      typename F,
-      typename = typename std::enable_if<
-          std::is_callable<F(T), typename std::result_of<F(T)>::type>::value>::
+          std::is_callable<OnSubscribe(Reference<Observer<T>>), void>::value>::
           type>
-  std::shared_ptr<Observable<typename std::result_of<F(T)>::type>> map(
-      F&& function) {
-    return lift<typename std::result_of<F(T)>::type>(
-        yarpl::observable::operators::
-            ObservableMapOperator<T, typename std::result_of<F(T)>::type, F>(
-                std::forward<F>(function)));
+  static auto create(OnSubscribe&& function) {
+    return Reference<Observable<T>>(new FromPublisherOperator<OnSubscribe>(
+        std::forward<OnSubscribe>(function)));
   }
 
-  /**
-   * Take n items from O<T> then cancel.
-   * @param toTake
-   * @return
-   */
-  std::shared_ptr<Observable<T>> take(int64_t toTake) {
-    return lift<T>(
-        yarpl::observable::operators::ObservableTakeOperator<T>(toTake));
-  }
+  template <typename Function>
+  auto map(Function&& function);
 
-  /**
-   * Convert from Observable to Flowable with a given BackpressureStrategy.
-   *
-   * Currently the only strategy is DROP.
-   *
-   * @param strategy
-   * @return
-   */
-  std::shared_ptr<yarpl::Flowable<T>> toFlowable(
-      BackpressureStrategy strategy) {
-    // we currently ONLY support the DROP strategy
-    // so do not use the strategy parameter for anything
-    return yarpl::Flowable<T>::create([o = this->shared_from_this()](
-        auto subscriber) mutable {
-      auto s =
-          new yarpl::flowable::sources::FlowableFromObservableSubscription<T>(
-              std::move(o), std::move(subscriber));
-      s->start();
-    });
-  }
+  auto take(int64_t);
 
- protected:
-  Observable() = default;
+  auto subscribeOn(Scheduler&);
 
  private:
-  template <typename Function>
-  class Derived;
+  template <typename OnSubscribe>
+  class FromPublisherOperator : public Observable<T> {
+   public:
+    FromPublisherOperator(OnSubscribe&& function)
+        : function_(std::move(function)) {}
 
-  /**
-   * Private creator of an Observable.
-   *
-   * Whatever is passed into this function *SHOULD* heap allocate
-   * and manage its own lifecycle. It is suggested to use the
-   * ObservableSubscription base type which manages this.
-   *
-   * If it does not heap allocate on subscribe, then it will
-   * only work for synchronous cases.
-   *
-   * The higher-level Observable::create method provides
-   * an abstraction and does this automatically.
-   *
-   * @tparam F
-   * @param function
-   * @return
-   */
-  template <
-      typename F,
-      typename = typename std::enable_if<std::is_callable<
-          F(std::unique_ptr<yarpl::observable::Observer<T>>),
-          void>::value>::type>
-  static std::shared_ptr<Observable> unsafeCreate(F&& function) {
-    // TODO(vjn): figure out why clang complains about the cast of the shared
-    // pointer to the base class.  (Also fails with std::static_pointer_cast.)
-    // Meantime, not using std::make_shared.
-    Observable* base = new Derived<F>(std::forward<F>(function));
-    return std::shared_ptr<Observable>(base);
-  }
+    void subscribe(Reference<Observer<T>> subscriber) {
+      function_(std::move(subscriber));
+    }
+
+   private:
+    OnSubscribe function_;
+  };
+
+  //  /**
+  //  * Convert from Observable to Flowable with a given BackpressureStrategy.
+  //  *
+  //  * Currently the only strategy is DROP.
+  //  *
+  //  * @param strategy
+  //  * @return
+  //  */
+  //  std::shared_ptr<yarpl::Observable<T>> toFlowable(
+  //      BackpressureStrategy strategy) {
+  //    // we currently ONLY support the DROP strategy
+  //    // so do not use the strategy parameter for anything
+  //    return yarpl::Observable<T>::create([o = this->shared_from_this()](
+  //        auto subscriber) mutable {
+  //      auto s =
+  //          new
+  //          yarpl::flowable::sources::ObservableFromObservableSubscription<T>(
+  //              std::move(o), std::move(subscriber));
+  //      s->start();
+  //    });
+  //  }
 };
+} // observable
+} // yarpl
 
+#include "observable/ObservableOperator.h"
+
+namespace yarpl {
+namespace observable {
 template <typename T>
 template <typename Function>
-class Observable<T>::Derived : public Observable<T> {
- public:
-  explicit Derived(Function&& function)
-      : function_(std::forward<Function>(function)) {}
+auto Observable<T>::map(Function&& function) {
+  using D = typename std::result_of<Function(T)>::type;
+  return Reference<Observable<D>>(new MapOperator<T, D, Function>(
+      Reference<Observable<T>>(this), std::forward<Function>(function)));
+}
 
-  void subscribe(std::unique_ptr<Observer<T>> subscriber) override {
-    (function_)(std::move(subscriber));
-  }
-
- private:
-  Function function_;
-};
-
-class Observables {
- public:
-  Observables() = default;
-  Observables(Observables&&) = delete;
-  Observables(const Observables&) = delete;
-  Observables& operator=(Observables&&) = delete;
-  Observables& operator=(const Observables&) = delete;
-
-  /**I
-    * Create an Observable<T> with a function that is executed when
-    * Observable.subscribe is called.
-    *
-    * The first call to `observer` should be `observer->onSubscribe(s)`
-    * with a Subscription that allows cancellation.
-    *
-    * Use Subscriptions::create for common implementations.
-    *
-    * Consider using 'createWithEmitter` if checking for cancellation
-    * in a loop is the intended behavior.
-    *
-    *@tparam F
-    *@param function
-    *@return
-    */
-  template <
-      typename T,
-      typename F,
-      typename = typename std::enable_if<std::is_callable<
-          F(std::unique_ptr<yarpl::observable::Observer<T>>),
-          void>::value>::type>
-  static std::shared_ptr<Observable<T>> unsafeCreate(F&& function) {
-    return Observable<T>::unsafeCreate(std::forward<F>(function));
-  }
-
-  static std::shared_ptr<Observable<long>> range(long start, long count) {
-    return Observable<long>::unsafeCreate([start, count](auto o) {
-      auto s = new yarpl::observable::sources::RangeSubscription(
-          start, count, std::move(o));
-      s->start();
-    });
-  }
-};
-
-/**
- * ObservableEmitter used with Observable::create
- *
- * This is purely an external API to present to the Observable::create function
- * provided by users. It abstracts the underlying Observer, Subscription,
- * lifecycle, etc.
- *
- * @tparam T
- */
 template <typename T>
-class ObservableEmitter {
- public:
-  explicit ObservableEmitter(ObservableSubscription<T>* emitter)
-      : emitter_(emitter) {}
-
-  void onNext(const T& t) {
-    emitter_->onNext(t);
-  }
-
-  // void onNext(T&& t) {
-  //   emitter_->onNext(t);
-  // }
-
-  void onComplete() {
-    emitter_->onComplete();
-  }
-
-  void onError(const std::exception_ptr error) {
-    emitter_->onError(error);
-  }
-
-  bool isCancelled() {
-    return emitter_->isCancelled();
-  }
-
- private:
-  ObservableSubscription<T>* emitter_;
-};
-
-template <typename T, typename OF>
-class EmitterSubscription : public ObservableSubscription<T> {
- public:
-  EmitterSubscription(std::unique_ptr<Observer<T>> observer, OF&& function)
-      : ObservableSubscription<T>(std::move(observer)),
-        emitter_(this),
-        function_(std::move(function)) {}
-
-  void start() override {
-    function_(emitter_);
-  }
-
- private:
-  ObservableEmitter<T> emitter_;
-  OF function_;
-};
+auto Observable<T>::take(int64_t limit) {
+  return Reference<Observable<T>>(
+      new TakeOperator<T>(Reference<Observable<T>>(this), limit));
 }
+
+template <typename T>
+auto Observable<T>::subscribeOn(Scheduler& scheduler) {
+  return Reference<Observable<T>>(
+      new SubscribeOnOperator<T>(Reference<Observable<T>>(this), scheduler));
 }
+
+} // observable
+} // yarpl

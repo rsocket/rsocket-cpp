@@ -8,6 +8,7 @@
 #include "yarpl/utils/type_traits.h"
 
 namespace yarpl {
+namespace flowable {
 
 /// Helper methods for constructing subscriber instances from functions:
 /// one, two, or three functions (callables; can be lamda, for instance)
@@ -131,4 +132,5 @@ class Subscribers {
   Subscribers() = delete;
 };
 
+} // flowable
 } // yarpl

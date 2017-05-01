@@ -2,13 +2,13 @@
 
 #include <stdexcept>
 
-#include "Refcounted.h"
+#include "../Refcounted.h"
 #include "Subscription.h"
 
 namespace yarpl {
-
+namespace observable {
 template <typename T>
-class Subscriber : public virtual Refcounted {
+class Observer : public virtual Refcounted {
  public:
   // Note: if any of the following methods is overridden in a subclass,
   // the new methods SHOULD ensure that these are invoked as well.
@@ -39,4 +39,5 @@ class Subscriber : public virtual Refcounted {
   Reference<Subscription> subscription_{nullptr};
 };
 
+} // observable
 } // yarpl
