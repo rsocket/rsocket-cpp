@@ -1,6 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include <gflags/gflags.h>
+#include <folly/portability/GFlags.h>
+
 #include <glog/logging.h>
 #include "gmock/gmock.h"
 

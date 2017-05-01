@@ -4,6 +4,7 @@
 #include <folly/String.h>
 #include <folly/io/async/AsyncSocket.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
+#include <folly/portability/GFlags.h>
 
 #include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"
