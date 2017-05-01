@@ -28,8 +28,8 @@ class Refcounted {
   virtual ~Refcounted() = default;
 #endif /* NDEBUG */
 
-private:
-  template <typename T, typename>
+ private:
+  template <typename T>
   friend class Reference;
 
   void incRef() {
@@ -53,12 +53,13 @@ private:
 /// RAII-enabling smart pointer for refcounted objects.  Each reference
 /// constructed against a target refcounted object increases its count
 /// by 1 during its lifetime.
-template <
-    typename T,
-    typename =
-        typename std::enable_if<std::is_base_of<Refcounted, T>::value>::type>
+template <typename T>
 class Reference {
  public:
+  static_assert(
+      std::is_base_of<Refcounted, T>::value,
+      "Reference must be used with types that virtually derive Refcounted");
+
   Reference() : pointer_(nullptr) {}
 
   explicit Reference(T* pointer) : pointer_(pointer) {
@@ -71,7 +72,7 @@ class Reference {
       pointer_->decRef();
   }
 
-  template <typename U, typename>
+  template <typename U>
   friend class Reference;
 
   template <typename U>
