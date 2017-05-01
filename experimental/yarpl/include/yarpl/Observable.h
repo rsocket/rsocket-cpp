@@ -8,6 +8,7 @@
 #include "yarpl/utils/type_traits.h"
 
 #include "yarpl/Flowable.h"
+#include "yarpl/Flowables.h"
 
 #include "yarpl/Disposable.h"
 #include "yarpl/Observable_Observer.h"
@@ -174,11 +175,11 @@ class Observable : public std::enable_shared_from_this<Observable<T>> {
    * @param strategy
    * @return
    */
-  std::shared_ptr<yarpl::flowable::Flowable<T>> toFlowable(
+  std::shared_ptr<yarpl::Flowable<T>> toFlowable(
       BackpressureStrategy strategy) {
     // we currently ONLY support the DROP strategy
     // so do not use the strategy parameter for anything
-    return yarpl::flowable::Flowable<T>::create([o = this->shared_from_this()](
+    return yarpl::Flowable<T>::create([o = this->shared_from_this()](
         auto subscriber) mutable {
       auto s =
           new yarpl::flowable::sources::FlowableFromObservableSubscription<T>(

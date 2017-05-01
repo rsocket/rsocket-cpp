@@ -7,8 +7,8 @@
 #include <mutex>
 #include "src/Payload.h"
 
-#include "yarpl/v/Subscriber.h"
-#include "yarpl/v/Flowable.h"
+#include "yarpl/Subscriber.h"
+#include "yarpl/Flowable.h"
 
 /**
  * Subscriber that logs all events.

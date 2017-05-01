@@ -3,7 +3,7 @@
 
 #include <gtest/gtest.h>
 
-#include "yarpl/v/Flowables.h"
+#include "yarpl/Flowables.h"
 
 namespace yarpl {
 

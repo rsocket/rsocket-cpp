@@ -90,6 +90,10 @@ if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
   set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Wno-unreachable-code-return)
   set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Wno-c++98-compat -Wno-c++98-compat-pedantic)
   set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Wno-abstract-vbase-init)
+
+  if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 5.0)
+    set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Wno-undefined-func-template)
+  endif ()
 elseif(CMAKE_COMPILER_IS_GNUCXX)
   set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Werror -pedantic -pedantic-errors)
 endif()
@@ -449,6 +453,7 @@ add_library(
 target_link_libraries(
         reactivesocket_examples_util
         rsocket_experimental
+        yarpl
         ReactiveSocket
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}

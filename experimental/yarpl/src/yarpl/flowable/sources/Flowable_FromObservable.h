@@ -3,7 +3,6 @@
 #pragma once
 
 #include <iostream>
-#include "reactivestreams/ReactiveStreams.h"
 #include "yarpl/flowable/utils/SubscriptionHelper.h"
 
 namespace yarpl {

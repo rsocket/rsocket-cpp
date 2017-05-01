@@ -3,8 +3,8 @@
 #include "rsocket/RSocketRequester.h"
 
 #include "rsocket/OldNewBridge.h"
-#include "yarpl/v/Flowable.h"
-#include "yarpl/v/Flowables.h"
+#include "yarpl/Flowable.h"
+#include "yarpl/Flowables.h"
 
 #include <folly/ExceptionWrapper.h>
 
