@@ -11,9 +11,10 @@
 #include "yarpl/utils/type_traits.h"
 
 #include "Refcounted.h"
-#include "Subscriber.h"
+#include "flowable/Subscriber.h"
 
 namespace yarpl {
+namespace flowable {
 
 template <typename T>
 class Flowable : public virtual Refcounted {
@@ -197,11 +198,13 @@ class Flowable : public virtual Refcounted {
   };
 };
 
+} // flowable
 } // yarpl
 
-#include "Operator.h"
+#include "flowable/FlowableOperator.h"
 
 namespace yarpl {
+namespace flowable {
 
 template <typename T>
 template <typename Emitter>
@@ -252,4 +255,5 @@ auto Flowable<T>::subscribeOn(Scheduler& scheduler) {
       new SubscribeOnOperator<T>(Reference<Flowable<T>>(this), scheduler));
 }
 
+} // flowable
 } // yarpl

@@ -66,7 +66,7 @@ class RSocketHandlerBridge : public reactivesocket::DefaultRequestHandler {
         handler_->handleRequestStream(std::move(request), std::move(streamId));
     // bridge from the existing eager RequestHandler and old Subscriber type
     // to the lazy Flowable and new Subscriber type
-    flowable->subscribe(yarpl::Reference<yarpl::Subscriber<Payload>>(
+    flowable->subscribe(yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(
         new NewToOldSubscriber(std::move(subscriber))));
   }
 
@@ -127,7 +127,8 @@ void RSocketServer::start(OnAccept onAccept) {
         }
         LOG(INFO) << "RSocketServer => received request handler";
 
-        auto handlerBridge = std::make_shared<RSocketHandlerBridge>(std::move(requestHandler));
+        auto handlerBridge =
+            std::make_shared<RSocketHandlerBridge>(std::move(requestHandler));
         auto rs = ReactiveSocket::disconnectedServer(
             // we know this callback is on a specific EventBase
             executor_,

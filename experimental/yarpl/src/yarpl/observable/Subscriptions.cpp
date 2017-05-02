@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "yarpl/Observable_Subscription.h"
+#include "yarpl/observable/Subscriptions.h"
 #include <atomic>
 #include <iostream>
 
@@ -36,18 +36,16 @@ bool CallbackSubscription::isCancelled() const {
   return cancelled_;
 }
 
-std::unique_ptr<Subscription> Subscriptions::create(
-    std::function<void()> onCancel) {
-  return std::make_unique<CallbackSubscription>(std::move(onCancel));
+Reference<Subscription> Subscriptions::create(std::function<void()> onCancel) {
+  return Reference<Subscription>(new CallbackSubscription(std::move(onCancel)));
 }
 
-std::unique_ptr<Subscription> Subscriptions::create(
-    std::atomic_bool& cancelled) {
+Reference<Subscription> Subscriptions::create(std::atomic_bool& cancelled) {
   return create([&cancelled]() { cancelled = true; });
 }
 
-std::unique_ptr<Subscription> Subscriptions::create() {
-  return std::make_unique<AtomicBoolSubscription>();
+Reference<Subscription> Subscriptions::empty() {
+  return Reference<Subscription>(new AtomicBoolSubscription());
 }
 }
 }

@@ -9,13 +9,13 @@
 #include "rsocket/RSocket.h"
 #include "rsocket/transports/TcpConnectionFactory.h"
 #include "yarpl/Flowable.h"
-#include "yarpl/Subscriber.h"
+#include "yarpl/flowable/Subscriber.h"
 
 using namespace ::reactivesocket;
 using namespace ::folly;
 using namespace ::rsocket_example;
 using namespace ::rsocket;
-using namespace yarpl;
+using namespace yarpl::flowable;
 
 DEFINE_string(host, "localhost", "host to connect to");
 DEFINE_int32(port, 9898, "host:port to connect to");
@@ -33,14 +33,14 @@ int main(int argc, char* argv[]) {
   auto s1 = yarpl::Reference<ExampleSubscriber>(new ExampleSubscriber(5, 6));
   rs->requestStream(Payload("Bob"))
       ->take(5)
-      ->subscribe(yarpl::Reference<yarpl::Subscriber<Payload>>(s1.get()));
+      ->subscribe(yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(s1.get()));
   s1->awaitTerminalEvent();
 
   LOG(INFO) << "------------------ Hello Jane!";
   auto s2 = yarpl::Reference<ExampleSubscriber>(new ExampleSubscriber(5, 6));
   rs->requestStream(Payload("Jane"))
       ->take(3)
-      ->subscribe(yarpl::Reference<yarpl::Subscriber<Payload>>(s2.get()));
+      ->subscribe(yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(s2.get()));
   s2->awaitTerminalEvent();
 
   // TODO on shutdown the destruction of

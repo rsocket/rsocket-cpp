@@ -1,8 +1,9 @@
 #pragma once
 
-#include "Refcounted.h"
+#include "../Refcounted.h"
 
 namespace yarpl {
+namespace flowable {
 
 class Subscription : public virtual Refcounted {
  public:
@@ -25,4 +26,5 @@ class Subscription : public virtual Refcounted {
   Reference<Refcounted> reference_;
 };
 
+} // flowable
 } // yarpl
