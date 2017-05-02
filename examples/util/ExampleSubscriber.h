@@ -7,8 +7,8 @@
 #include <mutex>
 #include "src/Payload.h"
 
-#include "yarpl/Subscriber.h"
 #include "yarpl/Flowable.h"
+#include "yarpl/flowable/Subscriber.h"
 
 /**
  * Subscriber that logs all events.
@@ -16,12 +16,12 @@
  */
 namespace rsocket_example {
 class ExampleSubscriber
-    : public yarpl::Subscriber<reactivesocket::Payload> {
+    : public yarpl::flowable::Subscriber<reactivesocket::Payload> {
  public:
   ~ExampleSubscriber();
   ExampleSubscriber(int initialRequest, int numToTake);
 
-  void onSubscribe(yarpl::Reference<yarpl::Subscription>
+  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
                        subscription) noexcept override;
   void onNext(const reactivesocket::Payload& element) noexcept override;
   void onComplete() noexcept override;
@@ -35,7 +35,7 @@ class ExampleSubscriber
   int numToTake_;
   int requested_;
   int received_;
-    yarpl::Reference<yarpl::Subscription> subscription_;
+  yarpl::Reference<yarpl::flowable::Subscription> subscription_;
   bool terminated_{false};
   std::mutex m_;
   std::condition_variable terminalEventCV_;

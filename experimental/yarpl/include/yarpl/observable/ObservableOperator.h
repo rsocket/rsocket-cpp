@@ -2,43 +2,44 @@
 
 #include <utility>
 
-#include "Flowable.h"
-#include "Subscriber.h"
+#include "../Observable.h"
+#include "Observer.h"
 #include "Subscription.h"
 
 namespace yarpl {
-
+namespace observable {
 /**
  * Base (helper) class for operators.  Operators are templated on two types:
  * D (downstream) and U (upstream).  Operators are created by method calls on
- * an upstream Flowable, and are Flowables themselves.  Multi-stage pipelines
- * can be built: a Flowable heading a sequence of Operators.
+ * an upstream Observable, and are Observables themselves.  Multi-stage
+ * pipelines
+ * can be built: a Observable heading a sequence of Operators.
  */
 template <typename U, typename D>
-class Operator : public Flowable<D> {
+class ObservableOperator : public Observable<D> {
  public:
-  explicit Operator(Reference<Flowable<U>> upstream)
+  explicit ObservableOperator(Reference<Observable<U>> upstream)
       : upstream_(std::move(upstream)) {}
 
-  virtual void subscribe(Reference<Subscriber<D>> subscriber) override {
-    upstream_->subscribe(Reference<Subscription>(
-        new Subscription(Reference<Flowable<D>>(this), std::move(subscriber))));
+  virtual void subscribe(Reference<Observer<D>> subscriber) override {
+    upstream_->subscribe(Reference<Subscription>(new Subscription(
+        Reference<Observable<D>>(this), std::move(subscriber))));
   }
 
  protected:
   ///
   /// \brief An Operator's subscription.
   ///
-  /// When a pipeline chain is active, each Flowable has a corresponding
+  /// When a pipeline chain is active, each Observable has a corresponding
   /// subscription.  Except for the first one, the subscriptions are created
   /// against Operators.  Each operator subscription has two functions: as a
   /// subscriber for the previous stage; as a subscription for the next one,
   /// the user-supplied subscriber being the last of the pipeline stages.
-  class Subscription : public ::yarpl::Subscription, public Subscriber<U> {
+  class Subscription : public ::yarpl::observable::Subscription, public Observer<U> {
    public:
     Subscription(
-        Reference<Flowable<D>> flowable,
-        Reference<Subscriber<D>> subscriber)
+        Reference<Observable<D>> flowable,
+        Reference<Observer<D>> subscriber)
         : flowable_(std::move(flowable)), subscriber_(std::move(subscriber)) {}
 
     ~Subscription() {
@@ -46,50 +47,43 @@ class Operator : public Flowable<D> {
     }
 
     virtual void onSubscribe(
-        Reference<::yarpl::Subscription> subscription) override {
+        Reference<::yarpl::observable::Subscription> subscription) override {
       upstream_ = std::move(subscription);
-      subscriber_->onSubscribe(Reference<::yarpl::Subscription>(this));
+      subscriber_->onSubscribe(Reference<::yarpl::observable::Subscription>(this));
     }
 
     virtual void onComplete() override {
       subscriber_->onComplete();
       upstream_.reset();
-      release();
     }
 
     virtual void onError(const std::exception_ptr error) override {
       subscriber_->onError(error);
       upstream_.reset();
-      release();
-    }
-
-    virtual void request(int64_t delta) override {
-      upstream_->request(delta);
     }
 
     virtual void cancel() override {
       upstream_->cancel();
-      release();
     }
 
    protected:
-    /// The Flowable has the lambda, and other creation parameters.
-    Reference<Flowable<D>> flowable_;
+    /// The Observable has the lambda, and other creation parameters.
+    Reference<Observable<D>> flowable_;
 
     /// This subscription controls the life-cycle of the subscriber.  The
     /// subscriber is retained as long as calls on it can be made.  (Note:
     /// the subscriber in turn maintains a reference on this subscription
     /// object until cancellation and/or completion.)
-    Reference<Subscriber<D>> subscriber_;
+    Reference<Observer<D>> subscriber_;
 
     /// In an active pipeline, cancel and (possibly modified) request(n)
     /// calls should be forwarded upstream.  Note that `this` is also a
     /// subscriber for the upstream stage: thus, there are cycles; all of
     /// the objects drop their references at cancel/complete.
-    Reference<::yarpl::Subscription> upstream_;
+    Reference<::yarpl::observable::Subscription> upstream_;
   };
 
-  Reference<Flowable<U>> upstream_;
+  Reference<Observable<U>> upstream_;
 };
 
 template <
@@ -97,32 +91,33 @@ template <
     typename D,
     typename F,
     typename = typename std::enable_if<std::is_callable<F(U), D>::value>::type>
-class MapOperator : public Operator<U, D> {
+class MapOperator : public ObservableOperator<U, D> {
  public:
-  MapOperator(Reference<Flowable<U>> upstream, F&& function)
-      : Operator<U, D>(std::move(upstream)),
+  MapOperator(Reference<Observable<U>> upstream, F&& function)
+      : ObservableOperator<U, D>(std::move(upstream)),
         function_(std::forward<F>(function)) {}
 
-  virtual void subscribe(Reference<Subscriber<D>> subscriber) override {
-    Operator<U, D>::upstream_->subscribe(
+  virtual void subscribe(Reference<Observer<D>> subscriber) override {
+    ObservableOperator<U, D>::upstream_->subscribe(
         // Note: implicit cast to a reference to a subscriber.
         Reference<Subscription>(new Subscription(
-            Reference<Flowable<D>>(this), std::move(subscriber))));
+            Reference<Observable<D>>(this), std::move(subscriber))));
   }
 
  private:
-  class Subscription : public Operator<U, D>::Subscription {
+  class Subscription : public ObservableOperator<U, D>::Subscription {
    public:
     Subscription(
-        Reference<Flowable<D>> flowable,
-        Reference<Subscriber<D>> subscriber)
-        : Operator<U, D>::Subscription(
+        Reference<Observable<D>> flowable,
+        Reference<Observer<D>> subscriber)
+        : ObservableOperator<U, D>::Subscription(
               std::move(flowable),
               std::move(subscriber)) {}
 
     virtual void onNext(const U& value) override {
-      auto* subscriber = Operator<U, D>::Subscription::subscriber_.get();
-      auto* flowable = Operator<U, D>::Subscription::flowable_.get();
+      auto* subscriber =
+          ObservableOperator<U, D>::Subscription::subscriber_.get();
+      auto* flowable = ObservableOperator<U, D>::Subscription::flowable_.get();
       auto* map = static_cast<MapOperator*>(flowable);
       subscriber->onNext(map->function_(value));
     }
@@ -132,25 +127,25 @@ class MapOperator : public Operator<U, D> {
 };
 
 template <typename T>
-class TakeOperator : public Operator<T, T> {
+class TakeOperator : public ObservableOperator<T, T> {
  public:
-  TakeOperator(Reference<Flowable<T>> upstream, int64_t limit)
-      : Operator<T, T>(std::move(upstream)), limit_(limit) {}
+  TakeOperator(Reference<Observable<T>> upstream, int64_t limit)
+      : ObservableOperator<T, T>(std::move(upstream)), limit_(limit) {}
 
-  virtual void subscribe(Reference<Subscriber<T>> subscriber) override {
-    Operator<T, T>::upstream_->subscribe(
+  virtual void subscribe(Reference<Observer<T>> subscriber) override {
+    ObservableOperator<T, T>::upstream_->subscribe(
         Reference<Subscription>(new Subscription(
-            Reference<Flowable<T>>(this), limit_, std::move(subscriber))));
+            Reference<Observable<T>>(this), limit_, std::move(subscriber))));
   }
 
  private:
-  class Subscription : public Operator<T, T>::Subscription {
+  class Subscription : public ObservableOperator<T, T>::Subscription {
    public:
     Subscription(
-        Reference<Flowable<T>> flowable,
+        Reference<Observable<T>> flowable,
         int64_t limit,
-        Reference<Subscriber<T>> subscriber)
-        : Operator<T, T>::Subscription(
+        Reference<Observer<T>> subscriber)
+        : ObservableOperator<T, T>::Subscription(
               std::move(flowable),
               std::move(subscriber)),
           limit_(limit) {}
@@ -159,19 +154,11 @@ class TakeOperator : public Operator<T, T> {
       if (limit_-- > 0) {
         if (pending_ > 0)
           --pending_;
-        Operator<T, T>::Subscription::subscriber_->onNext(value);
+        ObservableOperator<T, T>::Subscription::subscriber_->onNext(value);
         if (limit_ == 0) {
-          Operator<T, T>::Subscription::cancel();
-          Operator<T, T>::Subscription::onComplete();
+          ObservableOperator<T, T>::Subscription::cancel();
+          ObservableOperator<T, T>::Subscription::onComplete();
         }
-      }
-    }
-
-    virtual void request(int64_t delta) {
-      delta = std::min(delta, limit_ - pending_);
-      if (delta > 0) {
-        pending_ += delta;
-        Operator<T, T>::Subscription::upstream_->request(delta);
       }
     }
 
@@ -184,28 +171,28 @@ class TakeOperator : public Operator<T, T> {
 };
 
 template <typename T>
-class SubscribeOnOperator : public Operator<T, T> {
+class SubscribeOnOperator : public ObservableOperator<T, T> {
  public:
-  SubscribeOnOperator(Reference<Flowable<T>> upstream, Scheduler& scheduler)
-      : Operator<T, T>(std::move(upstream)),
+  SubscribeOnOperator(Reference<Observable<T>> upstream, Scheduler& scheduler)
+      : ObservableOperator<T, T>(std::move(upstream)),
         worker_(scheduler.createWorker()) {}
 
-  virtual void subscribe(Reference<Subscriber<T>> subscriber) override {
-    Operator<T, T>::upstream_->subscribe(
+  virtual void subscribe(Reference<Observer<T>> subscriber) override {
+    ObservableOperator<T, T>::upstream_->subscribe(
         Reference<Subscription>(new Subscription(
-            Reference<Flowable<T>>(this),
+            Reference<Observable<T>>(this),
             std::move(worker_),
             std::move(subscriber))));
   }
 
  private:
-  class Subscription : public Operator<T, T>::Subscription {
+  class Subscription : public ObservableOperator<T, T>::Subscription {
    public:
     Subscription(
-        Reference<Flowable<T>> flowable,
+        Reference<Observable<T>> flowable,
         std::unique_ptr<Worker> worker,
-        Reference<Subscriber<T>> subscriber)
-        : Operator<T, T>::Subscription(
+        Reference<Observer<T>> subscriber)
+        : ObservableOperator<T, T>::Subscription(
               std::move(flowable),
               std::move(subscriber)),
           worker_(std::move(worker)) {}
@@ -219,19 +206,20 @@ class SubscribeOnOperator : public Operator<T, T> {
     }
 
     virtual void onNext(const T& value) override {
-      auto* subscriber = Operator<T, T>::Subscription::subscriber_.get();
+      auto* subscriber =
+          ObservableOperator<T, T>::Subscription::subscriber_.get();
       subscriber->onNext(value);
     }
 
    private:
     // Trampoline to call superclass method; gcc bug 58972.
     void callSuperRequest(int64_t delta) {
-      Operator<T, T>::Subscription::request(delta);
+      ObservableOperator<T, T>::Subscription::request(delta);
     }
 
     // Trampoline to call superclass method; gcc bug 58972.
     void callSuperCancel() {
-      Operator<T, T>::Subscription::cancel();
+      ObservableOperator<T, T>::Subscription::cancel();
     }
 
     std::unique_ptr<Worker> worker_;
@@ -240,17 +228,19 @@ class SubscribeOnOperator : public Operator<T, T> {
   std::unique_ptr<Worker> worker_;
 };
 
-template<typename T, typename OnSubscribe>
-class FromPublisherOperator : public Flowable<T> {
-public:
+template <typename T, typename OnSubscribe>
+class FromPublisherOperator : public Observable<T> {
+ public:
   FromPublisherOperator(OnSubscribe&& function)
-    : function_(std::move(function)) {}
+      : function_(std::move(function)) {}
 
-  void subscribe(Reference<Subscriber<T>> subscriber) {
+  void subscribe(Reference<Observer<T>> subscriber) {
     function_(std::move(subscriber));
   }
-private:
+
+ private:
   OnSubscribe function_;
 };
 
+} // observable
 } // yarpl

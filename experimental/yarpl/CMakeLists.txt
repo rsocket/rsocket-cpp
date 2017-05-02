@@ -34,34 +34,33 @@ add_library(
         # public API
         include/yarpl/Scheduler.h
         include/yarpl/Disposable.h
+        include/yarpl/Refcounted.h
         # Flowable public API
         include/yarpl/Flowable.h
         include/yarpl/Flowables.h
-        include/yarpl/Operator.h
-        include/yarpl/Refcounted.h
-        include/yarpl/Subscriber.h
-        include/yarpl/Subscribers.h
-        include/yarpl/Subscription.h
+        include/yarpl/flowable/FlowableOperator.h
+        include/yarpl/flowable/Subscriber.h
+        include/yarpl/flowable/Subscribers.h
+        include/yarpl/flowable/Subscription.h
         # Observable public API
         include/yarpl/Observable.h
-        include/yarpl/Observable_Observer.h
-        include/yarpl/Observable_Subscription.h
-        include/yarpl/Observable_TestObserver.h
-        src/yarpl/observable/Observable_Subscription.cpp
+        include/yarpl/Observables.h
+        include/yarpl/observable/ObservableOperator.h
+        include/yarpl/observable/Observer.h
+        include/yarpl/observable/Observers.h
+        include/yarpl/observable/Subscription.h
+        include/yarpl/observable/Subscriptions.h
+        include/yarpl/observable/TestObserver.h
+        src/yarpl/observable/Subscriptions.cpp
         # Flowable sources
         src/yarpl/Refcounted.cpp
-        # Observable sources
-        src/yarpl/observable/sources/Observable_RangeSubscription.h
-        src/yarpl/observable/sources/Observable_RangeSubscription.cpp
-        # Observable operators
-        src/yarpl/observable/operators/Observable_Map.h
-        src/yarpl/observable/operators/Observable_Take.h
         # utils
         src/yarpl/utils/type_traits.h
         # Scheduler
         src/yarpl/ThreadScheduler.cpp
         src/yarpl/ThreadScheduler.h
-)
+        include/yarpl/observable/Subscriptions.h
+        )
 
 target_include_directories(
         yarpl
@@ -91,17 +90,17 @@ target_include_directories(
 add_executable(
         yarpl-tests
         test/yarpl-tests.cpp
-#        test/Observable_test.cpp
+        test/Observable_test.cpp
 #        test/FlowableCreateSubscribe_test.cpp
 #        test/Observable_Subscription_test.cpp
 #        test/Flowable_range_test.cpp
 #        test/Flowable_lifecycle.cpp
-#        test/FlowableA_lifecycle.cpp
-#        test/FlowableB_lifecycle.cpp
 #        test/FlowableChaining_test.cpp
         test/Scheduler_test.cpp
         test/RefcountedTest.cpp
         test/FlowableTest.cpp
+        test/Tuple.h
+        test/Tuple.cpp
 )
 
 target_link_libraries(

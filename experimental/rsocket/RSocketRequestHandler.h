@@ -28,7 +28,7 @@ class RSocketRequestHandler {
    * @param streamId
    * @return
    */
-  virtual yarpl::Reference<yarpl::Flowable<reactivesocket::Payload>>
+  virtual yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
   handleRequestStream(
       reactivesocket::Payload request,
       reactivesocket::StreamId streamId) = 0;

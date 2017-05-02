@@ -2,7 +2,9 @@
 
 #include <folly/Memory.h>
 #include <folly/io/async/AsyncServerSocket.h>
+#include <folly/portability/GFlags.h>
 #include <gmock/gmock.h>
+
 #include "src/NullRequestHandler.h"
 #include "src/ReactiveSocket.h"
 #include "src/SubscriptionBase.h"

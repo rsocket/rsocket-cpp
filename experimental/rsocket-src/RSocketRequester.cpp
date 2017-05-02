@@ -43,21 +43,23 @@ std::shared_ptr<Subscriber<Payload>> RSocketRequester::requestChannel(
   return reactiveSocket_->requestChannel(std::move(responseSink));
 }
 
-yarpl::Reference<yarpl::Flowable<Payload>> RSocketRequester::requestStream(
-    Payload request) {
+yarpl::Reference<yarpl::flowable::Flowable<Payload>>
+RSocketRequester::requestStream(Payload request) {
   auto& eb = eventBase_;
   auto srs = reactiveSocket_;
 
-  return yarpl::Flowables::fromPublisher<Payload>(
-      [&eb, request = std::move(request), srs = std::move(srs) ](
-          yarpl::Reference<yarpl::Subscriber<Payload>> subscriber) mutable {
-        auto os = std::make_shared<OldToNewSubscriber>(std::move(subscriber));
-        eb.runInEventBaseThread([
-          request = std::move(request),
-          os = std::move(os),
-          srs = std::move(srs)
-        ]() mutable { srs->requestStream(std::move(request), std::move(os)); });
-      });
+  return yarpl::flowable::Flowables::fromPublisher<Payload>([
+    &eb,
+    request = std::move(request),
+    srs = std::move(srs)
+  ](yarpl::Reference<yarpl::flowable::Subscriber<Payload>> subscriber) mutable {
+    auto os = std::make_shared<OldToNewSubscriber>(std::move(subscriber));
+    eb.runInEventBaseThread([
+      request = std::move(request),
+      os = std::move(os),
+      srs = std::move(srs)
+    ]() mutable { srs->requestStream(std::move(request), std::move(os)); });
+  });
 }
 
 void RSocketRequester::requestResponse(
