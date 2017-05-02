@@ -3,6 +3,7 @@
 #include <folly/Conv.h>
 
 #include "test/integration/ServerFixture.h"
+#include <gflags/gflags.h>
 
 using namespace ::reactivesocket;
 
@@ -27,7 +28,7 @@ class ServerSubscription : public SubscriptionBase {
 
   void requestImpl(size_t n) noexcept override {
     LOG(INFO) << "Received request(" << n << ")";
-    for (int i = 0; i < n; i++) {
+    for (size_t i = 0; i < n; i++) {
       VLOG(1) << "Sending " << sentCounter_ + 1;
       requester_->onNext(Payload(std::to_string(++sentCounter_)));
     }
