@@ -114,17 +114,3 @@ TEST_F(ServerFixture, BasicWarmResumption) {
       std::cv_status::no_timeout,
       cv.wait_until(lk, std::chrono::system_clock::now() + 1000ms));
 }
-
-/*
-int main(int argc, char** argv) {
-  FLAGS_logtostderr = true;
-  ::testing::InitGoogleMock(&argc, argv);
-#ifdef OSS
-  google::ParseCommandLineFlags(&argc, &argv, true);
-#else
-  gflags::ParseCommandLineFlags(&argc, &argv, true);
-#endif
-  google::InitGoogleLogging(argv[0]);
-  return RUN_ALL_TESTS();
-}
-*/
