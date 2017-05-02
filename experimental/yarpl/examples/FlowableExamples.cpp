@@ -10,9 +10,10 @@
 #include "yarpl/ThreadScheduler.h"
 
 #include "yarpl/Flowables.h"
-#include "yarpl/Subscribers.h"
+#include "yarpl/flowable/Subscribers.h"
 
 using namespace yarpl;
+using namespace yarpl::flowable;
 
 namespace {
 
@@ -35,7 +36,7 @@ std::string getThreadId() {
 
 void fromPublisherExample() {
   auto onSubscribe = [](Reference<Subscriber<int>> subscriber) {
-    class Subscription : public ::yarpl::Subscription {
+    class Subscription : public ::yarpl::flowable::Subscription {
     public:
       virtual void request(int64_t delta) override {
         // TODO
@@ -46,7 +47,7 @@ void fromPublisherExample() {
       }
     };
 
-    Reference<::yarpl::Subscription> subscription(new Subscription);
+    Reference<::yarpl::flowable::Subscription> subscription(new Subscription);
     subscriber->onSubscribe(subscription);
     subscriber->onNext(1234);
     subscriber->onNext(5678);
