@@ -3,6 +3,7 @@
 #include <folly/Conv.h>
 #include <gflags/gflags.h>
 #include "test/integration/ServerFixture.h"
+#include <gflags/gflags.h>
 
 
 using namespace ::reactivesocket;
