@@ -242,7 +242,11 @@ add_executable(
   test/ServerConnectionAcceptorTest.cpp
   test/PayloadTest.cpp
   test/ResumeCacheTest.cpp
-  test/StreamStateTest.cpp)
+  test/StreamStateTest.cpp
+  test/integration/ClientUtils.h
+  test/integration/ServerFixture.h
+  test/integration/ServerFixture.cpp
+  test/integration/WarmResumptionTest.cpp)
 
 target_link_libraries(
   tests
