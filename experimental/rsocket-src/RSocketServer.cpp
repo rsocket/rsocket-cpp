@@ -18,11 +18,12 @@ class RSocketServerConnectionHandler : public virtual RSocketConnectionHandler {
   }
 
   std::shared_ptr<RSocketRequestHandler> getHandler(
-      std::unique_ptr<ConnectionSetupRequest> request) override {
+      std::shared_ptr<ConnectionSetupRequest> request) override {
     return onAccept_(std::move(request));
   }
 
   void manageSocket(
+      std::shared_ptr<ConnectionSetupRequest> request,
       std::unique_ptr<reactivesocket::ReactiveSocket> socket) override {
     socket->onClosed([ this, socket = socket.get() ](
         const folly::exception_wrapper&) {

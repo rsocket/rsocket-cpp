@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
   auto jsonHandler = std::make_shared<JsonRequestHandler>();
   // start accepting connections
   rs->startAndPark(
-      [textHandler, jsonHandler](std::unique_ptr<ConnectionSetupRequest> r)
+      [textHandler, jsonHandler](std::shared_ptr<ConnectionSetupRequest> r)
           -> std::shared_ptr<RSocketRequestHandler> {
             if (r->getDataMimeType() == "text/plain") {
               LOG(INFO) << "Connection Request => text/plain MimeType";

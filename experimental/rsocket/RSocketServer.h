@@ -16,7 +16,7 @@
 namespace rsocket {
 
 using OnAccept = std::function<std::shared_ptr<RSocketRequestHandler>(
-    std::unique_ptr<ConnectionSetupRequest>)>;
+    std::shared_ptr<ConnectionSetupRequest>)>;
 /**
  * API for starting an RSocket server. Returned from RSocket::createServer.
  *

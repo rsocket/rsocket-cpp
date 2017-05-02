@@ -41,13 +41,14 @@ class RSocketConnectionHandler : public reactivesocket::ConnectionHandler {
    * an RSocket given the setup of the socket.
    */
   virtual std::shared_ptr<RSocketRequestHandler> getHandler(
-      std::unique_ptr<ConnectionSetupRequest> request) = 0;
+      std::shared_ptr<ConnectionSetupRequest> request) = 0;
 
   /**
    * Different connection handlers can customize the way that they manage and
    * store RSocket connections.
    */
   virtual void manageSocket(
+      std::shared_ptr<ConnectionSetupRequest> request,
       std::unique_ptr<reactivesocket::ReactiveSocket> socket) = 0;
 };
 

@@ -45,10 +45,11 @@ void RSocketConnectionHandler::setupNewSocket(
 
   auto socketParams =
       SocketParameters(setupPayload.resumable, setupPayload.protocolVersion);
+  std::shared_ptr<ConnectionSetupRequest> setupRequest =
+      std::make_shared<ConnectionSetupRequest>(std::move(setupPayload));
   std::shared_ptr<RSocketRequestHandler> requestHandler;
   try {
-    requestHandler = getHandler(
-        std::make_unique<ConnectionSetupRequest>(std::move(setupPayload)));
+    requestHandler = getHandler(setupRequest);
   } catch (const RSocketError& e) {
     // TODO emit ERROR ... but how do I do that here?
     frameTransport->close(
@@ -67,7 +68,7 @@ void RSocketConnectionHandler::setupNewSocket(
 
   auto rawRs = rs.get();
 
-  manageSocket(std::move(rs));
+  manageSocket(setupRequest, std::move(rs));
 
   // Connect last, after all state has been set up.
   rawRs->serverConnect(std::move(frameTransport), socketParams);
