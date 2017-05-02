@@ -573,38 +573,41 @@ void ConnectionAutomaton::handleStreamFrame(
   auto& automaton = it->second;
 
   switch (frameType) {
-    case FrameType::REQUEST_CHANNEL: {
-      // this is only for compatibility with protocol v0.1
-      Frame_REQUEST_CHANNEL frame;
-      if (!deserializeFrameOrError(frame, std::move(serializedFrame))) {
+    case FrameType::REQUEST_N: {
+      Frame_REQUEST_N frame_request_n;
+      if (!deserializeFrameOrError(frame_request_n,
+                                   std::move(serializedFrame))) {
         return;
       }
-      auto automaton = streamsFactory_.createChannelResponder(
-          frame.requestN_, streamId, executor());
-      auto requestSink = requestHandler_->handleRequestChannel(
-          std::move(frame.payload_), streamId, automaton);
-      automaton->subscribe(requestSink);
+      automaton->handleRequestN(frame_request_n.requestN_);
+      break;
+    }
+    case FrameType::CANCEL: {
+      automaton->handleCancel();
+      break;
+    }
+    case FrameType::PAYLOAD: {
+      Frame_PAYLOAD frame_payload;
+      if (!deserializeFrameOrError(frame_payload,
+                                   std::move(serializedFrame))) {
+        return;
+      }
+      automaton->handlePayload(std::move(frame_payload.payload_),
+                               frame_payload.header_.flagsComplete(),
+                               frame_payload.header_.flagsNext());
+      break;
+    }
+    case FrameType::ERROR: {
+      Frame_ERROR frame_error;
+      if (!deserializeFrameOrError(frame_error,
+                                   std::move(serializedFrame))) {
+        return;
+      }
+      automaton->handleError(frame_error.payload_.moveDataToString());
       break;
     }
     case FrameType::REQUEST_CHANNEL:
-      deserializeAndDispatch<Frame_REQUEST_CHANNEL>(std::move(payload));
-      return;
-    case FrameType::REQUEST_N:
-      deserializeAndDispatch<Frame_REQUEST_N>(std::move(payload));
-      return;
     case FrameType::REQUEST_RESPONSE:
-      deserializeAndDispatch<Frame_REQUEST_RESPONSE>(std::move(payload));
-      return;
-    case FrameType::CANCEL:
-      deserializeAndDispatch<Frame_CANCEL>(std::move(payload));
-      return;
-    case FrameType::PAYLOAD:
-      deserializeAndDispatch<Frame_PAYLOAD>(std::move(payload));
-      return;
-    case FrameType::ERROR:
-      deserializeAndDispatch<Frame_ERROR>(std::move(payload));
-      return;
-
     case FrameType::RESERVED:
     case FrameType::SETUP:
     case FrameType::LEASE:
