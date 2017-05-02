@@ -92,7 +92,7 @@ if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
   set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Wno-abstract-vbase-init)
 
   if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 5.0)
-    #set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Wno-undefined-func-template)
+    set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Wno-undefined-func-template)
   endif ()
 elseif(CMAKE_COMPILER_IS_GNUCXX)
   set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Werror -pedantic -pedantic-errors)
