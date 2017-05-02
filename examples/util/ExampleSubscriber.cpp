@@ -22,7 +22,7 @@ ExampleSubscriber::ExampleSubscriber(int initialRequest, int numToTake)
 }
 
 void ExampleSubscriber::onSubscribe(
-        yarpl::Reference<yarpl::Subscription> subscription) noexcept {
+        yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept {
   LOG(INFO) << "ExampleSubscriber " << this << " onSubscribe";
   subscription_ = std::move(subscription);
   requested_ = initialRequest_;

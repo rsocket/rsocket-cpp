@@ -6,10 +6,8 @@
 
 #include <folly/ExceptionWrapper.h>
 
-// using the "v" Flowable types
-// since they don't have ReactiveStreams right now
-#include "yarpl/Subscriber.h"
-#include "yarpl/Subscription.h"
+#include "yarpl/flowable/Subscriber.h"
+#include "yarpl/flowable/Subscription.h"
 
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
@@ -18,7 +16,7 @@ namespace rsocket {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-class NewToOldSubscription : public yarpl::Subscription {
+class NewToOldSubscription : public yarpl::flowable::Subscription {
  public:
   explicit NewToOldSubscription(
       std::shared_ptr<reactivesocket::Subscription> inner)
@@ -41,12 +39,12 @@ class OldToNewSubscriber
     : public reactivesocket::Subscriber<reactivesocket::Payload> {
  public:
   explicit OldToNewSubscriber(
-      yarpl::Reference<yarpl::Subscriber<reactivesocket::Payload>> inner)
+      yarpl::Reference<yarpl::flowable::Subscriber<reactivesocket::Payload>> inner)
       : inner_{std::move(inner)} {}
 
   void onSubscribe(
       std::shared_ptr<reactivesocket::Subscription> subscription) noexcept {
-    bridge_ = yarpl::Reference<yarpl::Subscription>(
+    bridge_ = yarpl::Reference<yarpl::flowable::Subscription>(
         new NewToOldSubscription(std::move(subscription)));
     inner_->onSubscribe(bridge_);
   }
@@ -64,15 +62,15 @@ class OldToNewSubscriber
   }
 
  private:
-  yarpl::Reference<yarpl::Subscriber<reactivesocket::Payload>> inner_;
-  yarpl::Reference<yarpl::Subscription> bridge_;
+  yarpl::Reference<yarpl::flowable::Subscriber<reactivesocket::Payload>> inner_;
+  yarpl::Reference<yarpl::flowable::Subscription> bridge_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 
 class OldToNewSubscription : public reactivesocket::Subscription {
  public:
-  explicit OldToNewSubscription(yarpl::Reference<yarpl::Subscription> inner)
+  explicit OldToNewSubscription(yarpl::Reference<yarpl::flowable::Subscription> inner)
       : inner_{inner} {}
 
   void request(size_t n) noexcept override {
@@ -92,11 +90,11 @@ class OldToNewSubscription : public reactivesocket::Subscription {
   }
 
  private:
-  yarpl::Reference<yarpl::Subscription> inner_{nullptr};
+  yarpl::Reference<yarpl::flowable::Subscription> inner_{nullptr};
   bool terminated_{false};
 };
 
-class NewToOldSubscriber : public yarpl::Subscriber<reactivesocket::Payload> {
+class NewToOldSubscriber : public yarpl::flowable::Subscriber<reactivesocket::Payload> {
  public:
   explicit NewToOldSubscriber(
       std::shared_ptr<reactivesocket::Subscriber<reactivesocket::Payload>>
@@ -104,7 +102,7 @@ class NewToOldSubscriber : public yarpl::Subscriber<reactivesocket::Payload> {
       : inner_{std::move(inner)} {}
 
   void onSubscribe(
-      yarpl::Reference<yarpl::Subscription> subscription) override {
+      yarpl::Reference<yarpl::flowable::Subscription> subscription) override {
     bridge_ = std::make_shared<OldToNewSubscription>(subscription);
     inner_->onSubscribe(bridge_);
   }

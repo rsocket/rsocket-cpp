@@ -7,10 +7,10 @@
 
 using namespace reactivesocket;
 using namespace rsocket;
-using namespace yarpl;
+using namespace yarpl::flowable;
 
 /// Handles a new inbound Stream requested by the other end.
-yarpl::Reference<yarpl::Flowable<reactivesocket::Payload>>
+yarpl::Reference<Flowable<reactivesocket::Payload>>
 TextRequestHandler::handleRequestStream(Payload request, StreamId streamId) {
   LOG(INFO) << "TextRequestHandler.handleRequestStream " << request;
 

@@ -41,7 +41,7 @@ class RSocketRequester {
    * @param payload
    * @param responseSink
    */
-  yarpl::Reference<yarpl::Flowable<reactivesocket::Payload>> requestStream(
+  yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>> requestStream(
       reactivesocket::Payload payload);
 
   /**
