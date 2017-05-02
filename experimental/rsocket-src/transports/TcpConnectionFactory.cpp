@@ -1,99 +1,84 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "rsocket/transports/TcpConnectionFactory.h"
+
 #include <folly/io/async/AsyncSocket.h>
 #include <folly/io/async/EventBaseManager.h>
+#include <glog/logging.h>
+
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/tcp/TcpDuplexConnection.h"
 
 using namespace reactivesocket;
-using namespace folly;
 
 namespace rsocket {
 
-// create new ScopedEventBaseThread
-// create new EventBase from it
-// create new AsyncSocket
-// connect
-// create FramedDuplexConnection
-// TODO create variant that takes an existing EventBase
-class SocketConnectorAndCallback : public AsyncSocket::ConnectCallback {
- public:
-  SocketConnectorAndCallback(
-      OnConnect onConnect,
-      SocketAddress addr,
-      EventBase* eventBase)
-      : addr_(addr), onConnect_(onConnect), eventBase_(eventBase) {}
+namespace {
 
-  ~SocketConnectorAndCallback() {
-    LOG(INFO) << "SocketConnectorAndCallback => destroy";
+class ConnectCallback : public folly::AsyncSocket::ConnectCallback {
+ public:
+  ConnectCallback(folly::SocketAddress address, OnConnect onConnect)
+      : address_(address), onConnect_{std::move(onConnect)} {
+    VLOG(2) << "Constructing ConnectCallback";
+
+    // Set up by ScopedEventBaseThread.
+    auto evb = folly::EventBaseManager::get()->getExistingEventBase();
+    DCHECK(evb);
+
+    VLOG(3) << "Starting socket";
+    socket_.reset(new folly::AsyncSocket(evb));
+
+    VLOG(3) << "Attempting connection to " << address_;
+
+    socket_->connect(this, address_);
   }
 
-  void connect() {
-    // now start the connection asynchronously
-    eventBase_->runInEventBaseThreadAndWait([this]() {
-      LOG(INFO) << "ConnectionFactory => starting socket";
-      socket_.reset(new folly::AsyncSocket(eventBase_));
+  ~ConnectCallback() {
+    VLOG(2) << "Destroying ConnectCallback";
+  }
 
-      LOG(INFO) << "ConnectionFactory => attempting connection to "
-                << addr_.describe() << std::endl;
+  void connectSuccess() noexcept {
+    std::unique_ptr<ConnectCallback> deleter(this);
 
-      socket_->connect(this, addr_);
+    auto evb = folly::EventBaseManager::get()->getExistingEventBase();
 
-      LOG(INFO) << "ConnectionFactory  => DONE connect";
-    });
+    VLOG(4) << "connectSuccess() on " << address_;
+
+    auto connection = std::make_unique<TcpDuplexConnection>(
+        std::move(socket_), *evb, Stats::noop());
+    auto framedConnection =
+        std::make_unique<FramedDuplexConnection>(std::move(connection), *evb);
+
+    onConnect_(std::move(framedConnection), *evb);
+  }
+
+  void connectErr(const folly::AsyncSocketException& ex) noexcept {
+    std::unique_ptr<ConnectCallback> deleter(this);
+
+    VLOG(4) << "connectErr(" << ex.what() << ") on " << address_;
   }
 
  private:
-  SocketAddress addr_;
+  folly::SocketAddress address_;
   folly::AsyncSocket::UniquePtr socket_;
   OnConnect onConnect_;
-  EventBase* eventBase_;
-
-  void connectSuccess() noexcept {
-    LOG(INFO) << "ConnectionFactory => socketCallback => Success";
-
-    // safe way to call 'delete this'
-    auto uThis = std::unique_ptr<SocketConnectorAndCallback>(this);
-
-    auto connection = std::make_unique<TcpDuplexConnection>(
-        std::move(socket_), inlineExecutor(), Stats::noop());
-    auto framedConnection = std::make_unique<FramedDuplexConnection>(
-        std::move(connection), inlineExecutor());
-
-    // callback with the connection now that we have it
-    onConnect_(std::move(framedConnection), *eventBase_);
-  }
-
-  void connectErr(const AsyncSocketException& ex) noexcept {
-    LOG(INFO) << "ConnectionFactory => socketCallback => ERROR => " << ex.what()
-              << " " << ex.getType() << std::endl;
-
-    delete this;
-  }
 };
 
-TcpConnectionFactory::TcpConnectionFactory(std::string host, uint16_t port)
-    : addr_(host, port, true),
-      eventBaseThread_(std::make_unique<ScopedEventBaseThread>()) {}
+} // namespace
 
-void TcpConnectionFactory::connect(OnConnect oc) {
-  // uses 'new' here since it needs to live while doing work asynchronously
-  // it is deleted in the connectSuccess/connectErr methods in the class
-  auto c = new SocketConnectorAndCallback(
-      std::move(oc), addr_, eventBaseThread_->getEventBase());
-  c->connect();
+TcpConnectionFactory::TcpConnectionFactory(folly::SocketAddress address)
+    : address_{std::move(address)} {
+  VLOG(1) << "Constructing TcpConnectionFactory";
 }
 
-std::unique_ptr<ConnectionFactory> TcpConnectionFactory::create(
-    std::string host,
-    uint16_t port) {
-  LOG(INFO) << "ConnectionFactory creation => host: " << host
-            << " port: " << port;
-  return std::make_unique<TcpConnectionFactory>(host, port);
+void TcpConnectionFactory::connect(OnConnect cb) {
+  worker_.getEventBase()->runInEventBaseThread(
+      [ this, fn = std::move(cb) ]() mutable {
+        new ConnectCallback(address_, std::move(fn));
+      });
 }
 
 TcpConnectionFactory::~TcpConnectionFactory() {
-  LOG(INFO) << "ConnectionFactory => destroy";
+  VLOG(1) << "Destroying TcpConnectionFactory";
 }
-}
+} // namespace rsocket

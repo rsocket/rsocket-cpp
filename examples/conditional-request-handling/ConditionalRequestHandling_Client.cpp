@@ -25,22 +25,27 @@ int main(int argc, char* argv[]) {
   FLAGS_minloglevel = 0;
   folly::init(&argc, &argv);
 
+  folly::SocketAddress address;
+  address.setFromHostPort(FLAGS_host, FLAGS_port);
+
   auto rsf = RSocket::createClient(
-      TcpConnectionFactory::create(FLAGS_host, FLAGS_port));
+      std::make_unique<TcpConnectionFactory>(std::move(address)));
   auto rs = rsf->connect().get();
 
   LOG(INFO) << "------------------ Hello Bob!";
   auto s1 = yarpl::Reference<ExampleSubscriber>(new ExampleSubscriber(5, 6));
   rs->requestStream(Payload("Bob"))
       ->take(5)
-      ->subscribe(yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(s1.get()));
+      ->subscribe(
+          yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(s1.get()));
   s1->awaitTerminalEvent();
 
   LOG(INFO) << "------------------ Hello Jane!";
   auto s2 = yarpl::Reference<ExampleSubscriber>(new ExampleSubscriber(5, 6));
   rs->requestStream(Payload("Jane"))
       ->take(3)
-      ->subscribe(yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(s2.get()));
+      ->subscribe(
+          yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(s2.get()));
   s2->awaitTerminalEvent();
 
   // TODO on shutdown the destruction of
