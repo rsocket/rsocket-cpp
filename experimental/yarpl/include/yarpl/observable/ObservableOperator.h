@@ -55,18 +55,15 @@ class ObservableOperator : public Observable<D> {
     virtual void onComplete() override {
       subscriber_->onComplete();
       upstream_.reset();
-      release();
     }
 
     virtual void onError(const std::exception_ptr error) override {
       subscriber_->onError(error);
       upstream_.reset();
-      release();
     }
 
     virtual void cancel() override {
       upstream_->cancel();
-      release();
     }
 
    protected:

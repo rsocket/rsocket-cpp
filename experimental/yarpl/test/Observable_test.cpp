@@ -14,15 +14,19 @@ TEST(Observable, SingleOnNext) {
   {
     ASSERT_EQ(std::size_t{0}, Refcounted::objects());
     auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
-      obs->onSubscribe(Subscriptions::empty());
+      auto s = Subscriptions::empty();
+      obs->onSubscribe(s);
       obs->onNext(1);
       obs->onComplete();
     });
 
+    ASSERT_EQ(std::size_t{1}, Refcounted::objects());
+
     std::vector<int> v;
     a->subscribe(
-        Observers::create<int>([&v](int value) { v.push_back(value); }));
+        Observers::create<int>([&v](const int& value) { v.push_back(value); }));
 
+    ASSERT_EQ(std::size_t{1}, Refcounted::objects());
     EXPECT_EQ(v.at(0), 1);
   }
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
@@ -41,7 +45,7 @@ TEST(Observable, MultiOnNext) {
 
     std::vector<int> v;
     a->subscribe(
-        Observers::create<int>([&v](int value) { v.push_back(value); }));
+        Observers::create<int>([&v](const int& value) { v.push_back(value); }));
 
     EXPECT_EQ(v.at(0), 1);
     EXPECT_EQ(v.at(1), 2);
