@@ -8,17 +8,15 @@
 #include <folly/Synchronized.h>
 
 #include "rsocket/ConnectionAcceptor.h"
-#include "rsocket/ConnectionResumeRequest.h"
 #include "rsocket/ConnectionSetupRequest.h"
 #include "rsocket/RSocketRequestHandler.h"
-
-#include "src/ServerConnectionAcceptor.h"
 #include "src/ReactiveSocket.h"
+#include "src/ServerConnectionAcceptor.h"
 
 namespace rsocket {
 
 using OnAccept = std::function<std::shared_ptr<RSocketRequestHandler>(
-    std::unique_ptr<ConnectionSetupRequest>)>;
+    std::shared_ptr<ConnectionSetupRequest>)>;
 /**
  * API for starting an RSocket server. Returned from RSocket::createServer.
  *
@@ -71,6 +69,8 @@ class RSocketServer {
   // TODO version supporting Stats and other params
   // RSocketServer::start(OnAccept onAccept, ServerSetup setupParams)
 
+  friend class RSocketServerConnectionHandler;
+
  private:
   void addSocket(std::unique_ptr<reactivesocket::ReactiveSocket>);
   void removeSocket(reactivesocket::ReactiveSocket*);
@@ -90,4 +90,4 @@ class RSocketServer {
   folly::Baton<> waiting_;
   folly::Optional<folly::Baton<>> shutdown_;
 };
-}
+} // namespace rsocket

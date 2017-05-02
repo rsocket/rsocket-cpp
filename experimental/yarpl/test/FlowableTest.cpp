@@ -6,7 +6,7 @@
 #include "yarpl/Flowables.h"
 
 namespace yarpl {
-
+namespace flowable {
 namespace {
 
 template <typename T>
@@ -96,4 +96,5 @@ TEST(FlowableTest, SimpleTake) {
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
+} // flowable
 } // yarpl

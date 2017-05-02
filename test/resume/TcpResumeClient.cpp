@@ -3,7 +3,9 @@
 #include <folly/Memory.h>
 #include <folly/io/async/EventBaseManager.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
+#include <folly/portability/GFlags.h>
 #include <gmock/gmock.h>
+
 #include "src/ClientResumeStatusCallback.h"
 #include "src/FrameTransport.h"
 #include "src/NullRequestHandler.h"

@@ -6,11 +6,12 @@
 
 using namespace ::reactivesocket;
 using namespace yarpl;
+using namespace yarpl::flowable;
 
 namespace rsocket {
 namespace tests {
 /// Handles a new inbound Stream requested by the other end.
-yarpl::Reference<yarpl::Flowable<reactivesocket::Payload>>
+Reference<Flowable<reactivesocket::Payload>>
 HelloStreamRequestHandler::handleRequestStream(
     reactivesocket::Payload request,
     reactivesocket::StreamId streamId) {
