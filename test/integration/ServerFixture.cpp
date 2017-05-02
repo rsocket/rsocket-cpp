@@ -1,8 +1,9 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include <folly/Conv.h>
-
+#include <gflags/gflags.h>
 #include "test/integration/ServerFixture.h"
+
 
 using namespace ::reactivesocket;
 
@@ -12,7 +13,7 @@ using folly::EventBase;
 using folly::SocketAddress;
 using testing::Test;
 
-DEFINE_uint32(port, 0, "Port to listen to");
+DEFINE_int32(port, 0, "Port to listen to");
 
 namespace {
 
@@ -27,7 +28,7 @@ class ServerSubscription : public SubscriptionBase {
 
   void requestImpl(size_t n) noexcept override {
     LOG(INFO) << "Received request(" << n << ")";
-    for (int i = 0; i < n; i++) {
+    for (size_t i = 0; i < n; i++) {
       VLOG(1) << "Sending " << sentCounter_ + 1;
       requester_->onNext(Payload(std::to_string(++sentCounter_)));
     }
