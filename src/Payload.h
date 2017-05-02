@@ -34,7 +34,6 @@ struct Payload {
   std::string cloneDataToString() const;
   void clear();
 
-  // Clone this object onto the stack
   Payload clone() const;
 
   std::unique_ptr<folly::IOBuf> data;

@@ -56,15 +56,15 @@ void Payload::clear() {
 }
 
 Payload Payload::clone() const {
-	Payload out;
-	if (data) {
-		out.data = data->clone();
-	}
+  Payload out;
+  if (data) {
+    out.data = data->clone();
+  }
 
-	if (metadata) {
-		out.metadata = metadata->clone();
-	}
-	return out;
+  if (metadata) {
+    out.metadata = metadata->clone();
+  }
+  return out;
 }
 
 FrameFlags Payload::getFlags() const {
