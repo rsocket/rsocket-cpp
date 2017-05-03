@@ -113,8 +113,8 @@ class Flowable : public virtual Refcounted {
       // Not actually expected to be called.
     }
 
-    virtual void onNext(const T& value) override {
-      subscriber_->onNext(value);
+    virtual void onNext(T value) override {
+      subscriber_->onNext(std::move(value));
     }
 
     virtual void onComplete() override {

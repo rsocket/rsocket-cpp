@@ -114,12 +114,12 @@ class MapOperator : public ObservableOperator<U, D> {
               std::move(flowable),
               std::move(subscriber)) {}
 
-    virtual void onNext(const U& value) override {
+    virtual void onNext(U value) override {
       auto* subscriber =
           ObservableOperator<U, D>::Subscription::subscriber_.get();
       auto* flowable = ObservableOperator<U, D>::Subscription::flowable_.get();
       auto* map = static_cast<MapOperator*>(flowable);
-      subscriber->onNext(map->function_(value));
+      subscriber->onNext(map->function_(std::move(value)));
     }
   };
 
@@ -150,11 +150,12 @@ class TakeOperator : public ObservableOperator<T, T> {
               std::move(subscriber)),
           limit_(limit) {}
 
-    virtual void onNext(const T& value) {
+    virtual void onNext(T value) {
       if (limit_-- > 0) {
         if (pending_ > 0)
           --pending_;
-        ObservableOperator<T, T>::Subscription::subscriber_->onNext(value);
+        ObservableOperator<T, T>::Subscription::subscriber_->onNext(
+            std::move(value));
         if (limit_ == 0) {
           ObservableOperator<T, T>::Subscription::cancel();
           ObservableOperator<T, T>::Subscription::onComplete();
@@ -205,10 +206,10 @@ class SubscribeOnOperator : public ObservableOperator<T, T> {
       worker_->schedule([this] { this->callSuperCancel(); });
     }
 
-    virtual void onNext(const T& value) override {
+    virtual void onNext(T value) override {
       auto* subscriber =
           ObservableOperator<T, T>::Subscription::subscriber_.get();
-      subscriber->onNext(value);
+      subscriber->onNext(std::move(value));
     }
 
    private:

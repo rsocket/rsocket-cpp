@@ -1,5 +1,5 @@
-#include <future>
 #include <vector>
+#include <type_traits>
 
 #include <gtest/gtest.h>
 
@@ -12,14 +12,18 @@ namespace {
 template <typename T>
 class CollectingSubscriber : public Subscriber<T> {
  public:
+  static_assert(
+      std::is_copy_constructible<T>::value,
+      "CollectingSubscriber needs to copy the value in order to collect it");
+
   void onSubscribe(Reference<Subscription> subscription) override {
     Subscriber<T>::onSubscribe(subscription);
     subscription->request(100);
   }
 
-  void onNext(const T& next) override {
+  void onNext(T next) override {
     Subscriber<T>::onNext(next);
-    values_.push_back(next);
+    values_.push_back(std::move(next));
   }
 
   void onComplete() override {

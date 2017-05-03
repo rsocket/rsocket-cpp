@@ -20,7 +20,7 @@ class Observers {
       typename T,
       typename Next,
       typename = typename std::enable_if<
-          std::is_callable<Next(const T&), void>::value>::type>
+          std::is_callable<Next(T), void>::value>::type>
   static auto create(
       Next&& next) {
     return Reference<Observer<T>>(
@@ -32,7 +32,7 @@ class Observers {
       typename Next,
       typename Error,
       typename = typename std::enable_if<
-          std::is_callable<Next(const T&), void>::value &&
+          std::is_callable<Next(T), void>::value &&
           std::is_callable<Error(const std::exception_ptr), void>::value>::type>
   static auto create(
       Next&& next,
@@ -47,7 +47,7 @@ class Observers {
       typename Error,
       typename Complete,
       typename = typename std::enable_if<
-          std::is_callable<Next(const T&), void>::value &&
+          std::is_callable<Next(T), void>::value &&
           std::is_callable<Error(const std::exception_ptr), void>::value &&
           std::is_callable<Complete(), void>::value>::type>
   static auto create(
@@ -72,8 +72,8 @@ class Observers {
       Observer<T>::onSubscribe(subscription);
     }
 
-    virtual void onNext(const T& value) override {
-      next_(value);
+    virtual void onNext(T value) override {
+      next_(std::move(value));
     }
 
    private:

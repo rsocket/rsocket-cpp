@@ -29,9 +29,9 @@ void ExampleSubscriber::onSubscribe(
   subscription_->request(initialRequest_);
 }
 
-void ExampleSubscriber::onNext(const Payload& element) noexcept {
+void ExampleSubscriber::onNext(Payload element) noexcept {
   LOG(INFO) << "ExampleSubscriber " << this
-            << " onNext as string: " << element.cloneDataToString();
+            << " onNext as string: " << element.moveDataToString();
   received_++;
   if (--requested_ == thresholdForRequest_) {
     int toRequest = (initialRequest_ - thresholdForRequest_);

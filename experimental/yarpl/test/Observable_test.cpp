@@ -170,7 +170,7 @@ class TakeObserver : public Observer<int> {
     subscription_ = std::move(s);
   }
 
-  void onNext(const int& value) override {
+  void onNext(int value) override {
     v.push_back(value);
     if (++count >= limit) {
       //      std::cout << "Cancelling subscription after receiving " << count
