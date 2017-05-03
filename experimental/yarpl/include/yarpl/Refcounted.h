@@ -57,6 +57,10 @@ class Refcounted {
 template <typename T>
 class Reference {
  public:
+  static_assert(
+      std::is_base_of<Refcounted, T>::value,
+      "Reference must be used with types that virtually derive Refcounted");
+
   template <typename U>
   friend class Reference;
 
@@ -73,11 +77,11 @@ class Reference {
 
   //////////////////////////////////////////////////////////////////////////////
 
-  Reference(const Reference& other): pointer_(other.pointer_) {
+  Reference(const Reference& other) : pointer_(other.pointer_) {
     inc();
   }
 
-  Reference(Reference&& other): pointer_(other.pointer_) {
+  Reference(Reference&& other) : pointer_(other.pointer_) {
     other.pointer_ = nullptr;
   }
 
@@ -157,4 +161,4 @@ class Reference {
   T* pointer_{nullptr};
 };
 
-} // yarpl
+} // namespace yarpl
