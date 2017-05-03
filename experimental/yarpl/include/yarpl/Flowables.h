@@ -77,6 +77,33 @@ class Flowables {
         std::forward<OnSubscribe>(function)));
   }
 
+  template <typename T>
+  static Reference<Flowable<T>> empty() {
+    auto lambda = [](Subscriber<T>& subscriber, int64_t) {
+      subscriber.onComplete();
+      return std::make_tuple(static_cast<int64_t>(0), true);
+    };
+    return Flowable<T>::create(std::move(lambda));
+  }
+
+  template <typename T>
+  static Reference<Flowable<T>> error(const std::exception_ptr ex) {
+    auto lambda = [ex](Subscriber<T>& subscriber, int64_t) {
+      subscriber.onError(ex);
+      return std::make_tuple(static_cast<int64_t>(0), true);
+    };
+    return Flowable<T>::create(std::move(lambda));
+  }
+
+  template <typename T, typename ExceptionType>
+  static Reference<Flowable<T>> error(const ExceptionType& ex) {
+    auto lambda = [ex](Subscriber<T>& subscriber, int64_t) {
+      subscriber.onError(std::make_exception_ptr(ex));
+      return std::make_tuple(static_cast<int64_t>(0), true);
+    };
+    return Flowable<T>::create(std::move(lambda));
+  }
+
  private:
   Flowables() = delete;
 };

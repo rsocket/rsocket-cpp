@@ -55,6 +55,18 @@ void Payload::clear() {
   metadata.reset();
 }
 
+Payload Payload::clone() const {
+  Payload out;
+  if (data) {
+    out.data = data->clone();
+  }
+
+  if (metadata) {
+    out.metadata = metadata->clone();
+  }
+  return out;
+}
+
 FrameFlags Payload::getFlags() const {
   return (metadata != nullptr ? FrameFlags::METADATA : FrameFlags::EMPTY);
 }

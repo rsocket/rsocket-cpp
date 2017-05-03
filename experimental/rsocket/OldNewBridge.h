@@ -121,9 +121,7 @@ class NewToOldSubscriber : public yarpl::flowable::Subscriber<reactivesocket::Pa
   void onNext(const reactivesocket::Payload& payload) override {
     // Cloning IOBufs just shares their internal buffers, so this isn't the end
     // of the world.
-    reactivesocket::Payload clone(
-        payload.data->clone(), payload.metadata->clone());
-    inner_->onNext(std::move(clone));
+    inner_->onNext(payload.clone());
   }
 
   void onComplete() override {

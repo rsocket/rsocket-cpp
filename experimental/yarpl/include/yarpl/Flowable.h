@@ -155,8 +155,12 @@ class Flowable : public virtual Refcounted {
 
       while (true) {
         auto current = requested_.load(std::memory_order_relaxed);
+
+        // Subscription was canceled, completed, or had an error.
         if (current == CANCELED) {
-          // Subscription was canceled, completed, or had an error.
+          // Don't destroy a locked mutex.
+          lock.unlock();
+
           return release();
         }
 
