@@ -69,6 +69,7 @@ class FlowableOperator : public Flowable<D> {
 
     virtual void cancel() override {
       upstream_->cancel();
+      upstream_.reset();
       release();
     }
 
