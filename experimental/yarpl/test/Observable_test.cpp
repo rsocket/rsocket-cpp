@@ -1,8 +1,13 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
+#include <folly/Baton.h>
 #include <gtest/gtest.h>
+#include <atomic>
 #include "Tuple.h"
 #include "yarpl/Observable.h"
+#include "yarpl/ThreadScheduler.h"
+#include "yarpl/flowable/Subscriber.h"
+#include "yarpl/flowable/Subscribers.h"
 #include "yarpl/observable/Observers.h"
 #include "yarpl/observable/Subscriptions.h"
 
@@ -207,6 +212,53 @@ TEST(Observable, SubscriptionCancellation) {
     a->subscribe(Reference<Observer<int>>(new TakeObserver(2, v)));
     EXPECT_EQ((unsigned long)2, v.size());
     EXPECT_EQ(2, emitted);
+  }
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(Observable, toFlowable) {
+  {
+    ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+    auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
+      auto s = Subscriptions::empty();
+      obs->onSubscribe(s);
+      obs->onNext(1);
+      obs->onComplete();
+    });
+
+    auto f = a->toFlowable(BackpressureStrategy::DROP);
+
+    std::vector<int> v;
+    f->subscribe(yarpl::flowable::Subscribers::create<int>(
+        [&v](const int& value) { v.push_back(value); }));
+
+    EXPECT_EQ(v.at(0), 1);
+  }
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(Observable, toFlowableWithCancel) {
+  {
+    ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+    auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
+      auto s = Subscriptions::atomicBoolSubscription();
+      obs->onSubscribe(s);
+      int i = 0;
+      while (!s->isCancelled()) {
+        obs->onNext(++i);
+      }
+      if (!s->isCancelled()) {
+        obs->onComplete();
+      }
+    });
+
+    auto f = a->toFlowable(BackpressureStrategy::DROP);
+
+    std::vector<int> v;
+    f->take(5)->subscribe(yarpl::flowable::Subscribers::create<int>(
+        [&v](const int& value) { v.push_back(value); }));
+
+    EXPECT_EQ(v, std::vector<int>({1, 2, 3, 4, 5}));
   }
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
 }

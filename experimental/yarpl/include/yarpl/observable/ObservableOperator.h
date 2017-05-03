@@ -197,10 +197,6 @@ class SubscribeOnOperator : public ObservableOperator<T, T> {
               std::move(subscriber)),
           worker_(std::move(worker)) {}
 
-    virtual void request(int64_t delta) override {
-      worker_->schedule([delta, this] { this->callSuperRequest(delta); });
-    }
-
     virtual void cancel() override {
       worker_->schedule([this] { this->callSuperCancel(); });
     }
@@ -212,10 +208,6 @@ class SubscribeOnOperator : public ObservableOperator<T, T> {
     }
 
    private:
-    // Trampoline to call superclass method; gcc bug 58972.
-    void callSuperRequest(int64_t delta) {
-      ObservableOperator<T, T>::Subscription::request(delta);
-    }
 
     // Trampoline to call superclass method; gcc bug 58972.
     void callSuperCancel() {

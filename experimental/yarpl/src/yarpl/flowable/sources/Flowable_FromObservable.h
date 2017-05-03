@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <iostream>
+#include "yarpl/Flowable.h"
 #include "yarpl/flowable/utils/SubscriptionHelper.h"
 
 namespace yarpl {
@@ -18,35 +18,25 @@ namespace sources {
 
 template <typename T>
 class FlowableFromObservableSubscription
-    : public reactivestreams_yarpl::Subscription {
+    : public yarpl::flowable::Subscription,
+      public yarpl::observable::Observer<T> {
   friend class TheObserver;
 
  public:
   FlowableFromObservableSubscription(
-      std::shared_ptr<yarpl::observable::Observable<T>> observable,
-      std::unique_ptr<reactivestreams_yarpl::Subscriber<T>> s)
+      Reference<yarpl::observable::Observable<T>> observable,
+      Reference<yarpl::flowable::Subscriber<T>> s)
       : observable_(std::move(observable)), subscriber_(std::move(s)) {}
-
-  ~FlowableFromObservableSubscription() {
-    // TODO remove this once happy with it
-    std::cout << "DESTROY FlowableFromObservableSubscription!!!" << std::endl;
-  }
 
   FlowableFromObservableSubscription(FlowableFromObservableSubscription&&) =
       delete;
 
   FlowableFromObservableSubscription(
       const FlowableFromObservableSubscription&) = delete;
-
   FlowableFromObservableSubscription& operator=(
       FlowableFromObservableSubscription&&) = delete;
-
   FlowableFromObservableSubscription& operator=(
       const FlowableFromObservableSubscription&) = delete;
-
-  void start() {
-    subscriber_->onSubscribe(this);
-  }
 
   void request(int64_t n) override {
     if (n <= 0) {
@@ -60,7 +50,7 @@ class FlowableFromObservableSubscription
     if (!started) {
       bool expected = false;
       if (started.compare_exchange_strong(expected, true)) {
-        observable_->subscribe(std::make_unique<TheObserver>(this));
+        observable_->subscribe(Reference<yarpl::observable::Observer<T>>(this));
       }
     }
   }
@@ -68,89 +58,49 @@ class FlowableFromObservableSubscription
   void cancel() override {
     if (yarpl::flowable::internal::SubscriptionHelper::addCancel(&requested_)) {
       // if this is the first time calling cancel, send the cancel
-      // TODO hook up cancellation here
-      // then try to delete if this thread wins the lock
-      tryDelete();
+      observableSubscription_->cancel();
+      release();
     }
   }
 
- private:
-  std::shared_ptr<yarpl::observable::Observable<T>> observable_;
-  std::unique_ptr<reactivestreams_yarpl::Subscriber<T>> subscriber_;
-  std::atomic_bool started{false};
-  std::atomic<int64_t> requested_{0};
-
-  void tryDelete() {
-    // only one thread can call delete
-
-    // TODO when is it safe to delete?
-    //    if (emitting_.fetch_add(1) == 0) {
-    //      // TODO remove this cout once happy with it
-    //      std::cout << "Delete FlowableSubscriptionSync" << std::endl;
-    //      delete this;
-    //    }
+  // Observer override
+  void onSubscribe(
+      Reference<yarpl::observable::Subscription> subscription) override {
+    observableSubscription_ = subscription;
   }
 
-  void onNext(const T& t) {
+  // Observer override
+  void onNext(const T& t) override {
+    if (++sent % 1000000 == 0) {
+    }
     if (requested_ > 0) {
       subscriber_->onNext(t);
       yarpl::flowable::internal::SubscriptionHelper::consumeCredits(
           &requested_, 1);
     }
-    // drop anything else
+    // drop anything else received while we don't have credits
   }
 
-  void onComplete() {
+  // Observer override
+  void onComplete() override {
     subscriber_->onComplete();
+    release();
   }
 
-  void onError(const std::exception_ptr error) {
+  // Observer override
+  void onError(const std::exception_ptr error) override {
     subscriber_->onError(error);
+    release();
   }
 
-  /**
-   * This will be used to subscribe to the upstream Observable.
-   *
-   * The FlowableFromObservableSubscription* contained by it will live
-   * until we send terminal events or are cancelled.
-   *
-   * NOTE on lifecycle: This class can be deleted BEFORE
-   * the Flowable which is represented by the subscription above.
-   * This would happen if the Observable sends an onComplete/onError,
-   * so we MUST not assume TheObserver will exist and retain
-   * references to it.
-   */
-  class TheObserver : public yarpl::observable::Observer<T> {
-   public:
-    explicit TheObserver(FlowableFromObservableSubscription<T>* fs) : fs_(fs) {}
-
-    void onSubscribe(yarpl::observable::Subscription* os) override {
-      os_ = os;
-    }
-
-    void onNext(const T& t) override {
-      fs_->onNext(t);
-    }
-
-    void onComplete() override {
-      fs_->onComplete();
-    }
-
-    void onError(const std::exception_ptr error) override {
-      fs_->onError(error);
-    }
-
-    /**
-     * Allow the Flowable Subscriber to cancel the Observable.
-     */
-    void cancel() {
-      os_->cancel();
-    }
-
-   private:
-    FlowableFromObservableSubscription<T>* fs_;
-    yarpl::observable::Subscription* os_;
-  };
+ private:
+  Reference<yarpl::observable::Observable<T>> observable_;
+  Reference<yarpl::flowable::Subscriber<T>> subscriber_;
+  std::atomic_bool started{false};
+  std::atomic<int64_t> requested_{0};
+  class TheObserver;
+  Reference<yarpl::observable::Subscription> observableSubscription_;
+  int64_t sent{0};
 };
 }
 }

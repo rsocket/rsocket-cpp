@@ -52,10 +52,13 @@ add_library(
         include/yarpl/observable/Subscriptions.h
         include/yarpl/observable/TestObserver.h
         src/yarpl/observable/Subscriptions.cpp
-        # Flowable sources
+        # Flowable private
         src/yarpl/Refcounted.cpp
+        src/yarpl/flowable/sources/Flowable_FromObservable.h
         # utils
         include/yarpl/utils/type_traits.h
+        src/yarpl/flowable/utils/SubscriptionHelper.h
+        src/yarpl/flowable/utils/SubscriptionHelper.cpp
         # Scheduler
         include/yarpl/ThreadScheduler.h
         src/yarpl/ThreadScheduler.cpp
@@ -99,6 +102,7 @@ add_executable(
         test/RefcountedTest.cpp
         test/ReferenceTest.cpp
         test/Scheduler_test.cpp
+        test/SubscriptionHelper_test.cpp
         test/Tuple.cpp
         test/Tuple.h
 )
@@ -106,7 +110,8 @@ add_executable(
 target_link_libraries(
         yarpl-tests
         yarpl
-        ${GMOCK_LIBS} # inherited from reactivesocket-cpp CMake
+        ${FOLLY_LIBRARIES} # inherited from rsocket-cpp CMake
+        ${GMOCK_LIBS} # inherited from rsocket-cpp CMake
         ${CMAKE_THREAD_LIBS_INIT}
 )
 
