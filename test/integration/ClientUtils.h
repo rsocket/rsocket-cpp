@@ -1,3 +1,7 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
+#include <gmock/gmock.h>
+
 #include <folly/io/async/AsyncSocket.h>
 
 #include "src/ClientResumeStatusCallback.h"
@@ -57,6 +61,35 @@ class ClientRequestHandler : public DefaultRequestHandler {
                                subscriber) noexcept override {
     LOG(INFO) << "Subscriber Resumed";
   }
+};
+
+class MySubscriber : public Subscriber<Payload> {
+ public:
+
+  void onSubscribe(std::shared_ptr<Subscription> sub) noexcept override {
+    subscription_ = sub;
+    onSubscribe_();
+  }
+
+  void onNext(Payload element) noexcept override {
+    VLOG(1) << "Receiving " << element;
+    onNext_(element.moveDataToString());
+  }
+
+  MOCK_METHOD0(onSubscribe_, void());
+  MOCK_METHOD1(onNext_, void(std::string));
+
+  void onComplete() noexcept override {}
+
+  void onError(folly::exception_wrapper ex) noexcept override {}
+
+  // methods for testing
+  void request(size_t n) {
+    subscription_->request(n);
+  }
+
+ private:
+  std::shared_ptr<Subscription> subscription_;
 };
 
 // Utility function to create a FrameTransport.
