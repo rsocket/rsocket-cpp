@@ -181,7 +181,7 @@ void ConnectionAutomaton::close(
     callback(ex);
   }
 
-  requestHandler_->socketOnClose(ex);
+  requestHandler_->socketOnClosed(ex);
 
   closeStreams(signal);
   closeFrameTransport(std::move(ex), signal);

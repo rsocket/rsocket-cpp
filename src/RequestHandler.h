@@ -78,6 +78,6 @@ class RequestHandler {
   // TODO (T17774014): Move to separate interface
   virtual void socketOnConnected(){}
   virtual void socketOnDisconnected(folly::exception_wrapper& listener){}
-  virtual void socketOnClose(folly::exception_wrapper& listener){}
+  virtual void socketOnClosed(folly::exception_wrapper& listener){}
 };
 }
