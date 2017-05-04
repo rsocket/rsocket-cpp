@@ -47,7 +47,7 @@ void fromPublisherExample() {
       }
     };
 
-    Reference<::yarpl::flowable::Subscription> subscription(new Subscription);
+    auto subscription = make_ref<Subscription>();
     subscriber->onSubscribe(subscription);
     subscriber->onNext(1234);
     subscriber->onNext(5678);

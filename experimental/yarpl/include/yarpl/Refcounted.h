@@ -161,4 +161,11 @@ class Reference {
   T* pointer_{nullptr};
 };
 
+////////////////////////////////////////////////////////////////////////////////
+
+template <typename T, typename... Args>
+Reference<T> make_ref(Args&&... args) {
+  return Reference<T>(new T(std::forward<Args>(args)...));
+}
+
 } // namespace yarpl
