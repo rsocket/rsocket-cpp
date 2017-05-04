@@ -104,6 +104,18 @@ class Flowables {
     return Flowable<T>::create(std::move(lambda));
   }
 
+  template <typename T>
+  static Reference<Flowable<T>> repeat(T value) {
+    auto lambda = [v = std::move(value)](
+        Subscriber<T> & subscriber, int64_t requested) mutable {
+      for (int64_t i = 0; i < requested; ++i) {
+        subscriber.onNext(v);
+      }
+      return std::make_tuple(requested, false);
+    };
+    return Flowable<T>::create(std::move(lambda));
+  }
+
  private:
   Flowables() = delete;
 };
