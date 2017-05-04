@@ -47,8 +47,7 @@ class Flowables {
 
   template <typename T>
   static Reference<Flowable<T>> justN(std::initializer_list<T> list) {
-    std::vector<T> vec;
-    std::move(list.begin(), list.end(), std::back_inserter(vec));
+    std::vector<T> vec(list);
 
     auto lambda = [ v = std::move(vec), i = size_t{0} ](
         Subscriber<T> & subscriber, int64_t requested) mutable {
