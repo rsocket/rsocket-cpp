@@ -50,9 +50,7 @@ class Flowables {
     std::vector<T> vec;
     std::move(list.begin(), list.end(), std::back_inserter(vec));
 
-    size_t i = 0;
-
-    auto lambda = [ v = std::move(vec), i ](
+    auto lambda = [ v = std::move(vec), i = size_t{0} ](
         Subscriber<T> & subscriber, int64_t requested) mutable {
       int64_t emitted = 0;
       bool done = false;
