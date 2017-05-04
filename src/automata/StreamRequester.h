@@ -32,7 +32,7 @@ class StreamRequester : public ConsumerBase {
   void cancelImpl() noexcept override;
 
   void handlePayload(Payload&& payload, bool complete, bool flagsNext) override;
-  void handleError(std::string errorPayload) override;
+  void handleError(folly::exception_wrapper errorPayload) override;
 
   void endStream(StreamCompletionSignal) override;
 

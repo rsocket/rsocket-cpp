@@ -101,7 +101,7 @@ void StreamRequester::handlePayload(Payload&& payload, bool complete, bool flags
   }
 }
 
-void StreamRequester::handleError(std::string errorPayload) {
+void StreamRequester::handleError(folly::exception_wrapper errorPayload) {
   switch (state_) {
     case State::NEW:
       // Cannot receive a frame before sending the initial request.
@@ -109,7 +109,7 @@ void StreamRequester::handleError(std::string errorPayload) {
       break;
     case State::REQUESTED:
       state_ = State::CLOSED;
-      Base::onError(std::runtime_error(errorPayload));
+      Base::onError(errorPayload);
       closeStream(StreamCompletionSignal::ERROR);
       break;
     case State::CLOSED:

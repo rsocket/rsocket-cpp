@@ -39,7 +39,7 @@ class ChannelRequester : public ConsumerBase,
 
   void handlePayload(Payload&& payload, bool complete, bool flagsNext) override;
   void handleRequestN(uint32_t n) override;
-  void handleError(std::string errorPayload) override;
+  void handleError(folly::exception_wrapper errorPayload) override;
 
   void endStream(StreamCompletionSignal) override;
 
