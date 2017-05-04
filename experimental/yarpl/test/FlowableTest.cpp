@@ -91,10 +91,10 @@ TEST(FlowableTest, JustFlowable) {
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
   EXPECT_EQ(run(Flowables::just(22)), std::vector<int>{22});
   EXPECT_EQ(
-      run(Flowables::just({12, 34, 56, 98})),
+      run(Flowables::justN({12, 34, 56, 98})),
       std::vector<int>({12, 34, 56, 98}));
   EXPECT_EQ(
-      run(Flowables::just({"ab", "pq", "yz"})),
+      run(Flowables::justN({"ab", "pq", "yz"})),
       std::vector<const char*>({"ab", "pq", "yz"}));
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
