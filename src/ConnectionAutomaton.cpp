@@ -603,7 +603,7 @@ void ConnectionAutomaton::handleStreamFrame(
                                    std::move(serializedFrame))) {
         return;
       }
-      automaton->handleError(frame_error.payload_.moveDataToString());
+      automaton->handleError(std::runtime_error(frame_error.payload_.moveDataToString()));
       break;
     }
     case FrameType::REQUEST_CHANNEL:

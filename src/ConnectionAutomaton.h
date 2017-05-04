@@ -186,7 +186,7 @@ class ConnectionAutomaton final
     return streamsFactory_;
   }
 
-  FrameSerializer& frameSerializer() const ;//override;
+  FrameSerializer& frameSerializer() const;
   void setFrameSerializer(std::unique_ptr<FrameSerializer>);
 
   Stats& stats() {

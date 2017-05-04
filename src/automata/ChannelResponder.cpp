@@ -91,14 +91,6 @@ void ChannelResponder::processInitialFrame(Frame_REQUEST_CHANNEL&& frame) {
       true);
 }
 
-/*
-void ChannelResponder::onNextFrame(Frame_REQUEST_CHANNEL&& frame) {
-  // TODO(t16487710): remove handling this frame when we remove support for
-  // protocol version < 1.0
-  processInitialFrame(std::move(frame));
-}
-*/
-
 void ChannelResponder::handlePayload(Payload&& payload, bool complete, bool flagsNext) {
   onNextPayloadFrame(
       0,

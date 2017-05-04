@@ -16,7 +16,7 @@ void StreamAutomatonBase::handleRequestN(uint32_t n) {
   VLOG(4) << "Unexpected handleRequestN";
 }
 
-void StreamAutomatonBase::handleError(std::string errorPayload) {
+void StreamAutomatonBase::handleError(folly::exception_wrapper errorPayload) {
   VLOG(4) << "Unexpected handleError";
 }
 

@@ -6,6 +6,7 @@
 #include <iosfwd>
 #include <memory>
 #include "src/Common.h"
+#include <folly/ExceptionWrapper.h>
 
 namespace folly {
 class IOBuf;
@@ -43,7 +44,7 @@ class StreamAutomatonBase {
 
   virtual void handlePayload(Payload&& payload, bool complete, bool flagsNext);
   virtual void handleRequestN(uint32_t n);
-  virtual void handleError(std::string errorPayload);
+  virtual void handleError(folly::exception_wrapper errorPayload);
   virtual void handleCancel();
 
   /// Indicates a terminal signal from the connection.

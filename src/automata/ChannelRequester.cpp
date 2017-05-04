@@ -154,7 +154,7 @@ void ChannelRequester::handlePayload(Payload&& payload, bool complete, bool flag
   }
 }
 
-void ChannelRequester::handleError(std::string errorPayload) {
+void ChannelRequester::handleError(folly::exception_wrapper errorPayload) {
   switch (state_) {
     case State::NEW:
       // Cannot receive a frame before sending the initial request.
@@ -162,8 +162,7 @@ void ChannelRequester::handleError(std::string errorPayload) {
       break;
     case State::REQUESTED:
       state_ = State::CLOSED;
-      ConsumerBase::onError(
-          std::runtime_error(errorPayload));
+      ConsumerBase::onError(errorPayload);
       closeStream(StreamCompletionSignal::ERROR);
       break;
     case State::CLOSED:
