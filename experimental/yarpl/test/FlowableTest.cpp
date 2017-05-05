@@ -67,8 +67,7 @@ class CollectingSubscriber : public Subscriber<T> {
 /// exception was sent, the exception is thrown.
 template <typename T>
 std::vector<T> run(Reference<Flowable<T>> flowable) {
-  auto collector =
-      Reference<CollectingSubscriber<T>>(new CollectingSubscriber<T>);
+  auto collector = make_ref<CollectingSubscriber<T>>();
   flowable->subscribe(collector);
   return collector->values();
 }
@@ -129,8 +128,7 @@ TEST(FlowableTest, SimpleTake) {
 
 TEST(FlowableTest, FlowableError) {
   auto flowable = Flowables::error<int>(std::runtime_error("something broke!"));
-  auto collector =
-      Reference<CollectingSubscriber<int>>(new CollectingSubscriber<int>);
+  auto collector = make_ref<CollectingSubscriber<int>>();
   flowable->subscribe(collector);
 
   EXPECT_EQ(collector->complete(), false);
@@ -141,8 +139,7 @@ TEST(FlowableTest, FlowableError) {
 TEST(FlowableTest, FlowableErrorPtr) {
   auto flowable = Flowables::error<int>(
       std::make_exception_ptr(std::runtime_error("something broke!")));
-  auto collector =
-      Reference<CollectingSubscriber<int>>(new CollectingSubscriber<int>);
+  auto collector = make_ref<CollectingSubscriber<int>>();
   flowable->subscribe(collector);
 
   EXPECT_EQ(collector->complete(), false);
@@ -152,8 +149,7 @@ TEST(FlowableTest, FlowableErrorPtr) {
 
 TEST(FlowableTest, FlowableEmpty) {
   auto flowable = Flowables::empty<int>();
-  auto collector =
-      Reference<CollectingSubscriber<int>>(new CollectingSubscriber<int>);
+  auto collector = make_ref<CollectingSubscriber<int>>();
   flowable->subscribe(collector);
 
   EXPECT_EQ(collector->complete(), true);

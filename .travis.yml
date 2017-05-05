@@ -85,6 +85,7 @@ script:
   - ./scripts/tck_test.sh -c cpp -s cpp
   - ./scripts/tck_test.sh -c java -s java
   - ./scripts/tck_test.sh -c java -s cpp
+  - ./scripts/tck_test.sh -c cpp -s java
 
 after_success:
   - if [ -n "$GCC_VERSION" ]; then lcov --directory . --capture --output-file coverage.info; fi # capture coverage info
