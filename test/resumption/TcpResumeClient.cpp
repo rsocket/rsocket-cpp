@@ -120,6 +120,7 @@ int main(int argc, char* argv[]) {
     reactiveSocket = ReactiveSocket::disconnectedClient(
         *eventBaseThread.getEventBase(),
         std::move(requestHandler),
+        std::make_shared<ResumeCache>(stats),
         stats,
         std::make_unique<FollyKeepaliveTimer>(
             *eventBaseThread.getEventBase(), std::chrono::seconds(10)));

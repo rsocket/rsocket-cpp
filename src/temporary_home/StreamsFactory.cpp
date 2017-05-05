@@ -33,6 +33,31 @@ Reference<yarpl::flowable::Subscriber<Payload>> StreamsFactory::createChannelReq
   return automaton;
 }
 
+StreamId StreamsFactory::createStreamRequester(
+    Payload request,
+    std::shared_ptr<Subscriber<Payload>> responseSink) {
+  auto nextStreamId = getNextStreamId();
+  StreamRequester::Parameters params(
+      connection_.shared_from_this(), nextStreamId);
+  auto automaton =
+      yarpl::make_ref<StreamRequester>(params, std::move(request));
+  connection_.addStream(params.streamId, automaton);
+  automaton->subscribe(std::move(responseSink));
+  return nextStreamId;
+}
+
+void StreamsFactory::createStreamRequester(
+    Payload request,
+		StreamId streamId,
+    std::shared_ptr<Subscriber<Payload>> responseSink) {
+  StreamRequester::Parameters params(connection_.shared_from_this(), streamId);
+  auto automaton =
+      yarpl::make_ref<StreamRequester>(params, std::move(request));
+  automaton->setState(StreamRequester::State::REQUESTED);
+  connection_.addStream(params.streamId, automaton);
+  automaton->subscribe(std::move(responseSink));
+}
+
 void StreamsFactory::createStreamRequester(
     Payload request,
     Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {

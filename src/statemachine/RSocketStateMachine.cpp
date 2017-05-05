@@ -26,12 +26,13 @@ RSocketStateMachine::RSocketStateMachine(
     std::shared_ptr<RequestHandler> requestHandler,
     std::shared_ptr<Stats> stats,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer,
-    ReactiveSocketMode mode)
+    ReactiveSocketMode mode,
+    std::shared_ptr<ResumeCache> resumeCache)
     : ExecutorBase(executor),
       reactiveSocket_(reactiveSocket),
       stats_(stats),
       mode_(mode),
-      resumeCache_(std::make_shared<ResumeCache>(stats)),
+      resumeCache_(std::move(resumeCache)),
       streamState_(std::make_shared<StreamState>(*stats)),
       requestHandler_(std::move(requestHandler)),
       keepaliveTimer_(std::move(keepaliveTimer)),

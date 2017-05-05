@@ -265,8 +265,10 @@ add_executable(
   test/resumption/ResumeCacheTest.cpp
   test/StreamStateTest.cpp
   test/integration/ClientUtils.h
+  test/integration/ClientUtils.cpp
   test/integration/ServerFixture.h
   test/integration/ServerFixture.cpp
+  test/integration/ColdResumptionTest.cpp
   test/integration/WarmResumptionTest.cpp
   test/streams/Mocks.h
   test/framing/FrameTransportTest.cpp)

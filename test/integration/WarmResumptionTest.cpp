@@ -66,7 +66,7 @@ TEST_F(ServerFixture, DISABLED_BasicWarmResumption) {
   clientEvb->runInEventBaseThreadAndWait([&]() { rsocket->disconnect(); });
 
   // This request should be buffered
-  mySub->request(2);
+  clientEvb->runInEventBaseThreadAndWait([&]() { mySub->request(2); });
 
   // Get subscriptions for buffered request (happens right after
   // reconnecting)

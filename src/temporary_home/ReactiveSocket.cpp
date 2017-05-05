@@ -26,6 +26,7 @@ ReactiveSocket::~ReactiveSocket() {
 ReactiveSocket::ReactiveSocket(
     ReactiveSocketMode mode,
     std::shared_ptr<RequestHandler> handler,
+    std::shared_ptr<ResumeCache> resumeCache,
     std::shared_ptr<Stats> stats,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer,
     folly::Executor& executor)
@@ -35,7 +36,8 @@ ReactiveSocket::ReactiveSocket(
           std::move(handler),
           std::move(stats),
           std::move(keepaliveTimer),
-          mode)),
+          mode,
+          std::move(resumeCache))),
       executor_(executor) {
   debugCheckCorrectExecutor();
   connection_->stats().socketCreated();
@@ -52,6 +54,7 @@ ReactiveSocket::fromClientConnection(
   auto socket = disconnectedClient(
       executor,
       std::move(handler),
+      std::make_shared<ResumeCache>(stats),
       std::move(stats),
       std::move(keepaliveTimer),
       setupPayload.protocolVersion);
@@ -65,12 +68,14 @@ std::unique_ptr<ReactiveSocket>
 ReactiveSocket::disconnectedClient(
     folly::Executor& executor,
     std::unique_ptr<RequestHandler> handler,
+    std::shared_ptr<ResumeCache> resumeCache,
     std::shared_ptr<Stats> stats,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer,
     ProtocolVersion protocolVersion) {
   std::unique_ptr<ReactiveSocket> socket(new ReactiveSocket(
       ReactiveSocketMode::CLIENT,
       std::move(handler),
+      std::move(resumeCache),
       std::move(stats),
       std::move(keepaliveTimer),
       executor));
@@ -111,6 +116,7 @@ ReactiveSocket::disconnectedServer(
   std::unique_ptr<ReactiveSocket> socket(new ReactiveSocket(
       ReactiveSocketMode::SERVER,
       std::move(handler),
+      std::make_shared<ResumeCache>(stats),
       std::move(stats),
       nullptr,
       executor));
@@ -136,6 +142,25 @@ void ReactiveSocket::requestStream(
   checkNotClosed();
   connection_->streamsFactory().createStreamRequester(
       std::move(request), std::move(responseSink));
+}
+
+bool ReactiveSocket::requestStream(
+    Payload request,
+    yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSink,
+    std::string streamName) {
+  debugCheckCorrectExecutor();
+  checkNotClosed();
+  auto streamId = connection_->getStreamId(streamName);
+  if (streamId == 0) {
+    // new stream
+    streamId = connection_->streamsFactory().createStreamRequester(
+        std::move(request), std::move(responseSink), executor_);
+    connection_->setStreamName(streamId, streamName);
+    return true;
+  } else {
+    // a stream is already present with the same name 
+    return false;
+  }
 }
 
 void ReactiveSocket::requestResponse(

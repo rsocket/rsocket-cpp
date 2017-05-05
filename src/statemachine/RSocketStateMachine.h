@@ -12,6 +12,7 @@
 #include "src/framing/FrameProcessor.h"
 #include "src/framing/FrameSerializer.h"
 #include "src/Payload.h"
+#include "src/temporary_home/ResumeCache.h"
 #include "src/temporary_home/StreamsFactory.h"
 #include "src/temporary_home/StreamsHandler.h"
 
@@ -65,7 +66,9 @@ class RSocketStateMachine final
       std::shared_ptr<RequestHandler> requestHandler,
       std::shared_ptr<Stats> stats,
       std::unique_ptr<KeepaliveTimer> keepaliveTimer_,
-      ReactiveSocketMode mode);
+      ReactiveSocketMode mode,
+      std::shared_ptr<ResumeCache> resumeCache = 
+          std::make_shared<ResumeCache>());
 
   void closeWithError(Frame_ERROR&& error);
   void disconnectOrCloseWithError(Frame_ERROR&& error) override;

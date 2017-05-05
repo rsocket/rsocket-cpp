@@ -29,7 +29,7 @@ class FrameTransport;
 class ResumeCache {
  public:
   explicit ResumeCache(
-      std::shared_ptr<Stats> stats,
+      std::shared_ptr<Stats> stats = Stats::noop(),
       size_t capacity = DEFAULT_CAPACITY)
       : stats_(std::move(stats)), capacity_(capacity) {}
   ~ResumeCache();
