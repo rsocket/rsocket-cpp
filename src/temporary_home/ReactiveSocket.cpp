@@ -55,7 +55,7 @@ ReactiveSocket::fromClientConnection(
       executor,
       std::move(handler),
       std::make_shared<ResumeCache>(stats),
-      std::move(stats),
+      stats,
       std::move(keepaliveTimer),
       setupPayload.protocolVersion);
   socket->clientConnect(
