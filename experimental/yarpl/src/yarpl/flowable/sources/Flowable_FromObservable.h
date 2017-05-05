@@ -20,7 +20,6 @@ template <typename T>
 class FlowableFromObservableSubscription
     : public yarpl::flowable::Subscription,
       public yarpl::observable::Observer<T> {
-  friend class TheObserver;
 
  public:
   FlowableFromObservableSubscription(
@@ -71,8 +70,6 @@ class FlowableFromObservableSubscription
 
   // Observer override
   void onNext(const T& t) override {
-    if (++sent % 1000000 == 0) {
-    }
     if (requested_ > 0) {
       subscriber_->onNext(t);
       yarpl::flowable::internal::SubscriptionHelper::consumeCredits(
@@ -98,9 +95,7 @@ class FlowableFromObservableSubscription
   Reference<yarpl::flowable::Subscriber<T>> subscriber_;
   std::atomic_bool started{false};
   std::atomic<int64_t> requested_{0};
-  class TheObserver;
   Reference<yarpl::observable::Subscription> observableSubscription_;
-  int64_t sent{0};
 };
 }
 }
