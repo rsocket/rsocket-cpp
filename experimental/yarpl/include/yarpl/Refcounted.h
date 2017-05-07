@@ -98,25 +98,21 @@ class Reference {
   //////////////////////////////////////////////////////////////////////////////
 
   Reference& operator=(const Reference& other) {
-    new (this) Reference(other);
-    return *this;
+    return assign(other);
   }
 
   Reference& operator=(Reference&& other) {
-    new (this) Reference(std::move(other));
-    return *this;
+    return assign(std::move(other));
   }
 
   template <typename U>
   Reference& operator=(const Reference<U>& other) {
-    new (this) Reference<T>(other);
-    return *this;
+    return assign(other);
   }
 
   template <typename U>
   Reference& operator=(Reference<U>&& other) {
-    new (this) Reference<T>(std::move(other));
-    return *this;
+    return assign(std::move(other));
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -156,6 +152,13 @@ class Reference {
 
   void swap(Reference<T>& other) {
     std::swap(pointer_, other.pointer_);
+  }
+
+  template <typename Ref>
+  Reference& assign(Ref&& other) {
+    Reference<T> temp(std::forward<Ref>(other));
+    swap(temp);
+    return *this;
   }
 
   T* pointer_{nullptr};
