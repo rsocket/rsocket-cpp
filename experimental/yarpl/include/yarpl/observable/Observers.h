@@ -12,15 +12,28 @@ namespace observable {
 
 /// Helper methods for constructing subscriber instances from functions:
 /// one, two, or three functions (callables; can be lamda, for instance)
-/// may be specified, corresponding to onNext, onError and onSubscribe
+/// may be specified, corresponding to onNext, onError and onComplete
 /// method bodies in the subscriber.
 class Observers {
+ private:
+  /// Defined if Next, Error and Complete are signature-compatible with
+  /// onNext, onError and onComplete subscriber methods respectively.
+  template <
+      typename T,
+      typename Next,
+      typename Error = void (*)(std::exception_ptr),
+      typename Complete = void (*)()>
+  using EnableIfCompatible =
+    typename std::enable_if<
+            std::is_callable<Next(T), void>::value &&
+            std::is_callable<Error(std::exception_ptr), void>::value &&
+            std::is_callable<Complete(), void>::value>::type;
+
  public:
   template <
       typename T,
       typename Next,
-      typename = typename std::enable_if<
-          std::is_callable<Next(T), void>::value>::type>
+      typename = EnableIfCompatible<T, Next>>
   static auto create(
       Next&& next) {
     return Reference<Observer<T>>(
@@ -31,9 +44,7 @@ class Observers {
       typename T,
       typename Next,
       typename Error,
-      typename = typename std::enable_if<
-          std::is_callable<Next(T), void>::value &&
-          std::is_callable<Error(const std::exception_ptr), void>::value>::type>
+      typename = EnableIfCompatible<T, Next, Error>>
   static auto create(
       Next&& next,
       Error&& error) {
@@ -46,10 +57,7 @@ class Observers {
       typename Next,
       typename Error,
       typename Complete,
-      typename = typename std::enable_if<
-          std::is_callable<Next(T), void>::value &&
-          std::is_callable<Error(const std::exception_ptr), void>::value &&
-          std::is_callable<Complete(), void>::value>::type>
+      typename = EnableIfCompatible<T, Next, Error, Complete>>
   static auto create(
       Next&& next,
       Error&& error,
