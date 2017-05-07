@@ -68,10 +68,6 @@ class Observers {
     Base(Next&& next)
         : next_(std::forward<Next>(next)) {}
 
-    virtual void onSubscribe(Reference<Subscription> subscription) override {
-      Observer<T>::onSubscribe(subscription);
-    }
-
     virtual void onNext(T value) override {
       next_(std::move(value));
     }
