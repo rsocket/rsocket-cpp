@@ -193,5 +193,11 @@ TEST(FlowableTest, FlowableEmpty) {
   EXPECT_EQ(collector->error(), false);
 }
 
+TEST(FlowableTest, FlowableRepeat) {
+  auto flowable = Flowables::repeat<int>(5)->take(10);
+  EXPECT_EQ(run(std::move(flowable)), std::vector<int>(10, 5));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
 } // flowable
 } // yarpl
