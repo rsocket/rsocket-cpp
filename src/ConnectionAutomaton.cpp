@@ -382,7 +382,7 @@ void ConnectionAutomaton::processFrameImpl(
   }
   auto streamId = *streamIdPtr;
   if (streamId == 0) {
-    onConnectionFrame(std::move(frame));
+    handleConnectionFrame(frameType, std::move(frame));
     return;
   }
 
@@ -396,14 +396,7 @@ void ConnectionAutomaton::processFrameImpl(
     return;
   }
 
-  auto it = streamState_->streams_.find(streamId);
-  if (it == streamState_->streams_.end()) {
-    handleUnknownStream(streamId, std::move(frame));
-    return;
-  }
-  auto automaton = it->second;
-  // Can deliver the frame.
-  automaton->onNextFrame(std::move(frame));
+  handleStreamFrame(streamId, frameType, std::move(frame));
 }
 
 void ConnectionAutomaton::onTerminal(folly::exception_wrapper ex) {
@@ -424,10 +417,10 @@ void ConnectionAutomaton::onTerminalImpl(folly::exception_wrapper ex) {
   }
 }
 
-void ConnectionAutomaton::onConnectionFrame(
+void ConnectionAutomaton::handleConnectionFrame(
+    FrameType frameType,
     std::unique_ptr<folly::IOBuf> payload) {
-  auto type = frameSerializer().peekFrameType(*payload);
-  switch (type) {
+  switch (frameType) {
     case FrameType::KEEPALIVE: {
       Frame_KEEPALIVE frame;
       if (!deserializeFrameOrError(
@@ -568,8 +561,75 @@ void ConnectionAutomaton::onConnectionFrame(
   }
 }
 
+void ConnectionAutomaton::handleStreamFrame(
+    StreamId streamId,
+    FrameType frameType,
+    std::unique_ptr<folly::IOBuf> serializedFrame) {
+  auto it = streamState_->streams_.find(streamId);
+  if (it == streamState_->streams_.end()) {
+    handleUnknownStream(streamId, frameType, std::move(serializedFrame));
+    return;
+  }
+  auto &automaton = it->second;
+
+  switch (frameType) {
+    case FrameType::REQUEST_N: {
+      Frame_REQUEST_N frame_request_n;
+      if (!deserializeFrameOrError(frame_request_n,
+                                   std::move(serializedFrame))) {
+        return;
+      }
+      automaton->handleRequestN(frame_request_n.requestN_);
+      break;
+    }
+    case FrameType::CANCEL: {
+      automaton->handleCancel();
+      break;
+    }
+    case FrameType::PAYLOAD: {
+      Frame_PAYLOAD frame_payload;
+      if (!deserializeFrameOrError(frame_payload,
+                                   std::move(serializedFrame))) {
+        return;
+      }
+      automaton->handlePayload(std::move(frame_payload.payload_),
+                               frame_payload.header_.flagsComplete(),
+                               frame_payload.header_.flagsNext());
+      break;
+    }
+    case FrameType::ERROR: {
+      Frame_ERROR frame_error;
+      if (!deserializeFrameOrError(frame_error,
+                                   std::move(serializedFrame))) {
+        return;
+      }
+      automaton->handleError(std::runtime_error(frame_error.payload_.moveDataToString()));
+      break;
+    }
+    case FrameType::REQUEST_CHANNEL:
+    case FrameType::REQUEST_RESPONSE:
+    case FrameType::RESERVED:
+    case FrameType::SETUP:
+    case FrameType::LEASE:
+    case FrameType::KEEPALIVE:
+    case FrameType::REQUEST_FNF:
+    case FrameType::REQUEST_STREAM:
+    case FrameType::METADATA_PUSH:
+    case FrameType::RESUME:
+    case FrameType::RESUME_OK:
+    case FrameType::EXT:
+      closeWithError(Frame_ERROR::unexpectedFrame());
+      break;
+    default:
+      // because of compatibility with future frame types we will just ignore
+      // unknown frames
+      break;
+  }
+}
+
 void ConnectionAutomaton::handleUnknownStream(
     StreamId streamId,
+    FrameType frameType,
     std::unique_ptr<folly::IOBuf> serializedFrame) {
   DCHECK(streamId != 0);
   // TODO: comparing string versions is odd because from version
@@ -580,8 +640,7 @@ void ConnectionAutomaton::handleUnknownStream(
     return;
   }
 
-  auto type = frameSerializer().peekFrameType(*serializedFrame);
-  switch (type) {
+  switch (frameType) {
     case FrameType::REQUEST_CHANNEL: {
       Frame_REQUEST_CHANNEL frame;
       if (!deserializeFrameOrError(frame, std::move(serializedFrame))) {
@@ -641,7 +700,7 @@ void ConnectionAutomaton::handleUnknownStream(
     case FrameType::EXT:
     default:
       DLOG(ERROR) << "unknown stream frame (streamId=" << streamId
-                  << " frameType=" << type << ")";
+                  << " frameType=" << frameType << ")";
       closeWithError(Frame_ERROR::unexpectedFrame());
   }
 }

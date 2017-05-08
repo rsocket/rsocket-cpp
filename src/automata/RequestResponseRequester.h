@@ -35,9 +35,9 @@ class RequestResponseRequester : public StreamAutomatonBase,
   void requestImpl(size_t) noexcept override;
   void cancelImpl() noexcept override;
 
-  using Base::onNextFrame;
-  void onNextFrame(Frame_PAYLOAD&&) override;
-  void onNextFrame(Frame_ERROR&&) override;
+  void handlePayload(Payload&& payload, bool complete, bool flagsNext) override;
+  void handleError(folly::exception_wrapper errorPayload) override;
+
   void endStream(StreamCompletionSignal signal) override;
 
   void pauseStream(RequestHandler& requestHandler) override;
