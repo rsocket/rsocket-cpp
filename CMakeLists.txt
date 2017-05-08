@@ -495,6 +495,41 @@ target_link_libraries(
         ${GLOG_LIBRARY}
         ${CMAKE_THREAD_LIBS_INIT})
 
+
+# stream-observable-to-flowable
+
+add_executable(
+        example_observable-to-flowable-server
+        examples/stream-observable-to-flowable/StreamObservableToFlowable_Server.cpp
+)
+
+target_link_libraries(
+        example_observable-to-flowable-server
+        ReactiveSocket
+        rsocket_experimental
+        reactivesocket_examples_util
+        yarpl
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
+
+add_executable(
+        example_observable-to-flowable-client
+        examples/stream-observable-to-flowable/StreamObservableToFlowable_Client.cpp
+)
+
+target_link_libraries(
+        example_observable-to-flowable-client
+        ReactiveSocket
+        rsocket_experimental
+        reactivesocket_examples_util
+        yarpl
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
+
 # conditional-request-handling
 
 add_executable(

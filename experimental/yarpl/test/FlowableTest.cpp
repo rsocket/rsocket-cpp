@@ -1,5 +1,5 @@
-#include <future>
 #include <vector>
+#include <type_traits>
 
 #include <gtest/gtest.h>
 
@@ -12,14 +12,18 @@ namespace {
 template <typename T>
 class CollectingSubscriber : public Subscriber<T> {
  public:
+  static_assert(
+      std::is_copy_constructible<T>::value,
+      "CollectingSubscriber needs to copy the value in order to collect it");
+
   void onSubscribe(Reference<Subscription> subscription) override {
     Subscriber<T>::onSubscribe(subscription);
     subscription->request(100);
   }
 
-  void onNext(const T& next) override {
+  void onNext(T next) override {
     Subscriber<T>::onNext(next);
-    values_.push_back(next);
+    values_.push_back(std::move(next));
   }
 
   void onComplete() override {
@@ -67,10 +71,8 @@ class CollectingSubscriber : public Subscriber<T> {
 /// exception was sent, the exception is thrown.
 template <typename T>
 std::vector<T> run(Reference<Flowable<T>> flowable) {
-  auto collector =
-      Reference<CollectingSubscriber<T>>(new CollectingSubscriber<T>);
-  auto subscriber = Reference<Subscriber<T>>(collector.get());
-  flowable->subscribe(std::move(subscriber));
+  auto collector = make_ref<CollectingSubscriber<T>>();
+  flowable->subscribe(collector);
   return collector->values();
 }
 
@@ -91,10 +93,10 @@ TEST(FlowableTest, JustFlowable) {
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
   EXPECT_EQ(run(Flowables::just(22)), std::vector<int>{22});
   EXPECT_EQ(
-      run(Flowables::just({12, 34, 56, 98})),
+      run(Flowables::justN({12, 34, 56, 98})),
       std::vector<int>({12, 34, 56, 98}));
   EXPECT_EQ(
-      run(Flowables::just({"ab", "pq", "yz"})),
+      run(Flowables::justN({"ab", "pq", "yz"})),
       std::vector<const char*>({"ab", "pq", "yz"}));
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
@@ -130,10 +132,8 @@ TEST(FlowableTest, SimpleTake) {
 
 TEST(FlowableTest, FlowableError) {
   auto flowable = Flowables::error<int>(std::runtime_error("something broke!"));
-  auto collector =
-      Reference<CollectingSubscriber<int>>(new CollectingSubscriber<int>);
-  auto subscriber = Reference<Subscriber<int>>(collector.get());
-  flowable->subscribe(std::move(subscriber));
+  auto collector = make_ref<CollectingSubscriber<int>>();
+  flowable->subscribe(collector);
 
   EXPECT_EQ(collector->complete(), false);
   EXPECT_EQ(collector->error(), true);
@@ -143,10 +143,8 @@ TEST(FlowableTest, FlowableError) {
 TEST(FlowableTest, FlowableErrorPtr) {
   auto flowable = Flowables::error<int>(
       std::make_exception_ptr(std::runtime_error("something broke!")));
-  auto collector =
-      Reference<CollectingSubscriber<int>>(new CollectingSubscriber<int>);
-  auto subscriber = Reference<Subscriber<int>>(collector.get());
-  flowable->subscribe(std::move(subscriber));
+  auto collector = make_ref<CollectingSubscriber<int>>();
+  flowable->subscribe(collector);
 
   EXPECT_EQ(collector->complete(), false);
   EXPECT_EQ(collector->error(), true);
@@ -155,10 +153,8 @@ TEST(FlowableTest, FlowableErrorPtr) {
 
 TEST(FlowableTest, FlowableEmpty) {
   auto flowable = Flowables::empty<int>();
-  auto collector =
-      Reference<CollectingSubscriber<int>>(new CollectingSubscriber<int>);
-  auto subscriber = Reference<Subscriber<int>>(collector.get());
-  flowable->subscribe(std::move(subscriber));
+  auto collector = make_ref<CollectingSubscriber<int>>();
+  flowable->subscribe(collector);
 
   EXPECT_EQ(collector->complete(), true);
   EXPECT_EQ(collector->error(), false);

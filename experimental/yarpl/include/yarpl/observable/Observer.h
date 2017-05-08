@@ -26,7 +26,7 @@ class Observer : public virtual Refcounted {
     subscription_.reset();
   }
 
-  virtual void onNext(const T&) {}
+  virtual void onNext(T) {}
 
  protected:
   Subscription* subscription() {

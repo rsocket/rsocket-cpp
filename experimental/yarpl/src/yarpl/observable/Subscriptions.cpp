@@ -47,5 +47,9 @@ Reference<Subscription> Subscriptions::create(std::atomic_bool& cancelled) {
 Reference<Subscription> Subscriptions::empty() {
   return Reference<Subscription>(new AtomicBoolSubscription());
 }
+
+Reference<AtomicBoolSubscription> Subscriptions::atomicBoolSubscription() {
+  return Reference<AtomicBoolSubscription>(new AtomicBoolSubscription());
+}
 }
 }

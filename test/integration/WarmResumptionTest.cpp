@@ -17,36 +17,6 @@ using namespace ::testing;
 
 using folly::ScopedEventBaseThread;
 
-namespace {
-class MySubscriber : public Subscriber<Payload> {
- public:
-  void onSubscribe(std::shared_ptr<Subscription> sub) noexcept override {
-    subscription_ = sub;
-    subscription_->request(1);
-  }
-
-  MOCK_METHOD1(onNext_, void(std::string));
-
-  void onNext(Payload element) noexcept override {
-    VLOG(1) << "Receiving " << element;
-    onNext_(element.moveDataToString());
-  }
-
-  void onComplete() noexcept override {}
-
-  void onError(folly::exception_wrapper ex) noexcept override {}
-
-  // methods for testing
-  void request(size_t n) {
-    subscription_->request(n);
-  }
-
- private:
-  std::shared_ptr<Subscription> subscription_;
-};
-
-} // anonymous namespace
-
 // A very simple test which tests a basic warm resumption workflow.
 // This setup can be used to test varying scenarious in warm resumption.
 TEST_F(ServerFixture, BasicWarmResumption) {
@@ -55,7 +25,7 @@ TEST_F(ServerFixture, BasicWarmResumption) {
   tests::MyConnectCallback connectCb;
   auto token = ResumeIdentificationToken::generateNew();
   std::unique_ptr<ReactiveSocket> rsocket;
-  auto mySub = std::make_shared<MySubscriber>();
+  auto mySub = std::make_shared<tests::MySubscriber>();
   Sequence s;
   SCOPE_EXIT {
     clientEvb->runInEventBaseThreadAndWait([&]() { rsocket.reset(); });
@@ -67,6 +37,16 @@ TEST_F(ServerFixture, BasicWarmResumption) {
   std::condition_variable cv;
   std::unique_lock<std::mutex> lk(cvM);
 
+  // Get a few subscriptions (happens right after connecting)
+  EXPECT_CALL(*mySub, onSubscribe_()).WillOnce(Invoke([&]() {
+    mySub->request(3);
+  }));
+  EXPECT_CALL(*mySub, onNext_("1"));
+  EXPECT_CALL(*mySub, onNext_("2"));
+  EXPECT_CALL(*mySub, onNext_("3")).WillOnce(Invoke([&](std::string) {
+    cv.notify_all();
+  }));
+
   // Create a RSocket and RequestStream
   clientEvb->runInEventBaseThreadAndWait([&]() {
     rsocket = tests::getRSocket(clientEvb);
@@ -75,14 +55,6 @@ TEST_F(ServerFixture, BasicWarmResumption) {
         tests::getFrameTransport(clientEvb, &connectCb, serverListenPort_),
         tests::getSetupPayload(token));
   });
-
-  // Get a few subscriptions
-  EXPECT_CALL(*mySub, onNext_("1"));
-  mySub->request(2);
-  EXPECT_CALL(*mySub, onNext_("2"));
-  EXPECT_CALL(*mySub, onNext_("3")).WillOnce(Invoke([&](std::string) {
-    cv.notify_all();
-  }));
 
   // Wait for few packets to exchange before disconnecting OR error out.
   EXPECT_EQ(
@@ -95,6 +67,13 @@ TEST_F(ServerFixture, BasicWarmResumption) {
   // This request should be buffered
   mySub->request(2);
 
+  // Get subscriptions for buffered request (happens right after
+  // reconnecting)
+  EXPECT_CALL(*mySub, onNext_("4"));
+  EXPECT_CALL(*mySub, onNext_("5")).WillOnce(Invoke([&](std::string) {
+    cv.notify_all();
+  }));
+
   // Reconnect
   clientEvb->runInEventBaseThreadAndWait([&]() {
     rsocket->tryClientResume(
@@ -102,12 +81,6 @@ TEST_F(ServerFixture, BasicWarmResumption) {
         tests::getFrameTransport(clientEvb, &connectCb, serverListenPort_),
         std::make_unique<tests::ResumeCallback>());
   });
-
-  // We should get subscriptions for buffered requests
-  EXPECT_CALL(*mySub, onNext_("4"));
-  EXPECT_CALL(*mySub, onNext_("5")).WillOnce(Invoke([&](std::string) {
-    cv.notify_all();
-  }));
 
   // Wait for the remaining frames to make it OR error out.
   EXPECT_EQ(

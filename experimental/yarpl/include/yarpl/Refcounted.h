@@ -3,6 +3,7 @@
 #include <atomic>
 #include <cstddef>
 #include <type_traits>
+#include <utility>
 
 namespace yarpl {
 
@@ -60,46 +61,61 @@ class Reference {
       std::is_base_of<Refcounted, T>::value,
       "Reference must be used with types that virtually derive Refcounted");
 
-  Reference() : pointer_(nullptr) {}
+  template <typename U>
+  friend class Reference;
+
+  Reference() {}
+  explicit Reference(std::nullptr_t) {}
 
   explicit Reference(T* pointer) : pointer_(pointer) {
-    if (pointer_)
-      pointer_->incRef();
+    inc();
   }
 
   ~Reference() {
-    if (pointer_)
-      pointer_->decRef();
+    dec();
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+
+  Reference(const Reference& other) : pointer_(other.pointer_) {
+    inc();
+  }
+
+  Reference(Reference&& other) : pointer_(other.pointer_) {
+    other.pointer_ = nullptr;
   }
 
   template <typename U>
-  friend class Reference;
+  Reference(const Reference<U>& other) : pointer_(other.pointer_) {
+    inc();
+  }
 
   template <typename U>
   Reference(Reference<U>&& other) : pointer_(other.pointer_) {
     other.pointer_ = nullptr;
   }
 
-  template <typename U>
-  Reference& operator=(Reference<U>&& other) {
-    Reference(static_cast<Reference<U>&&>(other)).swap(*this);
-    return *this;
+  //////////////////////////////////////////////////////////////////////////////
+
+  Reference& operator=(const Reference& other) {
+    return assign(other);
   }
 
   Reference& operator=(Reference&& other) {
-    Reference(static_cast<Reference&&>(other)).swap(*this);
-    return *this;
+    return assign(std::move(other));
   }
 
-  Reference& operator=(const Reference& other) {
-    Reference(other.pointer_).swap(*this);
-    return *this;
+  template <typename U>
+  Reference& operator=(const Reference<U>& other) {
+    return assign(other);
   }
 
-  Reference(const Reference& other) : pointer_(other.pointer_) {
-    if (pointer_)
-      pointer_->incRef();
+  template <typename U>
+  Reference& operator=(Reference<U>&& other) {
+    return assign(std::move(other));
   }
+
+  //////////////////////////////////////////////////////////////////////////////
 
   T* get() const {
     return pointer_;
@@ -114,7 +130,7 @@ class Reference {
   }
 
   void reset() {
-    Reference().swap(*this);
+    Reference{}.swap(*this);
   }
 
   explicit operator bool() const {
@@ -122,13 +138,37 @@ class Reference {
   }
 
  private:
-  void swap(Reference& other) {
-    T* temp = pointer_;
-    pointer_ = other.pointer_;
-    other.pointer_ = temp;
+  void inc() {
+    if (pointer_) {
+      pointer_->incRef();
+    }
   }
 
-  T* pointer_;
+  void dec() {
+    if (pointer_) {
+      pointer_->decRef();
+    }
+  }
+
+  void swap(Reference<T>& other) {
+    std::swap(pointer_, other.pointer_);
+  }
+
+  template <typename Ref>
+  Reference& assign(Ref&& other) {
+    Reference<T> temp(std::forward<Ref>(other));
+    swap(temp);
+    return *this;
+  }
+
+  T* pointer_{nullptr};
 };
 
-} // yarpl
+////////////////////////////////////////////////////////////////////////////////
+
+template <typename T, typename... Args>
+Reference<T> make_ref(Args&&... args) {
+  return Reference<T>(new T(std::forward<Args>(args)...));
+}
+
+} // namespace yarpl

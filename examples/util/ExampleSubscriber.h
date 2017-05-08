@@ -23,7 +23,7 @@ class ExampleSubscriber
 
   void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
                        subscription) noexcept override;
-  void onNext(const reactivesocket::Payload& element) noexcept override;
+  void onNext(reactivesocket::Payload) noexcept override;
   void onComplete() noexcept override;
   void onError(const std::exception_ptr ex) noexcept override;
 

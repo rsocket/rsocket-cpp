@@ -44,6 +44,7 @@ class Subscriptions {
   static Reference<Subscription> create(std::function<void()> onCancel);
   static Reference<Subscription> create(std::atomic_bool& cancelled);
   static Reference<Subscription> empty();
+  static Reference<AtomicBoolSubscription> atomicBoolSubscription();
 };
 
 } // observable namespace

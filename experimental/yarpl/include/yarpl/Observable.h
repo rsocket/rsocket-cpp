@@ -10,9 +10,13 @@
 #include "yarpl/Scheduler.h"
 #include "yarpl/utils/type_traits.h"
 
-#include "observable/Observer.h"
 #include "Refcounted.h"
+#include "observable/Observer.h"
 #include "observable/Subscription.h"
+
+#include "Flowable.h"
+#include "Flowables.h"
+#include "yarpl/flowable/sources/Flowable_FromObservable.h"
 
 namespace yarpl {
 namespace observable {
@@ -47,6 +51,16 @@ class Observable : public virtual Refcounted {
 
   auto subscribeOn(Scheduler&);
 
+  /**
+  * Convert from Observable to Flowable with a given BackpressureStrategy.
+  *
+  * Currently the only strategy is DROP.
+  *
+  * @param strategy
+  * @return
+  */
+  auto toFlowable(BackpressureStrategy strategy);
+
  private:
   template <typename OnSubscribe>
   class FromPublisherOperator : public Observable<T> {
@@ -61,28 +75,6 @@ class Observable : public virtual Refcounted {
    private:
     OnSubscribe function_;
   };
-
-  //  /**
-  //  * Convert from Observable to Flowable with a given BackpressureStrategy.
-  //  *
-  //  * Currently the only strategy is DROP.
-  //  *
-  //  * @param strategy
-  //  * @return
-  //  */
-  //  std::shared_ptr<yarpl::Observable<T>> toFlowable(
-  //      BackpressureStrategy strategy) {
-  //    // we currently ONLY support the DROP strategy
-  //    // so do not use the strategy parameter for anything
-  //    return yarpl::Observable<T>::create([o = this->shared_from_this()](
-  //        auto subscriber) mutable {
-  //      auto s =
-  //          new
-  //          yarpl::flowable::sources::ObservableFromObservableSubscription<T>(
-  //              std::move(o), std::move(subscriber));
-  //      s->start();
-  //    });
-  //  }
 };
 } // observable
 } // yarpl
@@ -109,6 +101,21 @@ template <typename T>
 auto Observable<T>::subscribeOn(Scheduler& scheduler) {
   return Reference<Observable<T>>(
       new SubscribeOnOperator<T>(Reference<Observable<T>>(this), scheduler));
+}
+
+template <typename T>
+auto Observable<T>::toFlowable(BackpressureStrategy strategy) {
+  // we currently ONLY support the DROP strategy
+  // so do not use the strategy parameter for anything
+  auto o = Reference<Observable<T>>(this);
+  return yarpl::flowable::Flowables::fromPublisher<T>([
+    o = std::move(o), // the Observable to pass through
+    strategy
+  ](Reference<yarpl::flowable::Subscriber<T>> s) {
+    s->onSubscribe(Reference<yarpl::flowable::Subscription>(
+        new yarpl::flowable::sources::FlowableFromObservableSubscription<T>(
+            std::move(o), std::move(s))));
+  });
 }
 
 } // observable

@@ -20,7 +20,7 @@ class Subscribers {
       typename T,
       typename Next,
       typename = typename std::enable_if<
-          std::is_callable<Next(const T&), void>::value>::type>
+          std::is_callable<Next(T), void>::value>::type>
   static auto create(
       Next&& next,
       int64_t batch = Flowable<T>::NO_FLOW_CONTROL) {
@@ -33,7 +33,7 @@ class Subscribers {
       typename Next,
       typename Error,
       typename = typename std::enable_if<
-          std::is_callable<Next(const T&), void>::value &&
+          std::is_callable<Next(T), void>::value &&
           std::is_callable<Error(const std::exception_ptr), void>::value>::type>
   static auto create(
       Next&& next,
@@ -49,7 +49,7 @@ class Subscribers {
       typename Error,
       typename Complete,
       typename = typename std::enable_if<
-          std::is_callable<Next(const T&), void>::value &&
+          std::is_callable<Next(T), void>::value &&
           std::is_callable<Error(const std::exception_ptr), void>::value &&
           std::is_callable<Complete(), void>::value>::type>
   static auto create(
@@ -78,8 +78,8 @@ class Subscribers {
       subscription->request(batch_);
     }
 
-    virtual void onNext(const T& value) override {
-      next_(value);
+    virtual void onNext(T value) override {
+      next_(std::move(value));
       if (--pending_ < batch_ / 2) {
         const auto delta = batch_ - pending_;
         pending_ += delta;

@@ -17,7 +17,7 @@
 class ServerFixture : public testing::Test {
  public:
   // ReactiveSocket requires a specific order in which objects need to be
-  // created and destroyed.  The constructor and desctructor ensure the order
+  // created and destroyed.  The constructor and destructor ensure the order
   // is respected.
   ServerFixture();
   ~ServerFixture();

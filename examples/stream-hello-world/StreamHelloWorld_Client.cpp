@@ -25,9 +25,12 @@ int main(int argc, char* argv[]) {
   FLAGS_minloglevel = 0;
   folly::init(&argc, &argv);
 
+  folly::SocketAddress address;
+  address.setFromHostPort(FLAGS_host, FLAGS_port);
+
   // create a client which can then make connections below
   auto rsf = RSocket::createClient(
-      TcpConnectionFactory::create(FLAGS_host, FLAGS_port));
+      std::make_unique<TcpConnectionFactory>(std::move(address)));
 
   {
     // this example runs inside the Future.then lambda
@@ -47,7 +50,8 @@ int main(int argc, char* argv[]) {
     auto s = yarpl::Reference<ExampleSubscriber>(new ExampleSubscriber(5, 6));
     auto rs = rsf->connect().get();
     rs->requestStream(Payload("Jane"))
-        ->subscribe(yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(s.get()));
+        ->subscribe(
+            yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(s.get()));
     s->awaitTerminalEvent();
   }
   LOG(INFO) << "------------- main() terminating -----------------";

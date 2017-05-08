@@ -1,6 +1,8 @@
 #pragma once
 
+#include <algorithm>
 #include <limits>
+#include <vector>
 
 #include "Flowable.h"
 
@@ -44,23 +46,25 @@ class Flowables {
   }
 
   template <typename T>
-  static Reference<Flowable<T>> just(std::initializer_list<T> list) {
-    auto lambda = [ list, it = list.begin() ](
+  static Reference<Flowable<T>> justN(std::initializer_list<T> list) {
+    std::vector<T> vec(list);
+
+    auto lambda = [ v = std::move(vec), i = size_t{0} ](
         Subscriber<T> & subscriber, int64_t requested) mutable {
       int64_t emitted = 0;
       bool done = false;
 
-      while (it != list.end() && emitted < requested) {
-        subscriber.onNext(*it++);
+      while (i < v.size() && emitted < requested) {
+        subscriber.onNext(v[i++]);
         ++emitted;
       }
 
-      if (it == list.end()) {
+      if (i == v.size()) {
         subscriber.onComplete();
         done = true;
       }
 
-      return std::make_tuple(static_cast<int64_t>(emitted), done);
+      return std::make_tuple(emitted, done);
     };
 
     return Flowable<T>::create(std::move(lambda));
