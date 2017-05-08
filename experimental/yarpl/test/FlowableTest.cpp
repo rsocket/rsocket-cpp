@@ -103,14 +103,14 @@ TEST(FlowableTest, JustFlowable) {
 
 TEST(FlowableTest, JustIncomplete) {
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-  auto flowable = Flowables::just<std::string>({"a", "b", "c"})
+  auto flowable = Flowables::justN<std::string>({"a", "b", "c"})
     ->take(2);
   EXPECT_EQ(
     run(std::move(flowable)),
     std::vector<std::string>({"a", "b"}));
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
 
-  flowable = Flowables::just<std::string>({"a", "b", "c"})
+  flowable = Flowables::justN<std::string>({"a", "b", "c"})
     ->take(2)
     ->take(1);
   EXPECT_EQ(
@@ -119,7 +119,7 @@ TEST(FlowableTest, JustIncomplete) {
   flowable.reset();
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
 
-  flowable = Flowables::just<std::string>(
+  flowable = Flowables::justN<std::string>(
       {"a", "b", "c", "d", "e", "f", "g", "h", "i"})
     ->map([](std::string s) {
         s[0] = ::toupper(s[0]);
