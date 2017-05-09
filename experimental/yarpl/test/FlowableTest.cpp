@@ -153,6 +153,15 @@ TEST(FlowableTest, RangeWithMap) {
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
+TEST(FlowableTest, RangeWithFilter) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto flowable = Flowables::range(0, 10)
+                      ->filter([](int64_t v) { return v % 2 != 0; });
+  EXPECT_EQ(
+      run(std::move(flowable)), std::vector<int64_t>({1, 3, 5, 7, 9}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
 TEST(FlowableTest, SimpleTake) {
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
   EXPECT_EQ(
