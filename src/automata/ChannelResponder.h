@@ -4,7 +4,6 @@
 
 #include <iosfwd>
 
-#include "src/Frame.h"
 #include "src/SubscriberBase.h"
 #include "src/SubscriptionBase.h"
 #include "src/automata/ConsumerBase.h"

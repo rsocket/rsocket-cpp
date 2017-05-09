@@ -150,20 +150,14 @@ void ReactiveSocket::requestResponse(
 void ReactiveSocket::requestFireAndForget(Payload request) {
   debugCheckCorrectExecutor();
   checkNotClosed();
-  Frame_REQUEST_FNF frame(
-      connection_->streamsFactory().getNextStreamId(),
-      FrameFlags::EMPTY,
-      std::move(std::move(request)));
-  connection_->outputFrameOrEnqueue(
-      connection_->frameSerializer().serializeOut(std::move(frame)));
+  connection_->requestFireAndForget(std::move(request));
 }
 
 void ReactiveSocket::metadataPush(
     std::unique_ptr<folly::IOBuf> metadata) {
   debugCheckCorrectExecutor();
   checkNotClosed();
-  connection_->outputFrameOrEnqueue(connection_->frameSerializer().serializeOut(
-      Frame_METADATA_PUSH(std::move(metadata))));
+  connection_->metadataPush(std::move(metadata));
 }
 
 void ReactiveSocket::clientConnect(
@@ -177,31 +171,10 @@ void ReactiveSocket::clientConnect(
   if (setupPayload.protocolVersion != ProtocolVersion::Unknown) {
     CHECK_EQ(
         setupPayload.protocolVersion,
-        connection_->frameSerializer().protocolVersion());
+        connection_->getSerializerProtocolVersion());
   }
 
-  auto protocolVersion = connection_->frameSerializer().protocolVersion();
-
-  Frame_SETUP frame(
-      setupPayload.resumable ? FrameFlags::RESUME_ENABLE : FrameFlags::EMPTY,
-      protocolVersion.major,
-      protocolVersion.minor,
-      connection_->getKeepaliveTime(),
-      Frame_SETUP::kMaxLifetime,
-      setupPayload.token,
-      std::move(setupPayload.metadataMimeType),
-      std::move(setupPayload.dataMimeType),
-      std::move(setupPayload.payload));
-
-  // TODO: when the server returns back that it doesn't support resumability, we
-  // should retry without resumability
-
-  // making sure we send setup frame first
-  frameTransport->outputFrameOrEnqueue(
-      connection_->frameSerializer().serializeOut(std::move(frame)));
-  // then the rest of the cached frames will be sent
-  connection_->connect(
-      std::move(frameTransport), true, ProtocolVersion::Unknown);
+  connection_->setUpFrame(std::move(frameTransport), std::move(setupPayload));
 }
 
 void ReactiveSocket::serverConnect(
@@ -262,16 +235,7 @@ void ReactiveSocket::tryClientResume(
   debugCheckCorrectExecutor();
   checkNotClosed();
   CHECK(frameTransport && !frameTransport->isClosed());
-  frameTransport->outputFrameOrEnqueue(
-      connection_->frameSerializer().serializeOut(
-          connection_->createResumeFrame(token)));
-
-  // if the client was still connected we will disconnected the old connection
-  // with a clear error message
-  connection_->disconnect(
-      std::runtime_error("resuming client on a different connection"));
-  connection_->setResumable(true);
-  connection_->reconnect(std::move(frameTransport), std::move(resumeCallback));
+  connection_->tryClientResume(token, std::move(frameTransport), std::move(resumeCallback));
 }
 
 bool ReactiveSocket::tryResumeServer(

@@ -3,7 +3,6 @@
 #include "src/automata/StreamAutomatonBase.h"
 #include <folly/io/IOBuf.h>
 #include "src/ConnectionAutomaton.h"
-#include "src/Frame.h"
 #include "src/StreamsHandler.h"
 
 namespace reactivesocket {

@@ -3,7 +3,7 @@
 #pragma once
 
 #include <iosfwd>
-#include "src/Frame.h"
+#include "src/Payload.h"
 #include "src/SubscriptionBase.h"
 #include "src/automata/StreamAutomatonBase.h"
 
