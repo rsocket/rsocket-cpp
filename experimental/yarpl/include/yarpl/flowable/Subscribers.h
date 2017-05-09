@@ -99,7 +99,7 @@ class Subscribers {
     WithError(Next&& next, Error&& error, int64_t batch)
         : Base<T, Next>(std::forward<Next>(next), batch), error_(error) {}
 
-    virtual void onError(std::exception_ptr error) override {
+    void onError(std::exception_ptr error) override {
       Subscriber<T>::onError(error);
       error_(error);
     }
@@ -122,7 +122,7 @@ class Subscribers {
               batch),
           complete_(complete) {}
 
-    virtual void onComplete() {
+    void onComplete() {
       Subscriber<T>::onComplete();
       complete_();
     }
