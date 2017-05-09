@@ -4,7 +4,8 @@
 #include <gmock/gmock.h>
 
 #include "src/NullRequestHandler.h"
-#include "src/StandardReactiveSocket.h"
+#include "MockRequestHandler.h"
+#include "src/ReactiveSocket.h"
 #include "test/InlineConnection.h"
 #include "test/MockStats.h"
 #include "test/ReactiveStreamsMocksCompat.h"
@@ -34,10 +35,15 @@ TEST(ReactiveSocketResumabilityTest, Disconnect) {
 
   auto stats = std::make_shared<MockStats>();
 
-  auto socket = StandardReactiveSocket::fromClientConnection(
+  auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*requestHandler, socketOnDisconnected(_)).Times(1);
+  EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+
+  auto socket = ReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(socketConnection),
-      std::make_unique<DefaultRequestHandler>(),
+      std::move(requestHandler),
       ConnectionSetupPayload("", "", Payload(), true),
       stats);
 

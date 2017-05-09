@@ -94,6 +94,8 @@ bool ConnectionAutomaton::connect(
     callback();
   }
 
+  requestHandler_->socketOnConnected();
+
   // We need to create a hard reference to frameTransport_ to make sure the
   // instance survives until the setFrameProcessor returns.  There can be
   // terminating signals processed in that call which will nullify
@@ -145,6 +147,8 @@ void ConnectionAutomaton::disconnect(folly::exception_wrapper ex) {
     callback(ex);
   }
 
+  requestHandler_->socketOnDisconnected(ex);
+
   closeFrameTransport(std::move(ex), StreamCompletionSignal::CONNECTION_END);
   pauseStreams();
   stats_->socketDisconnected();
@@ -176,6 +180,8 @@ void ConnectionAutomaton::close(
   for (auto& callback : onCloseListeners) {
     callback(ex);
   }
+
+  requestHandler_->socketOnClosed(ex);
 
   closeStreams(signal);
   closeFrameTransport(std::move(ex), signal);

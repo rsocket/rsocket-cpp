@@ -2,33 +2,31 @@
 
 #include "HelloStreamRequestHandler.h"
 #include <string>
-#include "HelloStreamSubscription.h"
+#include "yarpl/Flowables.h"
 
 using namespace ::reactivesocket;
+using namespace yarpl;
+using namespace yarpl::flowable;
 
 namespace rsocket {
 namespace tests {
 /// Handles a new inbound Stream requested by the other end.
-void HelloStreamRequestHandler::handleRequestStream(
-    Payload request,
-    StreamId streamId,
-    const std::shared_ptr<Subscriber<Payload>>& response) noexcept {
+Reference<Flowable<reactivesocket::Payload>>
+HelloStreamRequestHandler::handleRequestStream(
+    reactivesocket::Payload request,
+    reactivesocket::StreamId streamId) {
   LOG(INFO) << "HelloStreamRequestHandler.handleRequestStream " << request;
 
   // string from payload data
-  const char* p = reinterpret_cast<const char*>(request.data->data());
-  auto requestString = std::string(p, request.data->length());
+  auto requestString = request.moveDataToString();
 
-  response->onSubscribe(
-      std::make_shared<HelloStreamSubscription>(response, requestString, 10));
-}
-
-std::shared_ptr<StreamState> HelloStreamRequestHandler::handleSetupPayload(
-    ReactiveSocket& socket,
-    ConnectionSetupPayload request) noexcept {
-  LOG(INFO) << "HelloStreamRequestHandler.handleSetupPayload " << request;
-  // TODO what should this do?
-  return nullptr;
+  return Flowables::range(1, 10)->map([name = std::move(requestString)](
+      int64_t v) {
+    std::stringstream ss;
+    ss << "Hello " << name << " " << v << "!";
+    std::string s = ss.str();
+    return Payload(s, "metadata");
+  });
 }
 }
 }

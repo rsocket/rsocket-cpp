@@ -9,6 +9,9 @@
 
 namespace rsocket {
 
+using OnDuplexConnectionAccept = std::function<
+    void(std::unique_ptr<reactivesocket::DuplexConnection>, folly::EventBase&)>;
+
 /**
  * Common interface for a server that accepts connections and turns them into
  * DuplexConnection.
@@ -39,9 +42,7 @@ class ConnectionAcceptor {
    * This can only be called once.
    */
   virtual folly::Future<folly::Unit> start(
-      std::function<void(
-          std::unique_ptr<reactivesocket::DuplexConnection>,
-          folly::EventBase&)> onAccept) = 0;
+      OnDuplexConnectionAccept onAccept) = 0;
   // TODO need to add numThreads option (either overload or arg with default=1)
 };
 }

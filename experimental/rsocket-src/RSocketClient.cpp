@@ -3,7 +3,7 @@
 #include "rsocket/RSocketClient.h"
 #include "rsocket/RSocketRequester.h"
 #include "src/NullRequestHandler.h"
-#include "src/StandardReactiveSocket.h"
+#include "src/ReactiveSocket.h"
 #include "src/folly/FollyKeepaliveTimer.h"
 
 using namespace reactivesocket;
@@ -26,7 +26,7 @@ Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect() {
       EventBase& eventBase) {
     LOG(INFO) << "RSocketClient => onConnect received DuplexConnection";
 
-    auto r = StandardReactiveSocket::fromClientConnection(
+    auto r = ReactiveSocket::fromClientConnection(
         eventBase,
         std::move(framedConnection),
         // TODO need to optionally allow this being passed in for a duplex

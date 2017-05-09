@@ -5,7 +5,7 @@
 #include <folly/futures/Future.h>
 #include "rsocket/ConnectionFactory.h"
 #include "rsocket/RSocketRequester.h"
-#include "src/StandardReactiveSocket.h"
+#include "src/ReactiveSocket.h"
 
 namespace rsocket {
 

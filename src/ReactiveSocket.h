@@ -2,10 +2,7 @@
 
 #pragma once
 
-#include <atomic>
-#include <list>
 #include <memory>
-
 #include "src/Common.h"
 #include "src/ConnectionSetupPayload.h"
 #include "src/Payload.h"
@@ -22,58 +19,121 @@ class ClientResumeStatusCallback;
 class ConnectionAutomaton;
 class DuplexConnection;
 class FrameTransport;
+class RequestHandler;
 
+folly::Executor& defaultExecutor();
+
+// TODO(stupaq): Here is some heavy problem with the recursion on shutdown.
+// Giving someone ownership over this object would probably lead to a deadlock
+// (or a crash) if one calls ::~ReactiveSocket from a terminal signal handler
+// of any of the connections. It seems natural to follow ReactiveStreams
+// specification and make this object "self owned", so that we don't need to
+// perform all of the cleanup from a d'tor. We could give out a "proxy" object
+// that (internally) holds a weak reference (conceptually, not std::weak_ptr)
+// and forbids any interactions with the socket after the shutdown procedure has
+// been initiated.
 class ReactiveSocket {
  public:
-  virtual ~ReactiveSocket() = default;
+  ReactiveSocket(ReactiveSocket&&) = delete;
+  ReactiveSocket& operator=(ReactiveSocket&&) = delete;
+  ReactiveSocket(const ReactiveSocket&) = delete;
+  ReactiveSocket& operator=(const ReactiveSocket&) = delete;
 
-  virtual std::shared_ptr<Subscriber<Payload>> requestChannel(
-      std::shared_ptr<Subscriber<Payload>> responseSink) = 0;
+  ~ReactiveSocket();
 
-  virtual void requestStream(
+  static std::unique_ptr<ReactiveSocket> fromClientConnection(
+      folly::Executor& executor,
+      std::unique_ptr<DuplexConnection> connection,
+      std::unique_ptr<RequestHandler> handler,
+      ConnectionSetupPayload setupPayload = ConnectionSetupPayload(),
+      std::shared_ptr<Stats> stats = Stats::noop(),
+      std::unique_ptr<KeepaliveTimer> keepaliveTimer =
+          std::unique_ptr<KeepaliveTimer>(nullptr));
+
+  static std::unique_ptr<ReactiveSocket> disconnectedClient(
+      folly::Executor& executor,
+      std::unique_ptr<RequestHandler> handler,
+      std::shared_ptr<Stats> stats = Stats::noop(),
+      std::unique_ptr<KeepaliveTimer> keepaliveTimer =
+          std::unique_ptr<KeepaliveTimer>(nullptr),
+      ProtocolVersion protocolVersion = ProtocolVersion::Unknown);
+
+  static std::unique_ptr<ReactiveSocket> fromServerConnection(
+      folly::Executor& executor,
+      std::unique_ptr<DuplexConnection> connection,
+      std::unique_ptr<RequestHandler> handler,
+      std::shared_ptr<Stats> stats = Stats::noop(),
+      const SocketParameters& socketParameters =
+          SocketParameters(/*resumable=*/false, ProtocolVersion::Unknown));
+
+  static std::unique_ptr<ReactiveSocket> disconnectedServer(
+      folly::Executor& executor,
+      std::shared_ptr<RequestHandler> handler,
+      std::shared_ptr<Stats> stats = Stats::noop(),
+      ProtocolVersion protocolVersion = ProtocolVersion::Unknown);
+
+  std::shared_ptr<Subscriber<Payload>> requestChannel(
+      std::shared_ptr<Subscriber<Payload>> responseSink);
+
+  void requestStream(
       Payload payload,
-      const std::shared_ptr<Subscriber<Payload>> responseSink) = 0;
+      std::shared_ptr<Subscriber<Payload>> responseSink);
 
-  virtual void requestResponse(
+  void requestResponse(
       Payload payload,
-      const std::shared_ptr<Subscriber<Payload>> responseSink) = 0;
+      std::shared_ptr<Subscriber<Payload>> responseSink);
 
-  virtual void requestFireAndForget(Payload request) = 0;
+  void requestFireAndForget(Payload request);
 
-  virtual void metadataPush(std::unique_ptr<folly::IOBuf> metadata) = 0;
+  void metadataPush(std::unique_ptr<folly::IOBuf> metadata);
 
-  virtual void clientConnect(
+  void clientConnect(
       std::shared_ptr<FrameTransport> frameTransport,
-      ConnectionSetupPayload setupPayload = ConnectionSetupPayload()) = 0;
+      ConnectionSetupPayload setupPayload = ConnectionSetupPayload());
 
-  virtual void serverConnect(
+  void serverConnect(
       std::shared_ptr<FrameTransport> frameTransport,
-      const SocketParameters& socketParams) = 0;
+      const SocketParameters& socketParams);
 
-  virtual void close() = 0;
-  virtual void disconnect() = 0;
+  void close();
+  void disconnect();
 
-  virtual void closeConnectionError(const std::string& reason) = 0;
+  void closeConnectionError(const std::string& reason);
 
-  virtual std::shared_ptr<FrameTransport> detachFrameTransport() = 0;
+  std::shared_ptr<FrameTransport> detachFrameTransport();
 
-  virtual void onConnected(std::function<void()> listener) = 0;
-  virtual void onDisconnected(ErrorCallback listener) = 0;
-  virtual void onClosed(ErrorCallback listener) = 0;
+  void onConnected(std::function<void()> listener);
+  void onDisconnected(ErrorCallback listener);
+  void onClosed(ErrorCallback listener);
 
-  virtual void tryClientResume(
+  void tryClientResume(
       const ResumeIdentificationToken& token,
       std::shared_ptr<FrameTransport> frameTransport,
-      std::unique_ptr<ClientResumeStatusCallback> resumeCallback) = 0;
+      std::unique_ptr<ClientResumeStatusCallback> resumeCallback);
 
-  virtual bool tryResumeServer(
+  bool tryResumeServer(
       std::shared_ptr<FrameTransport> frameTransport,
-      const ResumeParameters& resumeParams) = 0;
+      const ResumeParameters& resumeParams);
 
-  virtual folly::Executor& executor() = 0;
+  folly::Executor& executor() {
+    return executor_;
+  }
 
-  virtual DuplexConnection* duplexConnection() const = 0;
+  DuplexConnection* duplexConnection() const;
+  bool isClosed();
 
-  virtual bool isClosed() = 0;
+ private:
+  ReactiveSocket(
+      ReactiveSocketMode mode,
+      std::shared_ptr<RequestHandler> handler,
+      std::shared_ptr<Stats> stats,
+      std::unique_ptr<KeepaliveTimer> keepaliveTimer,
+      folly::Executor& executor);
+
+  void checkNotClosed() const;
+  void debugCheckCorrectExecutor() const;
+
+  std::shared_ptr<ConnectionAutomaton> connection_;
+  folly::Executor& executor_;
 };
 }

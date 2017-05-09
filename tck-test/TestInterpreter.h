@@ -5,7 +5,7 @@
 #include <map>
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
-#include "src/StandardReactiveSocket.h"
+#include "src/ReactiveSocket.h"
 
 #include "tck-test/TestSubscriber.h"
 #include "tck-test/TestSuite.h"
@@ -16,7 +16,7 @@ class EventBase;
 
 namespace reactivesocket {
 
-class StandardReactiveSocket;
+class ReactiveSocket;
 
 namespace tck {
 
@@ -28,7 +28,7 @@ class AssertCommand;
 
 class TestInterpreter {
  public:
-  TestInterpreter(const Test& test, StandardReactiveSocket& reactiveSocket);
+  TestInterpreter(const Test& test, ReactiveSocket& reactiveSocket);
 
   bool run(folly::EventBase* evb);
 
@@ -42,7 +42,7 @@ class TestInterpreter {
   std::shared_ptr<TestSubscriber> createTestSubscriber(const std::string& id);
   std::shared_ptr<TestSubscriber> getSubscriber(const std::string& id);
 
-  StandardReactiveSocket* reactiveSocket_;
+  ReactiveSocket* reactiveSocket_;
   const Test& test_;
   std::map<std::string, std::string> interactionIdToType_;
   std::map<std::string, std::shared_ptr<TestSubscriber>> testSubscribers_;

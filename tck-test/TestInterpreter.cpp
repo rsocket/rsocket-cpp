@@ -15,7 +15,7 @@ namespace tck {
 
 TestInterpreter::TestInterpreter(
     const Test& test,
-    StandardReactiveSocket& reactiveSocket)
+    ReactiveSocket& reactiveSocket)
     : reactiveSocket_(&reactiveSocket), test_(test) {
   DCHECK(!test.empty());
 }

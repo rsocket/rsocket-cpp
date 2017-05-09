@@ -2,11 +2,13 @@
 
 #include <folly/Memory.h>
 #include <folly/io/async/AsyncServerSocket.h>
+#include <folly/portability/GFlags.h>
 #include <gmock/gmock.h>
+
 #include "src/FrameTransport.h"
 #include "src/NullRequestHandler.h"
 #include "src/ServerConnectionAcceptor.h"
-#include "src/StandardReactiveSocket.h"
+#include "src/ReactiveSocket.h"
 #include "src/SubscriptionBase.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/tcp/TcpDuplexConnection.h"
@@ -146,8 +148,8 @@ class MyConnectionHandler : public ConnectionHandler {
     std::unique_ptr<RequestHandler> requestHandler =
         std::make_unique<ServerRequestHandler>(nullptr);
 
-    std::unique_ptr<StandardReactiveSocket> rs =
-        StandardReactiveSocket::disconnectedServer(
+    std::unique_ptr<ReactiveSocket> rs =
+        ReactiveSocket::disconnectedServer(
             eventBase_, std::move(requestHandler), stats_);
 
     rs->onConnected([]() { LOG(INFO) << "socket connected"; });

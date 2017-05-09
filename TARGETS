@@ -6,7 +6,14 @@ cpp_library(
         ('src', '**/*.h')
     ]),
     srcs = [
+        'src/Common.cpp',
         'src/Executor.cpp',
+        'src/Frame.cpp',
+        'src/FrameSerializer.cpp',
+        'src/Payload.cpp',
+        'src/versions/FrameSerializer_v0.cpp',
+        'src/versions/FrameSerializer_v0_1.cpp',
+        'src/versions/FrameSerializer_v1_0.cpp',
     ],
     deps = [
         '@/folly/futures:futures',
@@ -35,7 +42,6 @@ cpp_library(
         'src/framed/FramedWriter.cpp',
         'src/framed/FramedDuplexConnection.cpp',
         'src/folly/FollyKeepaliveTimer.cpp',
-        'src/Payload.cpp',
     ],
     deps = [
         ':reactivesocket-internal',
@@ -50,16 +56,15 @@ cpp_library(
     name = 'reactivesocket',
 
     headers = [
+        'src/Common.h',
         'src/ClientResumeStatusCallback.h',
         'src/EnableSharedFromThis.h',
         'src/FrameTransport.h',
         'src/NullRequestHandler.h',
         'src/Payload.h',
-        'src/ReactiveSocket.h',
         'src/RequestHandler.h',
-        'src/ResumeTracker.h',
-        'src/SmartPointers.h', #will be removed soon
-        'src/StandardReactiveSocket.h',
+        'src/ServerConnectionAcceptor.h',
+        'src/ReactiveSocket.h',
         'src/Stats.h',
         'src/StreamsFactory.h',
         'src/SubscriberBase.h',
@@ -68,22 +73,17 @@ cpp_library(
     srcs = glob([
         'src/AbstractStreamAutomaton.cpp',
         'src/automata/*.cpp',
-        'src/mixins/*.cpp',
-        'src/versions/*.cpp',
-        'src/Common.cpp',
         'src/ConnectionAutomaton.cpp',
         'src/ConnectionSetupPayload.cpp',
-        'src/Frame.cpp',
-        'src/FrameSerializer.cpp',
         'src/FrameTransport.cpp',
         'src/NullRequestHandler.cpp',
-        'src/mixins/*.cpp', # temporarily
         'src/Payload.cpp',
         'src/RequestHandler.cpp',
         'src/ResumeCache.cpp',
-        'src/ResumeTracker.cpp',
-        'src/StandardReactiveSocket.cpp',
+        'src/ServerConnectionAcceptor.cpp',
+        'src/ReactiveSocket.cpp',
         'src/Stats.cpp',
+        'src/StreamState.cpp',
         'src/StreamsFactory.cpp',
     ]),
     deps = [
@@ -139,7 +139,7 @@ cpp_library(
         ':reactivesocket-streams-mocks',
     ],
     external_deps=[
-        'gmock',
+        ('googletest', None, 'gmock'),
     ],
 )
 
@@ -152,7 +152,9 @@ cpp_unittest(
     ]),
     srcs = glob([
         'test/*.cpp',
+        'test/folly/*.cpp',
         'test/framed/*.cpp',
+        'test/automata/*.cpp',
         'test/simple/*.cpp',
         ]),
     deps = [
@@ -163,8 +165,134 @@ cpp_unittest(
         '@/folly/io/async:scoped_event_base_thread',
     ],
     external_deps = [
-        'gmock',
-        'gtest',
+        ('googletest', None, 'gmock'),
+        ('googletest', None, 'gtest'),
+    ],
+)
+
+cpp_library(
+    name='reactivesocket-tests-internal',
+    header_namespace = 'test',
+    headers = subdir_glob([
+        ('test', '**/*.h'),
+    ]),
+    srcs=[
+        'test/simple/StatsPrinter.cpp',
+    ],
+    deps=[
+        ':reactivesocket',
+    ],
+)
+
+cpp_binary(
+    name = 'reactivesocket-tck-server',
+    header_namespace = 'tck-test',
+    headers = subdir_glob([
+        ('tck-test', '**/*.h'),
+    ]),
+    srcs = glob([
+        'tck-test/server.cpp',
+        'tck-test/MarbleProcessor.cpp',
+        ]),
+    deps = [
+        ':reactivesocket-tcp',
+        ':reactivesocket',
+        ':reactivesocket-streams-mocks',
+        ':reactivesocket-tests-internal',
+        '@/folly/io/async:scoped_event_base_thread',
+    ],
+)
+
+cpp_binary(
+    name = 'reactivesocket-tck-client',
+    header_namespace = 'tck-test',
+    headers = subdir_glob([
+        ('tck-test', '**/*.h'),
+    ]),
+    srcs = glob([
+        'tck-test/client.cpp',
+        'tck-test/TestFileParser.cpp',
+        'tck-test/TestInterpreter.cpp',
+        'tck-test/TestSubscriber.cpp',
+        'tck-test/TestSuite.cpp',
+        ]),
+    deps = [
+        ':reactivesocket-tcp',
+        ':reactivesocket',
+        ':reactivesocket-streams-mocks',
+        '@/folly/io/async:scoped_event_base_thread',
+    ],
+)
+
+cpp_binary(
+    name = 'reactivesocket-test-resumeclient',
+    header_namespace = 'test',
+    headers = subdir_glob([
+        ('test', '**/*.h'),
+    ]),
+    srcs = glob([
+        'test/resume/TcpResumeClient.cpp',
+        'test/simple/*.cpp',
+        ]),
+    deps = [
+        ':reactivesocket-tcp',
+        ':reactivesocket',
+        ':reactivesocket-streams-mocks',
+        '@/folly/io/async:scoped_event_base_thread',
+    ],
+)
+
+cpp_binary(
+    name = 'reactivesocket-test-resumeserver',
+    header_namespace = 'test',
+    headers = subdir_glob([
+        ('test', '**/*.h'),
+    ]),
+    srcs = glob([
+        'test/resume/TcpResumeServer.cpp',
+        'test/simple/*.cpp',
+        ]),
+    deps = [
+        ':reactivesocket-tcp',
+        ':reactivesocket',
+        ':reactivesocket-streams-mocks',
+        '@/folly/io/async:scoped_event_base_thread',
+    ],
+)
+
+cpp_binary(
+    name = 'reactivesocket-test-tcpclient',
+    header_namespace = 'test',
+    headers = subdir_glob([
+        ('test', '**/*.h'),
+    ]),
+    srcs = glob([
+        'test/tcp/TcpClient.cpp',
+        'test/simple/*.cpp',
+        ]),
+    deps = [
+        ':reactivesocket-tcp',
+        ':reactivesocket',
+        ':reactivesocket-streams-mocks',
+        '@/folly/io/async:scoped_event_base_thread',
+    ],
+)
+
+cpp_binary(
+    name = 'reactivesocket-test-tcpserver',
+    header_namespace = 'test',
+    headers = subdir_glob([
+        ('test', '**/*.h'),
+    ]),
+    srcs = glob([
+        'test/tcp/TcpServer.cpp',
+        'test/simple/*.cpp',
+        ]),
+    deps = [
+        ':reactivesocket-tcp',
+        ':reactivesocket',
+        ':reactivesocket-streams-mocks',
+        '@/folly/io/async:scoped_event_base_thread',
     ],
 )
 
@@ -182,4 +310,36 @@ cpp_library(
 
     headers = ['test/ReactiveStreamsMocksCompat.h', 'test/streams/Mocks.h'],
     deps = ['@/lithium/reactive-streams-cpp:reactive-streams-mocks',],
+)
+
+cpp_library(
+    name = 'rsocket',
+
+    header_namespace = "rsocket",
+    headers = subdir_glob([
+        ('experimental/rsocket', '**/*.h'),
+        ('experimental/rsocket/facebook', '**/*.h'),
+        ('experimental/rsocket/transports', '**/*.h'),
+    ]),
+    srcs = glob([
+        'experimental/rsocket-src/*.cpp',
+        'experimental/rsocket-src/facebook/transports/*.cpp',
+        'experimental/rsocket-src/transports/*.cpp',
+    ]),
+    deps = [
+        ':reactivesocket',
+        ':reactivesocket-internal',
+        ':reactivesocket-streams',
+        ':reactivesocket-tcp',
+        '@/folly/futures:futures',
+        '@/folly/io:iobuf',
+        '@/folly:exception_wrapper',
+        '@/lithium/duplexconnection-proxygen:server',
+        '@/lithium/duplexconnection:util',
+        '@/lithium/reactivesocket-cpp/experimental/yarpl:reactive-streams',
+        '@/lithium/reactivesocket-cpp/experimental/yarpl:yarpl',
+        '@/lithium/reactivesocket-utils:reactivesocket-external-utils',
+        '@/proxygen/httpserver:httpserver',
+    ],
+    compiler_flags=['-DREACTIVE_SOCKET_EXTERNAL_STACK_TRACE_UTILS'],
 )

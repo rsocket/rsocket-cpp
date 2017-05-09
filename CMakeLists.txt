@@ -70,9 +70,11 @@ if(NOT META_CXX_STD)
 endif()
 
 # Common configuration for all build modes.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++${META_CXX_STD}")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Woverloaded-virtual")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++${META_CXX_STD} -pedantic")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter -Woverloaded-virtual")
+
+set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Werror)
 
 string(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_LOWER)
 if("${BUILD_TYPE_LOWER}" MATCHES "debug")
@@ -83,15 +85,7 @@ else()
 endif()
 
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-  set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Werror -Weverything -pedantic-errors)
-  set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Wno-unreachable-code-break -Wno-covered-switch-default)
-  set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Wno-padded -Wno-weak-vtables -Wno-weak-template-vtables)
-  set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Wno-global-constructors -Wno-exit-time-destructors)
-  set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Wno-unreachable-code-return)
-  set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Wno-c++98-compat -Wno-c++98-compat-pedantic)
-  set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Wno-abstract-vbase-init)
-elseif(CMAKE_COMPILER_IS_GNUCXX)
-  set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Werror -pedantic -pedantic-errors)
+  set(TEST_CXX_FLAGS ${TEST_CXX_FLAGS} -Wno-inconsistent-missing-override)
 endif()
 
 find_library(DOUBLE-CONVERSION double-conversion)
@@ -170,15 +164,14 @@ add_library(
   src/NullRequestHandler.h
   src/Payload.cpp
   src/Payload.h
-  src/ReactiveSocket.h
   src/ReactiveStreamsCompat.h
   src/RequestHandler.h
   src/ResumeCache.cpp
   src/ResumeCache.h
   src/ServerConnectionAcceptor.cpp
   src/ServerConnectionAcceptor.h
-  src/StandardReactiveSocket.cpp
-  src/StandardReactiveSocket.h
+  src/ReactiveSocket.cpp
+  src/ReactiveSocket.h
   src/Stats.cpp
   src/Stats.h
   src/StreamsFactory.cpp
@@ -239,7 +232,11 @@ add_executable(
   test/ServerConnectionAcceptorTest.cpp
   test/PayloadTest.cpp
   test/ResumeCacheTest.cpp
-  test/StreamStateTest.cpp)
+  test/StreamStateTest.cpp
+  test/integration/ClientUtils.h
+  test/integration/ServerFixture.h
+  test/integration/ServerFixture.cpp
+  test/integration/WarmResumptionTest.cpp)
 
 target_link_libraries(
   tests
@@ -250,6 +247,10 @@ target_link_libraries(
   ${GLOG_LIBRARY}
   ${CMAKE_THREAD_LIBS_INIT})
 
+target_compile_options(
+  tests
+  PRIVATE ${TEST_CXX_FLAGS})
+
 add_dependencies(tests gmock ReactiveSocket)
 
 add_test(NAME ReactiveSocketTests COMMAND tests)
@@ -259,8 +260,8 @@ add_executable(
         test/tcp/TcpClient.cpp
         test/simple/PrintSubscriber.cpp
         test/simple/PrintSubscriber.h
-        src/StandardReactiveSocket.cpp
-        src/StandardReactiveSocket.h
+        src/ReactiveSocket.cpp
+        src/ReactiveSocket.h
         test/simple/StatsPrinter.cpp
         test/simple/StatsPrinter.h)
 
@@ -338,8 +339,8 @@ add_executable(
         test/resume/TcpResumeClient.cpp
         test/simple/PrintSubscriber.cpp
         test/simple/PrintSubscriber.h
-        src/StandardReactiveSocket.cpp
-        src/StandardReactiveSocket.h
+        src/ReactiveSocket.cpp
+        src/ReactiveSocket.h
         test/simple/StatsPrinter.cpp
         test/simple/StatsPrinter.h)
 
@@ -382,6 +383,8 @@ add_subdirectory(experimental/yarpl)
 add_library(
         rsocket_experimental
         experimental/rsocket/RSocket.h
+        # TODO remove when ReactiveStreams all synced
+        experimental/rsocket/OldNewBridge.h
         experimental/rsocket-src/RSocket.cpp
         experimental/rsocket/RSocketServer.h
         experimental/rsocket-src/RSocketServer.cpp
@@ -400,9 +403,12 @@ add_library(
         experimental/rsocket-src/transports/TcpConnectionAcceptor.cpp
         experimental/rsocket/transports/TcpConnectionFactory.h
         experimental/rsocket-src/transports/TcpConnectionFactory.cpp
+        experimental/rsocket/RSocketRequestHandler.h
+        experimental/rsocket/RSocketConnectionHandler.h
+        experimental/rsocket-src/RSocketConnectionHandler.cpp
 )
 
-add_dependencies(rsocket_experimental ReactiveStreams)
+add_dependencies(rsocket_experimental ReactiveStreams yarpl)
 
 # include the experimental includes for usage
 target_include_directories(rsocket_experimental PUBLIC "${PROJECT_SOURCE_DIR}/experimental")
@@ -417,13 +423,12 @@ add_executable(
         experimental/rsocket-test/RSocketClientServerTest.cpp
         experimental/rsocket-test/handlers/HelloStreamRequestHandler.h
         experimental/rsocket-test/handlers/HelloStreamRequestHandler.cpp
-        experimental/rsocket-test/handlers/HelloStreamSubscription.h
-        experimental/rsocket-test/handlers/HelloStreamSubscription.cpp
 )
 
 target_link_libraries(
         rsocket_tests
         rsocket_experimental
+        yarpl
         ReactiveSocket
         ${FOLLY_LIBRARIES}
         ${GMOCK_LIBS}
@@ -448,6 +453,7 @@ add_library(
 target_link_libraries(
         reactivesocket_examples_util
         rsocket_experimental
+        yarpl
         ReactiveSocket
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
@@ -460,16 +466,14 @@ target_link_libraries(
 add_executable(
         example_stream-hello-world-server
         examples/stream-hello-world/StreamHelloWorld_Server.cpp
-        examples/stream-hello-world/HelloStreamSubscription.cpp
-        examples/stream-hello-world/HelloStreamSubscription.h
-        examples/stream-hello-world/HelloStreamRequestHandler.cpp
-        examples/stream-hello-world/HelloStreamRequestHandler.h)
+)
 
 target_link_libraries(
         example_stream-hello-world-server
         ReactiveSocket
         rsocket_experimental
         reactivesocket_examples_util
+        yarpl
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
         ${GLOG_LIBRARY}
@@ -485,6 +489,42 @@ target_link_libraries(
         ReactiveSocket
         rsocket_experimental
         reactivesocket_examples_util
+        yarpl
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
+
+
+# stream-observable-to-flowable
+
+add_executable(
+        example_observable-to-flowable-server
+        examples/stream-observable-to-flowable/StreamObservableToFlowable_Server.cpp
+)
+
+target_link_libraries(
+        example_observable-to-flowable-server
+        ReactiveSocket
+        rsocket_experimental
+        reactivesocket_examples_util
+        yarpl
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
+
+add_executable(
+        example_observable-to-flowable-client
+        examples/stream-observable-to-flowable/StreamObservableToFlowable_Client.cpp
+)
+
+target_link_libraries(
+        example_observable-to-flowable-client
+        ReactiveSocket
+        rsocket_experimental
+        reactivesocket_examples_util
+        yarpl
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
         ${GLOG_LIBRARY}
@@ -497,15 +537,16 @@ add_executable(
         examples/conditional-request-handling/ConditionalRequestHandling_Server.cpp
         examples/conditional-request-handling/TextRequestHandler.h
         examples/conditional-request-handling/TextRequestHandler.cpp
-        examples/conditional-request-handling/ConditionalRequestSubscription.h
-        examples/conditional-request-handling/ConditionalRequestSubscription.cpp
-        examples/conditional-request-handling/JsonRequestHandler.cpp examples/conditional-request-handling/JsonRequestHandler.h)
+        examples/conditional-request-handling/JsonRequestHandler.cpp
+        examples/conditional-request-handling/JsonRequestHandler.h
+)
 
 target_link_libraries(
         example_conditional-request-handling-server
         ReactiveSocket
         rsocket_experimental
         reactivesocket_examples_util
+        yarpl
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
         ${GLOG_LIBRARY}
@@ -521,6 +562,7 @@ target_link_libraries(
         ReactiveSocket
         rsocket_experimental
         reactivesocket_examples_util
+        yarpl
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
         ${GLOG_LIBRARY}

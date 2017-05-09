@@ -7,7 +7,7 @@
 #include <folly/io/Cursor.h>
 #include <gmock/gmock.h>
 #include "src/FrameSerializer.h"
-#include "src/StandardReactiveSocket.h"
+#include "src/ReactiveSocket.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/framed/FramedReader.h"
 #include "test/InlineConnection.h"
@@ -224,12 +224,16 @@ TEST(FramedReaderTest, InvalidDataStream) {
   testConnection->setInput(testOutputSubscriber);
   sub->onSubscribe(inputSubscription);
 
-  auto reactiveSocket = StandardReactiveSocket::fromClientConnection(
+  auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+
+  auto reactiveSocket = ReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(framedRsAutomatonConnection),
       // No interactions on this mock, the client will not accept any
       // requests.
-      std::make_unique<StrictMock<MockRequestHandler>>(),
+      std::move(requestHandler),
       ConnectionSetupPayload("", "", Payload("test client payload")));
 }
 

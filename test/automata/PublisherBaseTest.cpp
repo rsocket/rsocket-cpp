@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/StandardReactiveSocket.h"
+#include "src/ReactiveSocket.h"
 #include "src/SubscriberBase.h"
 #include "src/automata/PublisherBase.h"
 #include "test/MockRequestHandler.h"

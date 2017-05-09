@@ -5,10 +5,11 @@
 #include <folly/Memory.h>
 #include <folly/io/async/AsyncServerSocket.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
+#include <folly/portability/GFlags.h>
 #include <gmock/gmock.h>
 
 #include "src/NullRequestHandler.h"
-#include "src/StandardReactiveSocket.h"
+#include "src/ReactiveSocket.h"
 #include "src/SubscriptionBase.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/tcp/TcpDuplexConnection.h"
@@ -120,7 +121,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     std::unique_ptr<RequestHandler> requestHandler =
         std::make_unique<ServerRequestHandler>();
 
-    auto rs = StandardReactiveSocket::fromServerConnection(
+    auto rs = ReactiveSocket::fromServerConnection(
         eventBase_,
         std::move(framedConnection),
         std::move(requestHandler),
@@ -138,7 +139,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
       reactiveSockets_.erase(std::remove_if(
           reactiveSockets_.begin(),
           reactiveSockets_.end(),
-          [&socket](std::unique_ptr<StandardReactiveSocket>& vecSocket) {
+          [&socket](std::unique_ptr<ReactiveSocket>& vecSocket) {
             return vecSocket.get() == &socket;
           }));
     }
@@ -229,7 +230,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     MarbleStore marbles_;
   };
 
-  std::vector<std::unique_ptr<StandardReactiveSocket>> reactiveSockets_;
+  std::vector<std::unique_ptr<ReactiveSocket>> reactiveSockets_;
   EventBase& eventBase_;
   bool shuttingDown_{false};
 };

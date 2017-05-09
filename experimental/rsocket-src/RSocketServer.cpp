@@ -1,53 +1,44 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "rsocket/RSocketServer.h"
+
 #include <folly/ExceptionWrapper.h>
-#include <folly/io/async/EventBase.h>
-#include <folly/io/async/EventBaseManager.h>
-#include "rsocket/RSocketErrors.h"
-#include "src/FrameTransport.h"
+
+#include "rsocket/RSocketConnectionHandler.h"
 
 using namespace reactivesocket;
 
 namespace rsocket {
 
-using OnSetupNewSocket = std::function<void(
-    std::shared_ptr<FrameTransport> frameTransport,
-    ConnectionSetupPayload setupPayload,
-    folly::Executor&)>;
-
-class RSocketConnectionHandler : public reactivesocket::ConnectionHandler {
+class RSocketServerConnectionHandler : public virtual RSocketConnectionHandler {
  public:
-  explicit RSocketConnectionHandler(OnSetupNewSocket onSetup)
-      : onSetup_(std::move(onSetup)) {}
-
-  ~RSocketConnectionHandler() {
-    LOG(INFO) << "RSocketServer => destroy the connection handler";
+  RSocketServerConnectionHandler(RSocketServer* server, OnAccept onAccept) {
+    server_ = server;
+    onAccept_ = onAccept;
   }
 
-  void setupNewSocket(
-      std::shared_ptr<FrameTransport> frameTransport,
-      ConnectionSetupPayload setupPayload) override {
-    // FIXME(alexanderm): Handler should be tied to specific executor
-    auto executor = folly::EventBaseManager::get()->getExistingEventBase();
-    onSetup_(std::move(frameTransport), std::move(setupPayload), *executor);
+  std::shared_ptr<RSocketRequestHandler> getHandler(
+      std::shared_ptr<ConnectionSetupRequest> request) override {
+    return onAccept_(std::move(request));
   }
 
-  bool resumeSocket(
-      std::shared_ptr<FrameTransport> frameTransport,
-      ResumeParameters) override {
-    //      onSetup_(std::move(frameTransport), std::move(setupPayload));
-    return false;
-  }
+  void manageSocket(
+      std::shared_ptr<ConnectionSetupRequest> request,
+      std::unique_ptr<reactivesocket::ReactiveSocket> socket) override {
+    socket->onClosed([ this, socket = socket.get() ](
+        const folly::exception_wrapper&) {
+      // Enqueue another event to remove and delete it.  We cannot delete
+      // the ReactiveSocket now as it still needs to finish processing the
+      // onClosed handlers in the stack frame above us.
+      socket->executor().add([this, socket] { server_->removeSocket(socket); });
+    });
 
-  void connectionError(
-      std::shared_ptr<FrameTransport>,
-      folly::exception_wrapper ex) override {
-    LOG(WARNING) << "Connection failed before first frame: " << ex.what();
+    server_->addSocket(std::move(socket));
   }
 
  private:
-  OnSetupNewSocket onSetup_;
+  RSocketServer* server_;
+  OnAccept onAccept_;
 };
 
 RSocketServer::RSocketServer(
@@ -82,51 +73,13 @@ void RSocketServer::start(OnAccept onAccept) {
   LOG(INFO) << "RSocketServer => initialize connection acceptor on start";
 
   LOG(INFO) << "RSocketServer => initialize connection acceptor on start";
-  connectionHandler_ = std::make_unique<RSocketConnectionHandler>(
-      [ this, onAccept = std::move(onAccept) ](
-          std::shared_ptr<FrameTransport> frameTransport,
-          ConnectionSetupPayload setupPayload,
-          folly::Executor & executor_) {
-        LOG(INFO) << "RSocketServer => received new setup payload";
-
-        auto socketParams = SocketParameters(
-            setupPayload.resumable, setupPayload.protocolVersion);
-        std::shared_ptr<RequestHandler> requestHandler;
-        try {
-          requestHandler = onAccept(std::make_unique<ConnectionSetupRequest>(
-              std::move(setupPayload)));
-        } catch (const RSocketError& e) {
-          // TODO emit ERROR ... but how do I do that here?
-          frameTransport->close(
-              folly::exception_wrapper{std::current_exception(), e});
-          return;
-        }
-        LOG(INFO) << "RSocketServer => received request handler";
-
-        auto rs = StandardReactiveSocket::disconnectedServer(
-            // we know this callback is on a specific EventBase
-            executor_,
-            std::move(requestHandler),
-            Stats::noop());
-
-        rs->onClosed([ this, rs = rs.get() ](const folly::exception_wrapper&) {
-          // Enqueue another event to remove and delete it.  We cannot delete
-          // the ReactiveSocket now as it still needs to finish processing the
-          // onClosed handlers in the stack frame above us.
-          rs->executor().add([this, rs] { removeSocket(rs); });
-        });
-
-        auto rawRs = rs.get();
-
-        addSocket(std::move(rs));
-
-        // Connect last, after all state has been set up.
-        rawRs->serverConnect(std::move(frameTransport), socketParams);
-      });
+  connectionHandler_ =
+      std::make_unique<RSocketServerConnectionHandler>(this, onAccept);
 
   lazyAcceptor_
       ->start([this](
-          std::unique_ptr<DuplexConnection> conn, folly::Executor& executor) {
+                  std::unique_ptr<DuplexConnection> conn,
+                  folly::Executor& executor) {
         LOG(INFO) << "RSocketServer => received new connection";
 
         LOG(INFO) << "RSocketServer => going to accept duplex connection";
@@ -170,4 +123,4 @@ void RSocketServer::removeSocket(ReactiveSocket* socket) {
     shutdown_->post();
   }
 }
-}
+} // namespace rsocket

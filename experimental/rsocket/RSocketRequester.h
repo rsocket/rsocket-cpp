@@ -7,7 +7,7 @@
 #include "yarpl/Flowable.h"
 
 #include "src/ReactiveStreamsCompat.h"
-#include "src/StandardReactiveSocket.h"
+#include "src/ReactiveSocket.h"
 
 namespace rsocket {
 
@@ -20,7 +20,7 @@ namespace rsocket {
 class RSocketRequester {
  public:
   static std::shared_ptr<RSocketRequester> create(
-      std::unique_ptr<reactivesocket::StandardReactiveSocket> srs,
+      std::unique_ptr<reactivesocket::ReactiveSocket> srs,
       folly::EventBase& executor);
   // TODO figure out how to use folly::Executor instead of EventBase
 
@@ -41,18 +41,8 @@ class RSocketRequester {
    * @param payload
    * @param responseSink
    */
-  void requestStream(
-      reactivesocket::Payload payload,
-      std::shared_ptr<reactivesocket::Subscriber<reactivesocket::Payload>>
-          responseSink);
-
-  /**
-   * TODO: This is a temporary hack to bridge instances of the old
-   * reactivesocket::Subscri{ber,ption} to
-   * reactivestreams_yarpl::Subscri{ber,ption}.
-   */
-  std::shared_ptr<yarpl::flowable::Flowable<reactivesocket::Payload>>
-  requestStream(reactivesocket::Payload request);
+  yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>> requestStream(
+      reactivesocket::Payload payload);
 
   /**
     * Start a channel (streams in both directions).
@@ -106,10 +96,10 @@ class RSocketRequester {
 
  private:
   RSocketRequester(
-      std::unique_ptr<reactivesocket::StandardReactiveSocket> srs,
+      std::unique_ptr<reactivesocket::ReactiveSocket> srs,
       folly::EventBase& eventBase);
-  std::shared_ptr<reactivesocket::StandardReactiveSocket>
-      standardReactiveSocket_;
+  std::shared_ptr<reactivesocket::ReactiveSocket>
+      reactiveSocket_;
   folly::EventBase& eventBase_;
 };
 }
