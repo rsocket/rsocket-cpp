@@ -27,8 +27,11 @@ class Flowable : public virtual Refcounted {
   template <typename Function>
   auto map(Function&& function);
 
-  template<typename Function>
+  template <typename Function>
   auto filter(Function&& function);
+
+  template <typename Function>
+  auto reduce(Function&& function);
 
   auto take(int64_t);
 
@@ -250,10 +253,17 @@ auto Flowable<T>::map(Function&& function) {
       Reference<Flowable<T>>(this), std::forward<Function>(function)));
 }
 
-template<typename T>
-template<typename Function>
+template <typename T>
+template <typename Function>
 auto Flowable<T>::filter(Function&& function) {
   return Reference<Flowable<T>>(new FilterOperator<T, Function>(
+      Reference<Flowable<T>>(this), std::forward<Function>(function)));
+}
+
+template <typename T>
+template <typename Function>
+auto Flowable<T>::reduce(Function&& function) {
+  return Reference<Flowable<T>>(new ReduceOperator<T, Function>(
       Reference<Flowable<T>>(this), std::forward<Function>(function)));
 }
 
