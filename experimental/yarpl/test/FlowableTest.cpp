@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 #include "yarpl/Flowables.h"
+#include "yarpl/flowable/Subscribers.h"
 
 namespace yarpl {
 namespace flowable {
@@ -191,6 +192,54 @@ TEST(FlowableTest, FlowableEmpty) {
 
   EXPECT_EQ(collector->complete(), true);
   EXPECT_EQ(collector->error(), false);
+}
+
+void unreachable() {
+  EXPECT_TRUE(false);
+}
+
+TEST(FlowableTest, SubscribersComplete) {
+  EXPECT_EQ(0u, Refcounted::objects());
+
+  auto flowable = Flowables::empty<int>();
+  EXPECT_EQ(1u, Refcounted::objects());
+
+  bool completed = false;
+
+  auto subscriber = Subscribers::create<int>(
+    [](int) { unreachable(); },
+    [](std::exception_ptr) { unreachable(); },
+    [&] { completed = true; }
+  );
+
+  flowable->subscribe(std::move(subscriber));
+  flowable.reset();
+
+  EXPECT_EQ(0u, Refcounted::objects());
+
+  EXPECT_TRUE(completed);
+}
+
+TEST(FlowableTest, SubscribersError) {
+  EXPECT_EQ(0u, Refcounted::objects());
+
+  auto flowable = Flowables::error<int>(std::runtime_error("Whoops"));
+  EXPECT_EQ(1u, Refcounted::objects());
+
+  bool errored = false;
+
+  auto subscriber = Subscribers::create<int>(
+    [](int) { unreachable(); },
+    [&](std::exception_ptr) { errored = true; },
+    [] { unreachable(); }
+  );
+
+  flowable->subscribe(std::move(subscriber));
+  flowable.reset();
+
+  EXPECT_EQ(0u, Refcounted::objects());
+
+  EXPECT_TRUE(errored);
 }
 
 } // flowable
