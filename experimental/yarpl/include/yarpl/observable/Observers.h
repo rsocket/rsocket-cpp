@@ -68,7 +68,7 @@ class Observers {
     Base(Next&& next)
         : next_(std::forward<Next>(next)) {}
 
-    virtual void onNext(T value) override {
+    void onNext(T value) override {
       next_(std::move(value));
     }
 
@@ -82,7 +82,7 @@ class Observers {
     WithError(Next&& next, Error&& error)
         : Base<T, Next>(std::forward<Next>(next)), error_(error) {}
 
-    virtual void onError(std::exception_ptr error) override {
+    void onError(std::exception_ptr error) override {
       error_(error);
     }
 
@@ -102,7 +102,7 @@ class Observers {
               std::forward<Error>(error)),
           complete_(complete) {}
 
-    virtual void onComplete() {
+    void onComplete() override {
       complete_();
     }
 

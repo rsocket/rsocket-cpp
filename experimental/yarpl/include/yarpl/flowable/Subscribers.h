@@ -72,13 +72,13 @@ class Subscribers {
     Base(Next&& next, int64_t batch)
         : next_(std::forward<Next>(next)), batch_(batch), pending_(0) {}
 
-    virtual void onSubscribe(Reference<Subscription> subscription) override {
+    void onSubscribe(Reference<Subscription> subscription) override {
       Subscriber<T>::onSubscribe(subscription);
       pending_ += batch_;
       subscription->request(batch_);
     }
 
-    virtual void onNext(T value) override {
+    void onNext(T value) override {
       next_(std::move(value));
       if (--pending_ < batch_ / 2) {
         const auto delta = batch_ - pending_;
@@ -99,7 +99,7 @@ class Subscribers {
     WithError(Next&& next, Error&& error, int64_t batch)
         : Base<T, Next>(std::forward<Next>(next), batch), error_(error) {}
 
-    virtual void onError(std::exception_ptr error) override {
+    void onError(std::exception_ptr error) override {
       Subscriber<T>::onError(error);
       error_(error);
     }
@@ -122,7 +122,7 @@ class Subscribers {
               batch),
           complete_(complete) {}
 
-    virtual void onComplete() {
+    void onComplete() {
       Subscriber<T>::onComplete();
       complete_();
     }
