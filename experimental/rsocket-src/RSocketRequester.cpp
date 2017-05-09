@@ -37,10 +37,40 @@ RSocketRequester::~RSocketRequester() {
   LOG(INFO) << "RSocketRequester => destroy";
 }
 
-std::shared_ptr<Subscriber<Payload>> RSocketRequester::requestChannel(
-    std::shared_ptr<Subscriber<Payload>> responseSink) {
-  // TODO need to runInEventBaseThread like other request methods
-  return reactiveSocket_->requestChannel(std::move(responseSink));
+yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
+RSocketRequester::requestChannel(
+    yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
+        payloads) {
+  auto& eb = eventBase_;
+  auto srs = reactiveSocket_;
+
+    LOG(INFO) << "requestChannel executing ";
+
+  return yarpl::flowable::Flowables::fromPublisher<Payload>([
+    &eb,
+    request = std::move(payloads),
+    srs = std::move(srs)
+  ](yarpl::Reference<yarpl::flowable::Subscriber<Payload>> subscriber) mutable {
+    // TODO eliminate OldToNew bridge
+    auto os = std::make_shared<OldToNewSubscriber>(std::move(subscriber));
+
+
+      LOG(INFO) << "requestChannel ABOUT TO RUN ON THREAD ";
+
+    eb.runInEventBaseThread([
+      request = std::move(request),
+      os = std::move(os),
+      srs = std::move(srs)
+    ]() mutable {
+
+        LOG(INFO) << "requestChannel RUNNING IN THREAD";
+
+      auto responseSink = srs->requestChannel(std::move(os));
+      // TODO eliminate NewToOld bridge
+      request->subscribe(
+          yarpl::make_ref<NewToOldSubscriber>(std::move(responseSink)));
+    });
+  });
 }
 
 yarpl::Reference<yarpl::flowable::Flowable<Payload>>
@@ -53,6 +83,7 @@ RSocketRequester::requestStream(Payload request) {
     request = std::move(request),
     srs = std::move(srs)
   ](yarpl::Reference<yarpl::flowable::Subscriber<Payload>> subscriber) mutable {
+    // TODO eliminate OldToNew bridge
     auto os = std::make_shared<OldToNewSubscriber>(std::move(subscriber));
     eb.runInEventBaseThread([
       request = std::move(request),

@@ -6,8 +6,8 @@
 
 #include "yarpl/Flowable.h"
 
-#include "src/ReactiveStreamsCompat.h"
 #include "src/ReactiveSocket.h"
+#include "src/ReactiveStreamsCompat.h"
 
 namespace rsocket {
 
@@ -39,10 +39,9 @@ class RSocketRequester {
    * https://github.com/ReactiveSocket/reactivesocket/blob/master/Protocol.md#request-stream
    *
    * @param payload
-   * @param responseSink
    */
-  yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>> requestStream(
-      reactivesocket::Payload payload);
+  yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
+  requestStream(reactivesocket::Payload payload);
 
   /**
     * Start a channel (streams in both directions).
@@ -50,13 +49,12 @@ class RSocketRequester {
     * Interaction model details can be found at
     * https://github.com/ReactiveSocket/reactivesocket/blob/master/Protocol.md#request-channel
     *
-    * @param responseSink
-    * @return
+    * @param request
     */
-  std::shared_ptr<reactivesocket::Subscriber<reactivesocket::Payload>>
+  yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
   requestChannel(
-      std::shared_ptr<reactivesocket::Subscriber<reactivesocket::Payload>>
-          responseSink);
+      yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
+          payloads);
 
   /**
    * Send a single request and get a single response.
@@ -89,17 +87,11 @@ class RSocketRequester {
    */
   void metadataPush(std::unique_ptr<folly::IOBuf> metadata);
 
-  // TODO implement
-  //  void close();
-
-  // TODO implement versions that return Future/Publisher/Flowable
-
  private:
   RSocketRequester(
       std::unique_ptr<reactivesocket::ReactiveSocket> srs,
       folly::EventBase& eventBase);
-  std::shared_ptr<reactivesocket::ReactiveSocket>
-      reactiveSocket_;
+  std::shared_ptr<reactivesocket::ReactiveSocket> reactiveSocket_;
   folly::EventBase& eventBase_;
 };
 }
