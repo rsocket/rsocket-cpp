@@ -43,9 +43,28 @@ std::string Payload::moveDataToString() {
   return data->moveToFbString().toStdString();
 }
 
+std::string Payload::cloneDataToString() const {
+    if (!data) {
+        return "";
+    }
+    return data->cloneAsValue().moveToFbString().toStdString();
+}
+
 void Payload::clear() {
   data.reset();
   metadata.reset();
+}
+
+Payload Payload::clone() const {
+  Payload out;
+  if (data) {
+    out.data = data->clone();
+  }
+
+  if (metadata) {
+    out.metadata = metadata->clone();
+  }
+  return out;
 }
 
 FrameFlags Payload::getFlags() const {

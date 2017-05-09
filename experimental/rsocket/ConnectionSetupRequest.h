@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "src/StandardReactiveSocket.h"
+#include "src/ReactiveSocket.h"
 
 namespace rsocket {
 

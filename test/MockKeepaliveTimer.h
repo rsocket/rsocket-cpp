@@ -8,7 +8,7 @@
 #include <gmock/gmock.h>
 
 #include "src/ConnectionAutomaton.h"
-#include "src/StandardReactiveSocket.h"
+#include "src/ReactiveSocket.h"
 
 namespace reactivesocket {
 class MockKeepaliveTimer : public KeepaliveTimer {

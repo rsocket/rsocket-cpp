@@ -167,16 +167,20 @@ TEST(FlowableChaining, customSourceThenMapTakeBranched) {
     ~OnSubscribeFunctor() {
       std::cout << "******* DESTROY OnSubscribeFunctor" << std::endl;
     }
+
     OnSubscribeFunctor(OnSubscribeFunctor&&) {
       std::cout << "******* moving OnSubscribeFunctor" << std::endl;
       // no members to move
-    };
+    }
+
     OnSubscribeFunctor(const OnSubscribeFunctor&) = delete;
+
     OnSubscribeFunctor& operator=(OnSubscribeFunctor&& other) {
       std::cout << "******* moving() OnSubscribeFunctor" << std::endl;
       // no members to move
       return *this;
-    };
+    }
+
     OnSubscribeFunctor& operator=(const OnSubscribeFunctor&) = delete;
 
     void operator()(

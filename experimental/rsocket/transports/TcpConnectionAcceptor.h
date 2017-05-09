@@ -5,56 +5,68 @@
 #include <folly/io/async/AsyncServerSocket.h>
 #include "rsocket/ConnectionAcceptor.h"
 
-using namespace folly;
-using namespace reactivesocket;
+namespace folly {
+class ScopedEventBaseThread;
+}
 
 namespace rsocket {
 
 /**
  * TCP implementation of ConnectionAcceptor for use with RSocket::createServer
  *
- * Creation of this does nothing. The 'start' method kicks off work.
- *
- * When started it will create a Thread, EventBase, and AsyncServerSocket.
- *
- * Destruction will shut down the thread(s) and socket.
+ * Construction of this does nothing.  The `start` method kicks off work.
  */
-class TcpConnectionAcceptor : public ConnectionAcceptor,
-                              public AsyncServerSocket::AcceptCallback {
+class TcpConnectionAcceptor : public ConnectionAcceptor {
  public:
-  static std::unique_ptr<ConnectionAcceptor> create(int port);
+  struct Options {
+    /// Port to listen on for TCP requests.
+    uint16_t port{8080};
 
-  explicit TcpConnectionAcceptor(int port);
-  virtual ~TcpConnectionAcceptor();
-  TcpConnectionAcceptor(const TcpConnectionAcceptor&) = delete; // copy
-  TcpConnectionAcceptor(TcpConnectionAcceptor&&) = delete; // move
-  TcpConnectionAcceptor& operator=(const TcpConnectionAcceptor&) =
-      delete; // copy
-  TcpConnectionAcceptor& operator=(TcpConnectionAcceptor&&) = delete; // move
+    /// Number of worker threads processing requests.
+    size_t threads{1};
+
+    /// Number of connections to buffer before accept handlers process them.
+    int backlog{10};
+  };
+
+  //////////////////////////////////////////////////////////////////////////////
+
+  explicit TcpConnectionAcceptor(Options);
+  ~TcpConnectionAcceptor();
+
+  //////////////////////////////////////////////////////////////////////////////
+
+  // ConnectionAcceptor overrides.
 
   /**
-   * Create an EventBase, Thread, and AsyncServerSocket. Bind to the given port
-   * and start accepting TCP connections.
+   * Bind an AsyncServerSocket and start accepting TCP connections.
    *
    * This can only be called once.
-   *
-   * @param onAccept
    */
-  void start(std::function<void(std::unique_ptr<DuplexConnection>, EventBase&)>
-                 onAccept) override;
+  folly::Future<folly::Unit> start(
+      std::function<void(
+          std::unique_ptr<reactivesocket::DuplexConnection>,
+          folly::EventBase&)>) override;
 
  private:
-  // TODO this is single-threaded right now
-  // TODO need to tell it how many threads to run on
-  EventBase eventBase_;
-  folly::SocketAddress addr_;
-  std::function<void(std::unique_ptr<DuplexConnection>, EventBase&)> onAccept_;
-  std::shared_ptr<AsyncServerSocket> serverSocket_;
+  class SocketCallback;
 
-  virtual void connectionAccepted(
-      int fd,
-      const SocketAddress& clientAddr) noexcept override;
+  /// The thread driving the AsyncServerSocket.
+  std::unique_ptr<folly::ScopedEventBaseThread> serverThread_;
 
-  virtual void acceptError(const std::exception& ex) noexcept override;
+  /// The callbacks handling accepted connections.  Each has its own worker
+  /// thread.
+  std::vector<std::unique_ptr<SocketCallback>> callbacks_;
+
+  std::function<void(
+      std::unique_ptr<reactivesocket::DuplexConnection>,
+      folly::EventBase&)>
+      onAccept_;
+
+  /// The socket listening for new connections.
+  folly::AsyncServerSocket::UniquePtr serverSocket_;
+
+  /// Options this acceptor has been configured with.
+  Options options_;
 };
 }

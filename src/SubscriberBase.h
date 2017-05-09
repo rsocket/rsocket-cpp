@@ -100,7 +100,6 @@ class SubscriberBaseT : public Subscriber<T>,
       std::shared_ptr<Subscription> subscription) noexcept override final {
     auto thisPtr = this->shared_from_this();
     runInExecutor([thisPtr, subscription]() {
-      VLOG(1) << static_cast<ExecutorBase*>(thisPtr.get()) << " onSubscribe";
       CHECK(!thisPtr->originalSubscription_);
       thisPtr->originalSubscription_ = std::move(subscription);
       // if the subscription got cancelled in the meantime, we will not try to
@@ -113,12 +112,9 @@ class SubscriberBaseT : public Subscriber<T>,
   }
 
   void onNext(T payload) noexcept override final {
-    bugTrap();
-
     auto movedPayload = folly::makeMoveWrapper(std::move(payload));
     auto thisPtr = this->shared_from_this();
     runInExecutor([thisPtr, movedPayload]() mutable {
-      VLOG(1) << static_cast<ExecutorBase*>(thisPtr.get()) << " onNext";
       if (!thisPtr->cancelled_) {
         thisPtr->onNextImpl(movedPayload.move());
       }
@@ -126,11 +122,8 @@ class SubscriberBaseT : public Subscriber<T>,
   }
 
   void onComplete() noexcept override final {
-    bugTrap();
-
     auto thisPtr = this->shared_from_this();
     runInExecutor([thisPtr]() {
-      VLOG(1) << static_cast<ExecutorBase*>(thisPtr.get()) << " onComplete";
       if (!thisPtr->cancelled_.exchange(true)) {
         thisPtr->onCompleteImpl();
 
@@ -142,12 +135,9 @@ class SubscriberBaseT : public Subscriber<T>,
   }
 
   void onError(folly::exception_wrapper ex) noexcept override final {
-    bugTrap();
-
     auto movedEx = folly::makeMoveWrapper(std::move(ex));
     auto thisPtr = this->shared_from_this();
     runInExecutor([thisPtr, movedEx]() mutable {
-      VLOG(1) << static_cast<ExecutorBase*>(thisPtr.get()) << " onError";
       if (!thisPtr->cancelled_.exchange(true)) {
         thisPtr->onErrorImpl(movedEx.move());
 
@@ -164,13 +154,6 @@ class SubscriberBaseT : public Subscriber<T>,
   }
 
  private:
-  void bugTrap() {
-    // TODO(16080326): this is a temporary trap set to catch use-after-free bug
-    // will be removed
-    trap_ = ~trap_;
-    VLOG(6) << trap_;
-  }
-
   // Once the subscription is cancelled we will no longer deliver any
   // other signals.
   // Scheduling the calls is not atomic operation so it may very well happen
@@ -180,9 +163,6 @@ class SubscriberBaseT : public Subscriber<T>,
   std::atomic<bool> cancelled_{false};
 
   std::shared_ptr<Subscription> originalSubscription_;
-
-  // TODO: remove once we catch the use-after-free bug
-  uint64_t trap_{1};
 };
 
 extern template class SubscriberBaseT<Payload>;

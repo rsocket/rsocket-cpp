@@ -5,6 +5,10 @@
 #include <deque>
 #include <memory>
 #include <mutex>
+
+#include <folly/Optional.h>
+#include <folly/ExceptionWrapper.h>
+
 #include "src/AllowanceSemaphore.h"
 #include "src/Common.h"
 #include "src/FrameProcessor.h"
@@ -77,5 +81,7 @@ class FrameTransport :
   std::shared_ptr<Subscription> connectionInputSub_;
 
   std::deque<std::unique_ptr<folly::IOBuf>> pendingWrites_;
+  std::deque<std::unique_ptr<folly::IOBuf>> pendingReads_;
+  folly::Optional<folly::exception_wrapper> pendingTerminal_;
 };
 } // reactivesocket

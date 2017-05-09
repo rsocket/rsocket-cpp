@@ -1,20 +1,22 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
+#include <folly/Baton.h>
+#include <folly/Memory.h>
+#include <folly/io/IOBuf.h>
+#include <folly/io/async/ScopedEventBaseThread.h>
+#include <folly/portability/GFlags.h>
+#include <gmock/gmock.h>
 #include <array>
 #include <chrono>
 #include <thread>
-
-#include <folly/Memory.h>
-#include <folly/io/IOBuf.h>
-#include <gmock/gmock.h>
-
-#include "MockStats.h"
 #include "src/FrameTransport.h"
 #include "src/NullRequestHandler.h"
-#include "src/StandardReactiveSocket.h"
+#include "src/ReactiveSocket.h"
+#include "src/folly/FollyKeepaliveTimer.h"
 #include "test/InlineConnection.h"
 #include "test/MockKeepaliveTimer.h"
 #include "test/MockRequestHandler.h"
+#include "test/MockStats.h"
 #include "test/ReactiveStreamsMocksCompat.h"
 
 using namespace ::testing;
@@ -35,6 +37,8 @@ MATCHER_P(
   return folly::IOBufEqual()(*payload, arg);
 }
 
+DECLARE_string(rs_use_protocol_version);
+
 TEST(ReactiveSocketTest, RequestChannel) {
   // InlineConnection forwards appropriate calls in-line, hence the order of
   // mock calls will be deterministic.
@@ -51,21 +55,27 @@ TEST(ReactiveSocketTest, RequestChannel) {
   std::shared_ptr<Subscription> clientInputSub, serverInputSub;
   std::shared_ptr<Subscriber<Payload>> clientOutput, serverOutput;
 
-  auto clientSock = StandardReactiveSocket::fromClientConnection(
+  auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+
+  auto clientSock = ReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
-      std::make_unique<StrictMock<MockRequestHandler>>(),
+      std::move(requestHandler),
       ConnectionSetupPayload("", "", Payload()));
 
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
-  auto serverSock = StandardReactiveSocket::fromServerConnection(
+  auto serverSock = ReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
@@ -170,21 +180,27 @@ TEST(ReactiveSocketTest, RequestStreamComplete) {
   std::shared_ptr<Subscription> clientInputSub;
   std::shared_ptr<Subscriber<Payload>> serverOutput;
 
-  auto clientSock = StandardReactiveSocket::fromClientConnection(
+  auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+
+  auto clientSock = ReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
-      std::make_unique<StrictMock<MockRequestHandler>>(),
+      std::move(requestHandler),
       ConnectionSetupPayload("", "", Payload()));
 
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
-  auto serverSock = StandardReactiveSocket::fromServerConnection(
+  auto serverSock = ReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
@@ -259,21 +275,27 @@ TEST(ReactiveSocketTest, RequestStreamCancel) {
   std::shared_ptr<Subscription> clientInputSub;
   std::shared_ptr<Subscriber<Payload>> serverOutput;
 
-  auto clientSock = StandardReactiveSocket::fromClientConnection(
+  auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+
+  auto clientSock = ReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
-      std::make_unique<StrictMock<MockRequestHandler>>(),
+      std::move(requestHandler),
       ConnectionSetupPayload("", "", Payload()));
 
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
-  auto serverSock = StandardReactiveSocket::fromServerConnection(
+  auto serverSock = ReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
@@ -345,21 +367,27 @@ TEST(ReactiveSocketTest, RequestStream) {
   std::shared_ptr<Subscription> clientInputSub;
   std::shared_ptr<Subscriber<Payload>> serverOutput;
 
-  auto clientSock = StandardReactiveSocket::fromClientConnection(
+  auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+
+auto clientSock = ReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
-      std::make_unique<StrictMock<MockRequestHandler>>(),
+      std::move(requestHandler),
       ConnectionSetupPayload("", "", Payload()));
 
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
-  auto serverSock = StandardReactiveSocket::fromServerConnection(
+  auto serverSock = ReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
@@ -434,12 +462,18 @@ TEST(ReactiveSocketTest, RequestStreamSendsOneRequest) {
       }));
 
   serverConn->setInput(testOutputSubscriber);
-  serverConn->getOutput()->onSubscribe(testInputSubscription);
+  auto sub = serverConn->getOutput();
+  sub->onSubscribe(testInputSubscription);
 
-  auto socket = StandardReactiveSocket::fromClientConnection(
+  auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+  EXPECT_CALL(*requestHandler, socketOnDisconnected(_)).Times(1);
+
+  auto socket = ReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
-      std::make_unique<DefaultRequestHandler>(),
+      std::move(requestHandler),
       ConnectionSetupPayload());
 
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
@@ -472,7 +506,7 @@ TEST(ReactiveSocketTest, RequestStreamSendsOneRequest) {
 
   socket->disconnect();
   socket->close();
-  serverConn->getOutput()->onComplete();
+  sub->onComplete();
 }
 
 TEST(ReactiveSocketTest, RequestStreamSurplusResponse) {
@@ -489,21 +523,27 @@ TEST(ReactiveSocketTest, RequestStreamSurplusResponse) {
   std::shared_ptr<Subscription> clientInputSub;
   std::shared_ptr<Subscriber<Payload>> serverOutput;
 
-  auto clientSock = StandardReactiveSocket::fromClientConnection(
+  auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+
+  auto clientSock = ReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
-      std::make_unique<StrictMock<MockRequestHandler>>(),
+      std::move(requestHandler),
       ConnectionSetupPayload("", "", Payload()));
 
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
-  auto serverSock = StandardReactiveSocket::fromServerConnection(
+  auto serverSock = ReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
@@ -562,20 +602,27 @@ TEST(ReactiveSocketTest, RequestResponse) {
   std::shared_ptr<Subscription> clientInputSub;
   std::shared_ptr<Subscriber<Payload>> serverOutput;
 
-  auto clientSock = StandardReactiveSocket::fromClientConnection(
+
+  auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+
+  auto clientSock = ReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
-      std::make_unique<StrictMock<MockRequestHandler>>());
+      std::move(requestHandler));
 
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
-  auto serverSock = StandardReactiveSocket::fromServerConnection(
+  auto serverSock = ReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
@@ -641,12 +688,18 @@ TEST(ReactiveSocketTest, RequestResponseSendsOneRequest) {
       }));
 
   serverConn->setInput(testOutputSubscriber);
-  serverConn->getOutput()->onSubscribe(testInputSubscription);
+  auto sub = serverConn->getOutput();
+  sub->onSubscribe(testInputSubscription);
 
-  auto socket = StandardReactiveSocket::fromClientConnection(
+  auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+  EXPECT_CALL(*requestHandler, socketOnDisconnected(_)).Times(1);
+
+  auto socket = ReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
-      std::make_unique<DefaultRequestHandler>(),
+      std::move(requestHandler),
       ConnectionSetupPayload());
 
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
@@ -679,7 +732,7 @@ TEST(ReactiveSocketTest, RequestResponseSendsOneRequest) {
 
   socket->disconnect();
   socket->close();
-  serverConn->getOutput()->onComplete();
+  sub->onComplete();
 }
 
 TEST(ReactiveSocketTest, RequestFireAndForget) {
@@ -693,21 +746,27 @@ TEST(ReactiveSocketTest, RequestFireAndForget) {
 
   StrictMock<MockSubscriber<Payload>> clientInput;
 
-  auto clientSock = StandardReactiveSocket::fromClientConnection(
+  auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+
+  auto clientSock = ReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
-      std::make_unique<StrictMock<MockRequestHandler>>(),
+      std::move(requestHandler),
       ConnectionSetupPayload("", "", Payload()));
 
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
-  auto serverSock = StandardReactiveSocket::fromServerConnection(
+  auto serverSock = ReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
@@ -732,21 +791,27 @@ TEST(ReactiveSocketTest, RequestMetadataPush) {
 
   StrictMock<MockSubscriber<Payload>> clientInput;
 
-  auto clientSock = StandardReactiveSocket::fromClientConnection(
+  auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+
+  auto clientSock = ReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
-      std::make_unique<StrictMock<MockRequestHandler>>(),
+      std::move(requestHandler),
       ConnectionSetupPayload("", "", Payload()));
 
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
-  auto serverSock = StandardReactiveSocket::fromServerConnection(
+  auto serverSock = ReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
@@ -769,22 +834,28 @@ TEST(ReactiveSocketTest, SetupData) {
 
   StrictMock<MockSubscriber<Payload>> clientInput;
 
-  auto clientSock = StandardReactiveSocket::fromClientConnection(
+  auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+
+  auto clientSock = ReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
-      std::make_unique<StrictMock<MockRequestHandler>>(),
+      std::move(requestHandler),
       ConnectionSetupPayload(
           "text/plain", "text/plain", Payload("meta", "data")));
 
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
-  auto serverSock = StandardReactiveSocket::fromServerConnection(
+  auto serverSock = ReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 }
 
@@ -808,6 +879,8 @@ TEST(ReactiveSocketTest, SetupWithKeepaliveAndStats) {
   EXPECT_CALL(*clientKeepalive, start(_)).InSequence(s);
 
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
@@ -816,18 +889,68 @@ TEST(ReactiveSocketTest, SetupWithKeepaliveAndStats) {
 
   EXPECT_CALL(*clientKeepalive, stop()).InSequence(s);
 
-  auto clientSock = StandardReactiveSocket::fromClientConnection(
+  auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+
+  auto clientSock = ReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
-      std::make_unique<StrictMock<MockRequestHandler>>(),
+      std::move(requestHandler),
       ConnectionSetupPayload(
           "text/plain", "text/plain", Payload("meta", "data")),
       clientStats,
       std::move(clientKeepalive));
 
-  auto serverSock = StandardReactiveSocket::fromServerConnection(
+  auto serverSock = ReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
+}
+
+TEST(ReactiveSocketTest, GoodKeepalive) {
+  // When a socket is closed with an error (e.g., no response to keepalive)
+  // ensure that clients can reset their pointers and rsocket can finish
+  // cleanups and exit
+  folly::Baton<> baton;
+  auto th = std::make_unique<folly::ScopedEventBaseThread>();
+
+  auto serverConn = std::make_unique<InlineConnection>();
+  std::unique_ptr<ReactiveSocket> clientSock;
+  auto keepalive_time = 10;
+
+  th->getEventBase()->runInEventBaseThreadAndWait([&]() {
+    auto clientConn = std::make_unique<InlineConnection>();
+    clientConn->connectTo(*serverConn);
+    auto clientStats = std::make_shared<NiceMock<MockStats>>();
+
+    auto clientKeepalive = std::make_unique<FollyKeepaliveTimer>(
+        *th->getEventBase(), std::chrono::milliseconds(keepalive_time));
+
+    auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+    EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+
+    clientSock = ReactiveSocket::fromClientConnection(
+        *th->getEventBase(),
+        std::move(clientConn),
+        // No interactions on this mock, the client will not accept any
+        // requests.
+        std::move(requestHandler),
+        ConnectionSetupPayload(
+            "text/plain", "text/plain", Payload("meta", "data")),
+        clientStats,
+        std::move(clientKeepalive));
+
+    clientSock->onClosed([&](const folly::exception_wrapper& ex) {
+      // socket is closed, time to cleanup
+      clientSock.reset();
+      baton.post();
+    });
+
+  });
+  // wait for keepalive failure to happen
+  baton.wait();
+  ASSERT_EQ(nullptr, clientSock);
 }
 
 TEST(ReactiveSocketTest, Destructor) {
@@ -860,22 +983,28 @@ TEST(ReactiveSocketTest, Destructor) {
   EXPECT_CALL(*clientStats, socketClosed(_)).Times(1);
   EXPECT_CALL(*serverStats, socketClosed(_)).Times(1);
 
-  auto clientSock = StandardReactiveSocket::fromClientConnection(
+  auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+
+  auto clientSock = ReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
-      std::make_unique<StrictMock<MockRequestHandler>>(),
+      std::move(requestHandler),
       ConnectionSetupPayload("", "", Payload()),
       clientStats);
 
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
-  auto serverSock = StandardReactiveSocket::fromServerConnection(
+  auto serverSock = ReactiveSocket::fromServerConnection(
       defaultExecutor(),
       std::move(serverConn),
       std::move(serverHandler),
@@ -942,21 +1071,27 @@ TEST(ReactiveSocketTest, ReactiveSocketOverInlineConnection) {
   auto serverConn = std::make_unique<InlineConnection>();
   clientConn->connectTo(*serverConn);
 
-  auto clientSock = StandardReactiveSocket::fromClientConnection(
+  auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+
+  auto clientSock = ReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
-      std::make_unique<StrictMock<MockRequestHandler>>(),
+      std::move(requestHandler),
       ConnectionSetupPayload("", "", Payload()));
 
   // we don't expect any call other than setup payload
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
       .WillRepeatedly(Return(nullptr));
 
-  auto serverSock = StandardReactiveSocket::fromServerConnection(
+  auto serverSock = ReactiveSocket::fromServerConnection(
       defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 }
 
@@ -965,15 +1100,21 @@ TEST(ReactiveSocketTest, CloseWithError) {
   auto serverConn = std::make_unique<InlineConnection>();
   clientConn->connectTo(*serverConn);
 
-  auto clientSock = StandardReactiveSocket::fromClientConnection(
+  auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+
+  auto clientSock = ReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
-      std::make_unique<StrictMock<MockRequestHandler>>(),
+      std::move(requestHandler),
       ConnectionSetupPayload("", "", Payload()));
 
   // We don't expect any call other than setup payload.
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+  EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
   const folly::StringPiece errString{"Hahaha"};
@@ -984,7 +1125,7 @@ TEST(ReactiveSocketTest, CloseWithError) {
         return nullptr;
       }));
 
-  auto serverSock = StandardReactiveSocket::disconnectedServer(
+  auto serverSock = ReactiveSocket::disconnectedServer(
       defaultExecutor(), std::move(serverHandler));
 
   serverSock->onClosed([&](auto const& exn) {
@@ -993,7 +1134,8 @@ TEST(ReactiveSocketTest, CloseWithError) {
   });
 
   serverSock->serverConnect(
-      std::make_shared<FrameTransport>(std::move(serverConn)), false);
+      std::make_shared<FrameTransport>(std::move(serverConn)),
+      SocketParameters(false, FrameSerializer::getCurrentProtocolVersion()));
 }
 
 class ReactiveSocketIgnoreRequestTest : public testing::Test {
@@ -1003,15 +1145,19 @@ class ReactiveSocketIgnoreRequestTest : public testing::Test {
     auto serverConn = std::make_unique<InlineConnection>();
     clientConn->connectTo(*serverConn);
 
-    clientSock = StandardReactiveSocket::fromClientConnection(
+    auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+    EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+
+    clientSock = ReactiveSocket::fromClientConnection(
         defaultExecutor(),
         std::move(clientConn),
         // No interactions on this mock, the client will not accept any
         // requests.
-        std::make_unique<StrictMock<MockRequestHandler>>(),
+        std::move(requestHandler),
         ConnectionSetupPayload("", "", Payload()));
 
-    serverSock = StandardReactiveSocket::fromServerConnection(
+    serverSock = ReactiveSocket::fromServerConnection(
         defaultExecutor(),
         std::move(serverConn),
         std::make_unique<DefaultRequestHandler>());
@@ -1038,8 +1184,8 @@ class ReactiveSocketIgnoreRequestTest : public testing::Test {
         }));
   }
 
-  std::unique_ptr<StandardReactiveSocket> clientSock;
-  std::unique_ptr<StandardReactiveSocket> serverSock;
+  std::unique_ptr<ReactiveSocket> clientSock;
+  std::unique_ptr<ReactiveSocket> serverSock;
 
   std::shared_ptr<StrictMock<MockSubscriber<Payload>>> clientInput{
       std::make_shared<StrictMock<MockSubscriber<Payload>>>()};
@@ -1079,21 +1225,27 @@ class ReactiveSocketOnErrorOnShutdownTest : public testing::Test {
     auto serverConn = std::make_unique<InlineConnection>();
     clientConn->connectTo(*serverConn);
 
-    clientSock = StandardReactiveSocket::fromClientConnection(
+    auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+    EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
+    EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+
+    clientSock = ReactiveSocket::fromClientConnection(
         defaultExecutor(),
         std::move(clientConn),
         // No interactions on this mock, the client will not accept any
         // requests.
-        std::make_unique<StrictMock<MockRequestHandler>>(),
+        std::move(requestHandler),
         ConnectionSetupPayload("", "", Payload()));
 
     auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+    EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
+    EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
     auto& serverHandlerRef = *serverHandler;
 
     EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
         .WillRepeatedly(Return(nullptr));
 
-    serverSock = StandardReactiveSocket::fromServerConnection(
+    serverSock = ReactiveSocket::fromServerConnection(
         defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 
     EXPECT_CALL(*clientInput, onSubscribe_(_))
@@ -1161,8 +1313,8 @@ class ReactiveSocketOnErrorOnShutdownTest : public testing::Test {
         }));
   }
 
-  std::unique_ptr<StandardReactiveSocket> clientSock;
-  std::unique_ptr<StandardReactiveSocket> serverSock;
+  std::unique_ptr<ReactiveSocket> clientSock;
+  std::unique_ptr<ReactiveSocket> serverSock;
 
   const std::unique_ptr<folly::IOBuf> originalPayload{
       folly::IOBuf::copyBuffer("foo")};
@@ -1229,15 +1381,20 @@ class ReactiveSocketRegressionTest : public Test {
     EXPECT_CALL(requestHandler_, handleSetupPayload_(_, _))
         .WillRepeatedly(Return(nullptr));
 
-    socket_ = StandardReactiveSocket::fromServerConnection(
+    EXPECT_CALL(requestHandler_, socketOnConnected()).Times(1);
+    EXPECT_CALL(requestHandler_, socketOnClosed(_)).Times(1);
+
+    socket_ = ReactiveSocket::fromServerConnection(
         defaultExecutor(),
         std::move(connectionPtr),
-        std::move(requestHandlerPtr_));
+        std::move(requestHandlerPtr_),
+        Stats::noop(),
+        SocketParameters(false, FrameSerializer::getCurrentProtocolVersion()));
   }
 
   MockRequestHandler& requestHandler_;
   std::shared_ptr<Subscriber<IOBufPtr>> input_;
-  std::unique_ptr<StandardReactiveSocket> socket_;
+  std::unique_ptr<ReactiveSocket> socket_;
 };
 
 TEST_F(ReactiveSocketRegressionTest, NoCrashOnUnknownStream) {
@@ -1251,4 +1408,147 @@ TEST_F(ReactiveSocketRegressionTest, MetadataFrameWithoutMetadataFlag) {
   EXPECT_CALL(requestHandler_, handleMetadataPush_(_)).Times(0);
   input_->onNext(folly::IOBuf::copyBuffer(
       "\x00\x0d\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"s));
+}
+
+class ReactiveSocketEmptyPayloadTest : public testing::Test {
+ public:
+  ReactiveSocketEmptyPayloadTest() {
+    auto clientConn = std::make_unique<InlineConnection>();
+    auto serverConn = std::make_unique<InlineConnection>();
+    clientConn->connectTo(*serverConn);
+
+    auto connectionSetup = ConnectionSetupPayload("", "", Payload());
+    connectionSetup.protocolVersion = ProtocolVersion(1, 0);
+
+    auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+    EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
+  EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+
+    clientSock = ReactiveSocket::fromClientConnection(
+        defaultExecutor(),
+        std::move(clientConn),
+        // No interactions on this mock, the client will not accept any
+        // requests.
+        std::move(requestHandler),
+        std::move(connectionSetup));
+
+    auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+    EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
+    EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
+    auto& serverHandlerRef = *serverHandler;
+
+    EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+        .WillRepeatedly(Return(nullptr));
+
+    serverSock = ReactiveSocket::fromServerConnection(
+        defaultExecutor(), std::move(serverConn), std::move(serverHandler));
+
+    EXPECT_CALL(*clientInput, onSubscribe_(_))
+        .WillOnce(Invoke([&](std::shared_ptr<Subscription> sub) {
+          clientInputSub = sub;
+          sub->request(2);
+        }));
+
+    EXPECT_CALL(serverHandlerRef, handleRequestResponse_(_, _, _))
+        .Times(AtMost(1))
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                std::shared_ptr<Subscriber<Payload>> response) {
+              CHECK(!request) << "incoming request is expected to be empty";
+              serverOutput = response;
+              serverOutput->onSubscribe(serverOutputSub);
+            }));
+    EXPECT_CALL(serverHandlerRef, handleRequestStream_(_, _, _))
+        .Times(AtMost(1))
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                std::shared_ptr<Subscriber<Payload>> response) {
+              CHECK(!request) << "incoming request is expected to be empty";
+              serverOutput = response;
+              serverOutput->onSubscribe(serverOutputSub);
+            }));
+    EXPECT_CALL(serverHandlerRef, handleRequestChannel_(_, _, _))
+        .Times(AtMost(1))
+        .WillOnce(Invoke(
+            [&](Payload& request,
+                StreamId streamId,
+                std::shared_ptr<Subscriber<Payload>> response) {
+              CHECK(!request) << "incoming request is expected to be empty";
+
+              EXPECT_CALL(*serverInput, onSubscribe_(_))
+                  .WillOnce(Invoke([&](std::shared_ptr<Subscription> sub) {
+                    serverInputSub = sub;
+                    sub->request(2);
+                  }));
+
+              EXPECT_CALL(*serverInput, onComplete_()).Times(1);
+              EXPECT_CALL(*serverInput, onError_(_)).Times(0);
+
+              serverOutput = response;
+              serverOutput->onSubscribe(serverOutputSub);
+
+              return serverInput;
+            }));
+
+    EXPECT_CALL(*clientInput, onComplete_()).Times(1);
+    EXPECT_CALL(*clientInput, onError_(_)).Times(0);
+
+    EXPECT_CALL(*serverOutputSub, request_(_)).WillOnce(Invoke([&](size_t n) {
+      CHECK_GT(n, 0);
+      EXPECT_CALL(*clientInput, onNext_(_))
+          .Times(n)
+          .WillRepeatedly(Invoke([&](Payload& p) { CHECK(!p); }));
+      while (n--) {
+        serverOutput->onNext(Payload());
+      }
+      serverOutput->onComplete();
+      serverOutput = nullptr;
+    }));
+  }
+
+  std::unique_ptr<ReactiveSocket> clientSock;
+  std::unique_ptr<ReactiveSocket> serverSock;
+
+  std::shared_ptr<StrictMock<MockSubscriber<Payload>>> clientInput{
+      std::make_shared<StrictMock<MockSubscriber<Payload>>>()};
+  std::shared_ptr<Subscription> clientInputSub;
+
+  std::shared_ptr<Subscriber<Payload>> serverOutput;
+  std::shared_ptr<NiceMock<MockSubscription>> serverOutputSub{
+      std::make_shared<NiceMock<MockSubscription>>()};
+
+  std::shared_ptr<StrictMock<MockSubscriber<Payload>>> serverInput{
+      std::make_shared<StrictMock<MockSubscriber<Payload>>>()};
+  std::shared_ptr<Subscription> serverInputSub;
+};
+
+TEST_F(ReactiveSocketEmptyPayloadTest, RequestResponse) {
+  clientSock->requestResponse(Payload(), clientInput);
+}
+
+TEST_F(ReactiveSocketEmptyPayloadTest, RequestStream) {
+  clientSock->requestStream(Payload(), clientInput);
+}
+
+TEST_F(ReactiveSocketEmptyPayloadTest, RequestChannel) {
+  auto clientOutput = clientSock->requestChannel(clientInput);
+  auto clientOutputSub = std::make_shared<NiceMock<MockSubscription>>();
+
+  int send = 3;
+  EXPECT_CALL(*clientOutputSub, request_(_))
+      .WillRepeatedly(Invoke([&](size_t n) {
+        CHECK(n >= 1);
+        while (n > 0 && send > 0) {
+          clientOutput->onNext(Payload());
+          --n;
+          --send;
+        }
+
+        if (!send) {
+          clientOutput->onComplete();
+        }
+      }));
+  clientOutput->onSubscribe(clientOutputSub);
 }

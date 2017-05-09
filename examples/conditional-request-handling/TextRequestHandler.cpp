@@ -2,29 +2,26 @@
 
 #include "TextRequestHandler.h"
 #include <string>
-#include "ConditionalRequestSubscription.h"
+#include "yarpl/Flowable.h"
+#include "yarpl/Flowables.h"
 
-using namespace ::reactivesocket;
+using namespace reactivesocket;
+using namespace rsocket;
+using namespace yarpl::flowable;
 
 /// Handles a new inbound Stream requested by the other end.
-void TextRequestHandler::handleRequestStream(
-    Payload request,
-    StreamId streamId,
-    const std::shared_ptr<Subscriber<Payload>>& response) noexcept {
+yarpl::Reference<Flowable<reactivesocket::Payload>>
+TextRequestHandler::handleRequestStream(Payload request, StreamId streamId) {
   LOG(INFO) << "TextRequestHandler.handleRequestStream " << request;
 
   // string from payload data
-  auto pds = request.moveDataToString();
-  auto requestString = std::string(pds, request.data->length());
+  auto requestString = request.moveDataToString();
 
-  response->onSubscribe(std::make_shared<ConditionalRequestSubscription>(
-      response, requestString, 10));
-}
-
-std::shared_ptr<StreamState> TextRequestHandler::handleSetupPayload(
-    ReactiveSocket& socket,
-    ConnectionSetupPayload request) noexcept {
-  LOG(INFO) << "TextRequestHandler.handleSetupPayload " << request;
-  // TODO what should this do?
-  return nullptr;
+  return Flowables::range(1, 100)->map([name = std::move(requestString)](
+      int64_t v) {
+    std::stringstream ss;
+    ss << "Hello " << name << " " << v << "!";
+    std::string s = ss.str();
+    return Payload(s, "metadata");
+  });
 }

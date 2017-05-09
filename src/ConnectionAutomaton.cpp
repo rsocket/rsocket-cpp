@@ -8,9 +8,11 @@
 #include <folly/String.h>
 #include <folly/io/async/EventBase.h>
 #include "src/ClientResumeStatusCallback.h"
+#include "src/ConnectionSetupPayload.h"
 #include "src/DuplexConnection.h"
 #include "src/FrameTransport.h"
 #include "src/RequestHandler.h"
+#include "src/ResumeCache.h"
 #include "src/Stats.h"
 #include "src/StreamState.h"
 #include "src/automata/ChannelResponder.h"
@@ -27,9 +29,10 @@ ConnectionAutomaton::ConnectionAutomaton(
     ReactiveSocketMode mode)
     : ExecutorBase(executor),
       reactiveSocket_(reactiveSocket),
-      stats_(std::move(stats)),
+      stats_(stats),
       mode_(mode),
-      streamState_(std::make_shared<StreamState>(*this)),
+      resumeCache_(std::make_shared<ResumeCache>(stats)),
+      streamState_(std::make_shared<StreamState>(*stats)),
       requestHandler_(std::move(requestHandler)),
       keepaliveTimer_(std::move(keepaliveTimer)),
       streamsFactory_(*this, mode) {
@@ -59,19 +62,39 @@ void ConnectionAutomaton::setResumable(bool resumable) {
   remoteResumeable_ = isResumable_ = resumable;
 }
 
-void ConnectionAutomaton::connect(
+bool ConnectionAutomaton::connect(
     std::shared_ptr<FrameTransport> frameTransport,
-    bool sendingPendingFrames) {
+    bool sendingPendingFrames,
+    ProtocolVersion protocolVersion) {
   debugCheckCorrectExecutor();
   CHECK(isDisconnectedOrClosed());
   CHECK(frameTransport);
   CHECK(!frameTransport->isClosed());
+  if (protocolVersion != ProtocolVersion::Unknown) {
+    if (frameSerializer_) {
+      if (frameSerializer_->protocolVersion() != protocolVersion) {
+        DCHECK(false);
+        frameTransport->close(std::runtime_error("protocol version mismatch"));
+        return false;
+      }
+    } else {
+      frameSerializer_ =
+          FrameSerializer::createFrameSerializer(protocolVersion);
+      if (!frameSerializer_) {
+        DCHECK(false);
+        frameTransport->close(std::runtime_error("invaid protocol version"));
+        return false;
+      }
+    }
+  }
 
   frameTransport_ = std::move(frameTransport);
 
   for (auto& callback : onConnectListeners_) {
     callback();
   }
+
+  requestHandler_->socketOnConnected();
 
   // We need to create a hard reference to frameTransport_ to make sure the
   // instance survives until the setFrameProcessor returns.  There can be
@@ -94,10 +117,13 @@ void ConnectionAutomaton::connect(
       outputFrameOrEnqueue(std::move(frame));
     }
 
+    // TODO: turn on only after setup frame was received
     if (keepaliveTimer_) {
       keepaliveTimer_->start(shared_from_this());
     }
   }
+
+  return true;
 }
 
 std::shared_ptr<FrameTransport> ConnectionAutomaton::detachFrameTransport() {
@@ -120,6 +146,8 @@ void ConnectionAutomaton::disconnect(folly::exception_wrapper ex) {
   for (auto& callback : onDisconnectListeners_) {
     callback(ex);
   }
+
+  requestHandler_->socketOnDisconnected(ex);
 
   closeFrameTransport(std::move(ex), StreamCompletionSignal::CONNECTION_END);
   pauseStreams();
@@ -152,6 +180,8 @@ void ConnectionAutomaton::close(
   for (auto& callback : onCloseListeners) {
     callback(ex);
   }
+
+  requestHandler_->socketOnClosed(ex);
 
   closeStreams(signal);
   closeFrameTransport(std::move(ex), signal);
@@ -231,7 +261,10 @@ void ConnectionAutomaton::closeWithError(Frame_ERROR&& error) {
 
   auto exception = std::runtime_error(
       error.payload_.data->cloneAsValue().moveToFbString().toStdString());
-  outputFrameOrEnqueue(frameSerializer().serializeOut(std::move(error)));
+
+  if (frameSerializer_) {
+    outputFrameOrEnqueue(frameSerializer_->serializeOut(std::move(error)));
+  }
   close(std::move(exception), signal);
 }
 
@@ -248,7 +281,7 @@ void ConnectionAutomaton::reconnect(
   // TODO: output frame buffer should not be written to the new connection until
   // we receive resume ok
   resumeCallback_ = std::move(resumeCallback);
-  connect(std::move(newFrameTransport), false);
+  connect(std::move(newFrameTransport), false, ProtocolVersion::Unknown);
 }
 
 void ConnectionAutomaton::addStream(
@@ -332,12 +365,20 @@ void ConnectionAutomaton::processFrameImpl(
     return;
   }
 
-  stats_->frameRead(frameSerializer().peekFrameType(*frame));
+  if (!ensureOrAutodetectFrameSerializer(*frame)) {
+    DLOG(FATAL) << "frame serializer is not set";
+    // Failed to autodetect protocol version
+    closeWithError(Frame_ERROR::invalidFrame());
+    return;
+  }
+
+  auto frameType = frameSerializer().peekFrameType(*frame);
+  stats_->frameRead(frameType);
 
   // TODO(tmont): If a frame is invalid, it will still be tracked. However, we
   // actually want that. We want to keep
   // each side in sync, even if a frame is invalid.
-  streamState_->resumeTracker_.trackReceivedFrame(*frame);
+  resumeCache_->trackReceivedFrame(*frame, frameType);
 
   auto streamIdPtr = frameSerializer().peekStreamId(*frame);
   if (!streamIdPtr) {
@@ -400,7 +441,7 @@ void ConnectionAutomaton::onConnectionFrame(
         return;
       }
 
-      streamState_->resumeCache_.resetUpToPosition(frame.position_);
+      resumeCache_->resetUpToPosition(frame.position_);
       if (mode_ == ReactiveSocketMode::SERVER) {
         if (!!(frame.header_.flags_ & FrameFlags::KEEPALIVE_RESPOND)) {
           sendKeepalive(FrameFlags::EMPTY, std::move(frame.data_));
@@ -434,11 +475,15 @@ void ConnectionAutomaton::onConnectionFrame(
         LOG(ERROR) << "ignoring setup frame with lease";
       }
 
-      setFrameSerializer(FrameSerializer::createFrameSerializer(
-          ProtocolVersion{frame.versionMajor_, frame.versionMinor_}));
-
       ConnectionSetupPayload setupPayload;
       frame.moveToSetupPayload(setupPayload);
+
+      // this should be already set to the correct version
+      if (frameSerializer().protocolVersion() != setupPayload.protocolVersion) {
+        closeWithError(Frame_ERROR::badSetupFrame("invalid protocol version"));
+        return;
+      }
+
       requestHandler_->handleSetupPayload(
           *reactiveSocket_, std::move(setupPayload));
       return;
@@ -461,7 +506,8 @@ void ConnectionAutomaton::onConnectionFrame(
             ResumeParameters(
                 frame.token_,
                 frame.lastReceivedServerPosition_,
-                frame.clientPosition_));
+                frame.clientPosition_,
+                ProtocolVersion(frame.versionMajor_, frame.versionMinor_)));
         if (!resumed) {
           closeWithError(Frame_ERROR::connectionError("can not resume"));
         }
@@ -477,7 +523,7 @@ void ConnectionAutomaton::onConnectionFrame(
         return;
       }
       if (resumeCallback_) {
-        if (streamState_->resumeCache_.isPositionAvailable(frame.position_)) {
+        if (resumeCache_->isPositionAvailable(frame.position_)) {
           resumeCallback_->onResumeOk();
           resumeCallback_.reset();
           resumeFromPosition(frame.position_);
@@ -600,6 +646,8 @@ void ConnectionAutomaton::handleUnknownStream(
     case FrameType::RESUME_OK:
     case FrameType::EXT:
     default:
+      DLOG(ERROR) << "unknown stream frame (streamId=" << streamId
+                  << " frameType=" << type << ")";
       closeWithError(Frame_ERROR::unexpectedFrame());
   }
 }
@@ -614,7 +662,7 @@ void ConnectionAutomaton::sendKeepalive(
     std::unique_ptr<folly::IOBuf> data) {
   debugCheckCorrectExecutor();
   Frame_KEEPALIVE pingFrame(
-      flags, streamState_->resumeTracker_.impliedPosition(), std::move(data));
+      flags, resumeCache_->impliedPosition(), std::move(data));
   outputFrameOrEnqueue(
       frameSerializer().serializeOut(std::move(pingFrame), remoteResumeable_));
 }
@@ -623,13 +671,14 @@ Frame_RESUME ConnectionAutomaton::createResumeFrame(
     const ResumeIdentificationToken& token) const {
   return Frame_RESUME(
       token,
-      streamState_->resumeTracker_.impliedPosition(),
-      streamState_->resumeCache_.lastResetPosition());
+      resumeCache_->impliedPosition(),
+      resumeCache_->lastResetPosition(),
+      frameSerializer().protocolVersion());
 }
 
 bool ConnectionAutomaton::isPositionAvailable(ResumePosition position) {
   debugCheckCorrectExecutor();
-  return streamState_->resumeCache_.isPositionAvailable(position);
+  return resumeCache_->isPositionAvailable(position);
 }
 
 bool ConnectionAutomaton::resumeFromPositionOrClose(
@@ -641,12 +690,12 @@ bool ConnectionAutomaton::resumeFromPositionOrClose(
   DCHECK(mode_ == ReactiveSocketMode::SERVER);
 
   bool clientPositionExist = (clientPosition == kUnspecifiedResumePosition) ||
-      streamState_->resumeTracker_.canResumeFrom(clientPosition);
+      resumeCache_->canResumeFrom(clientPosition);
 
   if (clientPositionExist &&
-      streamState_->resumeCache_.isPositionAvailable(serverPosition)) {
+      resumeCache_->isPositionAvailable(serverPosition)) {
     frameTransport_->outputFrameOrEnqueue(frameSerializer().serializeOut(
-        Frame_RESUME_OK(streamState_->resumeTracker_.impliedPosition())));
+        Frame_RESUME_OK(resumeCache_->impliedPosition())));
     resumeFromPosition(serverPosition);
     return true;
   } else {
@@ -656,7 +705,7 @@ bool ConnectionAutomaton::resumeFromPositionOrClose(
         " firstClientPosition=",
         clientPosition,
         " is not available. Last reset position is ",
-        streamState_->resumeCache_.lastResetPosition())));
+        resumeCache_->lastResetPosition())));
     return false;
   }
 }
@@ -664,10 +713,10 @@ bool ConnectionAutomaton::resumeFromPositionOrClose(
 void ConnectionAutomaton::resumeFromPosition(ResumePosition position) {
   DCHECK(!resumeCallback_);
   DCHECK(!isDisconnectedOrClosed());
-  DCHECK(streamState_->resumeCache_.isPositionAvailable(position));
+  DCHECK(resumeCache_->isPositionAvailable(position));
 
   resumeStreams();
-  streamState_->resumeCache_.sendFramesFromPosition(position, *frameTransport_);
+  resumeCache_->sendFramesFromPosition(position, *frameTransport_);
 
   for (auto& frame : streamState_->moveOutputPendingFrames()) {
     outputFrameOrEnqueue(std::move(frame));
@@ -696,7 +745,8 @@ void ConnectionAutomaton::outputFrame(std::unique_ptr<folly::IOBuf> frame) {
   stats_->frameWritten(frameType);
 
   if (isResumable_) {
-    streamState_->resumeCache_.trackSentFrame(*frame);
+    auto streamIdPtr = frameSerializer().peekStreamId(*frame);
+    resumeCache_->trackSentFrame(*frame, frameType, streamIdPtr);
   }
   frameTransport_->outputFrameOrEnqueue(std::move(frame));
 }
@@ -744,6 +794,9 @@ void ConnectionAutomaton::addClosedListener(ErrorCallback listener) {
 
 void ConnectionAutomaton::setFrameSerializer(
     std::unique_ptr<FrameSerializer> frameSerializer) {
+  CHECK(frameSerializer);
+  // serializer is not interchangeable, it would screw up resumability
+  // CHECK(!frameSerializer_);
   frameSerializer_ = std::move(frameSerializer);
 }
 
@@ -757,12 +810,12 @@ void ConnectionAutomaton::writeNewStream(
     StreamType streamType,
     uint32_t initialRequestN,
     Payload payload,
-    bool TEMP_completed) {
+    bool completed) {
   switch (streamType) {
     case StreamType::CHANNEL:
       outputFrameOrEnqueue(frameSerializer().serializeOut(Frame_REQUEST_CHANNEL(
           streamId,
-          TEMP_completed ? FrameFlags::COMPLETE : FrameFlags::EMPTY,
+          completed ? FrameFlags::COMPLETE : FrameFlags::EMPTY,
           initialRequestN,
           std::move(payload))));
       break;
@@ -799,7 +852,7 @@ void ConnectionAutomaton::writePayload(
     bool complete) {
   Frame_PAYLOAD frame(
       streamId,
-      complete ? FrameFlags::COMPLETE : FrameFlags::EMPTY,
+      FrameFlags::NEXT | (complete ? FrameFlags::COMPLETE : FrameFlags::EMPTY),
       std::move(payload));
   outputFrameOrEnqueue(frameSerializer().serializeOut(std::move(frame)));
 }
@@ -847,4 +900,27 @@ void ConnectionAutomaton::onStreamClosed(
   endStream(streamId, signal);
 }
 
+bool ConnectionAutomaton::ensureOrAutodetectFrameSerializer(
+    const folly::IOBuf& firstFrame) {
+  if (frameSerializer_) {
+    return true;
+  }
+
+  if (mode_ != ReactiveSocketMode::SERVER) {
+    // this should never happen as clients are initized with FrameSerializer
+    // instance
+    DCHECK(false);
+    return false;
+  }
+
+  auto serializer = FrameSerializer::createAutodetectedSerializer(firstFrame);
+  if (!serializer) {
+    LOG(ERROR) << "unable to detect protocol version";
+    return false;
+  }
+
+  VLOG(2) << "detected protocol version" << serializer->protocolVersion();
+  frameSerializer_ = std::move(serializer);
+  return true;
+}
 } // reactivesocket

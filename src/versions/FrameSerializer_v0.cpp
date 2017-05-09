@@ -6,10 +6,11 @@
 namespace reactivesocket {
 
 constexpr const ProtocolVersion FrameSerializerV0::Version;
-constexpr static const auto kFrameHeaderSize = 8;
-constexpr static const auto kMaxMetadataLength = 0xFFFFFF; // 24bit max value
+constexpr const size_t FrameSerializerV0::kFrameHeaderSize; // bytes
 
 namespace {
+constexpr static const auto kMaxMetadataLength = 0xFFFFFF; // 24bit max value
+
 enum class FrameType_V0 : uint16_t {
   RESERVED = 0x0000,
   SETUP = 0x0001,
@@ -39,7 +40,6 @@ enum class FrameFlags_V0 : uint16_t {
   KEEPALIVE_RESPOND = 0x2000,
   LEASE = 0x2000,
   COMPLETE = 0x1000,
-  STRICT = 0x1000,
   RESUME_ENABLE = 0x0800,
 };
 
@@ -260,7 +260,8 @@ static uint32_t payloadFramingSize(const Payload& payload) {
 static std::unique_ptr<folly::IOBuf> serializeOutInternal(
     Frame_REQUEST_Base&& frame) {
   auto queue = createBufferQueue(
-      kFrameHeaderSize + sizeof(uint32_t) + payloadFramingSize(frame.payload_));
+      FrameSerializerV0::kFrameHeaderSize + sizeof(uint32_t) +
+      payloadFramingSize(frame.payload_));
   uint16_t extraFlags = 0;
   if (!!(frame.header_.flags_ & FrameFlags::FOLLOWS)) {
     extraFlags |= FrameFlags_V0::FOLLOWS;
@@ -451,13 +452,13 @@ std::unique_ptr<folly::IOBuf> FrameSerializerV0::serializeOut(
   if (!!(frame.header_.flags_ & FrameFlags::LEASE)) {
     extraFlags |= FrameFlags_V0::LEASE;
   }
-  if (!!(frame.header_.flags_ & FrameFlags::STRICT)) {
-    extraFlags |= FrameFlags_V0::STRICT;
-  }
 
   folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
 
   serializeHeaderInto(appender, frame.header_, extraFlags);
+  CHECK(
+      frame.versionMajor_ != ProtocolVersion::Unknown.major ||
+      frame.versionMinor_ != ProtocolVersion::Unknown.minor);
   appender.writeBE(static_cast<uint16_t>(frame.versionMajor_));
   appender.writeBE(static_cast<uint16_t>(frame.versionMinor_));
   appender.writeBE(static_cast<uint32_t>(frame.keepaliveTime_));
@@ -687,9 +688,6 @@ bool FrameSerializerV0::deserializeFrom(
     }
     if (!!(flags & FrameFlags_V0::LEASE)) {
       frame.header_.flags_ |= FrameFlags::LEASE;
-    }
-    if (!!(flags & FrameFlags_V0::STRICT)) {
-      frame.header_.flags_ |= FrameFlags::STRICT;
     }
 
     frame.versionMajor_ = cur.readBE<uint16_t>();

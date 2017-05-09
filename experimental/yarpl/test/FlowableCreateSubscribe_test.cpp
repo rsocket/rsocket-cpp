@@ -6,6 +6,7 @@
 #include "reactivestreams/ReactiveStreams.h"
 #include "yarpl/Flowable.h"
 #include "yarpl/Flowable_TestSubscriber.h"
+#include "yarpl/Tuple.h"
 
 using namespace yarpl::flowable;
 using namespace reactivestreams_yarpl;
@@ -66,12 +67,6 @@ TEST(FlowableCreateSubscribe, SubscribeRequestAndCancel) {
         subscription->cancel();
       }
     }
-    void onNext(int&& value) override {
-      std::cout << "received&& " << value << std::endl;
-      if (value == 6) {
-        subscription->cancel();
-      }
-    }
     void onError(const std::exception_ptr e) override {}
     void onComplete() override {}
     void onSubscribe(Subscription* s) override {
@@ -111,7 +106,7 @@ TEST(FlowableCreateSubscribe, OnError) {
       try {
         // simulate user function throwing and being caught
         throw std::runtime_error("something broke!");
-      } catch (const std::exception& e) {
+      } catch (const std::exception&) {
         subscriber_->onError(std::current_exception());
       }
     }
@@ -133,30 +128,6 @@ TEST(FlowableCreateSubscribe, OnError) {
  * Assert that all items passed through the Flowable get destroyed
  */
 TEST(FlowableCreateSubscribe, ItemsCollectedSynchronously) {
-  static std::atomic<int> instanceCount;
-
-  struct Tuple {
-    const int a;
-    const int b;
-
-    Tuple(const int a, const int b) : a(a), b(b) {
-      std::cout << "Tuple created!!" << std::endl;
-      instanceCount++;
-    }
-    Tuple(const Tuple& t) : a(t.a), b(t.b) {
-      std::cout << "Tuple copy constructed!!" << std::endl;
-      instanceCount++;
-    }
-    Tuple(Tuple&& t) : a(std::move(t.a)), b(std::move(t.b)) {
-      std::cout << "Tuple move constructed!!" << std::endl;
-      instanceCount++;
-    }
-    ~Tuple() {
-      std::cout << "Tuple destroyed!!" << std::endl;
-      instanceCount--;
-    }
-  };
-
   class Source : public Subscription {
     std::unique_ptr<Subscriber<Tuple>> subscriber_;
     std::atomic_bool isCancelled{false};
@@ -194,9 +165,9 @@ TEST(FlowableCreateSubscribe, ItemsCollectedSynchronously) {
   // reset the TestSubscriber since it holds the onNexted values
   ts.reset();
 
-  std::cout << "Remaining tuples == " << instanceCount << std::endl;
+  std::cout << "Remaining tuples == " << Tuple::instanceCount << std::endl;
 
-  EXPECT_EQ(0, instanceCount);
+  EXPECT_EQ(0, Tuple::instanceCount);
   std::cout << "-----------------------------" << std::endl;
 }
 
@@ -207,27 +178,8 @@ TEST(FlowableCreateSubscribe, ItemsCollectedSynchronously) {
 TEST(
     FlowableCreateSubscribe,
     TestRetainOnStaticAsyncFlowableWithMultipleSubscribers) {
-  static std::atomic<int> tupleInstanceCount;
   static std::atomic<int> subscriptionInstanceCount;
   static std::atomic<int> subscriberInstanceCount;
-
-  struct Tuple {
-    const int a;
-    const int b;
-
-    Tuple(const int a, const int b) : a(a), b(b) {
-      std::cout << "   Tuple created!!" << std::endl;
-      tupleInstanceCount++;
-    }
-    Tuple(const Tuple& t) : a(t.a), b(t.b) {
-      std::cout << "   Tuple copy constructed!!" << std::endl;
-      tupleInstanceCount++;
-    }
-    ~Tuple() {
-      std::cout << "   Tuple destroyed!!" << std::endl;
-      tupleInstanceCount--;
-    }
-  };
 
   class MySubscriber : public Subscriber<Tuple> {
     Subscription* subscription_;
@@ -246,10 +198,7 @@ TEST(
       std::cout << "   Subscriber received value& " << value.a << " on thread "
                 << std::this_thread::get_id() << std::endl;
     }
-    void onNext(Tuple&& value) override {
-      std::cout << "   Subscriber received value&& " << value.a << " on thread "
-                << std::this_thread::get_id() << std::endl;
-    }
+
     void onError(const std::exception_ptr e) override {}
     void onComplete() override {}
     void onSubscribe(Subscription* s) override {
@@ -347,17 +296,18 @@ TEST(
     // ensure Subscriber and Subscription are destroyed
     EXPECT_EQ(0, subscriptionInstanceCount);
 
-    std::cout << "Finished ... remaining instances == " << tupleInstanceCount
+    std::cout << "Finished ... remaining instances == " << Tuple::instanceCount
               << std::endl;
   }
   std::cout << "... after block" << std::endl;
-  EXPECT_EQ(0, tupleInstanceCount);
+  EXPECT_EQ(0, Tuple::instanceCount);
   EXPECT_EQ(0, subscriptionInstanceCount);
   EXPECT_EQ(0, subscriberInstanceCount);
   std::cout << "-----------------------------" << std::endl;
 }
 
-std::shared_ptr<reactivestreams_yarpl::Publisher<long>> getDataAsPublisher() {
+static std::shared_ptr<reactivestreams_yarpl::Publisher<long>>
+getDataAsPublisher() {
   return Flowables::range(1, 4);
 }
 
@@ -375,7 +325,7 @@ TEST(FlowableCreateSubscribe, TestReturnTypePublisherToFlowable) {
   ts->assertValueCount(3);
 }
 
-std::shared_ptr<Flowable<long>> getDataAsFlowable() {
+static std::shared_ptr<Flowable<long>> getDataAsFlowable() {
   return Flowables::range(1, 4);
 }
 

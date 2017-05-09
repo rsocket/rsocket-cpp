@@ -1,160 +1,141 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
+#include <folly/Baton.h>
 #include <gtest/gtest.h>
+#include <atomic>
+#include "Tuple.h"
 #include "yarpl/Observable.h"
+#include "yarpl/ThreadScheduler.h"
+#include "yarpl/flowable/Subscriber.h"
+#include "yarpl/flowable/Subscribers.h"
+#include "yarpl/observable/Observers.h"
+#include "yarpl/observable/Subscriptions.h"
 
+// TODO can we eliminate need to import both of these?
+using namespace yarpl;
 using namespace yarpl::observable;
 
 TEST(Observable, SingleOnNext) {
-  auto a =
-      Observables::unsafeCreate<int>([](std::unique_ptr<Observer<int>> obs) {
-        auto s = Subscriptions::create();
-        obs->onSubscribe(s.get());
-        obs->onNext(1);
-        obs->onComplete();
-      });
+  {
+    ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+    auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
+      auto s = Subscriptions::empty();
+      obs->onSubscribe(s);
+      obs->onNext(1);
+      obs->onComplete();
+    });
 
-  std::vector<int> v;
-  a->subscribe(Observers::create<int>([&v](int value) { v.push_back(value); }));
+    ASSERT_EQ(std::size_t{1}, Refcounted::objects());
 
-  EXPECT_EQ(v.at(0), 1);
+    std::vector<int> v;
+    a->subscribe(
+        Observers::create<int>([&v](const int& value) { v.push_back(value); }));
+
+    ASSERT_EQ(std::size_t{1}, Refcounted::objects());
+    EXPECT_EQ(v.at(0), 1);
+  }
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
 TEST(Observable, MultiOnNext) {
-  auto a =
-      Observables::unsafeCreate<int>([](std::unique_ptr<Observer<int>> obs) {
-        auto s = Subscriptions::create();
-        obs->onSubscribe(s.get());
-        obs->onNext(1);
-        obs->onNext(2);
-        obs->onNext(3);
-        obs->onComplete();
-      });
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  {
+    auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
+      obs->onSubscribe(Subscriptions::empty());
+      obs->onNext(1);
+      obs->onNext(2);
+      obs->onNext(3);
+      obs->onComplete();
+    });
 
-  std::vector<int> v;
-  a->subscribe(Observers::create<int>([&v](int value) { v.push_back(value); }));
+    std::vector<int> v;
+    a->subscribe(
+        Observers::create<int>([&v](const int& value) { v.push_back(value); }));
 
-  EXPECT_EQ(v.at(0), 1);
-  EXPECT_EQ(v.at(1), 2);
-  EXPECT_EQ(v.at(2), 3);
+    EXPECT_EQ(v.at(0), 1);
+    EXPECT_EQ(v.at(1), 2);
+    EXPECT_EQ(v.at(2), 3);
+  }
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
 TEST(Observable, OnError) {
-  std::string errorMessage("DEFAULT->No Error Message");
-  auto a =
-      Observables::unsafeCreate<int>([](std::unique_ptr<Observer<int>> obs) {
-        try {
-          throw std::runtime_error("something broke!");
-        } catch (const std::exception& e) {
-          obs->onError(std::current_exception());
-        }
-      });
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  {
+    std::string errorMessage("DEFAULT->No Error Message");
+    auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
+      try {
+        throw std::runtime_error("something broke!");
+      } catch (const std::exception&) {
+        obs->onError(std::current_exception());
+      }
+    });
 
-  a->subscribe(Observers::create<int>(
-      [](int value) { /* do nothing */ },
-      [&errorMessage](const std::exception_ptr e) {
-        try {
-          std::rethrow_exception(e);
-        } catch (const std::runtime_error& ex) {
-          errorMessage = std::string(ex.what());
-        }
-      }));
+    a->subscribe(Observers::create<int>(
+        [](int value) { /* do nothing */ },
+        [&errorMessage](const std::exception_ptr e) {
+          try {
+            std::rethrow_exception(e);
+          } catch (const std::runtime_error& ex) {
+            errorMessage = std::string(ex.what());
+          }
+        }));
 
-  EXPECT_EQ("something broke!", errorMessage);
+    EXPECT_EQ("something broke!", errorMessage);
+  }
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
 }
+
+static std::atomic<int> instanceCount;
 
 /**
  * Assert that all items passed through the Observable get destroyed
  */
 TEST(Observable, ItemsCollectedSynchronously) {
-  static std::atomic<int> instanceCount;
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  {
+    auto a = Observable<Tuple>::create([](Reference<Observer<Tuple>> obs) {
+      obs->onSubscribe(Subscriptions::empty());
+      obs->onNext(Tuple{1, 2});
+      obs->onNext(Tuple{2, 3});
+      obs->onNext(Tuple{3, 4});
+      obs->onComplete();
+    });
 
-  struct Tuple {
-    const int a;
-    const int b;
+    a->subscribe(Observers::create<Tuple>([](const Tuple& value) {
+      std::cout << "received value " << value.a << std::endl;
+    }));
 
-    Tuple(const int a, const int b) : a(a), b(b) {
-      std::cout << "Tuple created!!" << std::endl;
-      instanceCount++;
-    }
-    Tuple(const Tuple& t) : a(t.a), b(t.b) {
-      std::cout << "Tuple copy constructed!!" << std::endl;
-      instanceCount++;
-    }
-    ~Tuple() {
-      std::cout << "Tuple destroyed!!" << std::endl;
-      instanceCount--;
-    }
-  };
+    std::cout << "Finished ... remaining instances == " << instanceCount
+              << std::endl;
 
-  auto a = Observables::unsafeCreate<Tuple>(
-      [](std::unique_ptr<Observer<Tuple>> obs) {
-        auto s = Subscriptions::create();
-        obs->onSubscribe(s.get());
-        obs->onNext(Tuple{1, 2});
-        obs->onNext(Tuple{2, 3});
-        obs->onNext(Tuple{3, 4});
-        obs->onComplete();
-      });
-
-  // TODO how can it be made so 'auto' correctly works without doing copying?
-  // a->subscribe(Observer<Tuple>::create(
-  //    [](auto value) { std::cout << "received value " << value.a << "\n"; }));
-  a->subscribe(Observers::create<Tuple>([](const Tuple& value) {
-    std::cout << "received value " << value.a << std::endl;
-  }));
-
-  std::cout << "Finished ... remaining instances == " << instanceCount
-            << std::endl;
-
-  EXPECT_EQ(0, instanceCount);
-  std::cout << "-----------------------------" << std::endl;
+    EXPECT_EQ(0, Tuple::instanceCount);
+  }
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
 /*
- * Assert that all items passed through the Flowable get
+ * Assert that all items passed through the Observable get
  * copied and destroyed correctly over async boundaries.
  *
  * This is simulating "async" by having an Observer store the items
  * in a Vector which could then be consumed on another thread.
  */
-TEST(Observable, ItemsCollectedAsynchronously) {
-  static std::atomic<int> createdCount;
-  static std::atomic<int> destroyedCount;
-
-  struct Tuple {
-    const int a;
-    const int b;
-
-    Tuple(const int a, const int b) : a(a), b(b) {
-      std::cout << "Tuple " << a << " created!!" << std::endl;
-      createdCount++;
-    }
-    Tuple(const Tuple& t) : a(t.a), b(t.b) {
-      std::cout << "Tuple " << a << " copy constructed!!" << std::endl;
-      createdCount++;
-    }
-    ~Tuple() {
-      std::cout << "Tuple " << a << " destroyed!!" << std::endl;
-      destroyedCount++;
-    }
-  };
-
+TEST(DISABLED_Observable, ItemsCollectedAsynchronously) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
   // scope this so we can check destruction of Vector after this block
   {
-    auto a = Observables::unsafeCreate<Tuple>(
-        [](std::unique_ptr<Observer<Tuple>> obs) {
-          auto s = Subscriptions::create();
-          obs->onSubscribe(s.get());
-          std::cout << "-----------------------------" << std::endl;
-          obs->onNext(Tuple{1, 2});
-          std::cout << "-----------------------------" << std::endl;
-          obs->onNext(Tuple{2, 3});
-          std::cout << "-----------------------------" << std::endl;
-          obs->onNext(Tuple{3, 4});
-          std::cout << "-----------------------------" << std::endl;
-          obs->onComplete();
-        });
+    auto a = Observable<Tuple>::create([](Reference<Observer<Tuple>> obs) {
+      obs->onSubscribe(Subscriptions::empty());
+      std::cout << "-----------------------------" << std::endl;
+      obs->onNext(Tuple{1, 2});
+      std::cout << "-----------------------------" << std::endl;
+      obs->onNext(Tuple{2, 3});
+      std::cout << "-----------------------------" << std::endl;
+      obs->onNext(Tuple{3, 4});
+      std::cout << "-----------------------------" << std::endl;
+      obs->onComplete();
+    });
 
     std::vector<Tuple> v;
     v.reserve(10); // otherwise it resizes and copies on each push_back
@@ -166,45 +147,36 @@ TEST(Observable, ItemsCollectedAsynchronously) {
     }));
 
     // expect that 3 instances were originally created, then 3 more when copying
-    EXPECT_EQ(6, createdCount);
+    EXPECT_EQ(6, Tuple::createdCount);
     // expect that 3 instances still exist in the vector, so only 3 destroyed so
     // far
-    EXPECT_EQ(3, destroyedCount);
+    EXPECT_EQ(3, Tuple::destroyedCount);
 
     std::cout << "Leaving block now so Vector should release Tuples..."
               << std::endl;
   }
-
-  EXPECT_EQ(0, (createdCount - destroyedCount));
-  std::cout << "-----------------------------" << std::endl;
+  EXPECT_EQ(0, Tuple::instanceCount);
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
 class TakeObserver : public Observer<int> {
  private:
   const int limit;
   int count = 0;
-  Subscription* subscription_;
+  Reference<yarpl::observable::Subscription> subscription_;
   std::vector<int>& v;
 
  public:
-  TakeObserver(int limit, std::vector<int>& v) : limit(limit), v(v) {
+  TakeObserver(int _limit, std::vector<int>& _v) : limit(_limit), v(_v) {
     v.reserve(5);
   }
 
-  void onSubscribe(Subscription* s) override {
-    subscription_ = s;
-  }
-  void onNext(const int& value) override {
-    v.push_back(value);
-    if (++count >= limit) {
-      //      std::cout << "Cancelling subscription after receiving " << count
-      //                << " items." << std::endl;
-      subscription_->cancel();
-    }
+  void onSubscribe(Reference<yarpl::observable::Subscription> s) override {
+    subscription_ = std::move(s);
   }
 
-  void onNext(int&& value) override {
-    v.emplace_back(std::move(value));
+  void onNext(int value) override {
+    v.push_back(value);
     if (++count >= limit) {
       //      std::cout << "Cancelling subscription after receiving " << count
       //                << " items." << std::endl;
@@ -218,25 +190,75 @@ class TakeObserver : public Observer<int> {
 
 // assert behavior of onComplete after subscription.cancel
 TEST(Observable, SubscriptionCancellation) {
-  static std::atomic_int emitted{0};
-  auto a =
-      Observables::unsafeCreate<int>([](std::unique_ptr<Observer<int>> obs) {
-        std::atomic_bool isUnsubscribed{false};
-        auto s =
-            Subscriptions::create([&isUnsubscribed] { isUnsubscribed = true; });
-        obs->onSubscribe(s.get());
-        int i = 0;
-        while (!isUnsubscribed && i <= 10) {
-          emitted++;
-          obs->onNext(i++);
-        }
-        if (!isUnsubscribed) {
-          obs->onComplete();
-        }
-      });
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  {
+    static std::atomic_int emitted{0};
+    auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
+      std::atomic_bool isUnsubscribed{false};
+      auto s =
+          Subscriptions::create([&isUnsubscribed] { isUnsubscribed = true; });
+      obs->onSubscribe(std::move(s));
+      int i = 0;
+      while (!isUnsubscribed && i <= 10) {
+        emitted++;
+        obs->onNext(i++);
+      }
+      if (!isUnsubscribed) {
+        obs->onComplete();
+      }
+    });
 
-  std::vector<int> v;
-  a->subscribe(std::make_unique<TakeObserver>(2, v));
-  EXPECT_EQ((unsigned long)2, v.size());
-  EXPECT_EQ(2, emitted);
+    std::vector<int> v;
+    a->subscribe(Reference<Observer<int>>(new TakeObserver(2, v)));
+    EXPECT_EQ((unsigned long)2, v.size());
+    EXPECT_EQ(2, emitted);
+  }
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(Observable, toFlowable) {
+  {
+    ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+    auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
+      auto s = Subscriptions::empty();
+      obs->onSubscribe(s);
+      obs->onNext(1);
+      obs->onComplete();
+    });
+
+    auto f = a->toFlowable(BackpressureStrategy::DROP);
+
+    std::vector<int> v;
+    f->subscribe(yarpl::flowable::Subscribers::create<int>(
+        [&v](const int& value) { v.push_back(value); }));
+
+    EXPECT_EQ(v.at(0), 1);
+  }
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(Observable, toFlowableWithCancel) {
+  {
+    ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+    auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
+      auto s = Subscriptions::atomicBoolSubscription();
+      obs->onSubscribe(s);
+      int i = 0;
+      while (!s->isCancelled()) {
+        obs->onNext(++i);
+      }
+      if (!s->isCancelled()) {
+        obs->onComplete();
+      }
+    });
+
+    auto f = a->toFlowable(BackpressureStrategy::DROP);
+
+    std::vector<int> v;
+    f->take(5)->subscribe(yarpl::flowable::Subscribers::create<int>(
+        [&v](const int& value) { v.push_back(value); }));
+
+    EXPECT_EQ(v, std::vector<int>({1, 2, 3, 4, 5}));
+  }
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
 }

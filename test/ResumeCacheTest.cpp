@@ -5,7 +5,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/ConnectionAutomaton.h"
 #include "src/Frame.h"
 #include "src/FrameTransport.h"
 #include "src/ResumeCache.h"
@@ -35,15 +34,7 @@ class ResumeCacheTest : public Test {
 };
 
 TEST_F(ResumeCacheTest, EmptyCache) {
-  ConnectionAutomaton automaton(
-      inlineExecutor(),
-      nullptr,
-      nullptr,
-      Stats::noop(),
-      nullptr,
-      ReactiveSocketMode::CLIENT);
-  automaton.setFrameSerializer(FrameSerializer::createCurrentVersion());
-  ResumeCache cache(automaton);
+  ResumeCache cache(Stats::noop());
   FrameTransportMock transport;
 
   EXPECT_CALL(transport, outputFrameOrEnqueue_(_)).Times(0);
@@ -64,22 +55,14 @@ TEST_F(ResumeCacheTest, EmptyCache) {
 }
 
 TEST_F(ResumeCacheTest, OneFrame) {
-  ConnectionAutomaton automaton(
-      inlineExecutor(),
-      nullptr,
-      nullptr,
-      Stats::noop(),
-      nullptr,
-      ReactiveSocketMode::CLIENT);
-  automaton.setFrameSerializer(FrameSerializer::createCurrentVersion());
-  ResumeCache cache(automaton);
-
+  ResumeCache cache(Stats::noop());
   FrameTransportMock transport;
 
   auto frame1 = frameSerializer_->serializeOut(Frame_CANCEL(0));
   const auto frame1Size = frame1->computeChainDataLength();
 
-  cache.trackSentFrame(*frame1);
+  cache.trackSentFrame(
+      *frame1, FrameType::CANCEL, folly::Optional<StreamId>(0));
 
   EXPECT_EQ(0, cache.lastResetPosition());
   EXPECT_EQ((ResumePosition)frame1Size, cache.position());
@@ -114,16 +97,7 @@ TEST_F(ResumeCacheTest, OneFrame) {
 }
 
 TEST_F(ResumeCacheTest, TwoFrames) {
-  ConnectionAutomaton automaton(
-      inlineExecutor(),
-      nullptr,
-      nullptr,
-      Stats::noop(),
-      nullptr,
-      ReactiveSocketMode::CLIENT);
-  automaton.setFrameSerializer(FrameSerializer::createCurrentVersion());
-  ResumeCache cache(automaton);
-
+  ResumeCache cache(Stats::noop());
   FrameTransportMock transport;
 
   auto frame1 = frameSerializer_->serializeOut(Frame_CANCEL(0));
@@ -132,8 +106,10 @@ TEST_F(ResumeCacheTest, TwoFrames) {
   auto frame2 = frameSerializer_->serializeOut(Frame_REQUEST_N(0, 2));
   const auto frame2Size = frame2->computeChainDataLength();
 
-  cache.trackSentFrame(*frame1);
-  cache.trackSentFrame(*frame2);
+  cache.trackSentFrame(
+      *frame1, FrameType::CANCEL, folly::Optional<StreamId>(0));
+  cache.trackSentFrame(
+      *frame2, FrameType::REQUEST_N, folly::Optional<StreamId>(0));
 
   EXPECT_EQ(0, cache.lastResetPosition());
   EXPECT_EQ((ResumePosition)(frame1Size + frame2Size), cache.position());
@@ -169,26 +145,21 @@ TEST_F(ResumeCacheTest, TwoFrames) {
 
 TEST_F(ResumeCacheTest, Stats) {
   auto stats = std::make_shared<StrictMock<MockStats>>();
-  ConnectionAutomaton automaton(
-      inlineExecutor(),
-      nullptr,
-      nullptr,
-      stats,
-      nullptr,
-      ReactiveSocketMode::CLIENT);
-  automaton.setFrameSerializer(FrameSerializer::createCurrentVersion());
-  ResumeCache cache(automaton);
+  ResumeCache cache(stats);
 
   auto frame1 = frameSerializer_->serializeOut(Frame_CANCEL(0));
   auto frame1Size = frame1->computeChainDataLength();
   EXPECT_CALL(*stats, resumeBufferChanged(1, frame1Size));
-  cache.trackSentFrame(*frame1);
+  cache.trackSentFrame(
+      *frame1, FrameType::CANCEL, folly::Optional<StreamId>(0));
 
   auto frame2 = frameSerializer_->serializeOut(Frame_REQUEST_N(0, 3));
   auto frame2Size = frame2->computeChainDataLength();
   EXPECT_CALL(*stats, resumeBufferChanged(1, frame2Size)).Times(2);
-  cache.trackSentFrame(*frame2);
-  cache.trackSentFrame(*frame2);
+  cache.trackSentFrame(
+      *frame2, FrameType::REQUEST_N, folly::Optional<StreamId>(0));
+  cache.trackSentFrame(
+      *frame2, FrameType::REQUEST_N, folly::Optional<StreamId>(0));
 
   EXPECT_CALL(*stats, resumeBufferChanged(-1, -frame1Size));
   cache.resetUpToPosition(frame1Size);
@@ -196,23 +167,14 @@ TEST_F(ResumeCacheTest, Stats) {
 }
 
 TEST_F(ResumeCacheTest, EvictFIFO) {
-  ConnectionAutomaton automaton(
-      inlineExecutor(),
-      nullptr,
-      nullptr,
-      Stats::noop(),
-      nullptr,
-      ReactiveSocketMode::CLIENT);
-  automaton.setFrameSerializer(FrameSerializer::createCurrentVersion());
-
   auto frame = frameSerializer_->serializeOut(Frame_CANCEL(0));
   const auto frameSize = frame->computeChainDataLength();
 
   // construct cache with capacity of 2 frameSize
-  ResumeCache cache(automaton, frameSize * 2);
+  ResumeCache cache(Stats::noop(), frameSize * 2);
 
-  cache.trackSentFrame(*frame);
-  cache.trackSentFrame(*frame);
+  cache.trackSentFrame(*frame, FrameType::CANCEL, folly::Optional<StreamId>(0));
+  cache.trackSentFrame(*frame, FrameType::CANCEL, folly::Optional<StreamId>(0));
 
   // first 2 frames should be presented in the cache
   EXPECT_TRUE(cache.isPositionAvailable(0));
@@ -220,13 +182,13 @@ TEST_F(ResumeCacheTest, EvictFIFO) {
   EXPECT_TRUE(cache.isPositionAvailable(frameSize * 2));
 
   // add third frame, and this frame should evict first frame
-  cache.trackSentFrame(*frame);
+  cache.trackSentFrame(*frame, FrameType::CANCEL, folly::Optional<StreamId>(0));
   EXPECT_FALSE(cache.isPositionAvailable(0));
 
   // cache size should also be adjusted by resetUpToPosition
   cache.resetUpToPosition(frameSize * 2);
   EXPECT_FALSE(cache.isPositionAvailable(frameSize));
-  cache.trackSentFrame(*frame);
+  cache.trackSentFrame(*frame, FrameType::CANCEL, folly::Optional<StreamId>(0));
   EXPECT_TRUE(cache.isPositionAvailable(frameSize * 2));
   EXPECT_TRUE(cache.isPositionAvailable(frameSize * 3));
   EXPECT_TRUE(cache.isPositionAvailable(frameSize * 4));
@@ -237,35 +199,28 @@ TEST_F(ResumeCacheTest, EvictFIFO) {
     hugeFrame->appendChain(frame->clone());
   }
   EXPECT_EQ(hugeFrame->computeChainDataLength(), frameSize * 3);
-  cache.trackSentFrame(*hugeFrame);
+  cache.trackSentFrame(
+      *hugeFrame, FrameType::CANCEL, folly::Optional<StreamId>(0));
   // cache should be cleared
   EXPECT_FALSE(cache.isPositionAvailable(frameSize * 2));
   EXPECT_FALSE(cache.isPositionAvailable(frameSize * 3));
   EXPECT_FALSE(cache.isPositionAvailable(frameSize * 4 + 1));
 
   // caching small frames shouldn't be affected
-  cache.trackSentFrame(*frame);
+  cache.trackSentFrame(*frame, FrameType::CANCEL, folly::Optional<StreamId>(0));
   EXPECT_FALSE(cache.isPositionAvailable(frameSize * 4 + 1));
-  cache.trackSentFrame(*frame);
+  cache.trackSentFrame(*frame, FrameType::CANCEL, folly::Optional<StreamId>(0));
   EXPECT_FALSE(cache.isPositionAvailable(frameSize * 5 + 1));
 }
 
 TEST_F(ResumeCacheTest, EvictStats) {
   auto stats = std::make_shared<StrictMock<MockStats>>();
-  ConnectionAutomaton automaton(
-      inlineExecutor(),
-      nullptr,
-      nullptr,
-      stats,
-      nullptr,
-      ReactiveSocketMode::CLIENT);
-  automaton.setFrameSerializer(FrameSerializer::createCurrentVersion());
 
   auto frame = frameSerializer_->serializeOut(Frame_CANCEL(0));
   const auto frameSize = frame->computeChainDataLength();
 
   // construct cache with capacity of 2 frameSize
-  ResumeCache cache(automaton, frameSize * 2);
+  ResumeCache cache(stats, frameSize * 2);
 
   {
     InSequence dummy;
@@ -279,49 +234,31 @@ TEST_F(ResumeCacheTest, EvictStats) {
     EXPECT_CALL(*stats, resumeBufferChanged(-2, -frameSize * 2));
   }
 
-  cache.trackSentFrame(*frame);
-  cache.trackSentFrame(*frame);
-  cache.trackSentFrame(*frame);
+  cache.trackSentFrame(*frame, FrameType::CANCEL, folly::Optional<StreamId>(0));
+  cache.trackSentFrame(*frame, FrameType::CANCEL, folly::Optional<StreamId>(0));
+  cache.trackSentFrame(*frame, FrameType::CANCEL, folly::Optional<StreamId>(0));
 
   EXPECT_EQ(frameSize * 2, cache.size());
 }
 
 TEST_F(ResumeCacheTest, PositionSmallFrame) {
-  ConnectionAutomaton automaton(
-      inlineExecutor(),
-      nullptr,
-      nullptr,
-      Stats::noop(),
-      nullptr,
-      ReactiveSocketMode::CLIENT);
-  automaton.setFrameSerializer(FrameSerializer::createCurrentVersion());
-
   auto frame = frameSerializer_->serializeOut(Frame_CANCEL(0));
   const auto frameSize = frame->computeChainDataLength();
 
   // Cache is larger than frame
-  ResumeCache cache(automaton, frameSize * 2);
-  cache.trackSentFrame(*frame);
+  ResumeCache cache(Stats::noop(), frameSize * 2);
+  cache.trackSentFrame(*frame, FrameType::CANCEL, folly::Optional<StreamId>(0));
   EXPECT_EQ(
       frame->computeChainDataLength(), static_cast<size_t>(cache.position()));
 }
 
 TEST_F(ResumeCacheTest, PositionLargeFrame) {
-  ConnectionAutomaton automaton(
-      inlineExecutor(),
-      nullptr,
-      nullptr,
-      Stats::noop(),
-      nullptr,
-      ReactiveSocketMode::CLIENT);
-  automaton.setFrameSerializer(FrameSerializer::createCurrentVersion());
-
   auto frame = frameSerializer_->serializeOut(Frame_CANCEL(0));
   const auto frameSize = frame->computeChainDataLength();
 
   // Cache is smaller than frame
-  ResumeCache cache(automaton, frameSize / 2);
-  cache.trackSentFrame(*frame);
+  ResumeCache cache(Stats::noop(), frameSize / 2);
+  cache.trackSentFrame(*frame, FrameType::CANCEL, folly::Optional<StreamId>(0));
   EXPECT_EQ(
       frame->computeChainDataLength(), static_cast<size_t>(cache.position()));
 }

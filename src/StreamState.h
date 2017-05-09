@@ -8,9 +8,6 @@
 #include <memory>
 #include <unordered_map>
 
-#include "src/ResumeCache.h"
-#include "src/ResumeTracker.h"
-
 namespace reactivesocket {
 
 class ConnectionAutomaton;
@@ -20,7 +17,7 @@ using StreamId = uint32_t;
 
 class StreamState {
  public:
-  explicit StreamState(ConnectionAutomaton& connection);
+  explicit StreamState(Stats& stats);
   ~StreamState();
 
   void enqueueOutputPendingFrame(std::unique_ptr<folly::IOBuf> frame);
@@ -28,8 +25,6 @@ class StreamState {
   std::deque<std::unique_ptr<folly::IOBuf>> moveOutputPendingFrames();
 
   std::unordered_map<StreamId, std::shared_ptr<StreamAutomatonBase>> streams_;
-  ResumeTracker resumeTracker_;
-  ResumeCache resumeCache_;
 
  private:
   /// Called to update stats when outputFrames_ is about to be cleared.

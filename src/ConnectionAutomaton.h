@@ -26,8 +26,10 @@ class Frame_ERROR;
 class FrameTransport;
 class KeepaliveTimer;
 class RequestHandler;
+class ResumeCache;
 class Stats;
 class StreamState;
+class SocketParameters;
 
 class FrameSink {
  public:
@@ -73,7 +75,10 @@ class ConnectionAutomaton final
   ///
   /// May result, depending on the implementation of the DuplexConnection, in
   /// processing of one or more frames.
-  void connect(std::shared_ptr<FrameTransport>, bool sendingPendingFrames);
+  bool connect(
+      std::shared_ptr<FrameTransport>,
+      bool sendingPendingFrames,
+      ProtocolVersion protocolVersion);
 
   /// Disconnects DuplexConnection from the automaton.
   /// Existing streams will stay intact.
@@ -232,7 +237,7 @@ class ConnectionAutomaton final
       StreamType streamType,
       uint32_t initialRequestN,
       Payload payload,
-      bool TEMP_completed) override;
+      bool completed) override;
   void writeRequestN(StreamId streamId, uint32_t n) override;
   void writePayload(StreamId streamId, Payload payload, bool complete) override;
   void writeCloseStream(
@@ -242,6 +247,8 @@ class ConnectionAutomaton final
   void onStreamClosed(StreamId streamId, StreamCompletionSignal signal)
       override;
 
+  bool ensureOrAutodetectFrameSerializer(const folly::IOBuf& firstFrame);
+
   ReactiveSocket* reactiveSocket_;
 
   const std::shared_ptr<Stats> stats_;
@@ -250,6 +257,7 @@ class ConnectionAutomaton final
   bool remoteResumeable_{false};
   bool isClosed_{false};
 
+  std::shared_ptr<ResumeCache> resumeCache_;
   std::shared_ptr<StreamState> streamState_;
   std::shared_ptr<RequestHandler> requestHandler_;
   std::shared_ptr<FrameTransport> frameTransport_;

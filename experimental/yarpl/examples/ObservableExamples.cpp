@@ -6,8 +6,8 @@
 #include "yarpl/Flowable.h"
 #include "yarpl/Flowable_Subscriber.h"
 #include "yarpl/Observable.h"
-#include "yarpl/Observable_Subscription.h"
-#include "yarpl/Observable_TestObserver.h"
+#include "yarpl/Subscriptions.h"
+#include "yarpl/TestObserver.h"
 
 using namespace yarpl::observable;
 using yarpl::flowable::Flowable;
@@ -137,10 +137,6 @@ void ObservableExamples::run() {
 
     void onNext(const int& t) override {
       std::cout << "onNext& " << t << std::endl;
-    }
-
-    void onNext(int&& t) override {
-      std::cout << "onNext&& " << t << std::endl;
     }
 
     void onComplete() override {

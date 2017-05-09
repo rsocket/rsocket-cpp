@@ -4,9 +4,10 @@
 #include <folly/String.h>
 #include <folly/io/async/AsyncSocket.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
+#include <folly/portability/GFlags.h>
 
 #include "src/NullRequestHandler.h"
-#include "src/StandardReactiveSocket.h"
+#include "src/ReactiveSocket.h"
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/tcp/TcpDuplexConnection.h"
 
@@ -79,7 +80,7 @@ int main(int argc, char* argv[]) {
 
   folly::AsyncSocket::UniquePtr socket;
   std::unique_ptr<SocketConnectCallback> callback;
-  std::unique_ptr<StandardReactiveSocket> reactiveSocket;
+  std::unique_ptr<ReactiveSocket> reactiveSocket;
 
   evbt.getEventBase()->runInEventBaseThreadAndWait([&]() {
     socket.reset(new folly::AsyncSocket(evbt.getEventBase()));
@@ -103,7 +104,7 @@ int main(int argc, char* argv[]) {
     std::unique_ptr<RequestHandler> requestHandler =
         std::make_unique<DefaultRequestHandler>();
 
-    reactiveSocket = StandardReactiveSocket::fromClientConnection(
+    reactiveSocket = ReactiveSocket::fromClientConnection(
         inlineExecutor(),
         std::move(framedConnection),
         std::move(requestHandler));

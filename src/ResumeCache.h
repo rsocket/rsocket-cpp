@@ -4,7 +4,11 @@
 
 #include <deque>
 #include <unordered_map>
+
+#include <folly/Optional.h>
+
 #include "src/Common.h"
+#include "src/Stats.h"
 
 namespace folly {
 class IOBuf;
@@ -15,18 +19,34 @@ namespace reactivesocket {
 class ConnectionAutomaton;
 class FrameTransport;
 
+// This class stores information necessary to resume the RSocket session.  The
+// stored information fall into two categories.  (1) Sent:  Here we have a
+// buffer queue of sent frames (limited by capacity).  We have two pointers -
+// position_ and resetPosition_, which track the position (in bytes) of the
+// first and last frames we have in queue.  (2) Rcvd: We have a
+// impliedPosition_ byte counter, which determines the bytes until which we
+// have received data from the other side.
 class ResumeCache {
  public:
   explicit ResumeCache(
-      ConnectionAutomaton& connection,
+      std::shared_ptr<Stats> stats,
       size_t capacity = DEFAULT_CAPACITY)
-      : connection_(connection), capacity_(capacity) {}
+      : stats_(std::move(stats)), capacity_(capacity) {}
   ~ResumeCache();
 
-  void trackSentFrame(const folly::IOBuf& serializedFrame);
+  // Tracks a received frame.
+  void trackReceivedFrame(
+      const folly::IOBuf& serializedFrame,
+      const FrameType frameType);
 
-  // called to clear up to a certain position from the cache (from keepalive or
-  // resuming)
+  // Tracks a sent frame.
+  void trackSentFrame(
+      const folly::IOBuf& serializedFrame,
+      const FrameType frameType,
+      const folly::Optional<StreamId> streamIdPtr);
+
+  // Resets the send buffer buffer until the given position.
+  // This is triggered on KeepAlive reception or when we hit capacity.
   void resetUpToPosition(ResumePosition position);
 
   bool isPositionAvailable(ResumePosition position) const;
@@ -45,6 +65,14 @@ class ResumeCache {
     return position_;
   }
 
+  ResumePosition impliedPosition() {
+    return impliedPosition_;
+  }
+
+  bool canResumeFrom(ResumePosition clientPosition) const {
+    return clientPosition <= impliedPosition_;
+  }
+
   size_t size() const {
     return size_;
   }
@@ -52,13 +80,19 @@ class ResumeCache {
  private:
   void addFrame(const folly::IOBuf&, size_t);
   void evictFrame();
-  /// Called before clearing cached frames to update stats.
+
+  // Called before clearing cached frames to update stats.
   void clearFrames(ResumePosition position);
 
-  ConnectionAutomaton& connection_;
+  std::shared_ptr<Stats> stats_;
 
+  // End position of the send buffer queue
   ResumePosition position_{0};
+  // Start position of the send buffer queue
   ResumePosition resetPosition_{0};
+  // Inferred position of the rcvd frames
+  ResumePosition impliedPosition_{0};
+
   std::unordered_map<StreamId, ResumePosition> streamMap_;
 
   std::deque<std::pair<ResumePosition, std::unique_ptr<folly::IOBuf>>> frames_;

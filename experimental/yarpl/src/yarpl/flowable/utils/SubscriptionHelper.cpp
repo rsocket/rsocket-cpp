@@ -24,12 +24,14 @@ int64_t SubscriptionHelper::addCredits(
       // do nothing, return existing unmodified value
       return r;
     }
-    int64_t u = r + n;
-    if (u < 0) {
-      // overflow
+
+    if (r > INT64_MAX - n) {
+      // will overflow
       current->store(INT64_MAX);
       return INT64_MAX;
     }
+
+    int64_t u = r + n;
     // set the new number
     if (current->compare_exchange_strong(r, u)) {
       return u;
@@ -62,12 +64,13 @@ int64_t SubscriptionHelper::consumeCredits(
       // do nothing, return existing unmodified value
       return r;
     }
-    int64_t u = r - n;
-    if (u < 0) {
-      // bad usage somewhere ... be resilient, just set to 0
-
-      u = 0;
+    if (r < n) {
+      // bad usage somewhere ... be resilient, just set to r
+      n = r;
     }
+
+    int64_t u = r - n;
+
     // set the new number
     if (current->compare_exchange_strong(r, u)) {
       return u;

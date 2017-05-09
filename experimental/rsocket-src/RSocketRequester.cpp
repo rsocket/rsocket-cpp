@@ -2,13 +2,19 @@
 
 #include "rsocket/RSocketRequester.h"
 
+#include "rsocket/OldNewBridge.h"
+#include "yarpl/Flowable.h"
+#include "yarpl/Flowables.h"
+
+#include <folly/ExceptionWrapper.h>
+
 using namespace reactivesocket;
 using namespace folly;
 
 namespace rsocket {
 
 std::shared_ptr<RSocketRequester> RSocketRequester::create(
-    std::unique_ptr<StandardReactiveSocket> srs,
+    std::unique_ptr<ReactiveSocket> srs,
     EventBase& eventBase) {
   auto customDeleter = [&eventBase](RSocketRequester* pRequester) {
     eventBase.runImmediatelyOrRunInEventBaseThreadAndWait([&pRequester] {
@@ -23,9 +29,9 @@ std::shared_ptr<RSocketRequester> RSocketRequester::create(
 }
 
 RSocketRequester::RSocketRequester(
-    std::unique_ptr<StandardReactiveSocket> srs,
+    std::unique_ptr<ReactiveSocket> srs,
     EventBase& eventBase)
-    : standardReactiveSocket_(std::move(srs)), eventBase_(eventBase) {}
+    : reactiveSocket_(std::move(srs)), eventBase_(eventBase) {}
 
 RSocketRequester::~RSocketRequester() {
   LOG(INFO) << "RSocketRequester => destroy";
@@ -34,17 +40,26 @@ RSocketRequester::~RSocketRequester() {
 std::shared_ptr<Subscriber<Payload>> RSocketRequester::requestChannel(
     std::shared_ptr<Subscriber<Payload>> responseSink) {
   // TODO need to runInEventBaseThread like other request methods
-  return standardReactiveSocket_->requestChannel(std::move(responseSink));
+  return reactiveSocket_->requestChannel(std::move(responseSink));
 }
 
-void RSocketRequester::requestStream(
-    Payload request,
-    std::shared_ptr<Subscriber<Payload>> responseSink) {
-  eventBase_.runInEventBaseThread(
-      [ this, request = std::move(request), responseSink ]() mutable {
-        standardReactiveSocket_->requestStream(
-            std::move(request), std::move(responseSink));
-      });
+yarpl::Reference<yarpl::flowable::Flowable<Payload>>
+RSocketRequester::requestStream(Payload request) {
+  auto& eb = eventBase_;
+  auto srs = reactiveSocket_;
+
+  return yarpl::flowable::Flowables::fromPublisher<Payload>([
+    &eb,
+    request = std::move(request),
+    srs = std::move(srs)
+  ](yarpl::Reference<yarpl::flowable::Subscriber<Payload>> subscriber) mutable {
+    auto os = std::make_shared<OldToNewSubscriber>(std::move(subscriber));
+    eb.runInEventBaseThread([
+      request = std::move(request),
+      os = std::move(os),
+      srs = std::move(srs)
+    ]() mutable { srs->requestStream(std::move(request), std::move(os)); });
+  });
 }
 
 void RSocketRequester::requestResponse(
@@ -52,7 +67,7 @@ void RSocketRequester::requestResponse(
     std::shared_ptr<Subscriber<Payload>> responseSink) {
   eventBase_.runInEventBaseThread(
       [ this, request = std::move(request), responseSink ]() mutable {
-        standardReactiveSocket_->requestResponse(
+        reactiveSocket_->requestResponse(
             std::move(request), std::move(responseSink));
       });
 }
@@ -60,14 +75,14 @@ void RSocketRequester::requestResponse(
 void RSocketRequester::requestFireAndForget(Payload request) {
   eventBase_.runInEventBaseThread(
       [ this, request = std::move(request) ]() mutable {
-        standardReactiveSocket_->requestFireAndForget(std::move(request));
+        reactiveSocket_->requestFireAndForget(std::move(request));
       });
 }
 
 void RSocketRequester::metadataPush(std::unique_ptr<folly::IOBuf> metadata) {
   eventBase_.runInEventBaseThread(
       [ this, metadata = std::move(metadata) ]() mutable {
-        standardReactiveSocket_->metadataPush(std::move(metadata));
+        reactiveSocket_->metadataPush(std::move(metadata));
       });
 }
 }

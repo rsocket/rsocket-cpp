@@ -22,7 +22,7 @@ ExampleSubscriber::ExampleSubscriber(int initialRequest, int numToTake)
 }
 
 void ExampleSubscriber::onSubscribe(
-    std::shared_ptr<Subscription> subscription) noexcept {
+        yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept {
   LOG(INFO) << "ExampleSubscriber " << this << " onSubscribe";
   subscription_ = std::move(subscription);
   requested_ = initialRequest_;
@@ -53,8 +53,8 @@ void ExampleSubscriber::onComplete() noexcept {
   terminalEventCV_.notify_all();
 }
 
-void ExampleSubscriber::onError(folly::exception_wrapper ex) noexcept {
-  LOG(INFO) << "ExampleSubscriber " << this << " onError " << ex.what();
+void ExampleSubscriber::onError(const std::exception_ptr ex) noexcept {
+  LOG(INFO) << "ExampleSubscriber " << this << " onError";
   terminated_ = true;
   terminalEventCV_.notify_all();
 }

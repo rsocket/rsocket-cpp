@@ -1,0 +1,91 @@
+cpp_library(
+    name='reactive-streams',
+    header_namespace='reactivestreams',
+    headers=subdir_glob([
+        ('include/reactivestreams', '**/*.h'),
+    ]),
+)
+
+cpp_library(
+    name='yarpl-internal',
+    header_namespace='yarpl',
+    headers=subdir_glob([
+        ('include/yarpl', '**/*.h'),
+        ('src/yarpl', 'ThreadScheduler.h'),
+        ('src/yarpl', 'flowable/operators/*.h'),
+        ('src/yarpl', 'flowable/sources/*.h'),
+        ('src/yarpl', 'flowable/sources/utils/*.h'),
+        ('src/yarpl', 'flowable/utils/*.h'),
+        ('src/yarpl', 'observable/sources/*.h'),
+        ('src/yarpl', 'observable/operators/*.h'),
+        ('src/yarpl', 'utils/**/*.h'),
+    ]),
+    deps=[
+        ':reactive-streams',
+    ],
+)
+
+cpp_library(
+    name='yarpl',
+    headers=subdir_glob([
+        ('', 'src/**/*.h'),
+    ]),
+    srcs=glob([
+        'src/**/*.cpp',
+    ]),
+    deps=[
+        ':yarpl-internal',
+    ],
+)
+
+cpp_unittest(
+    name='yarpl-test',
+    headers=subdir_glob([
+        ('', 'test/**/*.h'),
+    ]),
+    srcs=glob([
+        'test/*.cpp',
+    ]),
+    deps=[
+        ':yarpl',
+    ],
+    external_deps=[
+        ('googletest', None, 'gtest'),
+    ],
+)
+
+# cpp_binary(
+#     name='yarpl-perf',
+#     headers=subdir_glob([
+#         ('', 'perf/**/*.h'),
+#     ]),
+#     srcs=glob([
+#         'perf/*.cpp',
+#     ]),
+#     deps=[
+#         ':yarpl',
+#     ],
+#     external_deps=[
+#         'benchmark',
+#     ],
+# )
+
+cpp_binary(
+    name='yarpl-examples',
+    header_namespace = 'examples',
+    headers = subdir_glob([
+        ('examples', '**/*.h')
+    ]),
+    srcs=[
+        'examples/FlowableAExamples.cpp',
+        'examples/FlowableBExamples.cpp',
+        'examples/FlowableCExamples.cpp',
+        'examples/FlowableExamples.cpp',
+        #'examples/FlowableVExamples.cpp',
+        'examples/ObservableExamples.cpp',
+        'examples/yarpl-playground.cpp'
+    ],
+    deps=[
+        ':yarpl',
+    ],
+)

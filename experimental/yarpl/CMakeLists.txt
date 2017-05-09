@@ -1,4 +1,8 @@
-cmake_minimum_required (VERSION 3.4)
+cmake_minimum_required (VERSION 3.2)
+
+# To debug the project, set the build type.
+set(CMAKE_BUILD_TYPE Debug)
+
 project (yarpl)
 
 # CMake Config
@@ -11,11 +15,15 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 # Common configuration for all build modes.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -momit-leaf-frame-pointer")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-weak-vtables -Wno-padded")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -momit-leaf-frame-pointer")
 
 # Configuration for Debug build mode.
 #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG")
 
 include_directories(${CMAKE_SOURCE_DIR})
 
@@ -26,44 +34,34 @@ add_library(
         # public API
         include/yarpl/Scheduler.h
         include/yarpl/Disposable.h
-        # Observable public API
-        include/yarpl/Observable.h
-        include/yarpl/Observable_Observer.h
-        include/yarpl/Observable_Subscription.h
-        include/yarpl/Observable_TestObserver.h
-        src/yarpl/observable/Observable_Subscription.cpp
-        # Observable sources
-        src/yarpl/observable/sources/Observable_RangeSubscription.h
-        src/yarpl/observable/sources/Observable_RangeSubscription.cpp
-        # Observable operators
-        src/yarpl/observable/operators/Observable_Map.h
-        src/yarpl/observable/operators/Observable_Take.h
+        include/yarpl/Refcounted.h
         # Flowable public API
         include/yarpl/Flowable.h
-        include/yarpl/FlowableA.h
-        include/yarpl/FlowableB.h
-        include/yarpl/FlowableC.h
-        include/yarpl/Flowable_Subscriber.h
-        include/yarpl/Flowable_SubscriptionSync.h
-        include/yarpl/Flowable_TestSubscriber.h
-        # Flowable sources
-        src/yarpl/flowable/sources/Flowable_RangeSubscription.h
-        src/yarpl/flowable/sources/Flowable_RangeSubscription.cpp
+        include/yarpl/Flowables.h
+        include/yarpl/flowable/FlowableOperator.h
+        include/yarpl/flowable/Subscriber.h
+        include/yarpl/flowable/Subscribers.h
+        include/yarpl/flowable/Subscription.h
+        # Observable public API
+        include/yarpl/Observable.h
+        include/yarpl/Observables.h
+        include/yarpl/observable/ObservableOperator.h
+        include/yarpl/observable/Observer.h
+        include/yarpl/observable/Observers.h
+        include/yarpl/observable/Subscription.h
+        include/yarpl/observable/Subscriptions.h
+        include/yarpl/observable/TestObserver.h
+        src/yarpl/observable/Subscriptions.cpp
+        # Flowable private
+        src/yarpl/Refcounted.cpp
         src/yarpl/flowable/sources/Flowable_FromObservable.h
-        # Flowable operators
-        src/yarpl/flowable/operators/Flowable_Map.h
-        src/yarpl/flowable/operators/Flowable_Take.h
-        src/yarpl/flowable/operators/Flowable_SubscribeOn.h
-        # Flowable utils
+        # utils
+        include/yarpl/utils/type_traits.h
         src/yarpl/flowable/utils/SubscriptionHelper.h
         src/yarpl/flowable/utils/SubscriptionHelper.cpp
-        # utils
-        src/yarpl/utils/type_traits.h
         # Scheduler
+        include/yarpl/ThreadScheduler.h
         src/yarpl/ThreadScheduler.cpp
-        src/yarpl/ThreadScheduler.h
-        # move this out at some point
-        include/reactivestreams/ReactiveStreams.h
 )
 
 target_include_directories(
@@ -76,15 +74,9 @@ target_include_directories(
 add_executable(
         yarpl-playground
         examples/yarpl-playground.cpp
-        examples/ObservableExamples.cpp
+#        examples/ObservableExamples.cpp
         examples/FlowableExamples.cpp
         examples/FlowableExamples.h
-        examples/FlowableAExamples.cpp
-        examples/FlowableAExamples.h
-        examples/FlowableBExamples.cpp
-        examples/FlowableBExamples.h
-        examples/FlowableCExamples.cpp
-        examples/FlowableCExamples.h
 )
 
 target_link_libraries(
@@ -101,30 +93,34 @@ add_executable(
         yarpl-tests
         test/yarpl-tests.cpp
         test/Observable_test.cpp
-        test/FlowableCreateSubscribe_test.cpp
-        test/Observable_Subscription_test.cpp
-        test/Flowable_range_test.cpp
-        test/FlowableSubscriptionHelper_test.cpp
-        test/Flowable_lifecycle.cpp
-        test/FlowableA_lifecycle.cpp
-        test/FlowableB_lifecycle.cpp
-        test/FlowableChaining_test.cpp
-        test/flowable_operators/Flowable_Map_test.cpp
-        test/flowable_operators/Flowable_Take_test.cpp
-        test/flowable_operators/Flowable_SubscribeOn_test.cpp
+#        test/FlowableCreateSubscribe_test.cpp
+#        test/Observable_Subscription_test.cpp
+#        test/Flowable_range_test.cpp
+#        test/Flowable_lifecycle.cpp
+#        test/FlowableChaining_test.cpp
+        test/FlowableTest.cpp
+        test/RefcountedTest.cpp
+        test/ReferenceTest.cpp
         test/Scheduler_test.cpp
+        test/SubscriptionHelper_test.cpp
+        test/Tuple.cpp
+        test/Tuple.h
 )
 
 target_link_libraries(
         yarpl-tests
         yarpl
-        ${GMOCK_LIBS} # inherited from reactivesocket-cpp CMake
+        ${FOLLY_LIBRARIES} # inherited from rsocket-cpp CMake
+        ${GMOCK_LIBS} # inherited from rsocket-cpp CMake
+        ${CMAKE_THREAD_LIBS_INIT}
 )
 
 target_include_directories(
         yarpl-tests
         PUBLIC "${PROJECT_SOURCE_DIR}/include" # allow include paths such as "yarpl/observable.h" can be used
 )
+
+add_dependencies(yarpl-tests gmock)
 
 ## perf tests
 #add_executable(

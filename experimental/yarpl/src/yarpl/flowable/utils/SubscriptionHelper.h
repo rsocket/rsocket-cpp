@@ -3,6 +3,7 @@
 #pragma once
 
 #include <atomic>
+#include <cstdint>
 
 namespace yarpl {
 namespace flowable {

@@ -8,38 +8,7 @@
 #include <string>
 #include "src/Frame.h"
 
-// bug in GCC: https://bugzilla.redhat.com/show_bug.cgi?id=130601
-#pragma push_macro("major")
-#pragma push_macro("minor")
-#undef major
-#undef minor
-
 namespace reactivesocket {
-
-struct ProtocolVersion {
-  uint16_t major{};
-  uint16_t minor{};
-
-  constexpr ProtocolVersion() = default;
-  constexpr ProtocolVersion(uint16_t _major, uint16_t _minor)
-      : major(_major), minor(_minor) {}
-
-  bool operator>(const ProtocolVersion& other) const {
-    return major > other.major || (major == other.major && minor > other.minor);
-  }
-
-  bool operator==(const ProtocolVersion& other) const {
-    return major == other.major && minor == other.minor;
-  }
-
-  bool operator!=(const ProtocolVersion& other) const {
-    return !((*this) == other);
-  }
-};
-std::ostream& operator<<(std::ostream&, const ProtocolVersion&);
-
-#pragma pop_macro("major")
-#pragma pop_macro("minor")
 
 // interface separating serialization/deserialization of ReactiveSocket frames
 class FrameSerializer {
@@ -48,15 +17,16 @@ class FrameSerializer {
 
   virtual ProtocolVersion protocolVersion() = 0;
 
+  static ProtocolVersion getCurrentProtocolVersion();
   static std::unique_ptr<FrameSerializer> createFrameSerializer(
       const ProtocolVersion& protocolVersion);
   static std::unique_ptr<FrameSerializer> createCurrentVersion();
 
+  static std::unique_ptr<FrameSerializer> createAutodetectedSerializer(
+      const folly::IOBuf& firstFrame);
+
   virtual FrameType peekFrameType(const folly::IOBuf& in) = 0;
   virtual folly::Optional<StreamId> peekStreamId(const folly::IOBuf& in) = 0;
-
-  constexpr static const ProtocolVersion kCurrentProtocolVersion =
-      ProtocolVersion(0, 1);
 
   virtual std::unique_ptr<folly::IOBuf> serializeOut(
       Frame_REQUEST_STREAM&&) = 0;

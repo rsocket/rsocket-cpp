@@ -93,10 +93,6 @@ TEST(FlowableRange, 1_to_100_cancel) {
   auto ts = TestSubscriber<long>::create(40);
   f->subscribe(ts->unique_subscriber());
   ts->cancel();
-  // requesting more should do nothing
-  // TODO this is probably a "bad thing" to do as it could call a dangling
-  // pointer.
-  ts->requestMore(100);
   ts->assertValueCount(40);
 }
 
@@ -104,10 +100,10 @@ TEST(FlowableRange, 1_to_100_cancel) {
  * Test that cancellation works correctly across thread boundaries
  * to stop emission.
  */
-TEST(FlowableRange, async_cancellation) {
+TEST(FlowableRange, DISABLED_async_cancellation) {
   ThreadScheduler threadScheduler;
   const int MAX_SIZE = 500000000;
-  auto f = Flowable<long>::create([](auto s) {
+  auto f = Flowable<long>::create([MAX_SIZE](auto s) {
     auto r_ = new yarpl::flowable::sources::RangeSubscription(
         1, MAX_SIZE, std::move(s));
     r_->start();
