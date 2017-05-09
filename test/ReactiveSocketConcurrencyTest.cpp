@@ -27,6 +27,10 @@ class ClientSideConcurrencyTest : public testing::Test {
   ClientSideConcurrencyTest() {
     auto serverConn = std::make_unique<InlineConnection>();
 
+    auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+    EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
+    EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+
     thread2.getEventBase()->runImmediatelyOrRunInEventBaseThreadAndWait([&] {
       auto clientConn = std::make_unique<InlineConnection>();
       clientConn->connectTo(*serverConn);
@@ -35,13 +39,15 @@ class ClientSideConcurrencyTest : public testing::Test {
           std::move(clientConn),
           // No interactions on this mock, the client will not accept any
           // requests.
-          std::make_unique<StrictMock<MockRequestHandler>>(),
+          std::move(requestHandler),
           ConnectionSetupPayload("", "", Payload()),
           Stats::noop(),
           nullptr);
     });
 
     auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+    EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
+    EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
     auto& serverHandlerRef = *serverHandler;
 
     EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
@@ -480,6 +486,8 @@ class InitialRequestNDeliveredTest : public testing::Test {
         }));
 
     auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
+    EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
+    EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
     auto& serverHandlerRef = *serverHandler;
 
     EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))

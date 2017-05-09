@@ -108,5 +108,10 @@ class MockRequestHandler : public RequestHandler {
                               subscriber) noexcept override {}
   void onSubscriberResumed(const std::shared_ptr<Subscriber<Payload>>&
                                subscriber) noexcept override {}
+
+  MOCK_METHOD0(socketOnConnected, void());
+
+  MOCK_METHOD1(socketOnClosed, void(folly::exception_wrapper& listener));
+  MOCK_METHOD1(socketOnDisconnected, void(folly::exception_wrapper& listener));
 };
 }
