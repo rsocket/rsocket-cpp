@@ -100,6 +100,7 @@ class Subscribers {
         : Base<T, Next>(std::forward<Next>(next), batch), error_(error) {}
 
     virtual void onError(std::exception_ptr error) override {
+      Subscriber<T>::onError(error);
       error_(error);
     }
 
@@ -122,6 +123,7 @@ class Subscribers {
           complete_(complete) {}
 
     virtual void onComplete() {
+      Subscriber<T>::onComplete();
       complete_();
     }
 
