@@ -39,11 +39,11 @@ TEST(RefcountedTest, CopyAssign) {
   using Sub = Subscriber<int>;
   Reference<Sub> a(new Sub());
   Reference<Sub> b(a);
-  EXPECT_EQ(2, a->count());
+  EXPECT_EQ(2u, a->count());
   Sub* ptr = nullptr;
   Reference<Sub> c(ptr = new Sub());
   b = c;
-  EXPECT_EQ(1, a->count());
+  EXPECT_EQ(1u, a->count());
   EXPECT_EQ(ptr, b.get());
 }
 
@@ -51,10 +51,10 @@ TEST(RefcountedTest, MoveAssign) {
   using Sub = Subscriber<int>;
   Reference<Sub> a(new Sub());
   Reference<Sub> b(a);
-  EXPECT_EQ(2, a->count());
+  EXPECT_EQ(2u, a->count());
   Sub* ptr = nullptr;
   b = Reference<Sub>(ptr = new Sub());
-  EXPECT_EQ(1, a->count());
+  EXPECT_EQ(1u, a->count());
   EXPECT_EQ(ptr, b.get());
 }
 
@@ -62,12 +62,12 @@ TEST(RefcountedTest, CopyAssignTemplate) {
   using Sub = Subscriber<int>;
   Reference<Sub> a(new Sub());
   Reference<Sub> b(a);
-  EXPECT_EQ(2, a->count());
+  EXPECT_EQ(2u, a->count());
   using Sub2 = MySubscriber<int>;
   Sub2* ptr = nullptr;
   Reference<Sub2> c(ptr = new Sub2());
   b = c;
-  EXPECT_EQ(1, a->count());
+  EXPECT_EQ(1u, a->count());
   EXPECT_EQ(ptr, b.get());
 }
 
@@ -75,10 +75,10 @@ TEST(RefcountedTest, MoveAssignTemplate) {
   using Sub = Subscriber<int>;
   Reference<Sub> a(new Sub());
   Reference<Sub> b(a);
-  EXPECT_EQ(2, a->count());
+  EXPECT_EQ(2u, a->count());
   using Sub2 = MySubscriber<int>;
   Sub2* ptr = nullptr;
   b = Reference<Sub2>(ptr = new Sub2());
-  EXPECT_EQ(1, a->count());
+  EXPECT_EQ(1u, a->count());
   EXPECT_EQ(ptr, b.get());
 }
