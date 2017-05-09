@@ -20,7 +20,7 @@ class FlowableOperator : public Flowable<D> {
   explicit FlowableOperator(Reference<Flowable<U>> upstream)
       : upstream_(std::move(upstream)) {}
 
-  virtual void subscribe(Reference<Subscriber<D>> subscriber) override {
+  void subscribe(Reference<Subscriber<D>> subscriber) override {
     upstream_->subscribe(Reference<Subscription>(
         new Subscription(Reference<Flowable<D>>(this), std::move(subscriber))));
   }
@@ -45,29 +45,29 @@ class FlowableOperator : public Flowable<D> {
       subscriber_.reset();
     }
 
-    virtual void onSubscribe(
+    void onSubscribe(
         Reference<::yarpl::flowable::Subscription> subscription) override {
       upstream_ = std::move(subscription);
       subscriber_->onSubscribe(Reference<::yarpl::flowable::Subscription>(this));
     }
 
-    virtual void onComplete() override {
+    void onComplete() override {
       subscriber_->onComplete();
       upstream_.reset();
       release();
     }
 
-    virtual void onError(const std::exception_ptr error) override {
+    void onError(const std::exception_ptr error) override {
       subscriber_->onError(error);
       upstream_.reset();
       release();
     }
 
-    virtual void request(int64_t delta) override {
+    void request(int64_t delta) override {
       upstream_->request(delta);
     }
 
-    virtual void cancel() override {
+    void cancel() override {
       upstream_->cancel();
       upstream_.reset();
       release();
@@ -104,7 +104,7 @@ class MapOperator : public FlowableOperator<U, D> {
       : FlowableOperator<U, D>(std::move(upstream)),
         function_(std::forward<F>(function)) {}
 
-  virtual void subscribe(Reference<Subscriber<D>> subscriber) override {
+  void subscribe(Reference<Subscriber<D>> subscriber) override {
     FlowableOperator<U, D>::upstream_->subscribe(
         // Note: implicit cast to a reference to a subscriber.
         Reference<Subscription>(new Subscription(
@@ -121,7 +121,7 @@ class MapOperator : public FlowableOperator<U, D> {
               std::move(flowable),
               std::move(subscriber)) {}
 
-    virtual void onNext(U value) override {
+    void onNext(U value) override {
       auto subscriber =
           FlowableOperator<U, D>::Subscription::subscriber_.get();
       auto* flowable = FlowableOperator<U, D>::Subscription::flowable_.get();
@@ -139,7 +139,7 @@ class TakeOperator : public FlowableOperator<T, T> {
   TakeOperator(Reference<Flowable<T>> upstream, int64_t limit)
       : FlowableOperator<T, T>(std::move(upstream)), limit_(limit) {}
 
-  virtual void subscribe(Reference<Subscriber<T>> subscriber) override {
+  void subscribe(Reference<Subscriber<T>> subscriber) override {
     FlowableOperator<T, T>::upstream_->subscribe(
         Reference<Subscription>(new Subscription(
             Reference<Flowable<T>>(this), limit_, std::move(subscriber))));
@@ -157,7 +157,7 @@ class TakeOperator : public FlowableOperator<T, T> {
               std::move(subscriber)),
           limit_(limit) {}
 
-    virtual void onNext(T value) {
+    void onNext(T value) override {
       if (limit_-- > 0) {
         if (pending_ > 0)
           --pending_;
@@ -170,7 +170,7 @@ class TakeOperator : public FlowableOperator<T, T> {
       }
     }
 
-    virtual void request(int64_t delta) {
+    void request(int64_t delta) override {
       delta = std::min(delta, limit_ - pending_);
       if (delta > 0) {
         pending_ += delta;
@@ -193,7 +193,7 @@ class SubscribeOnOperator : public FlowableOperator<T, T> {
       : FlowableOperator<T, T>(std::move(upstream)),
         worker_(scheduler.createWorker()) {}
 
-  virtual void subscribe(Reference<Subscriber<T>> subscriber) override {
+  void subscribe(Reference<Subscriber<T>> subscriber) override {
     FlowableOperator<T, T>::upstream_->subscribe(
         Reference<Subscription>(new Subscription(
             Reference<Flowable<T>>(this),
@@ -213,15 +213,15 @@ class SubscribeOnOperator : public FlowableOperator<T, T> {
               std::move(subscriber)),
           worker_(std::move(worker)) {}
 
-    virtual void request(int64_t delta) override {
+    void request(int64_t delta) override {
       worker_->schedule([delta, this] { this->callSuperRequest(delta); });
     }
 
-    virtual void cancel() override {
+    void cancel() override {
       worker_->schedule([this] { this->callSuperCancel(); });
     }
 
-    virtual void onNext(T value) override {
+    void onNext(T value) override {
       auto* subscriber =
           FlowableOperator<T, T>::Subscription::subscriber_.get();
       subscriber->onNext(std::move(value));
@@ -250,7 +250,7 @@ class FromPublisherOperator : public Flowable<T> {
   FromPublisherOperator(OnSubscribe&& function)
       : function_(std::move(function)) {}
 
-  void subscribe(Reference<Subscriber<T>> subscriber) {
+  void subscribe(Reference<Subscriber<T>> subscriber) override {
     function_(std::move(subscriber));
   }
 

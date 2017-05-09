@@ -21,7 +21,7 @@ class ObservableOperator : public Observable<D> {
   explicit ObservableOperator(Reference<Observable<U>> upstream)
       : upstream_(std::move(upstream)) {}
 
-  virtual void subscribe(Reference<Observer<D>> subscriber) override {
+  void subscribe(Reference<Observer<D>> subscriber) override {
     upstream_->subscribe(Reference<Subscription>(new Subscription(
         Reference<Observable<D>>(this), std::move(subscriber))));
   }
@@ -46,23 +46,23 @@ class ObservableOperator : public Observable<D> {
       subscriber_.reset();
     }
 
-    virtual void onSubscribe(
+    void onSubscribe(
         Reference<::yarpl::observable::Subscription> subscription) override {
       upstream_ = std::move(subscription);
       subscriber_->onSubscribe(Reference<::yarpl::observable::Subscription>(this));
     }
 
-    virtual void onComplete() override {
+    void onComplete() override {
       subscriber_->onComplete();
       upstream_.reset();
     }
 
-    virtual void onError(const std::exception_ptr error) override {
+    void onError(const std::exception_ptr error) override {
       subscriber_->onError(error);
       upstream_.reset();
     }
 
-    virtual void cancel() override {
+    void cancel() override {
       upstream_->cancel();
     }
 
@@ -97,7 +97,7 @@ class MapOperator : public ObservableOperator<U, D> {
       : ObservableOperator<U, D>(std::move(upstream)),
         function_(std::forward<F>(function)) {}
 
-  virtual void subscribe(Reference<Observer<D>> subscriber) override {
+  void subscribe(Reference<Observer<D>> subscriber) override {
     ObservableOperator<U, D>::upstream_->subscribe(
         // Note: implicit cast to a reference to a subscriber.
         Reference<Subscription>(new Subscription(
@@ -114,7 +114,7 @@ class MapOperator : public ObservableOperator<U, D> {
               std::move(flowable),
               std::move(subscriber)) {}
 
-    virtual void onNext(U value) override {
+    void onNext(U value) override {
       auto* subscriber =
           ObservableOperator<U, D>::Subscription::subscriber_.get();
       auto* flowable = ObservableOperator<U, D>::Subscription::flowable_.get();
@@ -132,7 +132,7 @@ class TakeOperator : public ObservableOperator<T, T> {
   TakeOperator(Reference<Observable<T>> upstream, int64_t limit)
       : ObservableOperator<T, T>(std::move(upstream)), limit_(limit) {}
 
-  virtual void subscribe(Reference<Observer<T>> subscriber) override {
+  void subscribe(Reference<Observer<T>> subscriber) override {
     ObservableOperator<T, T>::upstream_->subscribe(
         Reference<Subscription>(new Subscription(
             Reference<Observable<T>>(this), limit_, std::move(subscriber))));
@@ -150,7 +150,7 @@ class TakeOperator : public ObservableOperator<T, T> {
               std::move(subscriber)),
           limit_(limit) {}
 
-    virtual void onNext(T value) {
+    void onNext(T value) override {
       if (limit_-- > 0) {
         if (pending_ > 0)
           --pending_;
@@ -178,7 +178,7 @@ class SubscribeOnOperator : public ObservableOperator<T, T> {
       : ObservableOperator<T, T>(std::move(upstream)),
         worker_(scheduler.createWorker()) {}
 
-  virtual void subscribe(Reference<Observer<T>> subscriber) override {
+  void subscribe(Reference<Observer<T>> subscriber) override {
     ObservableOperator<T, T>::upstream_->subscribe(
         Reference<Subscription>(new Subscription(
             Reference<Observable<T>>(this),
@@ -198,11 +198,11 @@ class SubscribeOnOperator : public ObservableOperator<T, T> {
               std::move(subscriber)),
           worker_(std::move(worker)) {}
 
-    virtual void cancel() override {
+    void cancel() override {
       worker_->schedule([this] { this->callSuperCancel(); });
     }
 
-    virtual void onNext(T value) override {
+    void onNext(T value) override {
       auto* subscriber =
           ObservableOperator<T, T>::Subscription::subscriber_.get();
       subscriber->onNext(std::move(value));
@@ -227,7 +227,7 @@ class FromPublisherOperator : public Observable<T> {
   FromPublisherOperator(OnSubscribe&& function)
       : function_(std::move(function)) {}
 
-  void subscribe(Reference<Observer<T>> subscriber) {
+  void subscribe(Reference<Observer<T>> subscriber) override {
     function_(std::move(subscriber));
   }
 

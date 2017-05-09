@@ -81,7 +81,7 @@ class Flowable : public virtual Refcounted {
       subscriber_.reset();
     }
 
-    virtual void request(int64_t delta) override {
+    void request(int64_t delta) override {
       if (delta <= 0) {
         auto message = "request(n): " + std::to_string(delta) + " <= 0";
         throw std::logic_error(message);
@@ -103,21 +103,21 @@ class Flowable : public virtual Refcounted {
       process();
     }
 
-    virtual void cancel() override {
+    void cancel() override {
       requested_.exchange(CANCELED, std::memory_order_relaxed);
       process();
     }
 
     // Subscriber methods.
-    virtual void onSubscribe(Reference<Subscription>) override {
+    void onSubscribe(Reference<Subscription>) override {
       // Not actually expected to be called.
     }
 
-    virtual void onNext(T value) override {
+    void onNext(T value) override {
       subscriber_->onNext(std::move(value));
     }
 
-    virtual void onComplete() override {
+    void onComplete() override {
       subscriber_->onComplete();
       requested_.store(CANCELED, std::memory_order_relaxed);
       // We should already be in process(); nothing more to do.
@@ -126,7 +126,7 @@ class Flowable : public virtual Refcounted {
       // we're following the Subscription's protocol instead.
     }
 
-    virtual void onError(const std::exception_ptr error) override {
+    void onError(const std::exception_ptr error) override {
       subscriber_->onError(error);
       requested_.store(CANCELED, std::memory_order_relaxed);
       // We should already be in process(); nothing more to do.
@@ -217,14 +217,14 @@ class Flowable<T>::EmitterWrapper : public Flowable<T> {
   explicit EmitterWrapper(Emitter&& emitter)
       : emitter_(std::forward<Emitter>(emitter)) {}
 
-  virtual void subscribe(Reference<Subscriber<T>> subscriber) {
+  void subscribe(Reference<Subscriber<T>> subscriber) override {
     new SynchronousSubscription(
         Reference<Flowable>(this), std::move(subscriber));
   }
 
-  virtual std::tuple<int64_t, bool> emit(
+  std::tuple<int64_t, bool> emit(
       Subscriber<T>& subscriber,
-      int64_t requested) {
+      int64_t requested) override {
     return emitter_(subscriber, requested);
   }
 
