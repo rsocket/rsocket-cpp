@@ -68,7 +68,6 @@ size_t FramedReader::readFrameLength() const {
 
 void FramedReader::onSubscribeImpl(
     std::shared_ptr<Subscription> subscription) noexcept {
-  CHECK(!streamSubscription_);
   streamSubscription_ = std::move(subscription);
   frames_->onSubscribe(shared_from_this());
 }
@@ -212,6 +211,14 @@ bool FramedReader::ensureOrAutodetectProtocolVersion() {
   onErrorImpl(
       std::runtime_error("could not detect protocol version from framing"));
   return false;
+}
+
+void FramedReader::setFrame(
+    std::shared_ptr<reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
+      frame) {
+  frames_->onComplete();
+  frames_ = frame;
+  onSubscribeImpl(streamSubscription_);
 }
 
 } // reactivesocket

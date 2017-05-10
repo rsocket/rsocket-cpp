@@ -27,7 +27,11 @@ class FramedReader : public SubscriberBaseT<std::unique_ptr<folly::IOBuf>>,
         payloadQueue_(folly::IOBufQueue::cacheChainLength()),
         protocolVersion_(std::move(protocolVersion)) {}
 
- private:
+  void setFrame(
+      std::shared_ptr<reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
+        frame);
+
+private:
   // Subscriber methods
   void onSubscribeImpl(
       std::shared_ptr<Subscription> subscription) noexcept override;
