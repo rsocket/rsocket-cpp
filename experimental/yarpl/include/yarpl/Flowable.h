@@ -177,7 +177,7 @@ class Flowable : public virtual Refcounted {
             *this /* implicit conversion to subscriber */, current);
 
         while (true) {
-          auto current = requested_.load(std::memory_order_relaxed);
+          current = requested_.load(std::memory_order_relaxed);
           if (current == CANCELED || (current == NO_FLOW_CONTROL && !done))
             break;
 
