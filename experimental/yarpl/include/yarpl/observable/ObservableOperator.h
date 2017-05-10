@@ -33,7 +33,7 @@ class ObservableOperator : public Observable<D> {
   /// When a pipeline chain is active, each Observable has a corresponding
   /// subscription.  Except for the first one, the subscriptions are created
   /// against Operators.  Each operator subscription has two functions: as a
-  /// subscriber for the previous stage; as a subscription for the next one,
+  /// subscriber for the previus stage; as a subscription for the next one,
   /// the user-supplied subscriber being the last of the pipeline stages.
   class Subscription : public ::yarpl::observable::Subscription, public Observer<U> {
    public:
@@ -136,7 +136,7 @@ public:
       : ObservableOperator<U, U>(std::move(upstream)),
         function_(std::forward<F>(function)) {}
 
-  virtual void subscribe(Reference <Observer<U>> subscriber) override {
+  void subscribe(Reference <Observer<U>> subscriber) override {
     ObservableOperator<U, U>::upstream_->subscribe(
         // Note: implicit cast to a reference to a subscriber.
         Reference<Subscription>(new Subscription(
@@ -153,13 +153,13 @@ private:
         std::move(flowable),
         std::move(subscriber)) {}
 
-    virtual void onNext(U value) override {
+    void onNext(U value) override {
       auto *flowable = ObservableOperator<U, U>::Subscription::flowable_.get();
       auto *reduce = static_cast<ReduceOperator*>(flowable);
       acc_ = reduce->function_(std::move(acc_), std::move(value));
     }
 
-    virtual void onComplete() override {
+    void onComplete() override {
       auto *subscriber =
           ObservableOperator<U, U>::Subscription::subscriber_.get();
       subscriber->onNext(acc_);
@@ -189,7 +189,7 @@ public:
       : ObservableOperator<U, U>(std::move(upstream)),
         function_(std::forward<F>(function)) {}
 
-  virtual void subscribe(Reference <Observer<U>> subscriber) override {
+  void subscribe(Reference <Observer<U>> subscriber) override {
     ObservableOperator<U, U>::upstream_->subscribe(
         // Note: implicit cast to a reference to a subscriber.
         Reference<Subscription>(new Subscription(
@@ -206,7 +206,7 @@ private:
         std::move(flowable),
         std::move(subscriber)) {}
 
-    virtual void onNext(U value) override {
+    void onNext(U value) override {
       auto *subscriber =
           ObservableOperator<U, U>::Subscription::subscriber_.get();
       auto *flowable = ObservableOperator<U, U>::Subscription::flowable_.get();

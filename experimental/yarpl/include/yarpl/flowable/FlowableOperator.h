@@ -143,7 +143,7 @@ public:
       : FlowableOperator<U, U>(std::move(upstream)),
         function_(std::forward<F>(function)) {}
 
-  virtual void subscribe(Reference<Subscriber<U>> subscriber) override {
+  void subscribe(Reference<Subscriber<U>> subscriber) override {
     FlowableOperator<U, U>::upstream_->subscribe(
         // Note: implicit cast to a reference to a subscriber.
         Reference<Subscription>(new Subscription(
@@ -160,7 +160,7 @@ private:
         std::move(flowable),
         std::move(subscriber)) {}
 
-    virtual void onNext(U value) override {
+    void onNext(U value) override {
       auto subscriber =
           FlowableOperator<U, U>::Subscription::subscriber_.get();
       auto* flowable = FlowableOperator<U, U>::Subscription::flowable_.get();
