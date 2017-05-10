@@ -163,6 +163,18 @@ TEST(FlowableTest, RangeWithReduce) {
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
+TEST(FlowableTest, StringReduce) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto flowable = Flowables::justN<std::string>(
+    {"a", "b", "c", "d", "e", "f", "g", "h", "i"})
+    ->reduce([](std::string acc, std::string v) {
+      return acc + v;
+    });
+  EXPECT_EQ(
+    run(std::move(flowable)), std::vector<std::string>({"abcdefghi"}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
 TEST(FlowableTest, SimpleTake) {
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
   EXPECT_EQ(

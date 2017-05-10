@@ -158,7 +158,8 @@ private:
         Reference<Subscriber<U>> subscriber)
         : FlowableOperator<U, U>::Subscription(
         std::move(flowable),
-        std::move(subscriber)) {}
+        std::move(subscriber)),
+          acc_() {}
 
     void onNext(U value) override {
       auto* flowable = FlowableOperator<U, U>::Subscription::flowable_.get();
