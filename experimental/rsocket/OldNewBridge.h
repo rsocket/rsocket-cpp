@@ -136,7 +136,14 @@ class NewToOldSubscriber : public yarpl::flowable::Subscriber<reactivesocket::Pa
     if (bridge_) {
       bridge_->terminate();
     }
-    inner_->onError(folly::exception_wrapper(std::move(eptr)));
+
+    try {
+      std::rethrow_exception(eptr);
+    } catch (const std::exception& e) {
+      inner_->onError(folly::exception_wrapper(std::move(eptr), e));
+    } catch (...) {
+      inner_->onError(folly::exception_wrapper(std::current_exception()));
+    }
 
     inner_.reset();
     bridge_.reset();
