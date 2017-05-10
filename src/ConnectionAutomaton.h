@@ -186,7 +186,7 @@ class ConnectionAutomaton final
     return streamsFactory_;
   }
 
-  FrameSerializer& frameSerializer() const override;
+  FrameSerializer& frameSerializer() const;
   void setFrameSerializer(std::unique_ptr<FrameSerializer>);
 
   Stats& stats() {
@@ -212,9 +212,16 @@ class ConnectionAutomaton final
   void onTerminalImpl(folly::exception_wrapper);
   /// @}
 
-  void onConnectionFrame(std::unique_ptr<folly::IOBuf>);
+  void handleConnectionFrame(FrameType frameType,
+                             std::unique_ptr<folly::IOBuf>);
+
+  void handleStreamFrame(
+      StreamId streamId,
+      FrameType frameType,
+      std::unique_ptr<folly::IOBuf> frame);
   void handleUnknownStream(
       StreamId streamId,
+      FrameType frameType,
       std::unique_ptr<folly::IOBuf> frame);
 
   void closeStreams(StreamCompletionSignal);

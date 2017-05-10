@@ -73,7 +73,7 @@ void StreamResponder::endStream(StreamCompletionSignal signal) {
   StreamAutomatonBase::endStream(signal);
 }
 
-void StreamResponder::onNextFrame(Frame_CANCEL&& frame) {
+void StreamResponder::handleCancel() {
   switch (state_) {
     case State::RESPONDING:
       state_ = State::CLOSED;
@@ -84,7 +84,7 @@ void StreamResponder::onNextFrame(Frame_CANCEL&& frame) {
   }
 }
 
-void StreamResponder::onNextFrame(Frame_REQUEST_N&& frame) {
-  PublisherBase::processRequestN(frame.requestN_);
+void StreamResponder::handleRequestN(uint32_t n) {
+  PublisherBase::processRequestN(n);
 }
 }

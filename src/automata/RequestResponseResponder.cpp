@@ -76,7 +76,7 @@ void RequestResponseResponder::endStream(StreamCompletionSignal signal) {
   StreamAutomatonBase::endStream(signal);
 }
 
-void RequestResponseResponder::onNextFrame(Frame_CANCEL&& frame) {
+void RequestResponseResponder::handleCancel() {
   switch (state_) {
     case State::RESPONDING:
       state_ = State::CLOSED;
@@ -87,8 +87,8 @@ void RequestResponseResponder::onNextFrame(Frame_CANCEL&& frame) {
   }
 }
 
-void RequestResponseResponder::onNextFrame(Frame_REQUEST_N&& frame) {
-  PublisherBase::processRequestN(frame.requestN_);
+void RequestResponseResponder::handleRequestN(uint32_t n) {
+  PublisherBase::processRequestN(n);
 }
 
 } // reactivesocket
