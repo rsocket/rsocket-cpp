@@ -55,9 +55,7 @@ TEST(RSocketClientServer, StartAndShutdown) {
   makeClient(randPort());
 }
 
-// TODO(alexanderm): Failing upon closing the server.  Error says we're on the
-// wrong EventBase for the AsyncSocket.
-TEST(RSocketClientServer, DISABLED_SimpleConnect) {
+TEST(RSocketClientServer, SimpleConnect) {
   auto const port = randPort();
   auto server = makeServer(port);
   auto client = makeClient(port);

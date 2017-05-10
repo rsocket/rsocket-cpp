@@ -89,5 +89,7 @@ class RSocketServer {
 
   folly::Baton<> waiting_;
   folly::Optional<folly::Baton<>> shutdown_;
+
+  std::atomic_bool isShutdown_{false};
 };
 } // namespace rsocket
