@@ -25,7 +25,7 @@ else
   export LDFLAGS="-L/usr/local/opt/openssl/lib"
 fi
 
-folly_version="2017.03.06.00"
+folly_version="2017.05.08.00"
 gtest_version="1.8.0"
 
 cachedir="$HOME/.rscache"
