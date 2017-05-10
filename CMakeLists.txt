@@ -496,6 +496,40 @@ target_link_libraries(
         ${CMAKE_THREAD_LIBS_INIT})
 
 
+# channel-hello-world
+
+add_executable(
+        example_channel-hello-world-server
+        examples/channel-hello-world/ChannelHelloWorld_Server.cpp
+)
+
+target_link_libraries(
+        example_channel-hello-world-server
+        ReactiveSocket
+        rsocket_experimental
+        reactivesocket_examples_util
+        yarpl
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
+
+add_executable(
+        example_channel-hello-world-client
+        examples/channel-hello-world/ChannelHelloWorld_Client.cpp
+)
+
+target_link_libraries(
+        example_channel-hello-world-client
+        ReactiveSocket
+        rsocket_experimental
+        reactivesocket_examples_util
+        yarpl
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
+
 # stream-observable-to-flowable
 
 add_executable(
