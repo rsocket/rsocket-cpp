@@ -2,13 +2,13 @@ cpp_binary(
   name = 'tcp-server',
   headers = subdir_glob([('.', '**/*.h')]),
   srcs = [
-    'HelloStreamRequestHandler.cpp',
-    'HelloStreamSubscription.cpp',
-    'StreamHelloWorld_Server.cpp',
+    'StreamObservableToFlowable_Server.cpp',
   ],
   deps = [
     '@/folly/init:init',
-    '@/lithium/reactivesocket-cpp:rsocket',
+    '@/rsocket/dev:rsocket',
+    '@/rsocket/dev:plugins',
+    '@/rsocket/dev/examples/util:subscriber',
   ],
 )
 
@@ -16,13 +16,12 @@ cpp_binary(
   name = 'tcp-client',
   headers = subdir_glob([('.', '**/*.h')]),
   srcs = [
-    'HelloStreamRequestHandler.cpp',
-    'HelloStreamSubscription.cpp',
-    'StreamHelloWorld_Client.cpp',
+    'StreamObservableToFlowable_Client.cpp',
   ],
   deps = [
     '@/folly/init:init',
-    '@/lithium/reactivesocket-cpp/examples/util:subscriber',
-    '@/lithium/reactivesocket-cpp:rsocket',
+    '@/rsocket/dev:rsocket',
+    '@/rsocket/dev:plugins',
+    '@/rsocket/dev/examples/util:subscriber',
   ],
 )
