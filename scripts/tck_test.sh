@@ -31,6 +31,16 @@ else
   exit 1
 fi
 
+if [ ! -s ./build/tckserver ] && [ "$server_lang" = cpp ]; then
+    echo "./build/tckserver Binary not found!"
+    exit 1
+fi
+
+if [ ! -s ./build/tckclient ] && [ "$client_lang" = cpp ]; then
+    echo "./build/tckclient Binary not found!"
+    exit 1
+fi
+
 java_server="java -cp reactivesocket-tck-drivers-0.9-SNAPSHOT.jar io/reactivesocket/tckdrivers/main/Main --server --host localhost --port 9898 --file tck-test/servertest.txt"
 java_client="java -cp reactivesocket-tck-drivers-0.9-SNAPSHOT.jar io/reactivesocket/tckdrivers/main/Main --client --host localhost --port 9898 --file tck-test/clienttest.txt"
 
