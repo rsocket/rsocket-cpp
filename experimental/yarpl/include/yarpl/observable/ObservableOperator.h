@@ -33,7 +33,7 @@ class ObservableOperator : public Observable<D> {
   /// When a pipeline chain is active, each Observable has a corresponding
   /// subscription.  Except for the first one, the subscriptions are created
   /// against Operators.  Each operator subscription has two functions: as a
-  /// subscriber for the previus stage; as a subscription for the next one,
+  /// subscriber for the previous stage; as a subscription for the next one,
   /// the user-supplied subscriber being the last of the pipeline stages.
   class Subscription : public ::yarpl::observable::Subscription, public Observer<U> {
    public:
