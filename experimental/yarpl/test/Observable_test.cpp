@@ -3,17 +3,89 @@
 #include <folly/Baton.h>
 #include <gtest/gtest.h>
 #include <atomic>
-#include "Tuple.h"
+
 #include "yarpl/Observable.h"
+#include "yarpl/Observables.h"
 #include "yarpl/ThreadScheduler.h"
 #include "yarpl/flowable/Subscriber.h"
 #include "yarpl/flowable/Subscribers.h"
 #include "yarpl/observable/Observers.h"
 #include "yarpl/observable/Subscriptions.h"
 
+#include "Tuple.h"
+
 // TODO can we eliminate need to import both of these?
 using namespace yarpl;
 using namespace yarpl::observable;
+
+namespace {
+
+void unreachable() {
+  EXPECT_TRUE(false);
+}
+
+template <typename T>
+class CollectingObserver : public Observer<T> {
+ public:
+  static_assert(
+      std::is_copy_constructible<T>::value,
+      "CollectingSubscriber needs to copy the value in order to collect it");
+
+  void onNext(T next) override {
+    Observer<T>::onNext(next);
+    values_.push_back(std::move(next));
+  }
+
+  void onComplete() override {
+    Observer<T>::onComplete();
+    complete_ = true;
+  }
+
+  void onError(std::exception_ptr ex) override {
+    Observer<T>::onError(ex);
+    error_ = true;
+
+    try {
+      std::rethrow_exception(ex);
+    } catch (const std::exception& e) {
+      errorMsg_ = e.what();
+    }
+  }
+
+  const std::vector<T>& values() const {
+    return values_;
+  }
+
+  bool complete() const {
+    return complete_;
+  }
+
+  bool error() const {
+    return error_;
+  }
+
+  const std::string& errorMsg() const {
+    return errorMsg_;
+  }
+
+ private:
+  std::vector<T> values_;
+  std::string errorMsg_;
+  bool complete_{false};
+  bool error_{false};
+};
+
+/// Construct a pipeline with a collecting observer against the supplied
+/// observable.  Return the items that were sent to the observer.  If some
+/// exception was sent, the exception is thrown.
+template <typename T>
+std::vector<T> run(Reference<Observable<T>> observable) {
+  auto collector = make_ref<CollectingObserver<T>>();
+  observable->subscribe(collector);
+  return collector->values();
+}
+
+} // namespace
 
 TEST(Observable, SingleOnNext) {
   {
@@ -261,4 +333,125 @@ TEST(Observable, toFlowableWithCancel) {
     EXPECT_EQ(v, std::vector<int>({1, 2, 3, 4, 5}));
   }
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(Observable, Just) {
+  ASSERT_EQ(0u, Refcounted::objects());
+
+  EXPECT_EQ(run(Observables::just(22)), std::vector<int>{22});
+  EXPECT_EQ(
+      run(Observables::justN({12, 34, 56, 98})),
+      std::vector<int>({12, 34, 56, 98}));
+  EXPECT_EQ(
+      run(Observables::justN({"ab", "pq", "yz"})),
+      std::vector<const char*>({"ab", "pq", "yz"}));
+
+  EXPECT_EQ(0u, Refcounted::objects());
+}
+
+TEST(Observable, Range) {
+  ASSERT_EQ(0u, Refcounted::objects());
+
+  auto observable = Observables::range(10, 14);
+  EXPECT_EQ(run(std::move(observable)), std::vector<int64_t>({10, 11, 12, 13}));
+
+  EXPECT_EQ(0u, Refcounted::objects());
+}
+
+TEST(Observable, RangeWithMap) {
+  ASSERT_EQ(0u, Refcounted::objects());
+
+  auto observable = Observables::range(1, 4)
+                      ->map([](int64_t v) { return v * v; })
+                      ->map([](int64_t v) { return v * v; })
+                      ->map([](int64_t v) { return std::to_string(v); });
+  EXPECT_EQ(
+      run(std::move(observable)), std::vector<std::string>({"1", "16", "81"}));
+
+  EXPECT_EQ(0u, Refcounted::objects());
+}
+
+// TODO: Hits ASAN errors.
+TEST(Observable, DISABLED_SimpleTake) {
+  ASSERT_EQ(0u, Refcounted::objects());
+
+  EXPECT_EQ(
+      run(Observables::range(0, 100)->take(3)),
+      std::vector<int64_t>({0, 1, 2}));
+
+  EXPECT_EQ(0u, Refcounted::objects());
+}
+
+TEST(Observable, Error) {
+  auto observable = Observables::error<int>(std::runtime_error("something broke!"));
+  auto collector = make_ref<CollectingObserver<int>>();
+  observable->subscribe(collector);
+
+  EXPECT_EQ(collector->complete(), false);
+  EXPECT_EQ(collector->error(), true);
+  EXPECT_EQ(collector->errorMsg(), "something broke!");
+}
+
+TEST(Observable, ErrorPtr) {
+  auto observable = Observables::error<int>(
+      std::make_exception_ptr(std::runtime_error("something broke!")));
+  auto collector = make_ref<CollectingObserver<int>>();
+  observable->subscribe(collector);
+
+  EXPECT_EQ(collector->complete(), false);
+  EXPECT_EQ(collector->error(), true);
+  EXPECT_EQ(collector->errorMsg(), "something broke!");
+}
+
+TEST(Observable, Empty) {
+  auto observable = Observables::empty<int>();
+  auto collector = make_ref<CollectingObserver<int>>();
+  observable->subscribe(collector);
+
+  EXPECT_EQ(collector->complete(), true);
+  EXPECT_EQ(collector->error(), false);
+}
+
+TEST(Observable, ObserversComplete) {
+  EXPECT_EQ(0u, Refcounted::objects());
+
+  auto observable = Observables::empty<int>();
+  EXPECT_EQ(1u, Refcounted::objects());
+
+  bool completed = false;
+
+  auto observer = Observers::create<int>(
+    [](int) { unreachable(); },
+    [](std::exception_ptr) { unreachable(); },
+    [&] { completed = true; }
+  );
+
+  observable->subscribe(std::move(observer));
+  observable.reset();
+
+  EXPECT_EQ(0u, Refcounted::objects());
+
+  EXPECT_TRUE(completed);
+}
+
+TEST(Observable, ObserversError) {
+  EXPECT_EQ(0u, Refcounted::objects());
+
+  auto observable = Observables::error<int>(std::runtime_error("Whoops"));
+  EXPECT_EQ(1u, Refcounted::objects());
+
+  bool errored = false;
+
+  auto observer = Observers::create<int>(
+    [](int) { unreachable(); },
+    [&](std::exception_ptr) { errored = true; },
+    [] { unreachable(); }
+  );
+
+  observable->subscribe(std::move(observer));
+  observable.reset();
+
+  EXPECT_EQ(0u, Refcounted::objects());
+
+  EXPECT_TRUE(errored);
 }
