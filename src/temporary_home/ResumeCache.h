@@ -73,6 +73,15 @@ class ResumeCache {
     return clientPosition <= impliedPosition_;
   }
 
+  void setStreamId(const std::string& streamName, StreamId streamId) {
+    streamNameMap_[streamName] = streamId;
+  }
+
+  StreamId getStreamId(const std::string& streamName) const;
+
+  std::unordered_map<std::string /* streamName */, StreamId>
+  getResumableStreams();
+
   size_t size() const {
     return size_;
   }
@@ -94,6 +103,8 @@ class ResumeCache {
   ResumePosition impliedPosition_{0};
 
   std::unordered_map<StreamId, ResumePosition> streamMap_;
+
+  std::unordered_map<std::string /* streamName */, StreamId> streamNameMap_;
 
   std::deque<std::pair<ResumePosition, std::unique_ptr<folly::IOBuf>>> frames_;
 

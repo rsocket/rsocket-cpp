@@ -45,6 +45,9 @@ class NullRequestHandler : public RequestHandler {
       StreamId streamId,
       const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) noexcept override;
 
+  virtual std::shared_ptr<Subscriber<Payload>> handleResumeStream(
+      std::string streamName) noexcept override;
+
   void handleRequestResponse(
       Payload request,
       StreamId streamId,

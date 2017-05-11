@@ -92,6 +92,8 @@ class RSocketStateMachine final
   /// StreamAutomatonBase attached to this ConnectionAutomaton.
   void close(folly::exception_wrapper, StreamCompletionSignal);
 
+  void resumeStreamsFromCache();
+
   std::shared_ptr<FrameTransport> detachFrameTransport();
 
   /// Terminate underlying connection and connect new connection
@@ -207,6 +209,10 @@ class RSocketStateMachine final
   Stats& stats() {
     return *stats_;
   }
+
+  void setStreamId(const std::string& streamName, StreamId streamId);
+
+  StreamId getStreamId(const std::string& streamName) const;
 
  private:
   /// Performs the same actions as ::endStream without propagating closure

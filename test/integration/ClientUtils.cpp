@@ -27,10 +27,9 @@ std::shared_ptr<FrameTransport> getFrameTransport(
 // Utility function to create a ReactiveSocket.
 std::unique_ptr<ReactiveSocket> getRSocket(
     folly::EventBase* eventBase,
-    std::shared_ptr<ResumeCache> resumeCache) {
+    std::shared_ptr<ResumeCache> resumeCache, 
+    std::unique_ptr<RequestHandler> requestHandler) {
   std::unique_ptr<ReactiveSocket> rsocket;
-  std::unique_ptr<RequestHandler> requestHandler =
-      std::make_unique<ClientRequestHandler>();
   rsocket = ReactiveSocket::disconnectedClient(
       *eventBase,
       std::move(requestHandler),

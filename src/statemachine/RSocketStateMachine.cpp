@@ -188,6 +188,22 @@ void RSocketStateMachine::close(
   closeFrameTransport(std::move(ex), signal);
 }
 
+void RSocketStateMachine::resumeStreamsFromCache() {
+  auto resumableStreams = resumeCache_->getResumableStreams();
+  StreamId maxStreamId = 0;
+  for (auto const& it : resumableStreams) {
+    auto sub = requestHandler_->handleResumeStream(it.first);
+    streamsFactory_.createStreamRequester(
+        Payload(), sub, it.second, executor());
+    if (it.second > maxStreamId) {
+      maxStreamId = it.second;
+    }
+  }
+  if (maxStreamId != 0) {
+    streamsFactory_.setNextStreamId(maxStreamId + 2);
+  }
+}
+
 void RSocketStateMachine::closeFrameTransport(
     folly::exception_wrapper ex,
     StreamCompletionSignal signal) {
@@ -920,7 +936,21 @@ ProtocolVersion RSocketStateMachine::getSerializerProtocolVersion() {
   return frameSerializer_->protocolVersion();
 }
 
+<<<<<<< HEAD:src/statemachine/RSocketStateMachine.cpp
 void RSocketStateMachine::writeNewStream(
+=======
+void ConnectionAutomaton::setStreamId(
+    const std::string& streamName,
+    StreamId streamId) {
+  return resumeCache_->setStreamId(streamName, streamId);
+}
+
+StreamId ConnectionAutomaton::getStreamId(const std::string& streamName) const {
+  return resumeCache_->getStreamId(streamName);
+}
+
+void ConnectionAutomaton::writeNewStream(
+>>>>>>> use request handler:src/ConnectionAutomaton.cpp
     StreamId streamId,
     StreamType streamType,
     uint32_t initialRequestN,

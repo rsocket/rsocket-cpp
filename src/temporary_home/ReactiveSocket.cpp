@@ -40,6 +40,7 @@ ReactiveSocket::ReactiveSocket(
           std::move(resumeCache))),
       executor_(executor) {
   debugCheckCorrectExecutor();
+  connection_->resumeStreamsFromCache();
   connection_->stats().socketCreated();
 }
 

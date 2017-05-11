@@ -61,6 +61,15 @@ class ClientRequestHandler : public DefaultRequestHandler {
                                subscriber) noexcept override {
     LOG(INFO) << "Subscriber Resumed";
   }
+
+  std::shared_ptr<Subscriber<Payload>> handleResumeStream(
+      std::string streamName) noexcept override {
+    LOG(INFO) << "Stream Resumed - " << streamName;
+    return handleResumeStream_(streamName);
+  }
+  MOCK_METHOD1(
+      handleResumeStream_,
+      std::shared_ptr<Subscriber<Payload>>(std::string));
 };
 
 class MySubscriber : public yarpl::flowable::Subscriber<Payload> {
@@ -79,9 +88,13 @@ class MySubscriber : public yarpl::flowable::Subscriber<Payload> {
   MOCK_METHOD0(onSubscribe_, void());
   MOCK_METHOD1(onNext_, void(std::string));
 
-  void onComplete() noexcept override {}
+  void onComplete() noexcept override {
+    LOG(INFO) << "MySub: Received onComplete";
+  }
 
-  void onError(std::exception_ptr ex) noexcept override {}
+  void onError(std::exception_ptr ex) noexcept override {
+    LOG(INFO) << "MySub: Received onError";
+  }
 
   // methods for testing
   void request(int64_t n) {
@@ -101,8 +114,9 @@ std::shared_ptr<FrameTransport> getFrameTransport(
 // Utility function to create a ReactiveSocket.
 std::unique_ptr<ReactiveSocket> getRSocket(
     folly::EventBase* eventBase,
-    std::shared_ptr<ResumeCache> resumeCache =
-        std::make_shared<ResumeCache>());
+    std::shared_ptr<ResumeCache> resumeCache = std::make_shared<ResumeCache>(),
+    std::unique_ptr<RequestHandler> requestHandler =
+        std::make_unique<ClientRequestHandler>());
 
 // Utility function to create a SetupPayload
 ConnectionSetupPayload getSetupPayload(ResumeIdentificationToken token);

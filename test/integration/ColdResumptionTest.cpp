@@ -25,7 +25,7 @@ TEST_F(ServerFixture, ColdResumptionBasic) {
   tests::MyConnectCallback connectCb;
   auto token = ResumeIdentificationToken::generateNew();
   std::unique_ptr<ReactiveSocket> rsocket;
-  auto mySub = std::make_shared<tests::MySubscriber>();
+  auto mySub1 = std::make_shared<tests::MySubscriber>();
   auto resumeCache = std::make_shared<ResumeCache>();
   Sequence s;
   SCOPE_EXIT {
@@ -39,19 +39,19 @@ TEST_F(ServerFixture, ColdResumptionBasic) {
   std::unique_lock<std::mutex> lk(cvM);
 
   // Get a few subscriptions (happens right after connecting)
-  EXPECT_CALL(*mySub, onSubscribe_()).WillOnce(Invoke([&]() {
-    mySub->request(3);
+  EXPECT_CALL(*mySub1, onSubscribe_()).WillOnce(Invoke([&]() {
+    mySub1->request(3);
   }));
-  EXPECT_CALL(*mySub, onNext_("1"));
-  EXPECT_CALL(*mySub, onNext_("2"));
-  EXPECT_CALL(*mySub, onNext_("3")).WillOnce(Invoke([&](std::string) {
+  EXPECT_CALL(*mySub1, onNext_("1"));
+  EXPECT_CALL(*mySub1, onNext_("2"));
+  EXPECT_CALL(*mySub1, onNext_("3")).WillOnce(Invoke([&](std::string) {
     cv.notify_all();
   }));
 
   // Create a RSocket and RequestStream
   clientEvb->runInEventBaseThreadAndWait([&]() {
     rsocket = tests::getRSocket(clientEvb, resumeCache);
-    rsocket->requestStream(Payload("from client"), mySub);
+    rsocket->requestStream(Payload(""), mySub1, "query1");
     rsocket->clientConnect(
         tests::getFrameTransport(clientEvb, &connectCb, serverListenPort_),
         tests::getSetupPayload(token));
@@ -62,26 +62,31 @@ TEST_F(ServerFixture, ColdResumptionBasic) {
 
   // Disconnect. Simulate a cold restart
   clientEvb->runInEventBaseThreadAndWait([&]() { rsocket.reset(); });
-  mySub = std::make_shared<tests::MySubscriber>();
+  auto mySub2 = std::make_shared<tests::MySubscriber>();
+  auto requestHandler = std::make_unique<tests::ClientRequestHandler>();
+
+  // Get resume callbacks
+  EXPECT_CALL(*requestHandler, handleResumeStream_("query1"))
+      .WillOnce(Invoke([&](std::string) { return mySub2; }));
 
   // Get subscriptions for buffered request (happens right after
   // reconnecting)
-  EXPECT_CALL(*mySub, onSubscribe_()).WillOnce(Invoke([&]() {
-    mySub->request(2);
+  EXPECT_CALL(*mySub2, onSubscribe_()).WillOnce(Invoke([&]() {
+    mySub2->request(2);
   }));
-  EXPECT_CALL(*mySub, onNext_("4"));
-  EXPECT_CALL(*mySub, onNext_("5")).WillOnce(Invoke([&](std::string) {
+  EXPECT_CALL(*mySub2, onNext_("4"));
+  EXPECT_CALL(*mySub2, onNext_("5")).WillOnce(Invoke([&](std::string) {
     cv.notify_all();
   }));
 
   // try resume
   clientEvb->runInEventBaseThreadAndWait([&]() {
-    rsocket = tests::getRSocket(clientEvb, resumeCache);
+    rsocket =
+        tests::getRSocket(clientEvb, resumeCache, std::move(requestHandler));
     rsocket->tryClientResume(
         token,
         tests::getFrameTransport(clientEvb, &connectCb, serverListenPort_),
         std::make_unique<tests::ResumeCallback>());
-    rsocket->requestStream(Payload("after resume"), mySub, 1);
   });
 
   // Wait for the remaining frames to make it OR error out.
@@ -99,7 +104,6 @@ TEST_F(ServerFixture, ColdResumption2Streams) {
   auto mySub1 = std::make_shared<tests::MySubscriber>();
   auto mySub2 = std::make_shared<tests::MySubscriber>();
   auto resumeCache = std::make_shared<ResumeCache>();
-  StreamId streamId1, streamId2;
   Sequence s;
   SCOPE_EXIT {
     clientEvb->runInEventBaseThreadAndWait([&]() { rsocket.reset(); });
@@ -137,8 +141,8 @@ TEST_F(ServerFixture, ColdResumption2Streams) {
   // Create a RSocket and request two streams 
   clientEvb->runInEventBaseThreadAndWait([&]() {
     rsocket = tests::getRSocket(clientEvb, resumeCache);
-    streamId1 = rsocket->requestStream(Payload("STREAM1"), mySub1);
-    streamId2 = rsocket->requestStream(Payload("STREAM2"), mySub2);
+    rsocket->requestStream(Payload(""), mySub1, "query1");
+    rsocket->requestStream(Payload(""), mySub2, "query2");
     rsocket->clientConnect(
         tests::getFrameTransport(clientEvb, &connectCb, serverListenPort_),
         tests::getSetupPayload(token));
@@ -148,12 +152,18 @@ TEST_F(ServerFixture, ColdResumption2Streams) {
   EXPECT_TRUE(cv.wait_for(lk, 1s, [&] { return mySub1P1 && mySub2P1; }));
 
   // Disconnect. Simulate a cold restart
-  clientEvb->runInEventBaseThreadAndWait([&]() {
-    rsocket.reset(); });
+  clientEvb->runInEventBaseThreadAndWait([&]() { rsocket.reset(); });
+  auto requestHandler = std::make_unique<tests::ClientRequestHandler>();
   mySub1 = std::make_shared<tests::MySubscriber>();
   mySub2 = std::make_shared<tests::MySubscriber>();
   bool mySub1P2 = false;
   bool mySub2P2 = false;
+
+  // Get resume callbacks
+  EXPECT_CALL(*requestHandler, handleResumeStream_("query1"))
+      .WillOnce(Invoke([&](std::string) { return mySub1; }));
+  EXPECT_CALL(*requestHandler, handleResumeStream_("query2"))
+      .WillOnce(Invoke([&](std::string) { return mySub2; }));
 
   // Get subscriptions for buffered request (happens right after
   // reconnecting)
@@ -178,13 +188,12 @@ TEST_F(ServerFixture, ColdResumption2Streams) {
 
   // try resume
   clientEvb->runInEventBaseThreadAndWait([&]() {
-    rsocket = tests::getRSocket(clientEvb, resumeCache);
+    rsocket =
+        tests::getRSocket(clientEvb, resumeCache, std::move(requestHandler));
     rsocket->tryClientResume(
         token,
         tests::getFrameTransport(clientEvb, &connectCb, serverListenPort_),
         std::make_unique<tests::ResumeCallback>());
-    rsocket->requestStream(Payload("after resume"), mySub1, streamId1);
-    rsocket->requestStream(Payload("after resume"), mySub2, streamId2);
   });
 
   // Wait for the remaining frames to make it OR error out.
