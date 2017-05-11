@@ -40,13 +40,16 @@ class TcpConnectionAcceptor : public ConnectionAcceptor {
 
   /**
    * Bind an AsyncServerSocket and start accepting TCP connections.
-   *
-   * This can only be called once.
    */
   folly::Future<folly::Unit> start(
       std::function<void(
           std::unique_ptr<reactivesocket::DuplexConnection>,
           folly::EventBase&)>) override;
+
+  /**
+   * Shutdown the AsyncServerSocket and associated listener thread.
+   */
+  void stop() override;
 
  private:
   class SocketCallback;

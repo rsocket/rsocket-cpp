@@ -4,7 +4,6 @@
 
 #include <iosfwd>
 
-#include "src/Frame.h"
 #include "src/Payload.h"
 #include "src/SubscriberBase.h"
 #include "src/SubscriptionBase.h"
@@ -37,10 +36,9 @@ class ChannelRequester : public ConsumerBase,
   void requestImpl(size_t) noexcept override;
   void cancelImpl() noexcept override;
 
-  using StreamAutomatonBase::onNextFrame;
-  void onNextFrame(Frame_PAYLOAD&&) override;
-  void onNextFrame(Frame_ERROR&&) override;
-  void onNextFrame(Frame_REQUEST_N&&) override;
+  void handlePayload(Payload&& payload, bool complete, bool flagsNext) override;
+  void handleRequestN(uint32_t n) override;
+  void handleError(folly::exception_wrapper errorPayload) override;
 
   void endStream(StreamCompletionSignal) override;
 

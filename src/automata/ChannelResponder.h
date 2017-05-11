@@ -4,7 +4,6 @@
 
 #include <iosfwd>
 
-#include "src/Frame.h"
 #include "src/SubscriberBase.h"
 #include "src/SubscriptionBase.h"
 #include "src/automata/ConsumerBase.h"
@@ -36,11 +35,9 @@ class ChannelResponder : public ConsumerBase,
   void requestImpl(size_t n) noexcept override;
   void cancelImpl() noexcept override;
 
-  using StreamAutomatonBase::onNextFrame;
-  void onNextFrame(Frame_REQUEST_CHANNEL&&) override;
-  void onNextFrame(Frame_CANCEL&&) override;
-  void onNextFrame(Frame_REQUEST_N&&) override;
-  void onNextFrame(Frame_PAYLOAD&& frame) override;
+  void handlePayload(Payload&& payload, bool complete, bool flagsNext) override;
+  void handleRequestN(uint32_t n) override;
+  void handleCancel() override;
 
   void onNextPayloadFrame(
       uint32_t requestN,

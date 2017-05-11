@@ -10,6 +10,10 @@ namespace yarpl {
 namespace flowable {
 namespace {
 
+void unreachable() {
+  EXPECT_TRUE(false);
+}
+
 template <typename T>
 class CollectingSubscriber : public Subscriber<T> {
  public:
@@ -56,15 +60,15 @@ class CollectingSubscriber : public Subscriber<T> {
     return error_;
   }
 
-  std::string errorMsg() const {
+  const std::string& errorMsg() const {
     return errorMsg_;
   }
 
  private:
   std::vector<T> values_;
+  std::string errorMsg_;
   bool complete_{false};
   bool error_{false};
-  std::string errorMsg_;
 };
 
 /// Construct a pipeline with a collecting subscriber against the supplied
@@ -192,10 +196,6 @@ TEST(FlowableTest, FlowableEmpty) {
 
   EXPECT_EQ(collector->complete(), true);
   EXPECT_EQ(collector->error(), false);
-}
-
-void unreachable() {
-  EXPECT_TRUE(false);
 }
 
 TEST(FlowableTest, SubscribersComplete) {

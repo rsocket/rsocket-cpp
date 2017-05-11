@@ -91,18 +91,14 @@ void ChannelResponder::processInitialFrame(Frame_REQUEST_CHANNEL&& frame) {
       true);
 }
 
-void ChannelResponder::onNextFrame(Frame_REQUEST_CHANNEL&& frame) {
-  // TODO(t16487710): remove handling this frame when we remove support for
-  // protocol version < 1.0
-  processInitialFrame(std::move(frame));
-}
-
-void ChannelResponder::onNextFrame(Frame_PAYLOAD&& frame) {
+void ChannelResponder::handlePayload(Payload&& payload,
+                                     bool complete,
+                                     bool flagsNext) {
   onNextPayloadFrame(
       0,
-      std::move(frame.payload_),
-      frame.header_.flagsComplete(),
-      frame.header_.flagsNext());
+      std::move(payload),
+      complete,
+      flagsNext);
 }
 
 void ChannelResponder::onNextPayloadFrame(
@@ -130,7 +126,7 @@ void ChannelResponder::onNextPayloadFrame(
   }
 }
 
-void ChannelResponder::onNextFrame(Frame_CANCEL&& frame) {
+void ChannelResponder::handleCancel() {
   switch (state_) {
     case State::RESPONDING:
       state_ = State::CLOSED;
@@ -141,7 +137,7 @@ void ChannelResponder::onNextFrame(Frame_CANCEL&& frame) {
   }
 }
 
-void ChannelResponder::onNextFrame(Frame_REQUEST_N&& frame) {
-  PublisherBase::processRequestN(frame.requestN_);
+void ChannelResponder::handleRequestN(uint32_t n) {
+  PublisherBase::processRequestN(n);
 }
 }

@@ -20,6 +20,8 @@ using OnDuplexConnectionAccept = std::function<
  *
  * Built-in implementations can be found in rsocket/transports/, such as
  * rsocket/transports/TcpConnectionAcceptor.h
+ *
+ * TODO: Add way of specifying number of worker threads.
  */
 class ConnectionAcceptor {
  public:
@@ -43,6 +45,13 @@ class ConnectionAcceptor {
    */
   virtual folly::Future<folly::Unit> start(
       OnDuplexConnectionAccept onAccept) = 0;
-  // TODO need to add numThreads option (either overload or arg with default=1)
+
+  /**
+   * Stop listening for new connections.
+   *
+   * This can only be called once.  Must be called in or before
+   * the implementation's destructor.  Must be synchronous.
+   */
+  virtual void stop() = 0;
 };
 }
