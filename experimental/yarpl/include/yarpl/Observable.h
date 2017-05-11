@@ -47,6 +47,9 @@ class Observable : public virtual Refcounted {
   template <typename Function>
   auto map(Function&& function);
 
+  template <typename Function>
+  auto filter(Function&& function);
+
   auto take(int64_t);
 
   auto subscribeOn(Scheduler&);
@@ -88,6 +91,13 @@ template <typename Function>
 auto Observable<T>::map(Function&& function) {
   using D = typename std::result_of<Function(T)>::type;
   return Reference<Observable<D>>(new MapOperator<T, D, Function>(
+      Reference<Observable<T>>(this), std::forward<Function>(function)));
+}
+
+template <typename T>
+template <typename Function>
+auto Observable<T>::filter(Function&& function) {
+  return Reference<Observable<T>>(new FilterOperator<T, Function>(
       Reference<Observable<T>>(this), std::forward<Function>(function)));
 }
 
