@@ -235,7 +235,8 @@ void ReactiveSocket::tryClientResume(
   debugCheckCorrectExecutor();
   checkNotClosed();
   CHECK(frameTransport && !frameTransport->isClosed());
-  connection_->tryClientResume(token, std::move(frameTransport), std::move(resumeCallback));
+  connection_->tryClientResume(
+      token, std::move(frameTransport), std::move(resumeCallback));
 }
 
 bool ReactiveSocket::tryResumeServer(
