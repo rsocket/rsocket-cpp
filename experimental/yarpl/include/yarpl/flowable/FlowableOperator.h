@@ -51,6 +51,8 @@ class FlowableOperator : public Flowable<D> {
       subscriber_->onSubscribe(Reference<::yarpl::flowable::Subscription>(this));
     }
 
+    void onNext(U) override {}
+
     void onComplete() override {
       subscriber_->onComplete();
       upstream_.reset();

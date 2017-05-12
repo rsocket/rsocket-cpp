@@ -17,17 +17,14 @@ void unreachable() {
 template <typename T>
 class CollectingSubscriber : public Subscriber<T> {
  public:
-  static_assert(
-      std::is_copy_constructible<T>::value,
-      "CollectingSubscriber needs to copy the value in order to collect it");
+  explicit CollectingSubscriber(int64_t requested = 100) : requested_(requested) {}
 
   void onSubscribe(Reference<Subscription> subscription) override {
     Subscriber<T>::onSubscribe(subscription);
-    subscription->request(100);
+    subscription->request(requested_);
   }
 
   void onNext(T next) override {
-    Subscriber<T>::onNext(next);
     values_.push_back(std::move(next));
   }
 
@@ -69,6 +66,7 @@ class CollectingSubscriber : public Subscriber<T> {
   std::string errorMsg_;
   bool complete_{false};
   bool error_{false};
+  int64_t requested_;
 };
 
 /// Construct a pipeline with a collecting subscriber against the supplied
@@ -196,6 +194,33 @@ TEST(FlowableTest, FlowableEmpty) {
 
   EXPECT_EQ(collector->complete(), true);
   EXPECT_EQ(collector->error(), false);
+}
+
+TEST(FlowableTest, FlowableFromGenerator) {
+  auto flowable = Flowables::fromGenerator<std::unique_ptr<int>>(
+      [] {return std::unique_ptr<int>();}
+  );
+  auto collector = make_ref<CollectingSubscriber<std::unique_ptr<int>>>(10);
+  flowable->subscribe(collector);
+
+  EXPECT_EQ(collector->complete(), false);
+  EXPECT_EQ(collector->error(), false);
+  EXPECT_EQ(std::size_t{10}, collector->values().size());
+}
+
+TEST(FlowableTest, FlowableFromGeneratorException) {
+  int count = 5;
+  auto flowable = Flowables::fromGenerator<std::unique_ptr<int>>(
+  [&] {
+    while (count--) { return std::unique_ptr<int>(); }
+    throw std::runtime_error("error from generator");
+  });
+  auto collector = make_ref<CollectingSubscriber<std::unique_ptr<int>>>(10);
+  flowable->subscribe(collector);
+
+  EXPECT_EQ(collector->complete(), false);
+  EXPECT_EQ(collector->error(), true);
+  EXPECT_EQ(std::size_t{5}, collector->values().size());
 }
 
 TEST(FlowableTest, SubscribersComplete) {
