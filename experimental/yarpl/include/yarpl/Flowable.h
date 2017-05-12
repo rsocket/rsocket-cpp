@@ -104,6 +104,10 @@ class Flowable : public virtual Refcounted {
     }
 
     void cancel() override {
+      // if this is the first terminating signal to receive, we need to
+      // make sure we break the reference cycle between subscription and
+      // subscriber
+
       requested_.exchange(CANCELED, std::memory_order_relaxed);
       process();
     }
@@ -161,7 +165,8 @@ class Flowable : public virtual Refcounted {
           // Don't destroy a locked mutex.
           lock.unlock();
 
-          return release();
+          releaseInstance();
+          return;
         }
 
         // If no more items can be emitted now, wait for a request(n).
@@ -186,6 +191,12 @@ class Flowable : public virtual Refcounted {
             break;
         }
       }
+    }
+
+    void releaseInstance() {
+      flowable_.reset();
+      subscriber_.reset();
+      release();
     }
 
     // The number of items that can be sent downstream.  Each request(n)

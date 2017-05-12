@@ -40,7 +40,7 @@ class ObservableOperator : public Observable<D> {
     Subscription(
         Reference<Observable<D>> flowable,
         Reference<Observer<D>> subscriber)
-        : flowable_(std::move(flowable)), subscriber_(std::move(subscriber)) {}
+        : observable_(std::move(flowable)), subscriber_(std::move(subscriber)) {}
 
     ~Subscription() {
       subscriber_.reset();
@@ -68,7 +68,7 @@ class ObservableOperator : public Observable<D> {
 
    protected:
     /// The Observable has the lambda, and other creation parameters.
-    Reference<Observable<D>> flowable_;
+    Reference<Observable<D>> observable_;
 
     /// This subscription controls the life-cycle of the subscriber.  The
     /// subscriber is retained as long as calls on it can be made.  (Note:
@@ -117,7 +117,7 @@ class MapOperator : public ObservableOperator<U, D> {
     void onNext(U value) override {
       auto* subscriber =
           ObservableOperator<U, D>::Subscription::subscriber_.get();
-      auto* flowable = ObservableOperator<U, D>::Subscription::flowable_.get();
+      auto* flowable = ObservableOperator<U, D>::Subscription::observable_.get();
       auto* map = static_cast<MapOperator*>(flowable);
       subscriber->onNext(map->function_(std::move(value)));
     }
