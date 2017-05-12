@@ -224,7 +224,7 @@ class SubscribeOnOperator : public ObservableOperator<T, T> {
 template <typename T, typename OnSubscribe>
 class FromPublisherOperator : public Observable<T> {
  public:
-  FromPublisherOperator(OnSubscribe&& function)
+  explicit FromPublisherOperator(OnSubscribe&& function)
       : function_(std::move(function)) {}
 
   void subscribe(Reference<Observer<T>> subscriber) override {

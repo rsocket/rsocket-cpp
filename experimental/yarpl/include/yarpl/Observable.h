@@ -65,7 +65,7 @@ class Observable : public virtual Refcounted {
   template <typename OnSubscribe>
   class FromPublisherOperator : public Observable<T> {
    public:
-    FromPublisherOperator(OnSubscribe&& function)
+    explicit FromPublisherOperator(OnSubscribe&& function)
         : function_(std::move(function)) {}
 
     void subscribe(Reference<Observer<T>> subscriber) override {
