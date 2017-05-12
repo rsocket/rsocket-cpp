@@ -167,7 +167,14 @@ private:
       auto* filter = static_cast<FilterOperator*>(flowable);
       if (filter->function_(value)) {
         subscriber->onNext(std::move(value));
+      } else {
+        callSuperRequest(1l);
       }
+    }
+
+  private:
+    void callSuperRequest(int64_t delta) {
+      FlowableOperator<U, U>::Subscription::request(delta);
     }
   };
 
