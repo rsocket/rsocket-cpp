@@ -60,14 +60,12 @@ TcpConnectionAcceptor::TcpConnectionAcceptor(Options options)
     : options_(std::move(options)) {}
 
 TcpConnectionAcceptor::~TcpConnectionAcceptor() {
-  LOG(INFO) << "Shutting down TCP listener";
-
-  // Need to terminate ServerSocket before the EventBase.  The socket will
-  // access the EventBase in its destructor.
-  serverThread_->getEventBase()->runInEventBaseThread(
-      [this] { serverSocket_.reset(); });
-  serverThread_.reset();
+  if (serverThread_) {
+    stop();
+  }
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 folly::Future<folly::Unit> TcpConnectionAcceptor::start(
     std::function<void(std::unique_ptr<DuplexConnection>, folly::EventBase&)>
@@ -115,5 +113,13 @@ folly::Future<folly::Unit> TcpConnectionAcceptor::start(
 
   LOG(INFO) << "ConnectionAcceptor => leave start";
   return folly::unit;
+}
+
+void TcpConnectionAcceptor::stop() {
+  LOG(INFO) << "Shutting down TCP listener";
+
+  serverThread_->getEventBase()->runInEventBaseThread(
+      [this] { serverSocket_.reset(); });
+  serverThread_.reset();
 }
 }

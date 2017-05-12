@@ -6,6 +6,7 @@
 #include <iosfwd>
 #include <memory>
 #include "src/Common.h"
+#include <folly/ExceptionWrapper.h>
 
 namespace folly {
 class IOBuf;
@@ -14,13 +15,6 @@ class IOBuf;
 namespace reactivesocket {
 
 class StreamsWriter;
-class Frame_CANCEL;
-class Frame_ERROR;
-class Frame_REQUEST_CHANNEL;
-class Frame_REQUEST_N;
-class Frame_REQUEST_RESPONSE;
-class Frame_REQUEST_STREAM;
-class Frame_PAYLOAD;
 class RequestHandler;
 struct Payload;
 
@@ -48,17 +42,10 @@ class StreamAutomatonBase {
       : writer_(std::move(params.writer)), streamId_(params.streamId) {}
   virtual ~StreamAutomatonBase() = default;
 
-  /// @{
-  /// A contract exposed to the connection, modelled after Subscriber and
-  /// Subscription contracts while omitting flow control related signals.
-  ///
-  /// By omitting flow control between stream and channel automatons we greatly
-  /// simplify implementation and move buffering into the connection automaton.
-
-  /// A signal carrying serialized frame on the stream.
-  ///
-  /// This signal corresponds to Subscriber::onNext.
-  void onNextFrame(std::unique_ptr<folly::IOBuf> frame);
+  virtual void handlePayload(Payload&& payload, bool complete, bool flagsNext);
+  virtual void handleRequestN(uint32_t n);
+  virtual void handleError(folly::exception_wrapper errorPayload);
+  virtual void handleCancel();
 
   /// Indicates a terminal signal from the connection.
   ///
@@ -81,14 +68,6 @@ class StreamAutomatonBase {
     return isTerminated_;
   }
 
-  virtual void onNextFrame(Frame_REQUEST_STREAM&&);
-  virtual void onNextFrame(Frame_REQUEST_CHANNEL&&);
-  virtual void onNextFrame(Frame_REQUEST_RESPONSE&&);
-  virtual void onNextFrame(Frame_REQUEST_N&&);
-  virtual void onNextFrame(Frame_CANCEL&&);
-  virtual void onNextFrame(Frame_PAYLOAD&&);
-  virtual void onNextFrame(Frame_ERROR&&);
-
   void newStream(
       StreamType streamType,
       uint32_t initialRequestN,
@@ -101,13 +80,6 @@ class StreamAutomatonBase {
   void cancelStream();
   void completeStream();
   void closeStream(StreamCompletionSignal signal);
-
- private:
-  template <typename Frame>
-  void deserializeAndDispatch(std::unique_ptr<folly::IOBuf> payload);
-
-  void onBadFrame();
-  void onUnknownFrame();
 
   /// A partially-owning pointer to the connection, the stream runs on.
   /// It is declared as const to allow only ctor to initialize it for thread

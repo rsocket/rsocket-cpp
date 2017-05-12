@@ -47,6 +47,14 @@ RSocketServer::RSocketServer(
       acceptor_(ProtocolVersion::Unknown) {}
 
 RSocketServer::~RSocketServer() {
+  // Stop accepting new connections.
+  lazyAcceptor_->stop();
+
+  // FIXME(alexanderm): This is where we /should/ close the FrameTransports
+  // sitting around in the ServerConnectionAcceptor, but we can't yet...
+
+  // Asynchronously close all existing ReactiveSockets.  If there are none, then
+  // we can do an early exit.
   {
     auto locked = sockets_.lock();
     if (locked->empty()) {
@@ -61,8 +69,11 @@ RSocketServer::~RSocketServer() {
     }
   }
 
+  // Wait for all ReactiveSockets to close.
   shutdown_->wait();
   DCHECK(sockets_.lock()->empty());
+
+  // All requests are fully finished, worker threads can be safely killed off.
 }
 
 void RSocketServer::start(OnAccept onAccept) {
@@ -70,9 +81,8 @@ void RSocketServer::start(OnAccept onAccept) {
     throw std::runtime_error("RSocketServer::start() already called.");
   }
 
-  LOG(INFO) << "RSocketServer => initialize connection acceptor on start";
+  LOG(INFO) << "Initializing connection acceptor on start";
 
-  LOG(INFO) << "RSocketServer => initialize connection acceptor on start";
   connectionHandler_ =
       std::make_unique<RSocketServerConnectionHandler>(this, onAccept);
 
@@ -80,16 +90,13 @@ void RSocketServer::start(OnAccept onAccept) {
       ->start([this](
                   std::unique_ptr<DuplexConnection> conn,
                   folly::Executor& executor) {
-        LOG(INFO) << "RSocketServer => received new connection";
+        LOG(INFO) << "Going to accept duplex connection";
 
-        LOG(INFO) << "RSocketServer => going to accept duplex connection";
-        // the callbacks above are wired up, now accept the connection
         // FIXME(alexanderm): This isn't thread safe
         acceptor_.accept(std::move(conn), connectionHandler_);
       })
       .onError([](const folly::exception_wrapper& ex) {
-        LOG(FATAL) << "RSocketServer => failed to start HttpAcceptor: "
-                   << ex.what();
+        LOG(FATAL) << "Failed to start ConnectionAcceptor: " << ex.what();
       });
 }
 

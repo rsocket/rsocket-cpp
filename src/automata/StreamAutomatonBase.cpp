@@ -3,106 +3,30 @@
 #include "src/automata/StreamAutomatonBase.h"
 #include <folly/io/IOBuf.h>
 #include "src/ConnectionAutomaton.h"
-#include "src/Frame.h"
 #include "src/StreamsHandler.h"
 
 namespace reactivesocket {
 
-void StreamAutomatonBase::onNextFrame(std::unique_ptr<folly::IOBuf> payload) {
-  DCHECK(payload);
-
-  auto type = writer_->frameSerializer().peekFrameType(*payload);
-  switch (type) {
-    case FrameType::REQUEST_CHANNEL:
-      deserializeAndDispatch<Frame_REQUEST_CHANNEL>(std::move(payload));
-      return;
-    case FrameType::REQUEST_N:
-      deserializeAndDispatch<Frame_REQUEST_N>(std::move(payload));
-      return;
-    case FrameType::REQUEST_RESPONSE:
-      deserializeAndDispatch<Frame_REQUEST_RESPONSE>(std::move(payload));
-      return;
-    case FrameType::CANCEL:
-      deserializeAndDispatch<Frame_CANCEL>(std::move(payload));
-      return;
-    case FrameType::PAYLOAD:
-      deserializeAndDispatch<Frame_PAYLOAD>(std::move(payload));
-      return;
-    case FrameType::ERROR:
-      deserializeAndDispatch<Frame_ERROR>(std::move(payload));
-      return;
-
-    case FrameType::RESERVED:
-    case FrameType::SETUP:
-    case FrameType::LEASE:
-    case FrameType::KEEPALIVE:
-    case FrameType::REQUEST_FNF:
-    case FrameType::REQUEST_STREAM:
-    case FrameType::METADATA_PUSH:
-    case FrameType::RESUME:
-    case FrameType::RESUME_OK:
-    case FrameType::EXT:
-    default:
-      onUnknownFrame();
-      return;
-  }
+void StreamAutomatonBase::handlePayload(Payload&& payload,
+                                        bool complete,
+                                        bool flagsNext) {
+  VLOG(4) << "Unexpected handlePayload";
 }
 
-template <class Frame>
-void StreamAutomatonBase::deserializeAndDispatch(
-    std::unique_ptr<folly::IOBuf> payload) {
-  Frame frame;
-  if (writer_->frameSerializer().deserializeFrom(frame, std::move(payload))) {
-    onNextFrame(std::move(frame));
-  } else {
-    onBadFrame();
-  }
+void StreamAutomatonBase::handleRequestN(uint32_t n) {
+  VLOG(4) << "Unexpected handleRequestN";
 }
 
-template <typename T>
-static void onUnexpectedFrame(const T& frame) {
-  VLOG(4) << "Unexpected frame, ignoring: " << frame;
+void StreamAutomatonBase::handleError(folly::exception_wrapper errorPayload) {
+  VLOG(4) << "Unexpected handleError";
+}
+
+void StreamAutomatonBase::handleCancel() {
+  VLOG(4) << "Unexpected handleCancel";
 }
 
 void StreamAutomatonBase::endStream(StreamCompletionSignal) {
   isTerminated_ = true;
-}
-
-void StreamAutomatonBase::onNextFrame(Frame_REQUEST_STREAM&& f) {
-  onUnexpectedFrame(f);
-}
-
-void StreamAutomatonBase::onNextFrame(Frame_REQUEST_CHANNEL&& f) {
-  onUnexpectedFrame(f);
-}
-
-void StreamAutomatonBase::onNextFrame(Frame_REQUEST_RESPONSE&& f) {
-  onUnexpectedFrame(f);
-}
-
-void StreamAutomatonBase::onNextFrame(Frame_REQUEST_N&& f) {
-  onUnexpectedFrame(f);
-}
-
-void StreamAutomatonBase::onNextFrame(Frame_CANCEL&& f) {
-  onUnexpectedFrame(f);
-}
-
-void StreamAutomatonBase::onNextFrame(Frame_PAYLOAD&& f) {
-  onUnexpectedFrame(f);
-}
-
-void StreamAutomatonBase::onNextFrame(Frame_ERROR&& f) {
-  onUnexpectedFrame(f);
-}
-
-void StreamAutomatonBase::onBadFrame() {
-  errorStream("bad frame");
-}
-
-void StreamAutomatonBase::onUnknownFrame() {
-  // because of compatibility with future frame types we will just ignore
-  // unknown frames
 }
 
 void StreamAutomatonBase::newStream(
