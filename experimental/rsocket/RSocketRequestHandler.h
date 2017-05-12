@@ -32,5 +32,7 @@ class RSocketRequestHandler {
   handleRequestStream(
       reactivesocket::Payload request,
       reactivesocket::StreamId streamId) = 0;
+
+  virtual ~RSocketRequestHandler() {}
 };
 }

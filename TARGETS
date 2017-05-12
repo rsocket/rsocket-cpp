@@ -1,5 +1,5 @@
 cpp_library(
-    name = 'reactivesocket-internal',
+    name = 'internal',
 
     header_namespace = 'src',
     headers = subdir_glob([
@@ -24,7 +24,7 @@ cpp_library(
 # A target, on which implementations of various pluggable strategies depend.
 # Contains minimal amount of code needed to implement those strategies.
 cpp_library(
-    name = 'reactivesocket-plugins',
+    name = 'plugins',
 
     headers = [
         'src/DuplexConnection.h',
@@ -44,8 +44,8 @@ cpp_library(
         'src/folly/FollyKeepaliveTimer.cpp',
     ],
     deps = [
-        ':reactivesocket-internal',
-        ':reactivesocket-streams',
+        ':internal',
+        ':streams',
         '@/folly:exception_wrapper',
         '@/folly/io:iobuf',
         '@/folly/io/async:async',
@@ -87,30 +87,29 @@ cpp_library(
         'src/StreamsFactory.cpp',
     ]),
     deps = [
-        ':reactivesocket-internal',
-        ':reactivesocket-streams',
+        ':internal',
+        ':streams',
         '@/folly/futures:futures',
         '@/folly/io:iobuf',
         '@/folly:exception_wrapper',
-        '@/lithium/reactivesocket-utils:reactivesocket-external-utils',
     ],
     compiler_flags=['-DREACTIVE_SOCKET_EXTERNAL_STACK_TRACE_UTILS'],
 )
 
 cpp_library(
-    name = 'reactivesocket-tcp-internal',
+    name = 'tcp-internal',
 
     header_namespace = "src",
     headers = subdir_glob([
         ('src/tcp', '**/*.h'),
     ]),
     deps = [
-        ':reactivesocket-internal',
+        ':internal',
     ],
 )
 
 cpp_library(
-    name = 'reactivesocket-tcp',
+    name = 'tcp',
     headers = [
         'src/tcp/TcpDuplexConnection.h',
     ],
@@ -118,16 +117,15 @@ cpp_library(
         'src/tcp/TcpDuplexConnection.cpp',
     ],
     deps = [
-        ':reactivesocket-tcp-internal',
+        ':tcp-internal',
         '@/lithium/reactive-streams-cpp:reactive-streams',
-        '@/lithium/reactivesocket-utils:reactivesocket-external-utils',
         '@/folly/io/async:async',
     ],
     compiler_flags=['-DREACTIVE_SOCKET_EXTERNAL_STACK_TRACE_UTILS'],
 )
 
 cpp_library(
-    name='reactivesocket-inline-conn',
+    name='inline-conn',
     headers=[
         'test/InlineConnection.h',
     ],
@@ -136,7 +134,7 @@ cpp_library(
     ],
     deps=[
         ':reactivesocket',
-        ':reactivesocket-streams-mocks',
+        ':streams-mocks',
     ],
     external_deps=[
         ('googletest', None, 'gmock'),
@@ -144,7 +142,7 @@ cpp_library(
 )
 
 cpp_unittest(
-    name = 'reactivesocket-tests',
+    name = 'tests',
 
     header_namespace = 'test',
     headers = subdir_glob([
@@ -158,10 +156,10 @@ cpp_unittest(
         'test/simple/*.cpp',
         ]),
     deps = [
-        ':reactivesocket-internal',
+        ':internal',
         ':reactivesocket',
-        ':reactivesocket-plugins',
-        ':reactivesocket-streams-mocks',
+        ':plugins',
+        ':streams-mocks',
         '@/folly/io/async:scoped_event_base_thread',
     ],
     external_deps = [
@@ -171,7 +169,7 @@ cpp_unittest(
 )
 
 cpp_library(
-    name='reactivesocket-tests-internal',
+    name='tests-internal',
     header_namespace = 'test',
     headers = subdir_glob([
         ('test', '**/*.h'),
@@ -185,7 +183,7 @@ cpp_library(
 )
 
 cpp_binary(
-    name = 'reactivesocket-tck-server',
+    name = 'tck-server',
     header_namespace = 'tck-test',
     headers = subdir_glob([
         ('tck-test', '**/*.h'),
@@ -195,16 +193,18 @@ cpp_binary(
         'tck-test/MarbleProcessor.cpp',
         ]),
     deps = [
-        ':reactivesocket-tcp',
+        ':tcp',
         ':reactivesocket',
-        ':reactivesocket-streams-mocks',
-        ':reactivesocket-tests-internal',
+        ':plugins',
+        ':streams-mocks',
+        ':tests-internal',
         '@/folly/io/async:scoped_event_base_thread',
+        '@/folly/io/async:server_socket',
     ],
 )
 
 cpp_binary(
-    name = 'reactivesocket-tck-client',
+    name = 'tck-client',
     header_namespace = 'tck-test',
     headers = subdir_glob([
         ('tck-test', '**/*.h'),
@@ -217,15 +217,17 @@ cpp_binary(
         'tck-test/TestSuite.cpp',
         ]),
     deps = [
-        ':reactivesocket-tcp',
+        ':tcp',
         ':reactivesocket',
-        ':reactivesocket-streams-mocks',
+        ':plugins',
+        ':streams-mocks',
         '@/folly/io/async:scoped_event_base_thread',
+        '@/folly/io/async:server_socket',
     ],
 )
 
 cpp_binary(
-    name = 'reactivesocket-test-resumeclient',
+    name = 'test-resumeclient',
     header_namespace = 'test',
     headers = subdir_glob([
         ('test', '**/*.h'),
@@ -235,15 +237,16 @@ cpp_binary(
         'test/simple/*.cpp',
         ]),
     deps = [
-        ':reactivesocket-tcp',
+        ':tcp',
         ':reactivesocket',
-        ':reactivesocket-streams-mocks',
+        ':plugins',
+        ':streams-mocks',
         '@/folly/io/async:scoped_event_base_thread',
     ],
 )
 
 cpp_binary(
-    name = 'reactivesocket-test-resumeserver',
+    name = 'test-resumeserver',
     header_namespace = 'test',
     headers = subdir_glob([
         ('test', '**/*.h'),
@@ -253,15 +256,17 @@ cpp_binary(
         'test/simple/*.cpp',
         ]),
     deps = [
-        ':reactivesocket-tcp',
+        ':tcp',
         ':reactivesocket',
-        ':reactivesocket-streams-mocks',
+        ':plugins',
+        ':streams-mocks',
         '@/folly/io/async:scoped_event_base_thread',
+        '@/folly/io/async:server_socket',
     ],
 )
 
 cpp_binary(
-    name = 'reactivesocket-test-tcpclient',
+    name = 'test-tcpclient',
     header_namespace = 'test',
     headers = subdir_glob([
         ('test', '**/*.h'),
@@ -271,15 +276,17 @@ cpp_binary(
         'test/simple/*.cpp',
         ]),
     deps = [
-        ':reactivesocket-tcp',
+        ':tcp',
         ':reactivesocket',
-        ':reactivesocket-streams-mocks',
+        ':plugins',
+        ':streams-mocks',
         '@/folly/io/async:scoped_event_base_thread',
+        '@/folly/io/async:server_socket',
     ],
 )
 
 cpp_binary(
-    name = 'reactivesocket-test-tcpserver',
+    name = 'test-tcpserver',
     header_namespace = 'test',
     headers = subdir_glob([
         ('test', '**/*.h'),
@@ -289,16 +296,18 @@ cpp_binary(
         'test/simple/*.cpp',
         ]),
     deps = [
-        ':reactivesocket-tcp',
+        ':tcp',
         ':reactivesocket',
-        ':reactivesocket-streams-mocks',
+        ':plugins',
+        ':streams-mocks',
         '@/folly/io/async:scoped_event_base_thread',
+        '@/folly/io/async:server_socket',
     ],
 )
 
 # Compatibility target for ReactiveStreams API.
 cpp_library(
-    name = 'reactivesocket-streams',
+    name = 'streams',
 
     headers = ['src/ReactiveStreamsCompat.h',],
     deps = ['@/lithium/reactive-streams-cpp:reactive-streams',],
@@ -306,7 +315,7 @@ cpp_library(
 
 # Compatibility target for ReactiveStreams mocking helpers.
 cpp_library(
-    name = 'reactivesocket-streams-mocks',
+    name = 'streams-mocks',
 
     headers = ['test/ReactiveStreamsMocksCompat.h', 'test/streams/Mocks.h'],
     deps = ['@/lithium/reactive-streams-cpp:reactive-streams-mocks',],
@@ -323,23 +332,21 @@ cpp_library(
     ]),
     srcs = glob([
         'experimental/rsocket-src/*.cpp',
-        'experimental/rsocket-src/facebook/transports/*.cpp',
-        'experimental/rsocket-src/transports/*.cpp',
+        'experimental/rsocket-src/facebook/transports/*.cpp', #TODO: move to rsocket/transports
+        'experimental/rsocket-src/transports/*.cpp', #TODO: move to rsocket/transports
     ]),
     deps = [
         ':reactivesocket',
-        ':reactivesocket-internal',
-        ':reactivesocket-streams',
-        ':reactivesocket-tcp',
+        ':internal',
+        ':streams',
+        ':tcp',
         '@/folly/futures:futures',
+        '@/folly/io/async:async',
+        '@/folly/io/async:server_socket',
+        '@/folly/io/async:scoped_event_base_thread',
         '@/folly/io:iobuf',
         '@/folly:exception_wrapper',
-        '@/lithium/duplexconnection-proxygen:server',
-        '@/lithium/duplexconnection:util',
-        '@/lithium/reactivesocket-cpp/experimental/yarpl:reactive-streams',
-        '@/lithium/reactivesocket-cpp/experimental/yarpl:yarpl',
-        '@/lithium/reactivesocket-utils:reactivesocket-external-utils',
-        '@/proxygen/httpserver:httpserver',
+        '@/rsocket/dev/experimental/yarpl:yarpl',
     ],
     compiler_flags=['-DREACTIVE_SOCKET_EXTERNAL_STACK_TRACE_UTILS'],
 )

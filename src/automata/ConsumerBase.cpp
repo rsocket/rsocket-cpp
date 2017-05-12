@@ -4,7 +4,6 @@
 
 #include <glog/logging.h>
 #include <algorithm>
-#include "src/Frame.h"
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
 

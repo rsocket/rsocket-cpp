@@ -130,7 +130,9 @@ void ChannelRequester::endStream(StreamCompletionSignal signal) {
   ConsumerBase::endStream(signal);
 }
 
-void ChannelRequester::onNextFrame(Frame_PAYLOAD&& frame) {
+void ChannelRequester::handlePayload(Payload&& payload,
+                                     bool complete,
+                                     bool flagsNext) {
   bool end = false;
   switch (state_) {
     case State::NEW:
@@ -138,7 +140,7 @@ void ChannelRequester::onNextFrame(Frame_PAYLOAD&& frame) {
       CHECK(false);
       break;
     case State::REQUESTED:
-      if (!!(frame.header_.flags_ & FrameFlags::COMPLETE)) {
+      if (complete) {
         state_ = State::CLOSED;
         end = true;
       }
@@ -147,14 +149,14 @@ void ChannelRequester::onNextFrame(Frame_PAYLOAD&& frame) {
       break;
   }
 
-  processPayload(std::move(frame.payload_), frame.header_.flagsNext());
+  processPayload(std::move(payload), flagsNext);
 
   if (end) {
     closeStream(StreamCompletionSignal::COMPLETE);
   }
 }
 
-void ChannelRequester::onNextFrame(Frame_ERROR&& frame) {
+void ChannelRequester::handleError(folly::exception_wrapper errorPayload) {
   switch (state_) {
     case State::NEW:
       // Cannot receive a frame before sending the initial request.
@@ -162,8 +164,7 @@ void ChannelRequester::onNextFrame(Frame_ERROR&& frame) {
       break;
     case State::REQUESTED:
       state_ = State::CLOSED;
-      ConsumerBase::onError(
-          std::runtime_error(frame.payload_.moveDataToString()));
+      ConsumerBase::onError(errorPayload);
       closeStream(StreamCompletionSignal::ERROR);
       break;
     case State::CLOSED:
@@ -171,8 +172,8 @@ void ChannelRequester::onNextFrame(Frame_ERROR&& frame) {
   }
 }
 
-void ChannelRequester::onNextFrame(Frame_REQUEST_N&& frame) {
-  PublisherBase::processRequestN(frame.requestN_);
+void ChannelRequester::handleRequestN(uint32_t n) {
+  PublisherBase::processRequestN(n);
 }
 
 } // reactivesocket

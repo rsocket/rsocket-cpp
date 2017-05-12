@@ -8,7 +8,6 @@
 #include "src/AllowanceSemaphore.h"
 #include "src/ConnectionAutomaton.h"
 #include "src/Executor.h"
-#include "src/Frame.h"
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
 #include "src/RequestHandler.h"

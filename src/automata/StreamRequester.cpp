@@ -77,7 +77,9 @@ void StreamRequester::endStream(StreamCompletionSignal signal) {
   Base::endStream(signal);
 }
 
-void StreamRequester::onNextFrame(Frame_PAYLOAD&& frame) {
+void StreamRequester::handlePayload(Payload&& payload,
+                                    bool complete,
+                                    bool flagsNext) {
   bool end = false;
   switch (state_) {
     case State::NEW:
@@ -85,7 +87,7 @@ void StreamRequester::onNextFrame(Frame_PAYLOAD&& frame) {
       CHECK(false);
       break;
     case State::REQUESTED:
-      if (frame.header_.flagsComplete()) {
+      if (complete) {
         state_ = State::CLOSED;
         end = true;
       }
@@ -94,14 +96,14 @@ void StreamRequester::onNextFrame(Frame_PAYLOAD&& frame) {
       break;
   }
 
-  processPayload(std::move(frame.payload_), frame.header_.flagsNext());
+  processPayload(std::move(payload), flagsNext);
 
   if (end) {
     closeStream(StreamCompletionSignal::COMPLETE);
   }
 }
 
-void StreamRequester::onNextFrame(Frame_ERROR&& frame) {
+void StreamRequester::handleError(folly::exception_wrapper errorPayload) {
   switch (state_) {
     case State::NEW:
       // Cannot receive a frame before sending the initial request.
@@ -109,7 +111,7 @@ void StreamRequester::onNextFrame(Frame_ERROR&& frame) {
       break;
     case State::REQUESTED:
       state_ = State::CLOSED;
-      Base::onError(std::runtime_error(frame.payload_.moveDataToString()));
+      Base::onError(errorPayload);
       closeStream(StreamCompletionSignal::ERROR);
       break;
     case State::CLOSED:

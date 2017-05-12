@@ -71,7 +71,8 @@ void RequestResponseRequester::endStream(StreamCompletionSignal signal) {
   }
 }
 
-void RequestResponseRequester::onNextFrame(Frame_ERROR&& frame) {
+void RequestResponseRequester::handleError(
+    folly::exception_wrapper errorPayload) {
   switch (state_) {
     case State::NEW:
       // Cannot receive a frame before sending the initial request.
@@ -80,8 +81,7 @@ void RequestResponseRequester::onNextFrame(Frame_ERROR&& frame) {
     case State::REQUESTED:
       state_ = State::CLOSED;
       if (auto subscriber = std::move(consumingSubscriber_)) {
-        subscriber->onError(
-            std::runtime_error(frame.payload_.moveDataToString()));
+        subscriber->onError(errorPayload);
       }
       closeStream(StreamCompletionSignal::ERROR);
       break;
@@ -90,7 +90,9 @@ void RequestResponseRequester::onNextFrame(Frame_ERROR&& frame) {
   }
 }
 
-void RequestResponseRequester::onNextFrame(Frame_PAYLOAD&& frame) {
+void RequestResponseRequester:: handlePayload(Payload&& payload,
+                                              bool complete,
+                                              bool flagsNext) {
   switch (state_) {
     case State::NEW:
       // Cannot receive a frame before sending the initial request.
@@ -106,9 +108,9 @@ void RequestResponseRequester::onNextFrame(Frame_PAYLOAD&& frame) {
       break;
   }
 
-  if (frame.payload_ || frame.header_.flagsNext()) {
-    consumingSubscriber_->onNext(std::move(frame.payload_));
-  } else if (!frame.header_.flagsComplete()) {
+  if (payload || flagsNext) {
+    consumingSubscriber_->onNext(std::move(payload));
+  } else if (!complete) {
     errorStream("payload, NEXT or COMPLETE flag expected");
     return;
   }

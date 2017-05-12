@@ -91,7 +91,7 @@ class Flowables {
   }
 
   template <typename T>
-  static Reference<Flowable<T>> error(const std::exception_ptr ex) {
+  static Reference<Flowable<T>> error(std::exception_ptr ex) {
     auto lambda = [ex](Subscriber<T>& subscriber, int64_t) {
       subscriber.onError(ex);
       return std::make_tuple(static_cast<int64_t>(0), true);

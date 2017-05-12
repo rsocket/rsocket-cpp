@@ -37,8 +37,5 @@ class StreamsWriter {
   virtual void onStreamClosed(
       StreamId streamId,
       StreamCompletionSignal signal) = 0;
-
-  // TODO: remove, this is only a temporary workaround
-  virtual FrameSerializer& frameSerializer() const = 0;
 };
 }

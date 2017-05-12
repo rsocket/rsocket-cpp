@@ -372,7 +372,7 @@ void ConnectionAutomaton::processFrameImpl(
     return;
   }
 
-  auto frameType = frameSerializer().peekFrameType(*frame);
+  auto frameType = frameSerializer_->peekFrameType(*frame);
   stats_->frameRead(frameType);
 
   // TODO(tmont): If a frame is invalid, it will still be tracked. However, we
@@ -380,7 +380,7 @@ void ConnectionAutomaton::processFrameImpl(
   // each side in sync, even if a frame is invalid.
   resumeCache_->trackReceivedFrame(*frame, frameType);
 
-  auto streamIdPtr = frameSerializer().peekStreamId(*frame);
+  auto streamIdPtr = frameSerializer_->peekStreamId(*frame);
   if (!streamIdPtr) {
     // Failed to deserialize the frame.
     closeWithError(Frame_ERROR::invalidFrame());
@@ -388,7 +388,7 @@ void ConnectionAutomaton::processFrameImpl(
   }
   auto streamId = *streamIdPtr;
   if (streamId == 0) {
-    onConnectionFrame(std::move(frame));
+    handleConnectionFrame(frameType, std::move(frame));
     return;
   }
 
@@ -402,14 +402,7 @@ void ConnectionAutomaton::processFrameImpl(
     return;
   }
 
-  auto it = streamState_->streams_.find(streamId);
-  if (it == streamState_->streams_.end()) {
-    handleUnknownStream(streamId, std::move(frame));
-    return;
-  }
-  auto automaton = it->second;
-  // Can deliver the frame.
-  automaton->onNextFrame(std::move(frame));
+  handleStreamFrame(streamId, frameType, std::move(frame));
 }
 
 void ConnectionAutomaton::onTerminal(folly::exception_wrapper ex) {
@@ -430,10 +423,10 @@ void ConnectionAutomaton::onTerminalImpl(folly::exception_wrapper ex) {
   }
 }
 
-void ConnectionAutomaton::onConnectionFrame(
+void ConnectionAutomaton::handleConnectionFrame(
+    FrameType frameType,
     std::unique_ptr<folly::IOBuf> payload) {
-  auto type = frameSerializer().peekFrameType(*payload);
-  switch (type) {
+  switch (frameType) {
     case FrameType::KEEPALIVE: {
       Frame_KEEPALIVE frame;
       if (!deserializeFrameOrError(
@@ -479,7 +472,7 @@ void ConnectionAutomaton::onConnectionFrame(
       frame.moveToSetupPayload(setupPayload);
 
       // this should be already set to the correct version
-      if (frameSerializer().protocolVersion() != setupPayload.protocolVersion) {
+      if (frameSerializer_->protocolVersion() != setupPayload.protocolVersion) {
         closeWithError(Frame_ERROR::badSetupFrame("invalid protocol version"));
         return;
       }
@@ -574,20 +567,86 @@ void ConnectionAutomaton::onConnectionFrame(
   }
 }
 
+void ConnectionAutomaton::handleStreamFrame(
+    StreamId streamId,
+    FrameType frameType,
+    std::unique_ptr<folly::IOBuf> serializedFrame) {
+  auto it = streamState_->streams_.find(streamId);
+  if (it == streamState_->streams_.end()) {
+    handleUnknownStream(streamId, frameType, std::move(serializedFrame));
+    return;
+  }
+  auto &automaton = it->second;
+
+  switch (frameType) {
+    case FrameType::REQUEST_N: {
+      Frame_REQUEST_N frameRequestN;
+      if (!deserializeFrameOrError(frameRequestN,
+                                   std::move(serializedFrame))) {
+        return;
+      }
+      automaton->handleRequestN(frameRequestN.requestN_);
+      break;
+    }
+    case FrameType::CANCEL: {
+      automaton->handleCancel();
+      break;
+    }
+    case FrameType::PAYLOAD: {
+      Frame_PAYLOAD framePayload;
+      if (!deserializeFrameOrError(framePayload,
+                                   std::move(serializedFrame))) {
+        return;
+      }
+      automaton->handlePayload(std::move(framePayload.payload_),
+                               framePayload.header_.flagsComplete(),
+                               framePayload.header_.flagsNext());
+      break;
+    }
+    case FrameType::ERROR: {
+      Frame_ERROR frameError;
+      if (!deserializeFrameOrError(frameError,
+                                   std::move(serializedFrame))) {
+        return;
+      }
+      automaton->handleError(std::runtime_error(frameError.payload_.moveDataToString()));
+      break;
+    }
+    case FrameType::REQUEST_CHANNEL:
+    case FrameType::REQUEST_RESPONSE:
+    case FrameType::RESERVED:
+    case FrameType::SETUP:
+    case FrameType::LEASE:
+    case FrameType::KEEPALIVE:
+    case FrameType::REQUEST_FNF:
+    case FrameType::REQUEST_STREAM:
+    case FrameType::METADATA_PUSH:
+    case FrameType::RESUME:
+    case FrameType::RESUME_OK:
+    case FrameType::EXT:
+      closeWithError(Frame_ERROR::unexpectedFrame());
+      break;
+    default:
+      // because of compatibility with future frame types we will just ignore
+      // unknown frames
+      break;
+  }
+}
+
 void ConnectionAutomaton::handleUnknownStream(
     StreamId streamId,
+    FrameType frameType,
     std::unique_ptr<folly::IOBuf> serializedFrame) {
   DCHECK(streamId != 0);
   // TODO: comparing string versions is odd because from version
   // 10.0 the lexicographic comparison doesn't work
   // we should change the version to struct
-  if (frameSerializer().protocolVersion() > ProtocolVersion{0, 0} &&
+  if (frameSerializer_->protocolVersion() > ProtocolVersion{0, 0} &&
       !streamsFactory_.registerNewPeerStreamId(streamId)) {
     return;
   }
 
-  auto type = frameSerializer().peekFrameType(*serializedFrame);
-  switch (type) {
+  switch (frameType) {
     case FrameType::REQUEST_CHANNEL: {
       Frame_REQUEST_CHANNEL frame;
       if (!deserializeFrameOrError(frame, std::move(serializedFrame))) {
@@ -647,7 +706,7 @@ void ConnectionAutomaton::handleUnknownStream(
     case FrameType::EXT:
     default:
       DLOG(ERROR) << "unknown stream frame (streamId=" << streamId
-                  << " frameType=" << type << ")";
+                  << " frameType=" << frameType << ")";
       closeWithError(Frame_ERROR::unexpectedFrame());
   }
 }
@@ -664,7 +723,22 @@ void ConnectionAutomaton::sendKeepalive(
   Frame_KEEPALIVE pingFrame(
       flags, resumeCache_->impliedPosition(), std::move(data));
   outputFrameOrEnqueue(
-      frameSerializer().serializeOut(std::move(pingFrame), remoteResumeable_));
+      frameSerializer_->serializeOut(std::move(pingFrame), remoteResumeable_));
+}
+
+void ConnectionAutomaton::tryClientResume(
+    const ResumeIdentificationToken& token,
+    std::shared_ptr<FrameTransport> frameTransport,
+    std::unique_ptr<ClientResumeStatusCallback> resumeCallback) {
+  frameTransport->outputFrameOrEnqueue(frameSerializer_->serializeOut(
+      createResumeFrame(token)));
+
+  // if the client was still connected we will disconnected the old connection
+  // with a clear error message
+  disconnect(
+      std::runtime_error("resuming client on a different connection"));
+  setResumable(true);
+  reconnect(std::move(frameTransport), std::move(resumeCallback));
 }
 
 Frame_RESUME ConnectionAutomaton::createResumeFrame(
@@ -673,7 +747,7 @@ Frame_RESUME ConnectionAutomaton::createResumeFrame(
       token,
       resumeCache_->impliedPosition(),
       resumeCache_->lastResetPosition(),
-      frameSerializer().protocolVersion());
+      frameSerializer_->protocolVersion());
 }
 
 bool ConnectionAutomaton::isPositionAvailable(ResumePosition position) {
@@ -694,7 +768,7 @@ bool ConnectionAutomaton::resumeFromPositionOrClose(
 
   if (clientPositionExist &&
       resumeCache_->isPositionAvailable(serverPosition)) {
-    frameTransport_->outputFrameOrEnqueue(frameSerializer().serializeOut(
+    frameTransport_->outputFrameOrEnqueue(frameSerializer_->serializeOut(
         Frame_RESUME_OK(resumeCache_->impliedPosition())));
     resumeFromPosition(serverPosition);
     return true;
@@ -738,14 +812,27 @@ void ConnectionAutomaton::outputFrameOrEnqueue(
   }
 }
 
+void ConnectionAutomaton::requestFireAndForget(Payload request) {
+  Frame_REQUEST_FNF frame(
+      streamsFactory().getNextStreamId(),
+      FrameFlags::EMPTY,
+      std::move(std::move(request)));
+  outputFrameOrEnqueue(frameSerializer_->serializeOut(std::move(frame)));
+}
+
+void ConnectionAutomaton::metadataPush(std::unique_ptr<folly::IOBuf> metadata) {
+  outputFrameOrEnqueue(frameSerializer_->serializeOut(
+      Frame_METADATA_PUSH(std::move(metadata))));
+}
+
 void ConnectionAutomaton::outputFrame(std::unique_ptr<folly::IOBuf> frame) {
   DCHECK(!isDisconnectedOrClosed());
 
-  auto frameType = frameSerializer().peekFrameType(*frame);
+  auto frameType = frameSerializer_->peekFrameType(*frame);
   stats_->frameWritten(frameType);
 
   if (isResumable_) {
-    auto streamIdPtr = frameSerializer().peekStreamId(*frame);
+    auto streamIdPtr = frameSerializer_->peekStreamId(*frame);
     resumeCache_->trackSentFrame(*frame, frameType, streamIdPtr);
   }
   frameTransport_->outputFrameOrEnqueue(std::move(frame));
@@ -800,9 +887,34 @@ void ConnectionAutomaton::setFrameSerializer(
   frameSerializer_ = std::move(frameSerializer);
 }
 
-FrameSerializer& ConnectionAutomaton::frameSerializer() const {
-  CHECK(frameSerializer_);
-  return *frameSerializer_;
+void ConnectionAutomaton::setUpFrame(std::shared_ptr<FrameTransport> frameTransport,
+                                     ConnectionSetupPayload setupPayload) {
+  auto protocolVersion = getSerializerProtocolVersion();
+
+  Frame_SETUP frame(
+      setupPayload.resumable ? FrameFlags::RESUME_ENABLE : FrameFlags::EMPTY,
+      protocolVersion.major,
+      protocolVersion.minor,
+      getKeepaliveTime(),
+      Frame_SETUP::kMaxLifetime,
+      setupPayload.token,
+      std::move(setupPayload.metadataMimeType),
+      std::move(setupPayload.dataMimeType),
+      std::move(setupPayload.payload));
+
+  // TODO: when the server returns back that it doesn't support resumability, we
+  // should retry without resumability
+
+  // making sure we send setup frame first
+  frameTransport->outputFrameOrEnqueue(
+      frameSerializer_->serializeOut(std::move(frame)));
+  // then the rest of the cached frames will be sent
+  connect(
+      std::move(frameTransport), true, ProtocolVersion::Unknown);
+}
+
+ProtocolVersion ConnectionAutomaton::getSerializerProtocolVersion() {
+  return frameSerializer_->protocolVersion();
 }
 
 void ConnectionAutomaton::writeNewStream(
@@ -813,7 +925,7 @@ void ConnectionAutomaton::writeNewStream(
     bool completed) {
   switch (streamType) {
     case StreamType::CHANNEL:
-      outputFrameOrEnqueue(frameSerializer().serializeOut(Frame_REQUEST_CHANNEL(
+      outputFrameOrEnqueue(frameSerializer_->serializeOut(Frame_REQUEST_CHANNEL(
           streamId,
           completed ? FrameFlags::COMPLETE : FrameFlags::EMPTY,
           initialRequestN,
@@ -821,18 +933,18 @@ void ConnectionAutomaton::writeNewStream(
       break;
 
     case StreamType::STREAM:
-      outputFrameOrEnqueue(frameSerializer().serializeOut(Frame_REQUEST_STREAM(
+      outputFrameOrEnqueue(frameSerializer_->serializeOut(Frame_REQUEST_STREAM(
           streamId, FrameFlags::EMPTY, initialRequestN, std::move(payload))));
       break;
 
     case StreamType::REQUEST_RESPONSE:
       outputFrameOrEnqueue(
-          frameSerializer().serializeOut(Frame_REQUEST_RESPONSE(
+          frameSerializer_->serializeOut(Frame_REQUEST_RESPONSE(
               streamId, FrameFlags::EMPTY, std::move(payload))));
       break;
 
     case StreamType::FNF:
-      outputFrameOrEnqueue(frameSerializer().serializeOut(
+      outputFrameOrEnqueue(frameSerializer_->serializeOut(
           Frame_REQUEST_FNF(streamId, FrameFlags::EMPTY, std::move(payload))));
       break;
 
@@ -843,7 +955,7 @@ void ConnectionAutomaton::writeNewStream(
 
 void ConnectionAutomaton::writeRequestN(StreamId streamId, uint32_t n) {
   outputFrameOrEnqueue(
-      frameSerializer().serializeOut(Frame_REQUEST_N(streamId, n)));
+      frameSerializer_->serializeOut(Frame_REQUEST_N(streamId, n)));
 }
 
 void ConnectionAutomaton::writePayload(
@@ -854,7 +966,7 @@ void ConnectionAutomaton::writePayload(
       streamId,
       FrameFlags::NEXT | (complete ? FrameFlags::COMPLETE : FrameFlags::EMPTY),
       std::move(payload));
-  outputFrameOrEnqueue(frameSerializer().serializeOut(std::move(frame)));
+  outputFrameOrEnqueue(frameSerializer_->serializeOut(std::move(frame)));
 }
 
 void ConnectionAutomaton::writeCloseStream(
@@ -864,21 +976,21 @@ void ConnectionAutomaton::writeCloseStream(
   switch (signal) {
     case StreamCompletionSignal::COMPLETE:
       outputFrameOrEnqueue(
-          frameSerializer().serializeOut(Frame_PAYLOAD::complete(streamId)));
+          frameSerializer_->serializeOut(Frame_PAYLOAD::complete(streamId)));
       break;
 
     case StreamCompletionSignal::CANCEL:
       outputFrameOrEnqueue(
-          frameSerializer().serializeOut(Frame_CANCEL(streamId)));
+          frameSerializer_->serializeOut(Frame_CANCEL(streamId)));
       break;
 
     case StreamCompletionSignal::ERROR:
-      outputFrameOrEnqueue(frameSerializer().serializeOut(
+      outputFrameOrEnqueue(frameSerializer_->serializeOut(
           Frame_ERROR::error(streamId, std::move(payload))));
       break;
 
     case StreamCompletionSignal::APPLICATION_ERROR:
-      outputFrameOrEnqueue(frameSerializer().serializeOut(
+      outputFrameOrEnqueue(frameSerializer_->serializeOut(
           Frame_ERROR::applicationError(streamId, std::move(payload))));
       break;
 

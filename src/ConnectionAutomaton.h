@@ -143,11 +143,13 @@ class ConnectionAutomaton final
 
   void outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf> frame);
 
+  void requestFireAndForget(Payload request);
+
   template <typename TFrame>
   bool deserializeFrameOrError(
       TFrame& frame,
       std::unique_ptr<folly::IOBuf> payload) {
-    if (frameSerializer().deserializeFrom(frame, std::move(payload))) {
+    if (frameSerializer_->deserializeFrom(frame, std::move(payload))) {
       return true;
     } else {
       closeWithError(Frame_ERROR::invalidFrame());
@@ -160,7 +162,7 @@ class ConnectionAutomaton final
       bool resumable,
       TFrame& frame,
       std::unique_ptr<folly::IOBuf> payload) {
-    if (frameSerializer().deserializeFrom(
+    if (frameSerializer_->deserializeFrom(
             frame, std::move(payload), resumable)) {
       return true;
     } else {
@@ -186,7 +188,17 @@ class ConnectionAutomaton final
     return streamsFactory_;
   }
 
-  FrameSerializer& frameSerializer() const override;
+
+  ProtocolVersion getSerializerProtocolVersion();
+  void setUpFrame(std::shared_ptr<FrameTransport> frameTransport,
+                  ConnectionSetupPayload setupPayload);
+
+  void metadataPush(std::unique_ptr<folly::IOBuf> metadata);
+
+  void tryClientResume(const ResumeIdentificationToken& token,
+                         std::shared_ptr<FrameTransport> frameTransport,
+                         std::unique_ptr<ClientResumeStatusCallback> resumeCallback);
+
   void setFrameSerializer(std::unique_ptr<FrameSerializer>);
 
   Stats& stats() {
@@ -212,9 +224,15 @@ class ConnectionAutomaton final
   void onTerminalImpl(folly::exception_wrapper);
   /// @}
 
-  void onConnectionFrame(std::unique_ptr<folly::IOBuf>);
+  void handleConnectionFrame(FrameType frameType,
+                             std::unique_ptr<folly::IOBuf>);
+  void handleStreamFrame(
+      StreamId streamId,
+      FrameType frameType,
+      std::unique_ptr<folly::IOBuf> frame);
   void handleUnknownStream(
       StreamId streamId,
+      FrameType frameType,
       std::unique_ptr<folly::IOBuf> frame);
 
   void closeStreams(StreamCompletionSignal);
