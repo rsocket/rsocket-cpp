@@ -371,6 +371,15 @@ TEST(Observable, RangeWithMap) {
   EXPECT_EQ(0u, Refcounted::objects());
 }
 
+TEST(Observable, RangeWithFilter) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto observable = Observables::range(0, 10)
+      ->filter([](int64_t v) { return v % 2 != 0; });
+  EXPECT_EQ(
+      run(std::move(observable)), std::vector<int64_t>({1, 3, 5, 7, 9}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
 // TODO: Hits ASAN errors.
 TEST(Observable, DISABLED_SimpleTake) {
   ASSERT_EQ(0u, Refcounted::objects());
