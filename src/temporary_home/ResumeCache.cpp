@@ -62,6 +62,11 @@ void ResumeCache::trackSentFrame(
     // TODO(tmont): this could be expensive, find a better way to get length
     auto frameDataLength = serializedFrame.computeChainDataLength();
 
+    if (streamIdPtr) {
+      const StreamId streamId = *streamIdPtr;
+      activeStreams_.insert(streamId);
+    }
+
     // if the frame is too huge, we don't cache it
     if (frameDataLength > capacity_) {
       resetUpToPosition(position_);
@@ -72,11 +77,6 @@ void ResumeCache::trackSentFrame(
 
     addFrame(serializedFrame, frameDataLength);
     position_ += frameDataLength;
-
-    if (streamIdPtr) {
-      const StreamId streamId = *streamIdPtr;
-      streamMap_[streamId] = position_;
-    }
   }
 }
 
@@ -87,14 +87,6 @@ void ResumeCache::resetUpToPosition(ResumePosition position) {
 
   if (position > position_) {
     position = position_;
-  }
-
-  for (auto it = streamMap_.begin(); it != streamMap_.end();) {
-    if (it->second <= position) {
-      it = streamMap_.erase(it);
-    } else {
-      it++;
-    }
   }
 
   clearFrames(position);
@@ -113,23 +105,6 @@ bool ResumeCache::isPositionAvailable(ResumePosition position) const {
                 decltype(frames_.back()) pairB) {
                return pairA.first < pairB.first;
              });
-}
-
-bool ResumeCache::isPositionAvailable(
-    ResumePosition position,
-    StreamId streamId) const {
-  bool result = false;
-
-  auto it = streamMap_.find(streamId);
-  if (it != streamMap_.end()) {
-    const ResumePosition streamPosition = (*it).second;
-
-    result = (streamPosition <= position);
-  } else {
-    result = (resetPosition_ >= position);
-  }
-
-  return result;
 }
 
 void ResumeCache::addFrame(const folly::IOBuf& frame, size_t frameDataLength) {

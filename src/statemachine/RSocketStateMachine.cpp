@@ -313,6 +313,7 @@ bool RSocketStateMachine::endStreamInternal(
     StreamId streamId,
     StreamCompletionSignal signal) {
   VLOG(6) << "endStreamInternal";
+  resumeCache_->rmFromActiveStreams(streamId);
   auto it = streamState_->streams_.find(streamId);
   if (it == streamState_->streams_.end()) {
     // Unsubscribe handshake initiated by the connection, we're done.

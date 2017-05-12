@@ -3,6 +3,7 @@
 #pragma once
 
 #include <deque>
+#include <set>
 #include <unordered_map>
 
 #include <folly/Optional.h>
@@ -51,8 +52,6 @@ class ResumeCache {
 
   bool isPositionAvailable(ResumePosition position) const;
 
-  bool isPositionAvailable(ResumePosition position, StreamId streamId) const;
-
   void sendFramesFromPosition(
       ResumePosition position,
       FrameTransport& transport) const;
@@ -77,6 +76,10 @@ class ResumeCache {
     return size_;
   }
 
+  void rmFromActiveStreams(StreamId streamId) {
+    activeStreams_.erase(streamId);
+  }
+
  private:
   void addFrame(const folly::IOBuf&, size_t);
   void evictFrame();
@@ -93,7 +96,8 @@ class ResumeCache {
   // Inferred position of the rcvd frames
   ResumePosition impliedPosition_{0};
 
-  std::unordered_map<StreamId, ResumePosition> streamMap_;
+  // Only active REQUEST_STREAMs are preserved here
+  std::set<StreamId> activeStreams_;
 
   std::deque<std::pair<ResumePosition, std::unique_ptr<folly::IOBuf>>> frames_;
 
