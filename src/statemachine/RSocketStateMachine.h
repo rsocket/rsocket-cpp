@@ -210,7 +210,7 @@ class RSocketStateMachine final
     return *stats_;
   }
 
-  void setStreamId(const std::string& streamName, StreamId streamId);
+  void setStreamName(StreamId streamId, const std::string& streamName);
 
   StreamId getStreamId(const std::string& streamName) const;
 

@@ -133,24 +133,27 @@ bool ResumeCache::isPositionAvailable(
 }
 
 StreamId ResumeCache::getStreamId(const std::string& streamName) const {
-  auto it = streamNameMap_.find(streamName);
-  if (it == streamNameMap_.end()) {
-    return 0;
-  } else {
-    return it->second;
+  /// This is a little inefficient.  But is called very infrequently
+  for (const auto& it : streamNameMap_) {
+    if (it.second == streamName) {
+      return it.first;
+    }
   }
+  return 0;
 }
 
-std::unordered_map<std::string /* streamName */, StreamId>
+std::unordered_map<StreamId, std::string /* streamName */>
 ResumeCache::getResumableStreams() {
   // An entry is added to streamNameMap_ when the stream is created. But the
   // entry gets added to streamMap_ only when the frames of the stream are
   // sent on the wire.  Check whether the stream entry exists on both to be
   // resumable.
-  std::unordered_map<std::string, StreamId> resumableStreams;
-  for (const auto& it : streamNameMap_) {
-    if (streamMap_.find(it.second) != streamMap_.end()) {
-      resumableStreams[it.first] = it.second;
+  std::unordered_map<StreamId, std::string> resumableStreams;
+  for (const auto& it : streamMap_) {
+    if (streamNameMap_.find(it.first) != streamNameMap_.end()) {
+      resumableStreams[it.first] = streamNameMap_[it.first];
+    } else {
+      resumableStreams[it.first] = std::to_string(it.first);
     }
   }
   return resumableStreams;
