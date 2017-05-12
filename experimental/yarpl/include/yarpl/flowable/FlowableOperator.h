@@ -135,53 +135,81 @@ class MapOperator : public FlowableOperator<U, D> {
 
 template <
     typename U,
+    typename D,
     typename F,
-    typename = typename std::enable_if<std::is_callable<F(U, U), U>::value>::type>
-class ReduceOperator : public FlowableOperator<U, U> {
+    typename = typename std::enable_if<std::is_trivially_assignable<D, U>::value>,
+    typename = typename std::enable_if<std::is_callable<F(D, U), D>::value>::type>
+class ReduceOperator : public FlowableOperator<U, D> {
 public:
   ReduceOperator(Reference<Flowable<U>> upstream, F&& function)
-      : FlowableOperator<U, U>(std::move(upstream)),
+      : FlowableOperator<U, D>(std::move(upstream)),
         function_(std::forward<F>(function)) {}
 
-  void subscribe(Reference<Subscriber<U>> subscriber) override {
-    FlowableOperator<U, U>::upstream_->subscribe(
+  void subscribe(Reference<Subscriber<D>> subscriber) override {
+    FlowableOperator<U, D>::upstream_->subscribe(
         // Note: implicit cast to a reference to a subscriber.
         Reference<Subscription>(new Subscription(
-            Reference<Flowable<U>>(this), std::move(subscriber))));
+            Reference<Flowable<D>>(this), std::move(subscriber))));
   }
 
 private:
-  class Subscription : public FlowableOperator<U, U>::Subscription {
+  class Subscription : public FlowableOperator<U, D>::Subscription {
   public:
     Subscription(
-        Reference<Flowable<U>> flowable,
-        Reference<Subscriber<U>> subscriber)
-        : FlowableOperator<U, U>::Subscription(
+        Reference<Flowable<D>> flowable,
+        Reference<Subscriber<D>> subscriber)
+        : FlowableOperator<U, D>::Subscription(
         std::move(flowable),
         std::move(subscriber)),
-          acc_() {}
+          accInitialized_(false) {
+    }
+
+    void request(int64_t /* delta */) override {
+      // Request all of the items
+      callSuperRequest(FlowableOperator<U, D>::NO_FLOW_CONTROL);
+    }
 
     void onNext(U value) override {
-      auto* flowable = FlowableOperator<U, U>::Subscription::flowable_.get();
+      auto* flowable = FlowableOperator<U, D>::Subscription::flowable_.get();
       auto* reduce = static_cast<ReduceOperator*>(flowable);
-      acc_ = reduce->function_(std::move(acc_), std::move(value));
+      if (accInitialized_) {
+        acc_ = reduce->function_(std::move(acc_), std::move(value));
+      } else {
+        acc_ = std::move(value);
+        accInitialized_ = true;
+      }
     }
 
     void onComplete() override {
       auto subscriber =
-          FlowableOperator<U, U>::Subscription::subscriber_.get();
-      subscriber->onNext(acc_);
-      callSuperOnComplete();
+          FlowableOperator<U, D>::Subscription::subscriber_.get();
+      if (accInitialized_) {
+        subscriber->onNext(acc_);
+        callSuperOnComplete();
+      } else {
+        callSuperOnError(std::make_exception_ptr(std::runtime_error("Upstream has no value")));
+      }
     }
 
   private:
     // Trampoline to call superclass method; gcc bug 58972.
+    void callSuperRequest(int64_t delta) {
+      FlowableOperator<U, D>::Subscription::request(delta);
+    }
+
+    // Trampoline to call superclass method; gcc bug 58972.
     void callSuperOnComplete() {
-      FlowableOperator<U, U>::Subscription::onComplete();
+      FlowableOperator<U, D>::Subscription::onComplete();
+    }
+
+    // Trampoline to call superclass method; gcc bug 58972.
+    void callSuperOnError(const std::exception_ptr error) {
+      FlowableOperator<U, D>::Subscription::onError(error);
     }
 
   private:
-    U acc_;
+    bool accInitialized_;
+    D acc_;
   };
 
   F function_;

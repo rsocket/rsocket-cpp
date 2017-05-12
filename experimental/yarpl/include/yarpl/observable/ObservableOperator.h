@@ -128,16 +128,17 @@ class MapOperator : public ObservableOperator<U, D> {
 
 template<
     typename U,
+    typename D,
     typename F,
-    typename = typename std::enable_if<std::is_callable<F(U, U), bool>::value>::type>
-class ReduceOperator : public ObservableOperator<U, U> {
+    typename = typename std::enable_if<std::is_callable<F(D, U), D>::value>::type>
+class ReduceOperator : public ObservableOperator<U, D> {
 public:
   ReduceOperator(Reference <Observable<U>> upstream, F &&function)
-      : ObservableOperator<U, U>(std::move(upstream)),
+      : ObservableOperator<U, D>(std::move(upstream)),
         function_(std::forward<F>(function)) {}
 
-  void subscribe(Reference <Observer<U>> subscriber) override {
-    ObservableOperator<U, U>::upstream_->subscribe(
+  void subscribe(Reference <Observer<D>> subscriber) override {
+    ObservableOperator<U, D>::upstream_->subscribe(
         // Note: implicit cast to a reference to a subscriber.
         Reference<Subscription>(new Subscription(
             Reference<Observable<U>>(this), std::move(subscriber))));
@@ -147,34 +148,49 @@ private:
   class Subscription : public ObservableOperator<U, U>::Subscription {
   public:
     Subscription(
-        Reference <Observable<U>> flowable,
-        Reference <Observer<U>> subscriber)
-        : ObservableOperator<U, U>::Subscription(
+        Reference <Observable<D>> flowable,
+        Reference <Observer<D>> subscriber)
+        : ObservableOperator<U, D>::Subscription(
         std::move(flowable),
         std::move(subscriber)),
-          acc_() {}
+          accInitialized_(false) {}
 
     void onNext(U value) override {
       auto *flowable = ObservableOperator<U, U>::Subscription::flowable_.get();
       auto *reduce = static_cast<ReduceOperator*>(flowable);
-      acc_ = reduce->function_(std::move(acc_), std::move(value));
+      if (accInitialized_) {
+        acc_ = reduce->function_(std::move(acc_), std::move(value));
+      } else {
+        acc_ = std::move(value);
+        accInitialized_ = true;
+      }
     }
 
     void onComplete() override {
       auto *subscriber =
           ObservableOperator<U, U>::Subscription::subscriber_.get();
-      subscriber->onNext(acc_);
-      callSuperOnComplete();
+      if (accInitialized_) {
+        subscriber->onNext(acc_);
+        callSuperOnComplete();
+      } else {
+        callSuperOnError(std::make_exception_ptr(std::runtime_error("Upstream has no value")));
+      }
     }
 
   private:
     // Trampoline to call superclass method; gcc bug 58972.
     void callSuperOnComplete() {
-      ObservableOperator<U, U>::Subscription::onComplete();
+      ObservableOperator<U, D>::Subscription::onComplete();
+    }
+
+    // Trampoline to call superclass method; gcc bug 58972.
+    void callSuperOnError(const std::exception_ptr error) {
+      ObservableOperator<U, D>::Subscription::onError(error);
     }
 
   private:
-    U acc_;
+    bool accInitialized_;
+    D acc_;
   };
 
   F function_;

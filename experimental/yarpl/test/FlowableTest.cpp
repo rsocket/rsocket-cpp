@@ -21,9 +21,11 @@ class CollectingSubscriber : public Subscriber<T> {
       std::is_copy_constructible<T>::value,
       "CollectingSubscriber needs to copy the value in order to collect it");
 
+  CollectingSubscriber(int64_t requestCount = 100) : requestCount_(requestCount) {}
+
   void onSubscribe(Reference<Subscription> subscription) override {
     Subscriber<T>::onSubscribe(subscription);
-    subscription->request(100);
+    subscription->request(requestCount_);
   }
 
   void onNext(T next) override {
@@ -69,14 +71,15 @@ class CollectingSubscriber : public Subscriber<T> {
   std::string errorMsg_;
   bool complete_{false};
   bool error_{false};
+  int64_t requestCount_;
 };
 
 /// Construct a pipeline with a collecting subscriber against the supplied
 /// flowable.  Return the items that were sent to the subscriber.  If some
 /// exception was sent, the exception is thrown.
 template <typename T>
-std::vector<T> run(Reference<Flowable<T>> flowable) {
-  auto collector = make_ref<CollectingSubscriber<T>>();
+std::vector<T> run(Reference<Flowable<T>> flowable, int64_t requestCount = 100) {
+  auto collector = make_ref<CollectingSubscriber<T>>(requestCount);
   flowable->subscribe(collector);
   return collector->values();
 }
@@ -158,12 +161,66 @@ TEST(FlowableTest, RangeWithMap) {
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
-TEST(FlowableTest, RangeWithReduce) {
+TEST(FlowableTest, RangeWithReduceMoreItems) {
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
   auto flowable = Flowables::range(0, 10)
-                      ->reduce([](int64_t acc, int64_t v) { return acc + v; });
+      ->reduce([](int64_t acc, int64_t v) { return acc + v; });
   EXPECT_EQ(
       run(std::move(flowable)), std::vector<int64_t>({45}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(FlowableTest, RangeWithReduceByMultiplication) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto flowable = Flowables::range(0, 10)
+      ->reduce([](int64_t acc, int64_t v) { return acc * v; });
+  EXPECT_EQ(
+      run(std::move(flowable)), std::vector<int64_t>({0}));
+
+  flowable = Flowables::range(1, 10)
+      ->reduce([](int64_t acc, int64_t v) { return acc * v; });
+  EXPECT_EQ(
+      run(std::move(flowable)), std::vector<int64_t>({2*3*4*5*6*7*8*9}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(FlowableTest, RangeWithReduceLessItems) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto flowable = Flowables::range(0, 10)
+      ->reduce([](int64_t acc, int64_t v) { return acc + v; });
+  EXPECT_EQ(
+      run(std::move(flowable), 5), std::vector<int64_t>({45}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(FlowableTest, RangeWithReduceOneItem) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto flowable = Flowables::range(5, 6)
+      ->reduce([](int64_t acc, int64_t v) { return acc + v; });
+  EXPECT_EQ(
+      run(std::move(flowable)), std::vector<int64_t>({5}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(FlowableTest, RangeWithReduceNoItem) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  {
+    auto flowable = Flowables::range(0, 0)
+        ->reduce([](int64_t acc, int64_t v) { return acc + v; });
+    auto collector = make_ref<CollectingSubscriber<int64_t>>(100);
+    flowable->subscribe(collector);
+    EXPECT_EQ(collector->error(), true);
+  }
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(FlowableTest, RangeWithReduceToBiggerType) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto flowable = Flowables::range(5, 6)
+      ->map([](int64_t v){ return (int32_t)v; })
+      ->reduce([](int64_t acc, int32_t v) { return acc + v; });
+  EXPECT_EQ(
+      run(std::move(flowable)), std::vector<int64_t>({5}));
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 

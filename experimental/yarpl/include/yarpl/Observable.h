@@ -97,7 +97,8 @@ auto Observable<T>::map(Function&& function) {
 template <typename T>
 template <typename Function>
 auto Observable<T>::reduce(Function&& function) {
-  return Reference<Observable<T>>(new ReduceOperator<T, Function>(
+  using D = typename std::result_of<Function(T, T)>::type;
+  return Reference<Observable<D>>(new ReduceOperator<T, D, Function>(
       Reference<Observable<T>>(this), std::forward<Function>(function)));
 }
 
