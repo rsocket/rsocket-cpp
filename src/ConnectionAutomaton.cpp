@@ -609,7 +609,8 @@ void ConnectionAutomaton::handleStreamFrame(
                                    std::move(serializedFrame))) {
         return;
       }
-      automaton->handleError(std::runtime_error(frameError.payload_.moveDataToString()));
+      automaton->handleError(
+          std::runtime_error(frameError.payload_.moveDataToString()));
       break;
     }
     case FrameType::REQUEST_CHANNEL:
@@ -887,8 +888,9 @@ void ConnectionAutomaton::setFrameSerializer(
   frameSerializer_ = std::move(frameSerializer);
 }
 
-void ConnectionAutomaton::setUpFrame(std::shared_ptr<FrameTransport> frameTransport,
-                                     ConnectionSetupPayload setupPayload) {
+void ConnectionAutomaton::setUpFrame(
+    std::shared_ptr<FrameTransport> frameTransport,
+    ConnectionSetupPayload setupPayload) {
   auto protocolVersion = getSerializerProtocolVersion();
 
   Frame_SETUP frame(

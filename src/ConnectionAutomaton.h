@@ -195,9 +195,10 @@ class ConnectionAutomaton final
 
   void metadataPush(std::unique_ptr<folly::IOBuf> metadata);
 
-  void tryClientResume(const ResumeIdentificationToken& token,
-                         std::shared_ptr<FrameTransport> frameTransport,
-                         std::unique_ptr<ClientResumeStatusCallback> resumeCallback);
+  void tryClientResume(
+      const ResumeIdentificationToken& token,
+      std::shared_ptr<FrameTransport> frameTransport,
+      std::unique_ptr<ClientResumeStatusCallback> resumeCallback);
 
   void setFrameSerializer(std::unique_ptr<FrameSerializer>);
 
