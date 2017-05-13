@@ -10,6 +10,7 @@
 #include <src/SubscriptionBase.h>
 #include "rsocket/RSocket.h"
 #include "rsocket/transports/TcpConnectionFactory.h"
+#include "yarpl/Flowable.h"
 
 using namespace ::reactivesocket;
 using namespace ::folly;
@@ -58,24 +59,32 @@ private:
     std::atomic_bool cancelled_;
 };
 
-class BM_RequestHandler : public DefaultRequestHandler
+class BM_RequestHandler : public RSocketRequestHandler
 {
 public:
-    void handleRequestResponse(
-        Payload request, StreamId streamId, const std::shared_ptr<Subscriber<Payload>> &response) noexcept override
-    {
-        LOG(INFO) << "BM_RequestHandler.handleRequestResponse " << request;
-
-        response->onSubscribe(
-            std::make_shared<BM_Subscription>(response, MESSAGE_LENGTH));
+    // TODO(lehecka): enable when we have support for request-response
+    yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
+    handleRequestStream(
+      reactivesocket::Payload request,
+      reactivesocket::StreamId streamId) override {
+        CHECK(false) << "not implemented";
     }
 
-    std::shared_ptr<StreamState> handleSetupPayload(
-        ReactiveSocket &socket, ConnectionSetupPayload request) noexcept override
-    {
-        LOG(INFO) << "BM_RequestHandler.handleSetupPayload " << request;
-        return nullptr;
-    }
+    // void handleRequestResponse(
+    //     Payload request, StreamId streamId, const std::shared_ptr<Subscriber<Payload>> &response) noexcept override
+    // {
+    //     LOG(INFO) << "BM_RequestHandler.handleRequestResponse " << request;
+
+    //     response->onSubscribe(
+    //         std::make_shared<BM_Subscription>(response, MESSAGE_LENGTH));
+    // }
+
+    // std::shared_ptr<StreamState> handleSetupPayload(
+    //     ReactiveSocket &socket, ConnectionSetupPayload request) noexcept override
+    // {
+    //     LOG(INFO) << "BM_RequestHandler.handleSetupPayload " << request;
+    //     return nullptr;
+    // }
 };
 
 class BM_Subscriber
@@ -193,8 +202,11 @@ public:
 
 BENCHMARK_DEFINE_F(BM_RsFixture, BM_RequestResponse_Throughput)(benchmark::State &state)
 {
+    folly::SocketAddress address;
+    address.setFromHostPort(host_, port_);
+
     auto clientRs = RSocket::createClient(std::make_unique<TcpConnectionFactory>(
-        host_, port_));
+        std::move(address)));
     int reqs = 0;
     int numSubscribers = state.range(0);
     int mask = numSubscribers - 1;
