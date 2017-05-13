@@ -130,11 +130,7 @@ template<
     typename U,
     typename D,
     typename F,
-#if __has_feature(is_trivially_assignable) || _GNUC_VER >= 501
-    typename = typename std::enable_if<std::is_trivially_assignable<D, U>::value>,
-#else
     typename = typename std::enable_if<std::is_assignable<D, U>::value>,
-#endif
     typename = typename std::enable_if<std::is_callable<F(D, U), D>::value>::type>
 class ReduceOperator : public ObservableOperator<U, D> {
 public:
