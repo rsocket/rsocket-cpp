@@ -188,6 +188,7 @@ TEST(FlowableTest, RangeWithReduceLessItems) {
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
   auto flowable = Flowables::range(0, 10)
       ->reduce([](int64_t acc, int64_t v) { return acc + v; });
+  // Even if we ask for 1 item only, it will reduce all the items
   EXPECT_EQ(
       run(std::move(flowable), 5), std::vector<int64_t>({45}));
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
@@ -209,7 +210,9 @@ TEST(FlowableTest, RangeWithReduceNoItem) {
         ->reduce([](int64_t acc, int64_t v) { return acc + v; });
     auto collector = make_ref<CollectingSubscriber<int64_t>>(100);
     flowable->subscribe(collector);
-    EXPECT_EQ(collector->error(), true);
+    EXPECT_EQ(collector->error(), false);
+    EXPECT_EQ(
+        collector->values(), std::vector<int64_t>({}));
   }
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }

@@ -130,22 +130,27 @@ template<
     typename U,
     typename D,
     typename F,
+#if __has_feature(is_trivially_assignable)
+    typename = typename std::enable_if<std::is_trivially_assignable<D, U>::value>,
+#else
+    typename = typename std::enable_if<std::is_assignable<D, U>::value>,
+#endif
     typename = typename std::enable_if<std::is_callable<F(D, U), D>::value>::type>
 class ReduceOperator : public ObservableOperator<U, D> {
 public:
-  ReduceOperator(Reference <Observable<U>> upstream, F &&function)
+  ReduceOperator(Reference<Observable<U>> upstream, F &&function)
       : ObservableOperator<U, D>(std::move(upstream)),
         function_(std::forward<F>(function)) {}
 
-  void subscribe(Reference <Observer<D>> subscriber) override {
+  void subscribe(Reference<Observer<D>> subscriber) override {
     ObservableOperator<U, D>::upstream_->subscribe(
         // Note: implicit cast to a reference to a subscriber.
         Reference<Subscription>(new Subscription(
-            Reference<Observable<U>>(this), std::move(subscriber))));
+            Reference<Observable<D>>(this), std::move(subscriber))));
   }
 
 private:
-  class Subscription : public ObservableOperator<U, U>::Subscription {
+  class Subscription : public ObservableOperator<U, D>::Subscription {
   public:
     Subscription(
         Reference <Observable<D>> flowable,
@@ -156,7 +161,7 @@ private:
           accInitialized_(false) {}
 
     void onNext(U value) override {
-      auto *flowable = ObservableOperator<U, U>::Subscription::flowable_.get();
+      auto *flowable = ObservableOperator<U, D>::Subscription::flowable_.get();
       auto *reduce = static_cast<ReduceOperator*>(flowable);
       if (accInitialized_) {
         acc_ = reduce->function_(std::move(acc_), std::move(value));
@@ -167,14 +172,12 @@ private:
     }
 
     void onComplete() override {
-      auto *subscriber =
-          ObservableOperator<U, U>::Subscription::subscriber_.get();
       if (accInitialized_) {
+        auto *subscriber =
+            ObservableOperator<U, D>::Subscription::subscriber_.get();
         subscriber->onNext(acc_);
-        callSuperOnComplete();
-      } else {
-        callSuperOnError(std::make_exception_ptr(std::runtime_error("Upstream has no value")));
       }
+      callSuperOnComplete();
     }
 
   private:

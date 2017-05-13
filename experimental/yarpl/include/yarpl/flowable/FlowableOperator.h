@@ -137,7 +137,11 @@ template <
     typename U,
     typename D,
     typename F,
+#if __has_feature(is_trivially_assignable)
     typename = typename std::enable_if<std::is_trivially_assignable<D, U>::value>,
+#else
+    typename = typename std::enable_if<std::is_assignable<D, U>::value>,
+#endif
     typename = typename std::enable_if<std::is_callable<F(D, U), D>::value>::type>
 class ReduceOperator : public FlowableOperator<U, D> {
 public:
@@ -181,14 +185,12 @@ private:
     }
 
     void onComplete() override {
-      auto subscriber =
-          FlowableOperator<U, D>::Subscription::subscriber_.get();
       if (accInitialized_) {
+        auto subscriber =
+            FlowableOperator<U, D>::Subscription::subscriber_.get();
         subscriber->onNext(acc_);
-        callSuperOnComplete();
-      } else {
-        callSuperOnError(std::make_exception_ptr(std::runtime_error("Upstream has no value")));
       }
+      callSuperOnComplete();
     }
 
   private:

@@ -371,6 +371,75 @@ TEST(Observable, RangeWithMap) {
   EXPECT_EQ(0u, Refcounted::objects());
 }
 
+
+TEST(Observable, RangeWithReduce) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto observable = Observables::range(0, 10)
+      ->reduce([](int64_t acc, int64_t v) { return acc + v; });
+  EXPECT_EQ(
+      run(std::move(observable)), std::vector<int64_t>({45}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(Observable, RangeWithReduceByMultiplication) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto observable = Observables::range(0, 10)
+      ->reduce([](int64_t acc, int64_t v) { return acc * v; });
+  EXPECT_EQ(
+      run(std::move(observable)), std::vector<int64_t>({0}));
+
+  observable = Observables::range(1, 10)
+      ->reduce([](int64_t acc, int64_t v) { return acc * v; });
+  EXPECT_EQ(
+      run(std::move(observable)), std::vector<int64_t>({2*3*4*5*6*7*8*9}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(Observable, RangeWithReduceOneItem) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto observable = Observables::range(5, 6)
+      ->reduce([](int64_t acc, int64_t v) { return acc + v; });
+  EXPECT_EQ(
+      run(std::move(observable)), std::vector<int64_t>({5}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(Observable, RangeWithReduceNoItem) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  {
+    auto observable = Observables::range(0, 0)
+        ->reduce([](int64_t acc, int64_t v) { return acc + v; });
+    auto collector = make_ref<CollectingObserver<int64_t>>();
+    observable->subscribe(collector);
+    EXPECT_EQ(collector->error(), false);
+    EXPECT_EQ(
+        collector->values(), std::vector<int64_t>({}));
+  }
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(Observable, RangeWithReduceToBiggerType) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto observable = Observables::range(5, 6)
+      ->map([](int64_t v){ return (int32_t)v; })
+      ->reduce([](int64_t acc, int32_t v) { return acc + v; });
+  EXPECT_EQ(
+      run(std::move(observable)), std::vector<int64_t>({5}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(Observable, StringReduce) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto observable = Observables::justN<std::string>(
+      {"a", "b", "c", "d", "e", "f", "g", "h", "i"})
+      ->reduce([](std::string acc, std::string v) {
+        return acc + v;
+      });
+  EXPECT_EQ(
+      run(std::move(observable)), std::vector<std::string>({"abcdefghi"}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
 // TODO: Hits ASAN errors.
 TEST(Observable, DISABLED_SimpleTake) {
   ASSERT_EQ(0u, Refcounted::objects());
