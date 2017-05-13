@@ -172,16 +172,10 @@ TEST(FlowableTest, RangeWithFilterRequestMoreItems) {
 
 TEST(FlowableTest, RangeWithFilterRequestLessItems) {
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-  {
-    auto flowable = Flowables::range(0, 10)
-        ->filter([](int64_t v) { return v % 2 != 0; });
-    EXPECT_EQ(
-        run(std::move(flowable), 2), std::vector<int64_t>({1, 3}));
-    EXPECT_EQ(
-        run(std::move(flowable), 2), std::vector<int64_t>({5, 7}));
-    EXPECT_EQ(std::size_t{1}, Refcounted::objects());
-  }
-
+  auto flowable = Flowables::range(0, 10)
+      ->filter([](int64_t v) { return v % 2 != 0; });
+  EXPECT_EQ(
+      run(std::move(flowable), 5), std::vector<int64_t>({1, 3, 5, 7, 9}));
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
