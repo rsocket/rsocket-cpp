@@ -44,7 +44,7 @@ RSocketRequester::requestChannel(
   auto& eb = eventBase_;
   auto srs = reactiveSocket_;
 
-    LOG(INFO) << "requestChannel executing ";
+  LOG(INFO) << "requestChannel executing ";
 
   return yarpl::flowable::Flowables::fromPublisher<Payload>([
     &eb,
@@ -54,8 +54,7 @@ RSocketRequester::requestChannel(
     // TODO eliminate OldToNew bridge
     auto os = std::make_shared<OldToNewSubscriber>(std::move(subscriber));
 
-
-      LOG(INFO) << "requestChannel ABOUT TO RUN ON THREAD ";
+    LOG(INFO) << "requestChannel ABOUT TO RUN ON THREAD ";
 
     eb.runInEventBaseThread([
       requestStream = std::move(requestStream),
@@ -75,17 +74,14 @@ RSocketRequester::requestChannel(
 
 yarpl::Reference<yarpl::flowable::Flowable<Payload>>
 RSocketRequester::requestStream(Payload request) {
-  auto& eb = eventBase_;
-  auto srs = reactiveSocket_;
-
   return yarpl::flowable::Flowables::fromPublisher<Payload>([
-    &eb,
+    eb = &eventBase_,
     request = std::move(request),
-    srs = std::move(srs)
+    srs = reactiveSocket_
   ](yarpl::Reference<yarpl::flowable::Subscriber<Payload>> subscriber) mutable {
     // TODO eliminate OldToNew bridge
     auto os = std::make_shared<OldToNewSubscriber>(std::move(subscriber));
-    eb.runInEventBaseThread([
+    eb->runInEventBaseThread([
       request = std::move(request),
       os = std::move(os),
       srs = std::move(srs)
