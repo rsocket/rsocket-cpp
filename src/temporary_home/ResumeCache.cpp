@@ -46,7 +46,13 @@ ResumeCache::~ResumeCache() {
 
 void ResumeCache::trackReceivedFrame(
     const folly::IOBuf& serializedFrame,
-    const FrameType frameType) {
+    const FrameType frameType,
+    const folly::Optional<StreamId> streamIdPtr) {
+  if (frameType == FrameType::REQUEST_STREAM && streamIdPtr) {
+    const StreamId streamId = *streamIdPtr;
+    activeStreams_.insert(streamId);
+  }
+
   if (shouldTrackFrame(frameType)) {
     VLOG(6) << "received frame " << frameType;
     // TODO(tmont): this could be expensive, find a better way to get length
@@ -58,14 +64,14 @@ void ResumeCache::trackSentFrame(
     const folly::IOBuf& serializedFrame,
     const FrameType frameType,
     const folly::Optional<StreamId> streamIdPtr) {
+  if (frameType == FrameType::REQUEST_STREAM && streamIdPtr) {
+    const StreamId streamId = *streamIdPtr;
+    activeStreams_.insert(streamId);
+  }
+
   if (shouldTrackFrame(frameType)) {
     // TODO(tmont): this could be expensive, find a better way to get length
     auto frameDataLength = serializedFrame.computeChainDataLength();
-
-    if (streamIdPtr) {
-      const StreamId streamId = *streamIdPtr;
-      activeStreams_.insert(streamId);
-    }
 
     // if the frame is too huge, we don't cache it
     if (frameDataLength > capacity_) {

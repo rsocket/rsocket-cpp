@@ -38,7 +38,8 @@ class ResumeCache {
   // Tracks a received frame.
   void trackReceivedFrame(
       const folly::IOBuf& serializedFrame,
-      const FrameType frameType);
+      const FrameType frameType,
+      const folly::Optional<StreamId> streamIdPtr);
 
   // Tracks a sent frame.
   void trackSentFrame(
@@ -76,7 +77,7 @@ class ResumeCache {
     return size_;
   }
 
-  void rmFromActiveStreams(StreamId streamId) {
+  void onStreamClosed(StreamId streamId) {
     activeStreams_.erase(streamId);
   }
 
