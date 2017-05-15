@@ -108,6 +108,25 @@ class Flowables {
     return Flowable<T>::create(std::move(lambda));
   }
 
+  template <typename T, typename TGenerator>
+  static Reference<Flowable<T>> fromGenerator(TGenerator generator) {
+    auto lambda = [generator = std::move(generator)]
+    (Subscriber<T>& subscriber, int64_t requested) {
+      int64_t generated = 0;
+      try {
+        while (generated < requested) {
+          subscriber.onNext(generator());
+          ++generated;
+        }
+        return std::make_tuple(static_cast<int64_t>(generated), false);
+      } catch(const std::exception&) {
+        subscriber.onError(std::current_exception());
+        return std::make_tuple(static_cast<int64_t>(generated), true);
+      }
+    };
+    return Flowable<T>::create(std::move(lambda));
+  }
+
  private:
   Flowables() = delete;
 };
