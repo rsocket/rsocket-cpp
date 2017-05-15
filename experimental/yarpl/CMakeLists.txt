@@ -52,6 +52,16 @@ add_library(
         include/yarpl/observable/Subscriptions.h
         include/yarpl/observable/TestObserver.h
         src/yarpl/observable/Subscriptions.cpp
+        # Single
+        include/yarpl/Single.h
+        include/yarpl/single/Single.h
+        include/yarpl/single/Singles.h
+        include/yarpl/single/SingleOperator.h
+        include/yarpl/single/SingleObserver.h
+        include/yarpl/single/SingleObservers.h
+        include/yarpl/single/SingleSubscription.h
+        include/yarpl/single/SingleSubscriptions.h
+        src/yarpl/single/SingleSubscriptions.cpp
         # Flowable private
         src/yarpl/Refcounted.cpp
         src/yarpl/flowable/sources/Flowable_FromObservable.h
@@ -93,6 +103,7 @@ add_executable(
         yarpl-tests
         test/yarpl-tests.cpp
         test/Observable_test.cpp
+        test/Single_test.cpp
 #        test/FlowableCreateSubscribe_test.cpp
 #        test/Observable_Subscription_test.cpp
 #        test/Flowable_range_test.cpp
