@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
 
   auto s = yarpl::make_ref<ExampleSubscriber>(5, 6);
   // send stream of strings to the server
-  rs->requestChannel(Flowables::just({"Bob", "Jane"})->map([](std::string v) {
+  rs->requestChannel(Flowables::justN({"initialPayload", "Bob", "Jane"})->map([](std::string v) {
       std::cout << "sending name " << v << std::endl;
       return Payload(v);
     }))

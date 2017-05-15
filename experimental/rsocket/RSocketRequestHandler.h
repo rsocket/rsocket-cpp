@@ -50,6 +50,7 @@ class RSocketRequestHandler {
      */
   virtual yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
   handleRequestChannel(
+      reactivesocket::Payload request,
       yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
           requestStream,
       reactivesocket::StreamId streamId) {

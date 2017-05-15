@@ -40,7 +40,7 @@ RSocketRequester::~RSocketRequester() {
 yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
 RSocketRequester::requestChannel(
     yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
-        payloads) {
+    requestStream) {
   auto& eb = eventBase_;
   auto srs = reactiveSocket_;
 
@@ -48,7 +48,7 @@ RSocketRequester::requestChannel(
 
   return yarpl::flowable::Flowables::fromPublisher<Payload>([
     &eb,
-    request = std::move(payloads),
+    requestStream = std::move(requestStream),
     srs = std::move(srs)
   ](yarpl::Reference<yarpl::flowable::Subscriber<Payload>> subscriber) mutable {
     // TODO eliminate OldToNew bridge
@@ -58,7 +58,7 @@ RSocketRequester::requestChannel(
       LOG(INFO) << "requestChannel ABOUT TO RUN ON THREAD ";
 
     eb.runInEventBaseThread([
-      request = std::move(request),
+      requestStream = std::move(requestStream),
       os = std::move(os),
       srs = std::move(srs)
     ]() mutable {
@@ -67,7 +67,7 @@ RSocketRequester::requestChannel(
 
       auto responseSink = srs->requestChannel(std::move(os));
       // TODO eliminate NewToOld bridge
-      request->subscribe(
+      requestStream->subscribe(
           yarpl::make_ref<NewToOldSubscriber>(std::move(responseSink)));
     });
   });

@@ -21,9 +21,11 @@ class HelloChannelRequestHandler : public rsocket::RSocketRequestHandler {
  public:
   /// Handles a new inbound Stream requested by the other end.
   yarpl::Reference<Flowable<reactivesocket::Payload>> handleRequestChannel(
+      reactivesocket::Payload initialPayload,
       yarpl::Reference<Flowable<reactivesocket::Payload>> request,
       reactivesocket::StreamId streamId) override {
-    LOG(INFO) << "HelloChannelRequestHandler.handleRequestChannel";
+    LOG(INFO) << "HelloChannelRequestHandler.handleRequestChannel "
+              << initialPayload.moveDataToString();
 
     // say "Hello" to each name on the input stream
     return request->map([](Payload p) {
@@ -52,8 +54,8 @@ int main(int argc, char* argv[]) {
   // global request handler
   auto handler = std::make_shared<HelloChannelRequestHandler>();
 
-  auto rawRs = rs.get();
-  auto serverThread = std::thread([=] {
+  auto* rawRs = rs.get();
+  auto serverThread = std::thread([rawRs, handler] {
     // start accepting connections
     rawRs->startAndPark([handler](auto r) { return handler; });
   });
