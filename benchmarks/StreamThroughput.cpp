@@ -9,7 +9,9 @@
 #include <src/NullRequestHandler.h>
 #include <src/SubscriptionBase.h>
 #include "rsocket/RSocket.h"
+#include "rsocket/OldNewBridge.h"
 #include "rsocket/transports/TcpConnectionFactory.h"
+#include "yarpl/Flowables.h"
 
 using namespace ::reactivesocket;
 using namespace ::folly;
@@ -59,23 +61,17 @@ private:
     std::atomic_bool cancelled_;
 };
 
-class BM_RequestHandler : public DefaultRequestHandler
+class BM_RequestHandler : public RSocketRequestHandler
 {
 public:
-    void handleRequestStream(
-        Payload request, StreamId streamId, const std::shared_ptr<Subscriber<Payload>> &response) noexcept override
-    {
-        LOG(INFO) << "BM_RequestHandler.handleRequestStream " << request;
-
-        response->onSubscribe(
-            std::make_shared<BM_Subscription>(response, MESSAGE_LENGTH));
-    }
-
-    std::shared_ptr<StreamState> handleSetupPayload(
-        ReactiveSocket &socket, ConnectionSetupPayload request) noexcept override
-    {
-        LOG(INFO) << "BM_RequestHandler.handleSetupPayload " << request;
-        return nullptr;
+    yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
+    handleRequestStream(
+      reactivesocket::Payload request,
+      reactivesocket::StreamId streamId) override {
+        CHECK(false) << "not implemented";
+        // TODO(lehecka) need to implement new operator fromGenerator
+        // return yarpl::flowable::Flowables::fromGenerator<reactivesocket::Payload>(
+        //     []{return Payload(std::string(MESSAGE_LENGTH, 'a')); });
     }
 };
 
@@ -206,7 +202,11 @@ public:
 
 BENCHMARK_DEFINE_F(BM_RsFixture, BM_Stream_Throughput)(benchmark::State &state)
 {
-    auto clientRs = RSocket::createClient(TcpConnectionFactory::create(host_, port_));
+    folly::SocketAddress address;
+    address.setFromHostPort(host_, port_);
+
+    auto clientRs = RSocket::createClient(std::make_unique<TcpConnectionFactory>(
+        std::move(address)));
 
     auto s = std::make_shared<BM_Subscriber>(state.range(0));
 
@@ -215,7 +215,9 @@ BENCHMARK_DEFINE_F(BM_RsFixture, BM_Stream_Throughput)(benchmark::State &state)
             .then(
                 [s](std::shared_ptr<RSocketRequester> rs)
                 {
-                   rs->requestStream(Payload("BM_Stream"), s);
+                   rs->requestStream(Payload("BM_Stream"))->subscribe(
+                        yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(
+                            new NewToOldSubscriber(s)));
                 });
 
     while (state.KeepRunning())

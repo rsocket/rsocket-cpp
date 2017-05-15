@@ -383,7 +383,8 @@ TEST(Observable, DISABLED_SimpleTake) {
 }
 
 TEST(Observable, Error) {
-  auto observable = Observables::error<int>(std::runtime_error("something broke!"));
+  auto observable =
+      Observables::error<int>(std::runtime_error("something broke!"));
   auto collector = make_ref<CollectingObserver<int>>();
   observable->subscribe(collector);
 

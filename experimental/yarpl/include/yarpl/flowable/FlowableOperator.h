@@ -247,7 +247,7 @@ class SubscribeOnOperator : public FlowableOperator<T, T> {
 template <typename T, typename OnSubscribe>
 class FromPublisherOperator : public Flowable<T> {
  public:
-  FromPublisherOperator(OnSubscribe&& function)
+  explicit FromPublisherOperator(OnSubscribe&& function)
       : function_(std::move(function)) {}
 
   void subscribe(Reference<Subscriber<T>> subscriber) override {

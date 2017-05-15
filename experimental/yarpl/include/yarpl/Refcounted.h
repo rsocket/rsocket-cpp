@@ -81,7 +81,7 @@ class Reference {
     inc();
   }
 
-  Reference(Reference&& other) : pointer_(other.pointer_) {
+  Reference(Reference&& other) noexcept : pointer_(other.pointer_) {
     other.pointer_ = nullptr;
   }
 
