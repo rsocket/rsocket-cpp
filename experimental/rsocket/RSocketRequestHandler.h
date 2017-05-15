@@ -20,6 +20,8 @@ namespace rsocket {
  */
 class RSocketRequestHandler {
  public:
+  virtual ~RSocketRequestHandler() {}
+
   /**
    * Called when a new `requestStream` occurs from an RSocketRequester.
    *
@@ -34,8 +36,7 @@ class RSocketRequestHandler {
       reactivesocket::Payload request,
       reactivesocket::StreamId streamId) {
     return yarpl::flowable::Flowables::error<reactivesocket::Payload>(
-        std::make_exception_ptr(
-            std::logic_error("handleRequestStream not implemented")));
+        std::logic_error("handleRequestStream not implemented"));
   }
 
   /**
@@ -53,8 +54,7 @@ class RSocketRequestHandler {
           requestStream,
       reactivesocket::StreamId streamId) {
     return yarpl::flowable::Flowables::error<reactivesocket::Payload>(
-        std::make_exception_ptr(
-            std::logic_error("handleRequestChannel not implemented")));
+        std::logic_error("handleRequestChannel not implemented"));
   }
 };
 }

@@ -40,12 +40,19 @@ cpp_library(
 
 cpp_unittest(
     name='yarpl-test',
-    headers=subdir_glob([
-        ('', 'test/**/*.h'),
-    ]),
-    srcs=glob([
-        'test/*.cpp',
-    ]),
+    headers=[
+      'test/Tuple.h',
+    ],
+    srcs=[
+      'test/yarpl-tests.cpp',
+      'test/Observable_test.cpp',
+      'test/FlowableTest.cpp',
+      'test/RefcountedTest.cpp',
+      'test/ReferenceTest.cpp',
+      'test/Scheduler_test.cpp',
+      'test/SubscriptionHelper_test.cpp',
+      'test/Tuple.cpp'
+    ],
     deps=[
         ':yarpl',
     ],
@@ -70,22 +77,3 @@ cpp_unittest(
 #     ],
 # )
 
-cpp_binary(
-    name='yarpl-examples',
-    header_namespace = 'examples',
-    headers = subdir_glob([
-        ('examples', '**/*.h')
-    ]),
-    srcs=[
-        'examples/FlowableAExamples.cpp',
-        'examples/FlowableBExamples.cpp',
-        'examples/FlowableCExamples.cpp',
-        'examples/FlowableExamples.cpp',
-        #'examples/FlowableVExamples.cpp',
-        'examples/ObservableExamples.cpp',
-        'examples/yarpl-playground.cpp'
-    ],
-    deps=[
-        ':yarpl',
-    ],
-)

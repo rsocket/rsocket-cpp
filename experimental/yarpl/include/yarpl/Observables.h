@@ -10,22 +10,11 @@ namespace observable {
 class Observables {
  public:
   static Reference<Observable<int64_t>> range(int64_t start, int64_t end) {
-    auto lambda = [ start, end, i = start ](
-        Subscriber<int64_t> & subscriber, int64_t requested) mutable {
-      int64_t emitted = 0;
-      bool done = false;
-
-      while (i < end && emitted < requested) {
-        subscriber.onNext(i++);
-        ++emitted;
+    auto lambda = [ start, end ](Reference<Observer<int64_t>> observer) {
+      for (int64_t i = start; i < end; ++i) {
+        observer->onNext(i);
       }
-
-      if (i >= end) {
-        subscriber.onComplete();
-        done = true;
-      }
-
-      return std::make_tuple(requested, done);
+      observer->onComplete();
     };
 
     return Observable<int64_t>::create(std::move(lambda));
@@ -33,34 +22,24 @@ class Observables {
 
   template <typename T>
   static Reference<Observable<T>> just(const T& value) {
-    auto lambda = [value](Subscriber<T>& subscriber, int64_t) {
+    auto lambda = [value](Reference<Observer<T>> observer) {
       // # requested should be > 0.  Ignoring the actual parameter.
-      subscriber.onNext(value);
-      subscriber.onComplete();
-      return std::make_tuple(static_cast<int64_t>(1), true);
+      observer->onNext(value);
+      observer->onComplete();
     };
 
     return Observable<T>::create(std::move(lambda));
   }
 
   template <typename T>
-  static Reference<Observable<T>> just(std::initializer_list<T> list) {
-    auto lambda = [ list, it = list.begin() ](
-        Subscriber<T> & subscriber, int64_t requested) mutable {
-      int64_t emitted = 0;
-      bool done = false;
+  static Reference<Observable<T>> justN(std::initializer_list<T> list) {
+    std::vector<T> vec(list);
 
-      while (it != list.end() && emitted < requested) {
-        subscriber.onNext(*it++);
-        ++emitted;
+    auto lambda = [v = std::move(vec)](Reference<Observer<T>> observer) {
+      for (auto const& elem : v) {
+        observer->onNext(elem);
       }
-
-      if (it == list.end()) {
-        subscriber.onComplete();
-        done = true;
-      }
-
-      return std::make_tuple(static_cast<int64_t>(emitted), done);
+      observer->onComplete();
     };
 
     return Observable<T>::create(std::move(lambda));
@@ -70,12 +49,35 @@ class Observables {
       typename T,
       typename OnSubscribe,
       typename = typename std::enable_if<std::is_callable<
-          OnSubscribe(Reference<Subscriber<T>>),
+          OnSubscribe(Reference<Observer<T>>),
           void>::value>::type>
-
   static Reference<Observable<T>> create(OnSubscribe&& function) {
     return Reference<Observable<T>>(new FromPublisherOperator<T, OnSubscribe>(
         std::forward<OnSubscribe>(function)));
+  }
+
+  template <typename T>
+  static Reference<Observable<T>> empty() {
+    auto lambda = [](Reference<Observer<T>> observer) {
+      observer->onComplete();
+    };
+    return Observable<T>::create(std::move(lambda));
+  }
+
+  template <typename T>
+  static Reference<Observable<T>> error(std::exception_ptr ex) {
+    auto lambda = [ex](Reference<Observer<T>> observer) {
+      observer->onError(ex);
+    };
+    return Observable<T>::create(std::move(lambda));
+  }
+
+  template <typename T, typename ExceptionType>
+  static Reference<Observable<T>> error(const ExceptionType& ex) {
+    auto lambda = [ex](Reference<Observer<T>> observer) {
+      observer->onError(std::make_exception_ptr(ex));
+    };
+    return Observable<T>::create(std::move(lambda));
   }
 
  private:

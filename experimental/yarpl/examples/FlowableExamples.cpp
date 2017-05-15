@@ -72,10 +72,10 @@ void FlowableExamples::run() {
   Flowables::just<long>(23)->subscribe(printer<long>());
 
   std::cout << "just: multiple values." << std::endl;
-  Flowables::just<long>({1, 4, 7, 11})->subscribe(printer<long>());
+  Flowables::justN<long>({1, 4, 7, 11})->subscribe(printer<long>());
 
   std::cout << "just: string values." << std::endl;
-  Flowables::just<std::string>({"the", "quick", "brown", "fox"})
+  Flowables::justN<std::string>({"the", "quick", "brown", "fox"})
       ->subscribe(printer<std::string>());
 
   std::cout << "range operator." << std::endl;
@@ -122,7 +122,7 @@ void FlowableExamples::run() {
   ThreadScheduler scheduler;
 
   std::cout << "subscribe_on example" << std::endl;
-  Flowables::just({"0: ", "1: ", "2: "})
+  Flowables::justN({"0: ", "1: ", "2: "})
       ->map([](const char* p) { return std::string(p); })
       ->map([](std::string log) { return log + " on " + getThreadId(); })
       ->subscribeOn(scheduler)

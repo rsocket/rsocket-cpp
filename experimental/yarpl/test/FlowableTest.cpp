@@ -4,10 +4,15 @@
 #include <gtest/gtest.h>
 
 #include "yarpl/Flowables.h"
+#include "yarpl/flowable/Subscribers.h"
 
 namespace yarpl {
 namespace flowable {
 namespace {
+
+void unreachable() {
+  EXPECT_TRUE(false);
+}
 
 template <typename T>
 class CollectingSubscriber : public Subscriber<T> {
@@ -55,15 +60,15 @@ class CollectingSubscriber : public Subscriber<T> {
     return error_;
   }
 
-  std::string errorMsg() const {
+  const std::string& errorMsg() const {
     return errorMsg_;
   }
 
  private:
   std::vector<T> values_;
+  std::string errorMsg_;
   bool complete_{false};
   bool error_{false};
-  std::string errorMsg_;
 };
 
 /// Construct a pipeline with a collecting subscriber against the supplied
@@ -93,12 +98,45 @@ TEST(FlowableTest, JustFlowable) {
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
   EXPECT_EQ(run(Flowables::just(22)), std::vector<int>{22});
   EXPECT_EQ(
-      run(Flowables::just({12, 34, 56, 98})),
+      run(Flowables::justN({12, 34, 56, 98})),
       std::vector<int>({12, 34, 56, 98}));
   EXPECT_EQ(
-      run(Flowables::just({"ab", "pq", "yz"})),
+      run(Flowables::justN({"ab", "pq", "yz"})),
       std::vector<const char*>({"ab", "pq", "yz"}));
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(FlowableTest, JustIncomplete) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto flowable = Flowables::justN<std::string>({"a", "b", "c"})
+    ->take(2);
+  EXPECT_EQ(
+    run(std::move(flowable)),
+    std::vector<std::string>({"a", "b"}));
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+
+  flowable = Flowables::justN<std::string>({"a", "b", "c"})
+    ->take(2)
+    ->take(1);
+  EXPECT_EQ(
+    run(std::move(flowable)),
+    std::vector<std::string>({"a"}));
+  flowable.reset();
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+
+  flowable = Flowables::justN<std::string>(
+      {"a", "b", "c", "d", "e", "f", "g", "h", "i"})
+    ->map([](std::string s) {
+        s[0] = ::toupper(s[0]);
+        return s;
+      })
+    ->take(5);
+
+  EXPECT_EQ(
+    run(std::move(flowable)),
+    std::vector<std::string>({"A", "B", "C", "D", "E"}));
+  flowable.reset();
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
 TEST(FlowableTest, Range) {
@@ -158,6 +196,50 @@ TEST(FlowableTest, FlowableEmpty) {
 
   EXPECT_EQ(collector->complete(), true);
   EXPECT_EQ(collector->error(), false);
+}
+
+TEST(FlowableTest, SubscribersComplete) {
+  EXPECT_EQ(0u, Refcounted::objects());
+
+  auto flowable = Flowables::empty<int>();
+  EXPECT_EQ(1u, Refcounted::objects());
+
+  bool completed = false;
+
+  auto subscriber = Subscribers::create<int>(
+    [](int) { unreachable(); },
+    [](std::exception_ptr) { unreachable(); },
+    [&] { completed = true; }
+  );
+
+  flowable->subscribe(std::move(subscriber));
+  flowable.reset();
+
+  EXPECT_EQ(0u, Refcounted::objects());
+
+  EXPECT_TRUE(completed);
+}
+
+TEST(FlowableTest, SubscribersError) {
+  EXPECT_EQ(0u, Refcounted::objects());
+
+  auto flowable = Flowables::error<int>(std::runtime_error("Whoops"));
+  EXPECT_EQ(1u, Refcounted::objects());
+
+  bool errored = false;
+
+  auto subscriber = Subscribers::create<int>(
+    [](int) { unreachable(); },
+    [&](std::exception_ptr) { errored = true; },
+    [] { unreachable(); }
+  );
+
+  flowable->subscribe(std::move(subscriber));
+  flowable.reset();
+
+  EXPECT_EQ(0u, Refcounted::objects());
+
+  EXPECT_TRUE(errored);
 }
 
 } // flowable

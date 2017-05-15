@@ -29,6 +29,7 @@ function(benchmark name file)
         ${name}
         rsocket_experimental
         ReactiveSocket
+        yarpl
         ${GOOGLE_BENCHMARK_LIBS}
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}

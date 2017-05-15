@@ -74,5 +74,10 @@ class RequestHandler {
       const std::shared_ptr<Subscriber<Payload>>& subscriber) noexcept = 0;
   virtual void onSubscriberResumed(
       const std::shared_ptr<Subscriber<Payload>>& subscriber) noexcept = 0;
+
+  // TODO (T17774014): Move to separate interface
+  virtual void socketOnConnected(){}
+  virtual void socketOnDisconnected(folly::exception_wrapper& listener){}
+  virtual void socketOnClosed(folly::exception_wrapper& listener){}
 };
 }

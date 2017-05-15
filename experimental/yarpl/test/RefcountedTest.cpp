@@ -58,5 +58,4 @@ TEST(RefcountedTest, ReferenceCountingWorks) {
 
   EXPECT_EQ(0U, Refcounted::objects());
 }
-
 } // yarpl
