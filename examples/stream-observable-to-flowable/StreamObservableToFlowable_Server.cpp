@@ -10,8 +10,7 @@
 #include "rsocket/RSocket.h"
 #include "rsocket/transports/TcpConnectionAcceptor.h"
 #include "yarpl/Observable.h"
-#include "yarpl/ThreadScheduler.h"
-#include "yarpl/observable/Subscriptions.h"
+#include "yarpl/schedulers/ThreadScheduler.h"
 
 using reactivesocket::Payload;
 using namespace rsocket;

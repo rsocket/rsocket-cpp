@@ -3,8 +3,7 @@
 
 #include <gtest/gtest.h>
 
-#include "yarpl/Flowables.h"
-#include "yarpl/flowable/Subscribers.h"
+#include "yarpl/Flowable.h"
 
 namespace yarpl {
 namespace flowable {

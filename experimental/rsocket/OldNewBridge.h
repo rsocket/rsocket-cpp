@@ -153,4 +153,53 @@ class NewToOldSubscriber : public yarpl::flowable::Subscriber<reactivesocket::Pa
   std::shared_ptr<reactivesocket::Subscriber<reactivesocket::Payload>> inner_;
   std::shared_ptr<OldToNewSubscription> bridge_;
 };
+
+class EagerSubscriberBridge
+    : public reactivesocket::Subscriber<reactivesocket::Payload> {
+ public:
+  void onSubscribe(
+      std::shared_ptr<reactivesocket::Subscription> subscription) noexcept {
+    CHECK(!subscription_);
+    subscription_ = yarpl::Reference<yarpl::flowable::Subscription>(
+        new NewToOldSubscription(std::move(subscription)));
+    if (inner_) {
+      inner_->onSubscribe(subscription_);
+    }
+  }
+
+  void onNext(reactivesocket::Payload element) noexcept {
+    DCHECK(inner_);
+    inner_->onNext(std::move(element));
+  }
+
+  void onComplete() noexcept {
+    DCHECK(inner_);
+    inner_->onComplete();
+
+    inner_.reset();
+    subscription_.reset();
+  }
+
+  void onError(folly::exception_wrapper ex) noexcept {
+    DCHECK(inner_);
+    inner_->onError(ex.to_exception_ptr());
+
+    inner_.reset();
+    subscription_.reset();
+  }
+
+  void subscribe(yarpl::Reference<yarpl::flowable::Subscriber<reactivesocket::Payload>> inner) {
+      CHECK(!inner_); // only one call to subscribe is supported
+    CHECK(inner);
+    inner_ = std::move(inner);
+    if (subscription_) {
+      inner_->onSubscribe(subscription_);
+    }
+  }
+
+ private:
+  yarpl::Reference<yarpl::flowable::Subscriber<reactivesocket::Payload>> inner_;
+  yarpl::Reference<yarpl::flowable::Subscription> subscription_;
+};
+
 }

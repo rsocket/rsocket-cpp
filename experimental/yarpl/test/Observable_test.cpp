@@ -5,12 +5,9 @@
 #include <atomic>
 
 #include "yarpl/Observable.h"
-#include "yarpl/Observables.h"
-#include "yarpl/ThreadScheduler.h"
+#include "yarpl/schedulers/ThreadScheduler.h"
 #include "yarpl/flowable/Subscriber.h"
 #include "yarpl/flowable/Subscribers.h"
-#include "yarpl/observable/Observers.h"
-#include "yarpl/observable/Subscriptions.h"
 
 #include "Tuple.h"
 
@@ -392,7 +389,8 @@ TEST(Observable, DISABLED_SimpleTake) {
 }
 
 TEST(Observable, Error) {
-  auto observable = Observables::error<int>(std::runtime_error("something broke!"));
+  auto observable =
+      Observables::error<int>(std::runtime_error("something broke!"));
   auto collector = make_ref<CollectingObserver<int>>();
   observable->subscribe(collector);
 

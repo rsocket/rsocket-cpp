@@ -73,7 +73,7 @@ class Observers {
   template <typename T, typename Next>
   class Base : public Observer<T> {
    public:
-    Base(Next&& next)
+    explicit Base(Next&& next)
         : next_(std::forward<Next>(next)) {}
 
     void onNext(T value) override {
