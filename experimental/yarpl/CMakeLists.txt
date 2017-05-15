@@ -37,14 +37,16 @@ add_library(
         include/yarpl/Refcounted.h
         # Flowable public API
         include/yarpl/Flowable.h
-        include/yarpl/Flowables.h
+        include/yarpl/flowable/Flowable.h
+        include/yarpl/flowable/Flowables.h
         include/yarpl/flowable/FlowableOperator.h
         include/yarpl/flowable/Subscriber.h
         include/yarpl/flowable/Subscribers.h
         include/yarpl/flowable/Subscription.h
         # Observable public API
         include/yarpl/Observable.h
-        include/yarpl/Observables.h
+        include/yarpl/observable/Observable.h
+        include/yarpl/observable/Observables.h
         include/yarpl/observable/ObservableOperator.h
         include/yarpl/observable/Observer.h
         include/yarpl/observable/Observers.h
@@ -60,8 +62,8 @@ add_library(
         src/yarpl/flowable/utils/SubscriptionHelper.h
         src/yarpl/flowable/utils/SubscriptionHelper.cpp
         # Scheduler
-        include/yarpl/ThreadScheduler.h
-        src/yarpl/ThreadScheduler.cpp
+        include/yarpl/schedulers/ThreadScheduler.h
+        src/yarpl/schedulers/ThreadScheduler.cpp
 )
 
 target_include_directories(

@@ -5,7 +5,6 @@
 #include <folly/io/async/EventBase.h>
 
 #include "yarpl/Flowable.h"
-#include "yarpl/Flowables.h"
 
 #include "src/Payload.h"
 #include "src/StreamState.h"

@@ -4,7 +4,7 @@
 #include <chrono>
 #include <iostream>
 #include <thread>
-#include "yarpl/ThreadScheduler.h"
+#include "yarpl/schedulers/ThreadScheduler.h"
 
 using namespace yarpl;
 

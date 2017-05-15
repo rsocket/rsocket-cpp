@@ -9,7 +9,6 @@
 #include "rsocket/RSocket.h"
 #include "rsocket/transports/TcpConnectionFactory.h"
 #include "yarpl/Flowable.h"
-#include "yarpl/flowable/Subscriber.h"
 
 using namespace ::reactivesocket;
 using namespace ::folly;

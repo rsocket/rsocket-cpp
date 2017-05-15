@@ -10,8 +10,7 @@
 #include "rsocket/RSocket.h"
 #include "rsocket/transports/TcpConnectionFactory.h"
 
-#include "yarpl/Flowables.h"
-#include "yarpl/flowable/Subscriber.h"
+#include "yarpl/Flowable.h"
 
 using namespace reactivesocket;
 using namespace rsocket_example;
