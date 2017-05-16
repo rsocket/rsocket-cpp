@@ -10,7 +10,6 @@
 #include "src/ConnectionAcceptor.h"
 #include "src/ConnectionSetupRequest.h"
 #include "src/RSocketResponder.h"
-#include "src/temporary_home/ReactiveSocket.h"
 #include "src/temporary_home/ServerConnectionAcceptor.h"
 
 namespace rsocket {
@@ -72,8 +71,8 @@ class RSocketServer {
   friend class RSocketServerConnectionHandler;
 
  private:
-  void addSocket(std::unique_ptr<reactivesocket::ReactiveSocket>);
-  void removeSocket(reactivesocket::ReactiveSocket*);
+  void addSocket(std::shared_ptr<reactivesocket::RSocketStateMachine>);
+  void removeSocket(std::shared_ptr<reactivesocket::RSocketStateMachine>);
 
   //////////////////////////////////////////////////////////////////////////////
 
@@ -83,7 +82,7 @@ class RSocketServer {
 
   /// Set of currently open ReactiveSockets.
   folly::Synchronized<
-      std::unordered_set<std::unique_ptr<reactivesocket::ReactiveSocket>>,
+      std::unordered_set<std::shared_ptr<reactivesocket::RSocketStateMachine>>,
       std::mutex>
       sockets_;
 

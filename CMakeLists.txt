@@ -200,8 +200,6 @@ add_library(
   src/temporary_home/ResumeCache.h
   src/temporary_home/ServerConnectionAcceptor.cpp
   src/temporary_home/ServerConnectionAcceptor.h
-  src/temporary_home/ReactiveSocket.cpp
-  src/temporary_home/ReactiveSocket.h
   src/temporary_home/Stats.cpp
   src/temporary_home/Stats.h
   src/temporary_home/StreamsFactory.cpp
@@ -273,7 +271,10 @@ add_executable(
   test/integration/ServerFixture.cpp
   test/integration/WarmResumptionTest.cpp
   test/streams/Mocks.h
-  test/framing/FrameTransportTest.cpp)
+  test/framing/FrameTransportTest.cpp
+  test/deprecated/ReactiveSocket.cpp
+  test/deprecated/ReactiveSocket.h
+)
 
 target_link_libraries(
   tests
@@ -304,7 +305,10 @@ add_executable(
   tck-test/TestSuite.h
   tck-test/TestInterpreter.cpp
   tck-test/TestInterpreter.h
-  tck-test/TypedCommands.h)
+  tck-test/TypedCommands.h
+  test/deprecated/ReactiveSocket.cpp
+  test/deprecated/ReactiveSocket.h
+)
 
 target_link_libraries(
   tckclient
@@ -321,7 +325,10 @@ add_executable(
   tck-test/MarbleProcessor.cpp
   tck-test/MarbleProcessor.h
   test/test_utils/StatsPrinter.cpp
-  test/test_utils/StatsPrinter.h)
+  test/test_utils/StatsPrinter.h
+  test/deprecated/ReactiveSocket.cpp
+  test/deprecated/ReactiveSocket.h
+)
 
 target_link_libraries(
   tckserver
@@ -339,10 +346,11 @@ add_executable(
   test/resumption/TcpResumeClient.cpp
   test/test_utils/PrintSubscriber.cpp
   test/test_utils/PrintSubscriber.h
-  src/temporary_home/ReactiveSocket.cpp
-  src/temporary_home/ReactiveSocket.h
   test/test_utils/StatsPrinter.cpp
-  test/test_utils/StatsPrinter.h)
+  test/test_utils/StatsPrinter.h
+  test/deprecated/ReactiveSocket.cpp
+  test/deprecated/ReactiveSocket.h
+)
 
 target_link_libraries(
   tcpresumeclient
@@ -362,7 +370,10 @@ add_executable(
   test/test_utils/PrintSubscriber.cpp
   test/test_utils/PrintSubscriber.h
   test/test_utils/StatsPrinter.cpp
-  test/test_utils/StatsPrinter.h)
+  test/test_utils/StatsPrinter.h
+  test/deprecated/ReactiveSocket.cpp
+  test/deprecated/ReactiveSocket.h
+)
 
 target_link_libraries(
   tcpresumeserver

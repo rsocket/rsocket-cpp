@@ -5,7 +5,7 @@
 
 #include "src/temporary_home/NullRequestHandler.h"
 #include "test/test_utils/MockRequestHandler.h"
-#include "src/temporary_home/ReactiveSocket.h"
+#include "test/deprecated/ReactiveSocket.h"
 #include "test/test_utils/InlineConnection.h"
 #include "test/test_utils/MockStats.h"
 #include "test/streams/Mocks.h"

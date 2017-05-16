@@ -7,9 +7,9 @@
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <folly/portability/GFlags.h>
 #include <gmock/gmock.h>
+#include "test/deprecated/ReactiveSocket.h"
 
 #include "src/temporary_home/NullRequestHandler.h"
-#include "src/temporary_home/ReactiveSocket.h"
 #include "src/temporary_home/SubscriptionBase.h"
 #include "src/framing/FramedDuplexConnection.h"
 #include "src/transports/tcp/TcpDuplexConnection.h"
@@ -220,7 +220,6 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     }
 
     std::shared_ptr<StreamState> handleSetupPayload(
-        ReactiveSocket&,
         ConnectionSetupPayload request) noexcept override {
       LOG(INFO) << "handleSetupPayload " << request;
       return nullptr;

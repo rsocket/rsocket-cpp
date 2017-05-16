@@ -58,10 +58,9 @@ class NullRequestHandler : public RequestHandler {
       std::unique_ptr<folly::IOBuf> request) noexcept override;
 
   std::shared_ptr<StreamState> handleSetupPayload(
-      ReactiveSocket& socket,
       ConnectionSetupPayload request) noexcept override;
 
-  bool handleResume(ReactiveSocket& socket, ResumeParameters) noexcept override;
+  bool handleResume(ResumeParameters) noexcept override;
 
   void handleCleanResume(
       yarpl::Reference<yarpl::flowable::Subscription> response) noexcept override;

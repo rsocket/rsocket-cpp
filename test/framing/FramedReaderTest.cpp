@@ -7,7 +7,7 @@
 #include <folly/io/Cursor.h>
 #include <gmock/gmock.h>
 #include "src/framing/FrameSerializer.h"
-#include "src/temporary_home/ReactiveSocket.h"
+#include "test/deprecated/ReactiveSocket.h"
 #include "src/framing/FramedDuplexConnection.h"
 #include "src/framing/FramedReader.h"
 #include "test/test_utils/InlineConnection.h"

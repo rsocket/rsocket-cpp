@@ -2,6 +2,4 @@
 
 #include "ConnectionResumeRequest.h"
 
-using namespace reactivesocket;
-
 namespace rsocket {}

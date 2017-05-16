@@ -15,6 +15,14 @@ namespace rsocket {
  * class that is responsible for basic RSocket creation and setup; the virtual
  * functions will be implemented to customize the actual handling of the
  * RSocket.
+ * Handles the setup/creation/error steps for an RSocketServer accepting
+ * connections.
+ *
+ * This is an abstract class that is responsible for basic RSocket creation and
+ * setup.
+ *
+ * The virtual functions will be implemented to customize the actual handling of
+ * the RSocket.
  *
  * TODO: Resumability
  *
@@ -49,7 +57,7 @@ class RSocketConnectionHandler : public reactivesocket::ConnectionHandler {
    */
   virtual void manageSocket(
       std::shared_ptr<ConnectionSetupRequest> request,
-      std::unique_ptr<reactivesocket::ReactiveSocket> socket) = 0;
+      std::shared_ptr<reactivesocket::RSocketStateMachine> socket) = 0;
 };
 
 } // namespace rsocket

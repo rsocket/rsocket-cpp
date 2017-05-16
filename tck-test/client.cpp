@@ -5,9 +5,9 @@
 #include <folly/io/async/AsyncSocket.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <folly/portability/GFlags.h>
+#include "test/deprecated/ReactiveSocket.h"
 
 #include "src/temporary_home/NullRequestHandler.h"
-#include "src/temporary_home/ReactiveSocket.h"
 #include "src/framing/FramedDuplexConnection.h"
 #include "src/transports/tcp/TcpDuplexConnection.h"
 

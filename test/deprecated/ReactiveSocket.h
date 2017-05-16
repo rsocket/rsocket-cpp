@@ -6,7 +6,7 @@
 #include "src/internal/Common.h"
 #include "src/temporary_home/ConnectionSetupPayload.h"
 #include "src/Payload.h"
-#include "Stats.h"
+#include "src/temporary_home/Stats.h"
 #include "yarpl/flowable/Subscriber.h"
 #include "yarpl/flowable/Subscription.h"
 
@@ -24,15 +24,7 @@ class RequestHandler;
 
 folly::Executor& defaultExecutor();
 
-// TODO(stupaq): Here is some heavy problem with the recursion on shutdown.
-// Giving someone ownership over this object would probably lead to a deadlock
-// (or a crash) if one calls ::~ReactiveSocket from a terminal signal handler
-// of any of the connections. It seems natural to follow ReactiveStreams
-// specification and make this object "self owned", so that we don't need to
-// perform all of the cleanup from a d'tor. We could give out a "proxy" object
-// that (internally) holds a weak reference (conceptually, not std::weak_ptr)
-// and forbids any interactions with the socket after the shutdown procedure has
-// been initiated.
+    // TODO eliminate this class and use RSocketStateMachine directly
 class ReactiveSocket {
  public:
   ReactiveSocket(ReactiveSocket&&) = delete;

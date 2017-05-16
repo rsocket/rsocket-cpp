@@ -37,14 +37,13 @@ class MockRequestHandler : public RequestHandler {
   MOCK_METHOD1(
       handleMetadataPush_,
       void(std::unique_ptr<folly::IOBuf>& request));
-  MOCK_METHOD2(
+  MOCK_METHOD1(
       handleSetupPayload_,
       std::shared_ptr<StreamState>(
-          ReactiveSocket& socket,
           ConnectionSetupPayload& request));
-  MOCK_METHOD2(
+  MOCK_METHOD1(
       handleResume_,
-      bool(ReactiveSocket& socket, ResumeParameters& resumeParams));
+      bool(ResumeParameters& resumeParams));
 
   yarpl::Reference<yarpl::flowable::Subscriber<Payload>> handleRequestChannel(
       Payload request,
@@ -79,15 +78,13 @@ class MockRequestHandler : public RequestHandler {
   }
 
   std::shared_ptr<StreamState> handleSetupPayload(
-      ReactiveSocket& socket,
       ConnectionSetupPayload request) noexcept override {
-    return handleSetupPayload_(socket, request);
+    return handleSetupPayload_(request);
   }
 
   bool handleResume(
-      ReactiveSocket& socket,
       ResumeParameters resumeParams) noexcept override {
-    return handleResume_(socket, resumeParams);
+    return handleResume_(resumeParams);
   }
 
   void handleCleanResume(

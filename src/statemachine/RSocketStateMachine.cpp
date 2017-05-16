@@ -22,13 +22,11 @@ namespace reactivesocket {
 
 RSocketStateMachine::RSocketStateMachine(
     folly::Executor& executor,
-    ReactiveSocket* reactiveSocket,
     std::shared_ptr<RequestHandler> requestHandler,
     std::shared_ptr<Stats> stats,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer,
     ReactiveSocketMode mode)
     : ExecutorBase(executor),
-      reactiveSocket_(reactiveSocket),
       stats_(stats),
       mode_(mode),
       resumeCache_(std::make_shared<ResumeCache>(stats)),
@@ -40,6 +38,8 @@ RSocketStateMachine::RSocketStateMachine(
   // stack when processing any signals from the connection. See ::connect and
   // ::onSubscribe.
   CHECK(streamState_);
+
+  stats_->socketCreated();
 }
 
 RSocketStateMachine::~RSocketStateMachine() {
@@ -163,7 +163,6 @@ void RSocketStateMachine::close(
     return;
   }
   isClosed_ = true;
-  reactiveSocket_ = nullptr;
   stats_->socketClosed(signal);
 
   VLOG(6) << "close";
@@ -474,8 +473,7 @@ void RSocketStateMachine::handleConnectionFrame(
         return;
       }
 
-      requestHandler_->handleSetupPayload(
-          *reactiveSocket_, std::move(setupPayload));
+      requestHandler_->handleSetupPayload(std::move(setupPayload));
       return;
     }
     case FrameType::METADATA_PUSH: {
@@ -491,13 +489,14 @@ void RSocketStateMachine::handleConnectionFrame(
         if (!deserializeFrameOrError(frame, std::move(payload))) {
           return;
         }
+
         auto resumed = requestHandler_->handleResume(
-            *reactiveSocket_,
             ResumeParameters(
                 frame.token_,
                 frame.lastReceivedServerPosition_,
                 frame.clientPosition_,
                 ProtocolVersion(frame.versionMajor_, frame.versionMinor_)));
+
         if (!resumed) {
           closeWithError(Frame_ERROR::connectionError("can not resume"));
         }
