@@ -49,7 +49,7 @@ class Single : public virtual Refcounted {
           OnSubscribe(Reference<SingleObserver<T>>),
           void>::value>::type>
   static auto create(OnSubscribe&& function) {
-    return Reference<Single<T>>(new FromPublisherOperator<OnSubscribe>(
+    return Reference<Single<T>>(new FromPublisherOperator<T, OnSubscribe>(
         std::forward<OnSubscribe>(function)));
   }
 
@@ -57,8 +57,8 @@ class Single : public virtual Refcounted {
   auto map(Function&& function);
 
  private:
-  template <typename OnSubscribe>
-  class FromPublisherOperator : public Single<T> {
+  template <typename N, typename OnSubscribe>
+  class FromPublisherOperator : public Single<N> {
    public:
     explicit FromPublisherOperator(OnSubscribe&& function)
         : function_(std::move(function)) {}
@@ -115,7 +115,7 @@ class Single<void> : public virtual Refcounted {
     };
 
     subscribe(make_ref<SuccessSingleObserver>(std::forward<Success>(s)));
-  };
+  }
 
   template <
       typename OnSubscribe,

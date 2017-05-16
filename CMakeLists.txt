@@ -216,9 +216,8 @@ add_library(
   src/framing/FrameSerializer_v1_0.cpp
   src/framing/FrameSerializer_v1_0.h)
 
-target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/experimental")
-target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/experimental/yarpl/include")
-target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/experimental/yarpl/src")
+target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/include")
+target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/src")
 
 target_link_libraries(
   ReactiveSocket

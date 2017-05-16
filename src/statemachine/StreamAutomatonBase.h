@@ -7,7 +7,7 @@
 #include <memory>
 #include "src/internal/Common.h"
 #include <folly/ExceptionWrapper.h>
-#include <experimental/yarpl/include/yarpl/Refcounted.h>
+#include <yarpl/Refcounted.h>
 
 namespace folly {
 class IOBuf;

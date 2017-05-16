@@ -21,7 +21,7 @@ set(
 )
 
 include_directories(${GOOGLE_BENCHMARK_SOURCE_DIR}/include)
-include_directories(${CMAKE_SOURCE_DIR}/experimental)
+include_directories(${CMAKE_SOURCE_DIR}/yarpl)
 
 function(benchmark name file)
     add_executable(${name} ${file})
