@@ -3,8 +3,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/StreamState.h"
-#include "test/MockStats.h"
+#include "src/temporary_home/StreamState.h"
+#include "test/test_utils/MockStats.h"
 
 using namespace reactivesocket;
 using namespace testing;

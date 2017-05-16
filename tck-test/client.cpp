@@ -6,10 +6,10 @@
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <folly/portability/GFlags.h>
 
-#include "src/NullRequestHandler.h"
-#include "src/ReactiveSocket.h"
-#include "src/framed/FramedDuplexConnection.h"
-#include "src/tcp/TcpDuplexConnection.h"
+#include "src/temporary_home/NullRequestHandler.h"
+#include "src/temporary_home/ReactiveSocket.h"
+#include "src/framing/FramedDuplexConnection.h"
+#include "src/transports/tcp/TcpDuplexConnection.h"
 
 #include "tck-test/TestFileParser.h"
 #include "tck-test/TestInterpreter.h"

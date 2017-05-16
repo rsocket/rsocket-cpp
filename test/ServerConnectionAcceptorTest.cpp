@@ -1,12 +1,12 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/ConnectionSetupPayload.h"
-#include "src/FrameProcessor.h"
-#include "src/FrameSerializer.h"
-#include "src/FrameTransport.h"
-#include "src/ServerConnectionAcceptor.h"
-#include "src/framed/FramedDuplexConnection.h"
-#include "test/InlineConnection.h"
+#include "src/temporary_home/ConnectionSetupPayload.h"
+#include "src/framing/FrameProcessor.h"
+#include "src/framing/FrameSerializer.h"
+#include "src/framing/FrameTransport.h"
+#include "src/temporary_home/ServerConnectionAcceptor.h"
+#include "src/framing/FramedDuplexConnection.h"
+#include "test/test_utils/InlineConnection.h"
 #include "test/streams/Mocks.h"
 #include <folly/ExceptionWrapper.h>
 #include <gmock/gmock.h>

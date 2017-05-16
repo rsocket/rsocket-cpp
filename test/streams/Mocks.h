@@ -10,7 +10,7 @@
 #include <reactive-streams/ReactiveStreams.h>
 #include <yarpl/flowable/Subscriber.h>
 #include <yarpl/flowable/Subscription.h>
-#include "src/ReactiveStreamsCompat.h"
+#include "src/internal/ReactiveStreamsCompat.h"
 
 namespace yarpl {
 namespace flowable {

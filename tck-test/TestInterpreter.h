@@ -4,8 +4,8 @@
 
 #include <map>
 #include "src/Payload.h"
-#include "src/ReactiveStreamsCompat.h"
-#include "src/ReactiveSocket.h"
+#include "src/internal/ReactiveStreamsCompat.h"
+#include "src/temporary_home/ReactiveSocket.h"
 
 #include "tck-test/TestSubscriber.h"
 #include "tck-test/TestSuite.h"

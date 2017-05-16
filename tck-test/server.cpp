@@ -8,13 +8,13 @@
 #include <folly/portability/GFlags.h>
 #include <gmock/gmock.h>
 
-#include "src/NullRequestHandler.h"
-#include "src/ReactiveSocket.h"
-#include "src/SubscriptionBase.h"
-#include "src/framed/FramedDuplexConnection.h"
-#include "src/tcp/TcpDuplexConnection.h"
+#include "src/temporary_home/NullRequestHandler.h"
+#include "src/temporary_home/ReactiveSocket.h"
+#include "src/temporary_home/SubscriptionBase.h"
+#include "src/framing/FramedDuplexConnection.h"
+#include "src/transports/tcp/TcpDuplexConnection.h"
 
-#include "test/simple/StatsPrinter.h"
+#include "test/test_utils/StatsPrinter.h"
 
 #include "tck-test/MarbleProcessor.h"
 

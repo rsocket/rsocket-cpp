@@ -4,13 +4,13 @@
 
 #include <folly/io/async/AsyncSocket.h>
 
-#include "src/ClientResumeStatusCallback.h"
-#include "src/FrameTransport.h"
-#include "src/NullRequestHandler.h"
-#include "src/ReactiveSocket.h"
-#include "src/folly/FollyKeepaliveTimer.h"
-#include "src/framed/FramedDuplexConnection.h"
-#include "src/tcp/TcpDuplexConnection.h"
+#include "src/internal/ClientResumeStatusCallback.h"
+#include "src/framing/FrameTransport.h"
+#include "src/temporary_home/NullRequestHandler.h"
+#include "src/temporary_home/ReactiveSocket.h"
+#include "src/internal/FollyKeepaliveTimer.h"
+#include "src/framing/FramedDuplexConnection.h"
+#include "src/transports/tcp/TcpDuplexConnection.h"
 
 namespace reactivesocket {
 namespace tests {
