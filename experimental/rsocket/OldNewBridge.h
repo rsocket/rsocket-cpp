@@ -155,13 +155,12 @@ class NewToOldSubscriber : public yarpl::flowable::Subscriber<reactivesocket::Pa
 };
 
 class EagerSubscriberBridge
-    : public reactivesocket::Subscriber<reactivesocket::Payload> {
+    : public yarpl::flowable::Subscriber<reactivesocket::Payload> {
  public:
   void onSubscribe(
-      std::shared_ptr<reactivesocket::Subscription> subscription) noexcept {
+      yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept {
     CHECK(!subscription_);
-    subscription_ = yarpl::Reference<yarpl::flowable::Subscription>(
-        new NewToOldSubscription(std::move(subscription)));
+    subscription_ = std::move(subscription);
     if (inner_) {
       inner_->onSubscribe(subscription_);
     }
@@ -180,9 +179,9 @@ class EagerSubscriberBridge
     subscription_.reset();
   }
 
-  void onError(folly::exception_wrapper ex) noexcept {
+  void onError(std::exception_ptr ex) noexcept {
     DCHECK(inner_);
-    inner_->onError(ex.to_exception_ptr());
+    inner_->onError(std::move(ex));
 
     inner_.reset();
     subscription_.reset();

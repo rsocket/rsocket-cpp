@@ -18,6 +18,7 @@
 using namespace ::testing;
 using namespace ::reactivesocket;
 using namespace ::folly;
+using namespace yarpl;
 
 DEFINE_string(address, "9898", "host:port to listen to");
 
@@ -27,17 +28,17 @@ std::vector<
     std::pair<std::unique_ptr<ReactiveSocket>, ResumeIdentificationToken>>
     g_reactiveSockets;
 
-class ServerSubscription : public SubscriptionBase {
+class ServerSubscription : public yarpl::flowable::Subscription {
  public:
-  explicit ServerSubscription(std::shared_ptr<Subscriber<Payload>> response)
-      : ExecutorBase(defaultExecutor()), response_(std::move(response)) {}
+  explicit ServerSubscription(yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response)
+      : response_(std::move(response)) {}
 
   ~ServerSubscription() {
     LOG(INFO) << "~ServerSubscription " << this;
   }
 
   // Subscription methods
-  void requestImpl(size_t n) noexcept override {
+  void request(int64_t n) noexcept override {
     LOG(INFO) << "request " << this;
     response_->onNext(Payload("from server"));
     response_->onNext(Payload("from server2"));
@@ -48,12 +49,12 @@ class ServerSubscription : public SubscriptionBase {
     //    response_.onError(std::runtime_error("XXX"));
   }
 
-  void cancelImpl() noexcept override {
+  void cancel() noexcept override {
     LOG(INFO) << "cancel " << this;
   }
 
  private:
-  std::shared_ptr<Subscriber<Payload>> response_;
+  yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response_;
 };
 
 class ServerRequestHandler : public DefaultRequestHandler {
@@ -65,10 +66,10 @@ class ServerRequestHandler : public DefaultRequestHandler {
   void handleRequestStream(
       Payload request,
       StreamId streamId,
-      const std::shared_ptr<Subscriber<Payload>>& response) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) noexcept override {
     LOG(INFO) << "ServerRequestHandler.handleRequestStream " << request;
 
-    response->onSubscribe(std::make_shared<ServerSubscription>(response));
+    response->onSubscribe(make_ref<ServerSubscription>(response));
   }
 
   void handleFireAndForgetRequest(
@@ -99,33 +100,33 @@ class ServerRequestHandler : public DefaultRequestHandler {
   }
 
   void handleCleanResume(
-      std::shared_ptr<Subscription> response) noexcept override {
+      yarpl::Reference<yarpl::flowable::Subscription> response) noexcept override {
     LOG(INFO) << "clean resume stream"
               << "\n";
   }
 
   void handleDirtyResume(
-      std::shared_ptr<Subscription> response) noexcept override {
+      yarpl::Reference<yarpl::flowable::Subscription> response) noexcept override {
     LOG(INFO) << "dirty resume stream"
               << "\n";
   }
 
   void onSubscriptionPaused(
-      const std::shared_ptr<Subscription>& subscription) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override {
     LOG(INFO) << "subscription paused " << &subscription;
   }
 
   void onSubscriptionResumed(
-      const std::shared_ptr<Subscription>& subscription) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override {
     LOG(INFO) << "subscription resumed " << &subscription;
   }
 
-  void onSubscriberPaused(const std::shared_ptr<Subscriber<Payload>>&
+  void onSubscriberPaused(const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
                               subscriber) noexcept override {
     LOG(INFO) << "subscriber paused " << &subscriber;
   }
 
-  void onSubscriberResumed(const std::shared_ptr<Subscriber<Payload>>&
+  void onSubscriberResumed(const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
                                subscriber) noexcept override {
     LOG(INFO) << "subscriber resumed " << &subscriber;
   }
@@ -157,7 +158,7 @@ class MyConnectionHandler : public ConnectionHandler {
       LOG(INFO) << "socket disconnect: " << ex.what();
       // to verify these frames will be queued up
       rs->requestStream(
-          Payload("from server resume"), std::make_shared<PrintSubscriber>());
+          Payload("from server resume"), make_ref<PrintSubscriber>());
     });
     rs->onClosed([](const folly::exception_wrapper& ex) {
       LOG(INFO) << "socket closed: " << ex.what();

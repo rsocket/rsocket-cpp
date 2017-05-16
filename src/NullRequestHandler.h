@@ -9,46 +9,46 @@
 namespace reactivesocket {
 
 template <typename T>
-class NullSubscriberT : public Subscriber<T> {
+class NullSubscriberT : public yarpl::flowable::Subscriber<T> {
  public:
   virtual ~NullSubscriberT() = default;
 
   // Subscriber methods
   void onSubscribe(
-      std::shared_ptr<Subscription> subscription) noexcept override {
+      yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept override {
     subscription->cancel();
   }
   void onNext(T element) noexcept override {}
   void onComplete() noexcept override {}
-  void onError(folly::exception_wrapper ex) noexcept override {}
+  void onError(const std::exception_ptr ex) noexcept override {}
 };
 
 extern template class NullSubscriberT<Payload>;
 using NullSubscriber = NullSubscriberT<Payload>;
 
-class NullSubscription : public Subscription {
+class NullSubscription : public yarpl::flowable::Subscription {
  public:
   // Subscription methods
-  void request(size_t n) noexcept override;
+  void request(int64_t n) noexcept override;
   void cancel() noexcept override;
 };
 
 class NullRequestHandler : public RequestHandler {
  public:
-  std::shared_ptr<Subscriber<Payload>> handleRequestChannel(
+  yarpl::Reference<yarpl::flowable::Subscriber<Payload>> handleRequestChannel(
       Payload request,
       StreamId streamId,
-      const std::shared_ptr<Subscriber<Payload>>& response) noexcept override;
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) noexcept override;
 
   void handleRequestStream(
       Payload request,
       StreamId streamId,
-      const std::shared_ptr<Subscriber<Payload>>& response) noexcept override;
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) noexcept override;
 
   void handleRequestResponse(
       Payload request,
       StreamId streamId,
-      const std::shared_ptr<Subscriber<Payload>>& response) noexcept override;
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) noexcept override;
 
   void handleFireAndForgetRequest(
       Payload request,
@@ -64,18 +64,18 @@ class NullRequestHandler : public RequestHandler {
   bool handleResume(ReactiveSocket& socket, ResumeParameters) noexcept override;
 
   void handleCleanResume(
-      std::shared_ptr<Subscription> response) noexcept override;
+      yarpl::Reference<yarpl::flowable::Subscription> response) noexcept override;
   void handleDirtyResume(
-      std::shared_ptr<Subscription> response) noexcept override;
+      yarpl::Reference<yarpl::flowable::Subscription> response) noexcept override;
 
   void onSubscriptionPaused(
-      const std::shared_ptr<Subscription>& subscription) noexcept override;
+      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override;
   void onSubscriptionResumed(
-      const std::shared_ptr<Subscription>& subscription) noexcept override;
+      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override;
   void onSubscriberPaused(
-      const std::shared_ptr<Subscriber<Payload>>& subscriber) noexcept override;
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& subscriber) noexcept override;
   void onSubscriberResumed(
-      const std::shared_ptr<Subscriber<Payload>>& subscriber) noexcept override;
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& subscriber) noexcept override;
 };
 
 using DefaultRequestHandler = NullRequestHandler;

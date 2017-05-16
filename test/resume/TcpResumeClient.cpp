@@ -19,6 +19,7 @@
 using namespace ::testing;
 using namespace ::reactivesocket;
 using namespace ::folly;
+using namespace yarpl;
 
 DEFINE_string(host, "localhost", "host to connect to");
 DEFINE_int32(port, 9898, "host:port to connect to");
@@ -57,21 +58,21 @@ class ResumeCallback : public ClientResumeStatusCallback {
 class ClientRequestHandler : public DefaultRequestHandler {
  public:
   void onSubscriptionPaused(
-      const std::shared_ptr<Subscription>& subscription) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override {
     LOG(INFO) << "subscription paused " << &subscription;
   }
 
   void onSubscriptionResumed(
-      const std::shared_ptr<Subscription>& subscription) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override {
     LOG(INFO) << "subscription resumed " << &subscription;
   }
 
-  void onSubscriberPaused(const std::shared_ptr<Subscriber<Payload>>&
+  void onSubscriberPaused(const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
                               subscriber) noexcept override {
     LOG(INFO) << "subscriber paused " << &subscriber;
   }
 
-  void onSubscriberResumed(const std::shared_ptr<Subscriber<Payload>>&
+  void onSubscriberResumed(const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
                                subscriber) noexcept override {
     LOG(INFO) << "subscriber resumed " << &subscriber;
   }
@@ -133,7 +134,7 @@ int main(int argc, char* argv[]) {
 
     LOG(INFO) << "requestStream:";
     reactiveSocket->requestStream(
-        Payload("from client"), std::make_shared<PrintSubscriber>());
+        Payload("from client"), make_ref<PrintSubscriber>());
 
     LOG(INFO) << "connecting RS ...";
     reactiveSocket->clientConnect(
@@ -150,7 +151,7 @@ int main(int argc, char* argv[]) {
     reactiveSocket->disconnect();
     LOG(INFO) << "requestStream:";
     reactiveSocket->requestStream(
-        Payload("from client2"), std::make_shared<PrintSubscriber>());
+        Payload("from client2"), make_ref<PrintSubscriber>());
   });
 
   std::getline(std::cin, input);

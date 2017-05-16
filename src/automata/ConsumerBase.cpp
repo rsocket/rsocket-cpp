@@ -5,20 +5,22 @@
 #include <glog/logging.h>
 #include <algorithm>
 #include "src/Payload.h"
-#include "src/ReactiveStreamsCompat.h"
 
 namespace reactivesocket {
 
-void ConsumerBase::subscribe(std::shared_ptr<Subscriber<Payload>> subscriber) {
+using namespace yarpl;
+using namespace yarpl::flowable;
+
+void ConsumerBase::subscribe(Reference<yarpl::flowable::Subscriber<Payload>> subscriber) {
   if (Base::isTerminated()) {
-    subscriber->onSubscribe(std::make_shared<NullSubscription>());
+    subscriber->onSubscribe(make_ref<NullSubscription>());
     subscriber->onComplete();
     return;
   }
 
   DCHECK(!consumingSubscriber_);
   consumingSubscriber_ = std::move(subscriber);
-  consumingSubscriber_->onSubscribe(shared_from_this());
+  consumingSubscriber_->onSubscribe(Reference<Subscription>(this));
 }
 
 void ConsumerBase::generateRequest(size_t n) {
@@ -33,9 +35,10 @@ void ConsumerBase::endStream(StreamCompletionSignal signal) {
         signal == StreamCompletionSignal::CANCEL) { // TODO: remove CANCEL
       subscriber->onComplete();
     } else {
-      subscriber->onError(StreamInterruptedException(static_cast<int>(signal)));
+      subscriber->onError(std::make_exception_ptr(StreamInterruptedException(static_cast<int>(signal))));
     }
   }
+  Subscription::release();
   Base::endStream(signal);
 }
 
@@ -67,7 +70,7 @@ void ConsumerBase::processPayload(Payload&& payload, bool onNext) {
 
 void ConsumerBase::onError(folly::exception_wrapper ex) {
   if (auto subscriber = std::move(consumingSubscriber_)) {
-    subscriber->onError(std::move(ex));
+    subscriber->onError(ex.to_exception_ptr());
   }
 }
 
@@ -83,7 +86,7 @@ void ConsumerBase::sendRequests() {
 
 void ConsumerBase::handleFlowControlError() {
   if (auto subscriber = std::move(consumingSubscriber_)) {
-    subscriber->onError(std::runtime_error("surplus response"));
+    subscriber->onError(std::make_exception_ptr(std::runtime_error("surplus response")));
   }
   errorStream("flow control error");
 }

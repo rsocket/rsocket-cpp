@@ -3,7 +3,8 @@
 #pragma once
 
 #include "src/Common.h"
-#include "src/ReactiveStreamsCompat.h"
+#include "yarpl/flowable/Subscriber.h"
+#include "yarpl/flowable/Subscription.h"
 
 namespace folly {
 class Executor;
@@ -19,35 +20,29 @@ class StreamsFactory {
  public:
   StreamsFactory(ConnectionAutomaton& connection, ReactiveSocketMode mode);
 
-  std::shared_ptr<Subscriber<Payload>> createChannelRequester(
-      std::shared_ptr<Subscriber<Payload>> responseSink,
-      folly::Executor& executor);
+  yarpl::Reference<yarpl::flowable::Subscriber<Payload>> createChannelRequester(
+      yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSink);
 
   void createStreamRequester(
       Payload request,
-      std::shared_ptr<Subscriber<Payload>> responseSink,
-      folly::Executor& executor);
+      yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSink);
 
   void createRequestResponseRequester(
       Payload payload,
-      std::shared_ptr<Subscriber<Payload>> responseSink,
-      folly::Executor& executor);
+      yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSink);
 
   // TODO: the return type should not be the automaton type, but something
   // generic
-  std::shared_ptr<ChannelResponder> createChannelResponder(
+  yarpl::Reference<ChannelResponder> createChannelResponder(
       uint32_t initialRequestN,
-      StreamId streamId,
-      folly::Executor& executor);
+      StreamId streamId);
 
-  std::shared_ptr<Subscriber<Payload>> createStreamResponder(
+  yarpl::Reference<yarpl::flowable::Subscriber<Payload>> createStreamResponder(
       uint32_t initialRequestN,
-      StreamId streamId,
-      folly::Executor& executor);
+      StreamId streamId);
 
-  std::shared_ptr<Subscriber<Payload>> createRequestResponseResponder(
-      StreamId streamId,
-      folly::Executor& executor);
+  yarpl::Reference<yarpl::flowable::Subscriber<Payload>> createRequestResponseResponder(
+      StreamId streamId);
 
   bool registerNewPeerStreamId(StreamId streamId);
   StreamId getNextStreamId();

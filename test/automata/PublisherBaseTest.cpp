@@ -10,37 +10,38 @@
 
 using namespace ::testing;
 using namespace ::reactivesocket;
+using namespace yarpl;
 
 namespace {
 
-class UserSubscriber : public SubscriberBase, private PublisherBase {
+class UserSubscriber : public yarpl::flowable::Subscriber<Payload>, private PublisherBase {
  public:
-  UserSubscriber() : ExecutorBase(inlineExecutor()), PublisherBase(5) {}
+  UserSubscriber() : PublisherBase(5) {}
   using PublisherBase::pausePublisherStream;
   using PublisherBase::publisherSubscribe;
 
- protected:
-  void onSubscribeImpl(
-      std::shared_ptr<Subscription> subscription) noexcept override {
+  void onSubscribe(
+      yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept override {
     publisherSubscribe(std::move(subscription));
   }
 
-  void onNextImpl(::reactivesocket::Payload element) noexcept override {
+  void onNext(::reactivesocket::Payload element) noexcept override {
+    FAIL();
+
+  }
+
+  void onComplete() noexcept override {
     FAIL();
   }
 
-  void onCompleteImpl() noexcept override {
-    FAIL();
-  }
-
-  void onErrorImpl(folly::exception_wrapper ex) noexcept override {
+  void onError(const std::exception_ptr) noexcept override {
     FAIL();
   }
 };
 
-class UserSubscription : public Subscription {
-  void request(size_t n) noexcept override {
-    EXPECT_EQ(5ul, n);
+class UserSubscription : public yarpl::flowable::Subscription {
+  void request(int64_t n) noexcept override {
+    EXPECT_EQ(5ll, n);
   }
 
   void cancel() noexcept override {
@@ -51,8 +52,8 @@ class UserSubscription : public Subscription {
 
 TEST(PublisherBaseTest, GetsPassedOriginalSubscription) {
   MockRequestHandler requestHandler;
-  auto subscription = std::make_shared<UserSubscription>();
-  auto userSubscriber = std::make_shared<UserSubscriber>();
+  auto subscription = make_ref<UserSubscription>();
+  auto userSubscriber = make_ref<UserSubscriber>();
 
   EXPECT_CALL(requestHandler, onSubscriptionPaused_(Eq(subscription)));
 

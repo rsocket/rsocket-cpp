@@ -13,6 +13,7 @@
 namespace rsocket {
 
 using namespace reactivesocket;
+using namespace yarpl;
 
 class RSocketHandlerBridge : public reactivesocket::DefaultRequestHandler {
  public:
@@ -22,20 +23,19 @@ class RSocketHandlerBridge : public reactivesocket::DefaultRequestHandler {
   void handleRequestStream(
       Payload request,
       StreamId streamId,
-      const std::shared_ptr<Subscriber<Payload>>& response) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) noexcept override {
     auto flowable =
         handler_->handleRequestStream(std::move(request), std::move(streamId));
     // bridge from the existing eager RequestHandler and old Subscriber type
     // to the lazy Flowable and new Subscriber type
-    flowable->subscribe(yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(
-        new NewToOldSubscriber(std::move(response))));
+    flowable->subscribe(std::move(response));
   }
 
-  std::shared_ptr<Subscriber<Payload>> handleRequestChannel(
+  yarpl::Reference<yarpl::flowable::Subscriber<Payload>> handleRequestChannel(
       Payload request,
       StreamId streamId,
-      const std::shared_ptr<Subscriber<Payload>>& response) noexcept override {
-    auto eagerSubscriber = std::make_shared<EagerSubscriberBridge>();
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) noexcept override {
+    auto eagerSubscriber = make_ref<EagerSubscriberBridge>();
     auto flowable = handler_->handleRequestChannel(
         std::move(request),
         yarpl::flowable::Flowables::fromPublisher<Payload>([eagerSubscriber](
@@ -45,8 +45,7 @@ class RSocketHandlerBridge : public reactivesocket::DefaultRequestHandler {
         std::move(streamId));
     // bridge from the existing eager RequestHandler and old Subscriber type
     // to the lazy Flowable and new Subscriber type
-    flowable->subscribe(yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(
-        new NewToOldSubscriber(std::move(response))));
+    flowable->subscribe(std::move(response));
 
     return eagerSubscriber;
   }
@@ -54,20 +53,21 @@ class RSocketHandlerBridge : public reactivesocket::DefaultRequestHandler {
   void handleRequestResponse(
       Payload request,
       StreamId streamId,
-      const std::shared_ptr<Subscriber<Payload>>&
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
           responseSubscriber) noexcept override {
     auto single = handler_->handleRequestResponse(std::move(request), streamId);
     // bridge from the existing eager RequestHandler and old Subscriber type
     // to the lazy Single and new SingleObserver type
 
-    class BridgeSubscriptionToSingle : public reactivesocket::Subscription {
+    class BridgeSubscriptionToSingle : public yarpl::flowable::Subscription {
      public:
       BridgeSubscriptionToSingle(
           yarpl::Reference<yarpl::single::Single<Payload>> single,
-          std::shared_ptr<Subscriber<Payload>> responseSubscriber)
+          yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSubscriber)
           : single_{std::move(single)},
             responseSubscriber_{std::move(responseSubscriber)} {}
-      void request(size_t n) noexcept override {
+
+      void request(int64_t n) noexcept override {
         // when we get a request we subscribe to Single
         bool expected = false;
         if (n > 0 && subscribed_.compare_exchange_strong(expected, true)) {
@@ -77,19 +77,11 @@ class RSocketHandlerBridge : public reactivesocket::DefaultRequestHandler {
                 responseSubscriber_->onNext(std::move(p));
               },
               [this](std::exception_ptr eptr) {
-                // onError
-                try {
-                  std::rethrow_exception(eptr);
-                } catch (const std::exception& e) {
-                  responseSubscriber_->onError(
-                      folly::exception_wrapper(std::move(eptr), e));
-                } catch (...) {
-                  responseSubscriber_->onError(
-                      folly::exception_wrapper(std::current_exception()));
-                }
+                responseSubscriber_->onError(std::move(eptr));
               }));
         }
       }
+
       void cancel() noexcept override{
           // TODO this code will be deleted shortly, so not bothering to make
           // work
@@ -97,12 +89,12 @@ class RSocketHandlerBridge : public reactivesocket::DefaultRequestHandler {
 
      private:
       yarpl::Reference<yarpl::single::Single<Payload>> single_;
-      std::shared_ptr<Subscriber<Payload>> responseSubscriber_;
+      yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSubscriber_;
       std::atomic_bool subscribed_{false};
     };
 
     responseSubscriber->onSubscribe(
-        std::make_shared<BridgeSubscriptionToSingle>(
+        make_ref<BridgeSubscriptionToSingle>(
             std::move(single), responseSubscriber));
   }
 

@@ -121,30 +121,30 @@ ReactiveSocket::disconnectedServer(
   return socket;
 }
 
-std::shared_ptr<Subscriber<Payload>> ReactiveSocket::requestChannel(
-    std::shared_ptr<Subscriber<Payload>> responseSink) {
+yarpl::Reference<yarpl::flowable::Subscriber<Payload>> ReactiveSocket::requestChannel(
+    yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
   debugCheckCorrectExecutor();
   checkNotClosed();
   return connection_->streamsFactory().createChannelRequester(
-      std::move(responseSink), executor_);
+      std::move(responseSink));
 }
 
 void ReactiveSocket::requestStream(
     Payload request,
-    std::shared_ptr<Subscriber<Payload>> responseSink) {
+    yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
   debugCheckCorrectExecutor();
   checkNotClosed();
   connection_->streamsFactory().createStreamRequester(
-      std::move(request), std::move(responseSink), executor_);
+      std::move(request), std::move(responseSink));
 }
 
 void ReactiveSocket::requestResponse(
     Payload payload,
-    std::shared_ptr<Subscriber<Payload>> responseSink) {
+    yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
   debugCheckCorrectExecutor();
   checkNotClosed();
   connection_->streamsFactory().createRequestResponseRequester(
-      std::move(payload), std::move(responseSink), executor_);
+      std::move(payload), std::move(responseSink));
 }
 
 void ReactiveSocket::requestFireAndForget(Payload request) {

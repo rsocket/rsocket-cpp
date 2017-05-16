@@ -9,9 +9,8 @@
 #include "src/ConnectionAutomaton.h"
 #include "src/Executor.h"
 #include "src/Payload.h"
-#include "src/ReactiveStreamsCompat.h"
 #include "src/RequestHandler.h"
-#include "src/SubscriberBase.h"
+#include "yarpl/flowable/Subscription.h"
 
 namespace reactivesocket {
 
@@ -24,7 +23,7 @@ class PublisherBase {
       : initialRequestN_(initialRequestN) {}
 
   /// @{
-  void publisherSubscribe(std::shared_ptr<Subscription> subscription) {
+  void publisherSubscribe(yarpl::Reference<yarpl::flowable::Subscription> subscription) {
     debugCheckOnSubscribe();
     producingSubscription_ = std::move(subscription);
     if (initialRequestN_) {
@@ -34,7 +33,7 @@ class PublisherBase {
 
   /// @}
 
-  std::shared_ptr<Subscription> subscription() const {
+  const yarpl::Reference<yarpl::flowable::Subscription>& subscription() const {
     return producingSubscription_;
   }
 
@@ -57,7 +56,7 @@ class PublisherBase {
     DCHECK(!producingSubscription_);
   }
 
-  void debugCheckOnNextOnCompleteOnError() {
+  void debugCheckOnNextOnError() {
     DCHECK(producingSubscription_);
   }
 
@@ -69,32 +68,18 @@ class PublisherBase {
   }
 
   void pausePublisherStream(RequestHandler& requestHandler) {
-    if (auto subscription = maybeUnwrap(producingSubscription_)) {
-      requestHandler.onSubscriptionPaused(subscription);
-    }
+    requestHandler.onSubscriptionPaused(producingSubscription_);
   }
 
   void resumePublisherStream(RequestHandler& requestHandler) {
-    if (auto subscription = maybeUnwrap(producingSubscription_)) {
-      requestHandler.onSubscriptionResumed(subscription);
-    }
+    requestHandler.onSubscriptionResumed(producingSubscription_);
   }
 
  private:
-  // TODO(t16368600) // Remove this hack as we improve the API
-  std::shared_ptr<Subscription> maybeUnwrap(
-      const std::shared_ptr<Subscription>& subscription) {
-    if (auto shim = std::dynamic_pointer_cast<SubscriptionShim>(subscription)) {
-      return shim->getParentSubscription();
-    } else {
-      return subscription;
-    }
-  }
-
   /// A Subscription that constrols production of payloads.
   /// This is responsible for delivering a terminal signal to the
   /// Subscription once the stream ends.
-  std::shared_ptr<Subscription> producingSubscription_;
+  yarpl::Reference<yarpl::flowable::Subscription> producingSubscription_;
   AllowanceSemaphore initialRequestN_;
 };
 }

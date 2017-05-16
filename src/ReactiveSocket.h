@@ -6,8 +6,9 @@
 #include "src/Common.h"
 #include "src/ConnectionSetupPayload.h"
 #include "src/Payload.h"
-#include "src/ReactiveStreamsCompat.h"
 #include "src/Stats.h"
+#include "yarpl/flowable/Subscriber.h"
+#include "yarpl/flowable/Subscription.h"
 
 namespace folly {
 class Executor;
@@ -72,16 +73,16 @@ class ReactiveSocket {
       std::shared_ptr<Stats> stats = Stats::noop(),
       ProtocolVersion protocolVersion = ProtocolVersion::Unknown);
 
-  std::shared_ptr<Subscriber<Payload>> requestChannel(
-      std::shared_ptr<Subscriber<Payload>> responseSink);
+  yarpl::Reference<yarpl::flowable::Subscriber<Payload>> requestChannel(
+      yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSink);
 
   void requestStream(
       Payload payload,
-      std::shared_ptr<Subscriber<Payload>> responseSink);
+      yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSink);
 
   void requestResponse(
       Payload payload,
-      std::shared_ptr<Subscriber<Payload>> responseSink);
+      yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSink);
 
   void requestFireAndForget(Payload request);
 

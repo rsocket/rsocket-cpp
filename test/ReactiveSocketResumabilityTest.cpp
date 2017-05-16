@@ -8,10 +8,11 @@
 #include "src/ReactiveSocket.h"
 #include "test/InlineConnection.h"
 #include "test/MockStats.h"
-#include "test/ReactiveStreamsMocksCompat.h"
+#include "test/streams/Mocks.h"
 
 using namespace ::testing;
 using namespace ::reactivesocket;
+using namespace yarpl;
 
 TEST(ReactiveSocketResumabilityTest, Disconnect) {
   auto socketConnection = std::make_unique<InlineConnection>();
@@ -47,10 +48,10 @@ TEST(ReactiveSocketResumabilityTest, Disconnect) {
       ConnectionSetupPayload("", "", Payload(), true),
       stats);
 
-  auto responseSubscriber = std::make_shared<MockSubscriber<Payload>>();
+  auto responseSubscriber = make_ref<yarpl::flowable::MockSubscriber<Payload>>();
   EXPECT_CALL(*responseSubscriber, onSubscribe_(_))
       .Times(1)
-      .WillOnce(Invoke([&](std::shared_ptr<Subscription> subscription) {
+      .WillOnce(Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> subscription) {
         subscription->request(std::numeric_limits<size_t>::max());
       }));
 

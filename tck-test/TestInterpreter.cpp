@@ -9,6 +9,7 @@
 #include "tck-test/TypedCommands.h"
 
 using namespace folly;
+using namespace yarpl;
 
 namespace reactivesocket {
 namespace tck {
@@ -135,18 +136,18 @@ void TestInterpreter::handleAssert(const AssertCommand& command) {
   }
 }
 
-std::shared_ptr<TestSubscriber> TestInterpreter::createTestSubscriber(
+yarpl::Reference<TestSubscriber> TestInterpreter::createTestSubscriber(
     const std::string& id) {
   if (testSubscribers_.find(id) != testSubscribers_.end()) {
     throw std::runtime_error("test subscriber with the same id already exists");
   }
 
-  auto testSubscriber = std::make_shared<TestSubscriber>();
+  auto testSubscriber = make_ref<TestSubscriber>();
   testSubscribers_[id] = testSubscriber;
   return testSubscriber;
 }
 
-std::shared_ptr<TestSubscriber> TestInterpreter::getSubscriber(
+yarpl::Reference<TestSubscriber> TestInterpreter::getSubscriber(
     const std::string& id) {
   auto found = testSubscribers_.find(id);
   if (found == testSubscribers_.end()) {

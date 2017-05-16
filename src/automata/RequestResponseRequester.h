@@ -4,36 +4,28 @@
 
 #include <iosfwd>
 #include "src/Payload.h"
-#include "src/SubscriptionBase.h"
 #include "src/automata/StreamAutomatonBase.h"
+#include "yarpl/flowable/Subscription.h"
+#include "yarpl/flowable/Subscriber.h"
 
 namespace reactivesocket {
 
 /// Implementation of stream automaton that represents a RequestResponse
 /// requester
 class RequestResponseRequester : public StreamAutomatonBase,
-                                 public SubscriptionBase {
+                                 public yarpl::flowable::Subscription {
   using Base = StreamAutomatonBase;
 
  public:
-  struct Parameters : Base::Parameters {
-    Parameters(
-        const typename Base::Parameters& baseParams,
-        folly::Executor& _executor)
-        : Base::Parameters(baseParams), executor(_executor) {}
-    folly::Executor& executor;
-  };
-
   explicit RequestResponseRequester(const Parameters& params, Payload payload)
-      : ExecutorBase(params.executor),
-        Base(params),
+      : Base(params),
         initialPayload_(std::move(payload)) {}
 
-  void subscribe(std::shared_ptr<Subscriber<Payload>> subscriber);
+  void subscribe(yarpl::Reference<yarpl::flowable::Subscriber<Payload>> subscriber);
 
  private:
-  void requestImpl(size_t) noexcept override;
-  void cancelImpl() noexcept override;
+  void request(int64_t) noexcept override;
+  void cancel() noexcept override;
 
   void handlePayload(Payload&& payload, bool complete, bool flagsNext) override;
   void handleError(folly::exception_wrapper errorPayload) override;
@@ -53,7 +45,7 @@ class RequestResponseRequester : public StreamAutomatonBase,
   /// A Subscriber that will consume payloads.
   /// This is responsible for delivering a terminal signal to the
   /// Subscriber once the stream ends.
-  std::shared_ptr<Subscriber<Payload>> consumingSubscriber_;
+  yarpl::Reference<yarpl::flowable::Subscriber<Payload>> consumingSubscriber_;
 
   /// Initial payload which has to be sent with 1st request.
   Payload initialPayload_;

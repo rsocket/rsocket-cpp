@@ -14,18 +14,19 @@
 using namespace std::chrono_literals;
 using namespace ::reactivesocket;
 using namespace ::testing;
+using namespace yarpl;
 
 using folly::ScopedEventBaseThread;
 
 // A very simple test which tests a basic warm resumption workflow.
 // This setup can be used to test varying scenarious in warm resumption.
-TEST_F(ServerFixture, BasicWarmResumption) {
+TEST_F(ServerFixture, DISABLED_BasicWarmResumption) {
   ScopedEventBaseThread eventBaseThread;
   auto clientEvb = eventBaseThread.getEventBase();
   tests::MyConnectCallback connectCb;
   auto token = ResumeIdentificationToken::generateNew();
   std::unique_ptr<ReactiveSocket> rsocket;
-  auto mySub = std::make_shared<tests::MySubscriber>();
+  auto mySub = make_ref<tests::MySubscriber>();
   Sequence s;
   SCOPE_EXIT {
     clientEvb->runInEventBaseThreadAndWait([&]() { rsocket.reset(); });

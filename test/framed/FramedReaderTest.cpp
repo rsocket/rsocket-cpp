@@ -12,7 +12,7 @@
 #include "src/framed/FramedReader.h"
 #include "test/InlineConnection.h"
 #include "test/MockRequestHandler.h"
-#include "test/ReactiveStreamsMocksCompat.h"
+#include "test/streams/Mocks.h"
 
 using namespace ::testing;
 using namespace ::reactivesocket;
