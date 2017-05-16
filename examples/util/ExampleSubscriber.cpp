@@ -1,6 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "examples/util/ExampleSubscriber.h"
+#include <iostream>
 
 using namespace ::reactivesocket;
 
@@ -22,8 +23,9 @@ ExampleSubscriber::ExampleSubscriber(int initialRequest, int numToTake)
 }
 
 void ExampleSubscriber::onSubscribe(
-        yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept {
-  LOG(INFO) << "ExampleSubscriber " << this << " onSubscribe";
+    yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept {
+  LOG(INFO) << "ExampleSubscriber " << this << " onSubscribe, requesting "
+            << initialRequest_;
   subscription_ = std::move(subscription);
   requested_ = initialRequest_;
   subscription_->request(initialRequest_);
@@ -54,7 +56,11 @@ void ExampleSubscriber::onComplete() noexcept {
 }
 
 void ExampleSubscriber::onError(const std::exception_ptr ex) noexcept {
-  LOG(INFO) << "ExampleSubscriber " << this << " onError";
+  try {
+    std::rethrow_exception(ex);
+  } catch (const std::exception& e) {
+    LOG(ERROR) << "ExampleSubscriber " << this << " onError: " << e.what();
+  }
   terminated_ = true;
   terminalEventCV_.notify_all();
 }

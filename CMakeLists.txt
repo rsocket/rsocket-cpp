@@ -403,7 +403,7 @@ add_library(
         experimental/rsocket-src/transports/TcpConnectionAcceptor.cpp
         experimental/rsocket/transports/TcpConnectionFactory.h
         experimental/rsocket-src/transports/TcpConnectionFactory.cpp
-        experimental/rsocket/RSocketRequestHandler.h
+        experimental/rsocket/RSocketResponder.h
         experimental/rsocket/RSocketConnectionHandler.h
         experimental/rsocket-src/RSocketConnectionHandler.cpp
 )
@@ -461,6 +461,41 @@ target_link_libraries(
         ${CMAKE_THREAD_LIBS_INIT}
 )
 
+# request-response-hello-world
+
+add_executable(
+        example_request-response-hello-world-server
+        examples/request-response-hello-world/RequestResponseHelloWorld_Server.cpp
+)
+
+target_link_libraries(
+        example_request-response-hello-world-server
+        ReactiveSocket
+        rsocket_experimental
+        reactivesocket_examples_util
+        yarpl
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
+
+add_executable(
+        example_request-response-hello-world-client
+        examples/request-response-hello-world/RequestResponseHelloWorld_Client.cpp
+)
+
+target_link_libraries(
+        example_request-response-hello-world-client
+        ReactiveSocket
+        rsocket_experimental
+        reactivesocket_examples_util
+        yarpl
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
+
+
 # stream-hello-world
 
 add_executable(
@@ -495,6 +530,40 @@ target_link_libraries(
         ${GLOG_LIBRARY}
         ${CMAKE_THREAD_LIBS_INIT})
 
+
+# channel-hello-world
+
+add_executable(
+        example_channel-hello-world-server
+        examples/channel-hello-world/ChannelHelloWorld_Server.cpp
+)
+
+target_link_libraries(
+        example_channel-hello-world-server
+        ReactiveSocket
+        rsocket_experimental
+        reactivesocket_examples_util
+        yarpl
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
+
+add_executable(
+        example_channel-hello-world-client
+        examples/channel-hello-world/ChannelHelloWorld_Client.cpp
+)
+
+target_link_libraries(
+        example_channel-hello-world-client
+        ReactiveSocket
+        rsocket_experimental
+        reactivesocket_examples_util
+        yarpl
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
 
 # stream-observable-to-flowable
 

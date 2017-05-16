@@ -133,6 +133,54 @@ class MapOperator : public FlowableOperator<U, D> {
   F function_;
 };
 
+template <
+    typename U,
+    typename F,
+    typename = typename std::enable_if<std::is_callable<F(U), bool>::value>::type>
+class FilterOperator : public FlowableOperator<U, U> {
+public:
+  FilterOperator(Reference<Flowable<U>> upstream, F&& function)
+      : FlowableOperator<U, U>(std::move(upstream)),
+        function_(std::forward<F>(function)) {}
+
+  void subscribe(Reference<Subscriber<U>> subscriber) override {
+    FlowableOperator<U, U>::upstream_->subscribe(
+        // Note: implicit cast to a reference to a subscriber.
+        Reference<Subscription>(new Subscription(
+            Reference<Flowable<U>>(this), std::move(subscriber))));
+  }
+
+private:
+  class Subscription : public FlowableOperator<U, U>::Subscription {
+  public:
+    Subscription(
+        Reference<Flowable<U>> flowable,
+        Reference<Subscriber<U>> subscriber)
+        : FlowableOperator<U, U>::Subscription(
+        std::move(flowable),
+        std::move(subscriber)) {}
+
+    void onNext(U value) override {
+      auto subscriber =
+          FlowableOperator<U, U>::Subscription::subscriber_.get();
+      auto* flowable = FlowableOperator<U, U>::Subscription::flowable_.get();
+      auto* filter = static_cast<FilterOperator*>(flowable);
+      if (filter->function_(value)) {
+        subscriber->onNext(std::move(value));
+      } else {
+        callSuperRequest(1l);
+      }
+    }
+
+  private:
+    void callSuperRequest(int64_t delta) {
+      FlowableOperator<U, U>::Subscription::request(delta);
+    }
+  };
+
+  F function_;
+};
+
 template <typename T>
 class TakeOperator : public FlowableOperator<T, T> {
  public:

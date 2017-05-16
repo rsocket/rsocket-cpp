@@ -1,19 +1,20 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
+#include <iostream>
+
 #include <folly/init/Init.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <folly/portability/GFlags.h>
-#include <iostream>
 
 #include "examples/util/ExampleSubscriber.h"
 #include "rsocket/RSocket.h"
 #include "rsocket/transports/TcpConnectionFactory.h"
+
 #include "yarpl/Flowable.h"
 
-using namespace ::reactivesocket;
-using namespace ::folly;
-using namespace ::rsocket_example;
-using namespace ::rsocket;
+using namespace reactivesocket;
+using namespace rsocket_example;
+using namespace rsocket;
 using namespace yarpl::flowable;
 
 DEFINE_string(host, "localhost", "host to connect to");
@@ -27,25 +28,21 @@ int main(int argc, char* argv[]) {
   folly::SocketAddress address;
   address.setFromHostPort(FLAGS_host, FLAGS_port);
 
+  // create a client which can then make connections below
   auto rsf = RSocket::createClient(
       std::make_unique<TcpConnectionFactory>(std::move(address)));
+
   auto rs = rsf->connect().get();
 
-  LOG(INFO) << "------------------ Hello Bob!";
-  auto s1 = yarpl::Reference<ExampleSubscriber>(new ExampleSubscriber(5, 6));
-  rs->requestStream(Payload("Bob"))
-      ->take(5)
+  auto s = yarpl::make_ref<ExampleSubscriber>(5, 6);
+  // send stream of strings to the server
+  rs->requestChannel(Flowables::justN({"initialPayload", "Bob", "Jane"})->map([](std::string v) {
+      std::cout << "sending name " << v << std::endl;
+      return Payload(v);
+    }))
       ->subscribe(
-          yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(s1.get()));
-  s1->awaitTerminalEvent();
-
-  LOG(INFO) << "------------------ Hello Jane!";
-  auto s2 = yarpl::Reference<ExampleSubscriber>(new ExampleSubscriber(5, 6));
-  rs->requestStream(Payload("Jane"))
-      ->take(3)
-      ->subscribe(
-          yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(s2.get()));
-  s2->awaitTerminalEvent();
+          yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(s.get()));
+  s->awaitTerminalEvent();
 
   // TODO on shutdown the destruction of
   // ScopedEventBaseThread spits out a stacktrace
