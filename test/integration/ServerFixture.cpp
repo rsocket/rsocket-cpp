@@ -30,7 +30,7 @@ class ServerSubscription : public yarpl::flowable::Subscription {
 
   void request(int64_t n) noexcept override {
     LOG(INFO) << "Received request(" << n << ")";
-    for (size_t i = 0; i < n; i++) {
+    for (int64_t i = 0; i < n; i++) {
       VLOG(1) << "Sending " << sentCounter_ + 1;
       requester_->onNext(Payload(std::to_string(++sentCounter_)));
     }
