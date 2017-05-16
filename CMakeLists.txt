@@ -461,6 +461,41 @@ target_link_libraries(
         ${CMAKE_THREAD_LIBS_INIT}
 )
 
+# request-response-hello-world
+
+add_executable(
+        example_request-response-hello-world-server
+        examples/request-response-hello-world/RequestResponseHelloWorld_Server.cpp
+)
+
+target_link_libraries(
+        example_request-response-hello-world-server
+        ReactiveSocket
+        rsocket_experimental
+        reactivesocket_examples_util
+        yarpl
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
+
+add_executable(
+        example_request-response-hello-world-client
+        examples/request-response-hello-world/RequestResponseHelloWorld_Client.cpp
+)
+
+target_link_libraries(
+        example_request-response-hello-world-client
+        ReactiveSocket
+        rsocket_experimental
+        reactivesocket_examples_util
+        yarpl
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
+
+
 # stream-hello-world
 
 add_executable(

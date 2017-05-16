@@ -5,6 +5,7 @@
 #include <folly/io/async/EventBase.h>
 
 #include "yarpl/Flowable.h"
+#include "yarpl/Single.h"
 
 #include "src/Payload.h"
 #include "src/StreamState.h"
@@ -20,6 +21,23 @@ namespace rsocket {
 class RSocketRequestHandler {
  public:
   virtual ~RSocketRequestHandler() {}
+
+  /**
+   * Called when a new `requestResponse` occurs from an RSocketRequester.
+   *
+   * Return a Single with the response.
+   *
+   * @param request
+   * @param streamId
+   * @return
+   */
+  virtual yarpl::Reference<yarpl::single::Single<reactivesocket::Payload>>
+  handleRequestResponse(
+      reactivesocket::Payload request,
+      reactivesocket::StreamId streamId) {
+    return yarpl::single::Singles::error<reactivesocket::Payload>(
+        std::logic_error("handleRequestResponse not implemented"));
+  }
 
   /**
    * Called when a new `requestStream` occurs from an RSocketRequester.

@@ -10,11 +10,13 @@
 #include "rsocket/RSocket.h"
 #include "rsocket/transports/TcpConnectionFactory.h"
 
-#include "yarpl/Flowable.h"
+#include "yarpl/Single.h"
 
 using namespace reactivesocket;
 using namespace rsocket_example;
 using namespace rsocket;
+using namespace yarpl;
+using namespace yarpl::single;
 
 DEFINE_string(host, "localhost", "host to connect to");
 DEFINE_int32(port, 9898, "host:port to connect to");
@@ -35,11 +37,13 @@ int main(int argc, char* argv[]) {
   auto rs = rsf->connect().get();
 
   // perform request on connected RSocket
-  auto s = yarpl::Reference<ExampleSubscriber>(new ExampleSubscriber(5, 6));
-  rs->requestStream(Payload("Jane"))
-      ->subscribe(
-          yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(s.get()));
-  s->awaitTerminalEvent();
+  rs->requestResponse(Payload("Jane"))
+      ->subscribe(SingleObservers::create<Payload>([](Payload p) {
+        std::cout << "Received >> " << p.moveDataToString() << std::endl;
+      }));
+
+  // Wait for a newline on the console to terminate the client.
+  std::getchar();
 
   return 0;
 }

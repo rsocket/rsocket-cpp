@@ -5,6 +5,7 @@
 #include <folly/io/async/EventBase.h>
 
 #include "yarpl/Flowable.h"
+#include "yarpl/Single.h"
 
 #include "src/ReactiveSocket.h"
 #include "src/ReactiveStreamsCompat.h"
@@ -29,8 +30,6 @@ class RSocketRequester {
   RSocketRequester(RSocketRequester&&) = delete; // move
   RSocketRequester& operator=(const RSocketRequester&) = delete; // copy
   RSocketRequester& operator=(RSocketRequester&&) = delete; // move
-
-  // TODO why is everything in here a shared_ptr and not just unique_ptr?
 
   /**
    * Send a single request and get a response stream.
@@ -63,12 +62,9 @@ class RSocketRequester {
    * https://github.com/ReactiveSocket/reactivesocket/blob/master/Protocol.md#stream-sequences-request-response
    *
    * @param payload
-   * @param responseSink
    */
-  void requestResponse(
-      reactivesocket::Payload payload,
-      std::shared_ptr<reactivesocket::Subscriber<reactivesocket::Payload>>
-          responseSink);
+  yarpl::Reference<yarpl::single::Single<reactivesocket::Payload>>
+  requestResponse(reactivesocket::Payload payload);
 
   /**
    * Send a single Payload with no response.

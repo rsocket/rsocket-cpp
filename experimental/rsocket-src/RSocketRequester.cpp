@@ -39,12 +39,9 @@ RSocketRequester::~RSocketRequester() {
 yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
 RSocketRequester::requestChannel(
     yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
-    requestStream) {
+        requestStream) {
   auto& eb = eventBase_;
   auto srs = reactiveSocket_;
-
-  LOG(INFO) << "requestChannel executing ";
-
   return yarpl::flowable::Flowables::fromPublisher<Payload>([
     &eb,
     requestStream = std::move(requestStream),
@@ -52,17 +49,11 @@ RSocketRequester::requestChannel(
   ](yarpl::Reference<yarpl::flowable::Subscriber<Payload>> subscriber) mutable {
     // TODO eliminate OldToNew bridge
     auto os = std::make_shared<OldToNewSubscriber>(std::move(subscriber));
-
-    LOG(INFO) << "requestChannel ABOUT TO RUN ON THREAD ";
-
     eb.runInEventBaseThread([
       requestStream = std::move(requestStream),
       os = std::move(os),
       srs = std::move(srs)
     ]() mutable {
-
-        LOG(INFO) << "requestChannel RUNNING IN THREAD";
-
       auto responseSink = srs->requestChannel(std::move(os));
       // TODO eliminate NewToOld bridge
       requestStream->subscribe(
@@ -88,13 +79,59 @@ RSocketRequester::requestStream(Payload request) {
   });
 }
 
-void RSocketRequester::requestResponse(
-    Payload request,
-    std::shared_ptr<Subscriber<Payload>> responseSink) {
-  eventBase_.runInEventBaseThread(
-      [ this, request = std::move(request), responseSink ]() mutable {
-        reactiveSocket_->requestResponse(
-            std::move(request), std::move(responseSink));
+yarpl::Reference<yarpl::single::Single<reactivesocket::Payload>>
+RSocketRequester::requestResponse(Payload request) {
+  // TODO bridge in use until SingleSubscriber is used internally
+  class SingleToSubscriberBridge : public Subscriber<Payload> {
+   public:
+    SingleToSubscriberBridge(
+        yarpl::Reference<yarpl::single::SingleObserver<Payload>>
+            singleSubscriber)
+        : singleSubscriber_{std::move(singleSubscriber)} {}
+
+    void onSubscribe(
+        std::shared_ptr<Subscription> subscription) noexcept override {
+      // register cancellation callback with SingleSubscriber
+      auto singleSubscription = yarpl::single::SingleSubscriptions::create(
+          [subscription] { subscription->cancel(); });
+
+      singleSubscriber_->onSubscribe(std::move(singleSubscription));
+
+      // kick off request (TODO this is not needed once we use the proper type)
+      subscription->request(1);
+    }
+    void onNext(Payload payload) noexcept override {
+      singleSubscriber_->onSuccess(std::move(payload));
+    }
+    void onComplete() noexcept override {
+      // ignore as we're done once we get a single value back
+    }
+    void onError(folly::exception_wrapper ex) noexcept override {
+      LOG(ERROR) << ex.what();
+      // TODO what happens if it doesn't have an exception_ptr?
+      // TODO we are eliminating this bridge within 48 hours so probably don't
+      // need to care
+      singleSubscriber_->onError(ex.to_exception_ptr());
+    }
+
+   private:
+    yarpl::Reference<yarpl::single::SingleObserver<Payload>> singleSubscriber_;
+  };
+
+  return yarpl::single::Single<Payload>::create(
+      [ eb = &eventBase_, request = std::move(request), srs = reactiveSocket_ ](
+          yarpl::Reference<yarpl::single::SingleObserver<Payload>>
+              subscriber) mutable {
+        eb->runInEventBaseThread([
+          request = std::move(request),
+          subscriber = std::move(subscriber),
+          srs = std::move(srs)
+        ]() mutable {
+          srs->requestResponse(
+              std::move(request),
+              std::make_shared<SingleToSubscriberBridge>(
+                  std::move(subscriber)));
+        });
       });
 }
 
