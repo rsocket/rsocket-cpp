@@ -68,7 +68,8 @@ auto Observable<T>::create(OnSubscribe&& function) {
       std::is_callable<OnSubscribe(Reference<Observer<T>>), void>(),
       "OnSubscribe must have type `void(Reference<Observer<T>>)`");
 
-  return make_ref<FromPublisherOperator<T, OnSubscribe>>(std::forward<OnSubscribe>(function));
+  return make_ref<FromPublisherOperator<T, OnSubscribe>>(
+      std::forward<OnSubscribe>(function));
 }
 
 template <typename T>
