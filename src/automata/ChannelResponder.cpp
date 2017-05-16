@@ -1,22 +1,26 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "src/automata/ChannelResponder.h"
+#include <folly/ExceptionString.h>
 
 namespace reactivesocket {
 
-void ChannelResponder::onSubscribeImpl(
-    std::shared_ptr<Subscription> subscription) noexcept {
+using namespace yarpl;
+using namespace yarpl::flowable;
+
+void ChannelResponder::onSubscribe(
+    Reference<Subscription> subscription) noexcept {
   if (ConsumerBase::isTerminated()) {
     subscription->cancel();
     return;
   }
-  publisherSubscribe(subscription);
+  publisherSubscribe(std::move(subscription));
 }
 
-void ChannelResponder::onNextImpl(Payload response) noexcept {
+void ChannelResponder::onNext(Payload response) noexcept {
+  debugCheckOnNextOnError();
   switch (state_) {
     case State::RESPONDING: {
-      debugCheckOnNextOnCompleteOnError();
       writePayload(std::move(response), false);
       break;
     }
@@ -25,7 +29,7 @@ void ChannelResponder::onNextImpl(Payload response) noexcept {
   }
 }
 
-void ChannelResponder::onCompleteImpl() noexcept {
+void ChannelResponder::onComplete() noexcept {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
@@ -36,18 +40,18 @@ void ChannelResponder::onCompleteImpl() noexcept {
   }
 }
 
-void ChannelResponder::onErrorImpl(folly::exception_wrapper ex) noexcept {
+void ChannelResponder::onError(const std::exception_ptr ex) noexcept {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
-      applicationError(ex.what().toStdString());
+      applicationError(folly::exceptionStr(ex).toStdString());
     } break;
     case State::CLOSED:
       break;
   }
 }
 
-void ChannelResponder::requestImpl(size_t n) noexcept {
+void ChannelResponder::request(int64_t n) noexcept {
   switch (state_) {
     case State::RESPONDING:
       ConsumerBase::generateRequest(n);
@@ -57,7 +61,7 @@ void ChannelResponder::requestImpl(size_t n) noexcept {
   }
 }
 
-void ChannelResponder::cancelImpl() noexcept {
+void ChannelResponder::cancel() noexcept {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
@@ -83,6 +87,7 @@ void ChannelResponder::endStream(StreamCompletionSignal signal) {
   ConsumerBase::endStream(signal);
 }
 
+//TODO: remove this unused function
 void ChannelResponder::processInitialFrame(Frame_REQUEST_CHANNEL&& frame) {
   onNextPayloadFrame(
       frame.requestN_,

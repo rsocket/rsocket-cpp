@@ -21,6 +21,7 @@
 using namespace ::testing;
 using namespace ::reactivesocket;
 using namespace ::folly;
+using namespace yarpl;
 
 DEFINE_string(ip, "0.0.0.0", "IP to bind on");
 DEFINE_int32(port, 9898, "port to listen to");
@@ -67,26 +68,25 @@ MarbleStore parseMarbles(const std::string& fileName) {
   return ms;
 }
 
-class ServerSubscription : public SubscriptionBase {
+class ServerSubscription : public yarpl::flowable::Subscription {
  public:
   explicit ServerSubscription(
-      std::shared_ptr<Subscriber<Payload>> response,
+      yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response,
       std::shared_ptr<tck::MarbleProcessor> marbleProcessor,
       size_t /* numElems = 2 */)
-      : ExecutorBase(defaultExecutor()),
-        response_(std::move(response)),
+      : response_(std::move(response)),
         marbleProcessor_(std::move(marbleProcessor)) {}
 
  private:
-  void requestImpl(size_t n) noexcept override {
+  void request(int64_t n) noexcept override {
     marbleProcessor_->request(n);
   }
 
-  void cancelImpl() noexcept override {
+  void cancel() noexcept override {
     marbleProcessor_->cancel();
   }
 
-  std::shared_ptr<Subscriber<Payload>> response_;
+  yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response_;
   std::shared_ptr<tck::MarbleProcessor> marbleProcessor_;
 };
 
@@ -165,7 +165,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     void handleRequestStream(
         Payload request,
         StreamId streamId,
-        const std::shared_ptr<Subscriber<Payload>>&
+        const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
             response) noexcept override {
       LOG(INFO) << "handleRequestStream " << request;
       std::string data = request.data->moveToFbString().toStdString();
@@ -178,7 +178,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
         auto marbleProcessor =
             std::make_shared<tck::MarbleProcessor>(it->second, response);
         auto subscription =
-            std::make_shared<ServerSubscription>(response, marbleProcessor, 0);
+            make_ref<ServerSubscription>(response, marbleProcessor, 0);
         response->onSubscribe(subscription);
         std::thread mpThread([marbleProcessor] { marbleProcessor->run(); });
         mpThread.detach();
@@ -188,7 +188,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     void handleRequestResponse(
         Payload request,
         StreamId streamId,
-        const std::shared_ptr<Subscriber<Payload>>&
+        const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
             response) noexcept override {
       LOG(INFO) << "handleRequestResponse " << request;
       std::string data = request.data->moveToFbString().toStdString();
@@ -201,7 +201,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
         auto marbleProcessor =
             std::make_shared<tck::MarbleProcessor>(it->second, response);
         auto subscription =
-            std::make_shared<ServerSubscription>(response, marbleProcessor, 0);
+            make_ref<ServerSubscription>(response, marbleProcessor, 0);
         response->onSubscribe(subscription);
         std::thread mpThread([marbleProcessor] { marbleProcessor->run(); });
         mpThread.detach();

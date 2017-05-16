@@ -5,8 +5,9 @@
 #include <folly/io/IOBuf.h>
 #include <stdint.h>
 #include <deque>
-#include <memory>
 #include <unordered_map>
+#include "src/automata/StreamAutomatonBase.h"
+#include "yarpl/Refcounted.h"
 
 namespace reactivesocket {
 
@@ -24,7 +25,7 @@ class StreamState {
 
   std::deque<std::unique_ptr<folly::IOBuf>> moveOutputPendingFrames();
 
-  std::unordered_map<StreamId, std::shared_ptr<StreamAutomatonBase>> streams_;
+  std::unordered_map<StreamId, yarpl::Reference<StreamAutomatonBase>> streams_;
 
  private:
   /// Called to update stats when outputFrames_ is about to be cleared.

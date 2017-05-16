@@ -11,6 +11,8 @@
 
 namespace reactivesocket {
 
+using namespace yarpl;
+
 StreamsFactory::StreamsFactory(
     ConnectionAutomaton& connection,
     ReactiveSocketMode mode)
@@ -22,12 +24,10 @@ StreamsFactory::StreamsFactory(
               : 2 /*streams initiated by the server MUST use
                     even-numbered stream identifiers*/) {}
 
-std::shared_ptr<Subscriber<Payload>> StreamsFactory::createChannelRequester(
-    std::shared_ptr<Subscriber<Payload>> responseSink,
-    folly::Executor& executor) {
-  ChannelRequester::Parameters params = {
-      {connection_.shared_from_this(), getNextStreamId()}, executor};
-  auto automaton = std::make_shared<ChannelRequester>(params);
+Reference<yarpl::flowable::Subscriber<Payload>> StreamsFactory::createChannelRequester(
+    Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
+  ChannelRequester::Parameters params(connection_.shared_from_this(), getNextStreamId());
+  auto automaton = yarpl::make_ref<ChannelRequester>(params);
   connection_.addStream(params.streamId, automaton);
   automaton->subscribe(std::move(responseSink));
   return automaton;
@@ -35,24 +35,20 @@ std::shared_ptr<Subscriber<Payload>> StreamsFactory::createChannelRequester(
 
 void StreamsFactory::createStreamRequester(
     Payload request,
-    std::shared_ptr<Subscriber<Payload>> responseSink,
-    folly::Executor& executor) {
-  StreamRequester::Parameters params = {
-      {connection_.shared_from_this(), getNextStreamId()}, executor};
+    Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
+  StreamRequester::Parameters params(connection_.shared_from_this(), getNextStreamId());
   auto automaton =
-      std::make_shared<StreamRequester>(params, std::move(request));
+      yarpl::make_ref<StreamRequester>(params, std::move(request));
   connection_.addStream(params.streamId, automaton);
   automaton->subscribe(std::move(responseSink));
 }
 
 void StreamsFactory::createRequestResponseRequester(
     Payload payload,
-    std::shared_ptr<Subscriber<Payload>> responseSink,
-    folly::Executor& executor) {
-  RequestResponseRequester::Parameters params = {
-      {connection_.shared_from_this(), getNextStreamId()}, executor};
+    Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
+  RequestResponseRequester::Parameters params(connection_.shared_from_this(), getNextStreamId());
   auto automaton =
-      std::make_shared<RequestResponseRequester>(params, std::move(payload));
+      yarpl::make_ref<RequestResponseRequester>(params, std::move(payload));
   connection_.addStream(params.streamId, automaton);
   automaton->subscribe(std::move(responseSink));
 }
@@ -81,35 +77,29 @@ bool StreamsFactory::registerNewPeerStreamId(StreamId streamId) {
   return true;
 }
 
-std::shared_ptr<ChannelResponder> StreamsFactory::createChannelResponder(
+Reference<ChannelResponder> StreamsFactory::createChannelResponder(
     uint32_t initialRequestN,
-    StreamId streamId,
-    folly::Executor& executor) {
-  ChannelResponder::Parameters params = {
-      {connection_.shared_from_this(), streamId}, executor};
-  auto automaton = std::make_shared<ChannelResponder>(initialRequestN, params);
+    StreamId streamId) {
+  ChannelResponder::Parameters params(connection_.shared_from_this(), streamId);
+  auto automaton = yarpl::make_ref<ChannelResponder>(initialRequestN, params);
   connection_.addStream(streamId, automaton);
   return automaton;
 }
 
-std::shared_ptr<Subscriber<Payload>> StreamsFactory::createStreamResponder(
+Reference<yarpl::flowable::Subscriber<Payload>> StreamsFactory::createStreamResponder(
     uint32_t initialRequestN,
-    StreamId streamId,
-    folly::Executor& executor) {
-  StreamResponder::Parameters params = {
-      {connection_.shared_from_this(), streamId}, executor};
-  auto automaton = std::make_shared<StreamResponder>(initialRequestN, params);
+    StreamId streamId) {
+  StreamResponder::Parameters params(connection_.shared_from_this(), streamId);
+  auto automaton = yarpl::make_ref<StreamResponder>(initialRequestN, params);
   connection_.addStream(streamId, automaton);
   return automaton;
 }
 
-std::shared_ptr<Subscriber<Payload>>
+Reference<yarpl::flowable::Subscriber<Payload>>
 StreamsFactory::createRequestResponseResponder(
-    StreamId streamId,
-    folly::Executor& executor) {
-  RequestResponseResponder::Parameters params = {
-      {connection_.shared_from_this(), streamId}, executor};
-  auto automaton = std::make_shared<RequestResponseResponder>(params);
+    StreamId streamId) {
+  RequestResponseResponder::Parameters params(connection_.shared_from_this(), streamId);
+  auto automaton = yarpl::make_ref<RequestResponseResponder>(params);
   connection_.addStream(streamId, automaton);
   return automaton;
 }

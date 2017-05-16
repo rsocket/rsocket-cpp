@@ -3,7 +3,7 @@
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <gmock/gmock.h>
 #include "src/SubscriberBase.h"
-#include "test/ReactiveStreamsMocksCompat.h"
+#include "test/streams/Mocks.h"
 
 using namespace ::testing;
 using namespace ::reactivesocket;

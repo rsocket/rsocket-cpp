@@ -3,6 +3,7 @@
 #include "test/simple/PrintSubscriber.h"
 #include <folly/Memory.h>
 #include <folly/io/IOBufQueue.h>
+#include <folly/ExceptionString.h>
 #include <glog/logging.h>
 
 namespace reactivesocket {
@@ -12,7 +13,7 @@ PrintSubscriber::~PrintSubscriber() {
 }
 
 void PrintSubscriber::onSubscribe(
-    std::shared_ptr<Subscription> subscription) noexcept {
+    yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept {
   LOG(INFO) << "PrintSubscriber " << this << " onSubscribe";
   subscription->request(std::numeric_limits<int32_t>::max());
 }
@@ -25,7 +26,7 @@ void PrintSubscriber::onComplete() noexcept {
   LOG(INFO) << "PrintSubscriber " << this << " onComplete";
 }
 
-void PrintSubscriber::onError(folly::exception_wrapper ex) noexcept {
-  LOG(INFO) << "PrintSubscriber " << this << " onError " << ex.what();
+void PrintSubscriber::onError(std::exception_ptr ex) noexcept {
+  LOG(INFO) << "PrintSubscriber " << this << " onError " << folly::exceptionStr(ex);
 }
 }

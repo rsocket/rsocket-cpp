@@ -39,13 +39,13 @@ class TestInterpreter {
   void handleCancel(const CancelCommand& command);
   void handleAssert(const AssertCommand& command);
 
-  std::shared_ptr<TestSubscriber> createTestSubscriber(const std::string& id);
-  std::shared_ptr<TestSubscriber> getSubscriber(const std::string& id);
+  yarpl::Reference<TestSubscriber> createTestSubscriber(const std::string& id);
+  yarpl::Reference<TestSubscriber> getSubscriber(const std::string& id);
 
   ReactiveSocket* reactiveSocket_;
   const Test& test_;
   std::map<std::string, std::string> interactionIdToType_;
-  std::map<std::string, std::shared_ptr<TestSubscriber>> testSubscribers_;
+  std::map<std::string, yarpl::Reference<TestSubscriber>> testSubscribers_;
 };
 
 } // tck

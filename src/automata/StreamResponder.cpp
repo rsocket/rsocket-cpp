@@ -1,23 +1,26 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "src/automata/StreamResponder.h"
+#include <folly/ExceptionString.h>
 
 namespace reactivesocket {
 
-void StreamResponder::onSubscribeImpl(
-    std::shared_ptr<Subscription> subscription) noexcept {
+using namespace yarpl;
+using namespace yarpl::flowable;
+
+void StreamResponder::onSubscribe(
+    Reference<yarpl::flowable::Subscription> subscription) noexcept {
   if (StreamAutomatonBase::isTerminated()) {
     subscription->cancel();
     return;
   }
-  publisherSubscribe(subscription);
+  publisherSubscribe(std::move(subscription));
 }
 
-void StreamResponder::onNextImpl(Payload response) noexcept {
-  debugCheckOnNextOnCompleteOnError();
+void StreamResponder::onNext(Payload response) noexcept {
+  debugCheckOnNextOnError();
   switch (state_) {
     case State::RESPONDING: {
-      debugCheckOnNextOnCompleteOnError();
       writePayload(std::move(response), false);
       break;
     }
@@ -26,8 +29,7 @@ void StreamResponder::onNextImpl(Payload response) noexcept {
   }
 }
 
-void StreamResponder::onCompleteImpl() noexcept {
-  debugCheckOnNextOnCompleteOnError();
+void StreamResponder::onComplete() noexcept {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
@@ -38,12 +40,12 @@ void StreamResponder::onCompleteImpl() noexcept {
   }
 }
 
-void StreamResponder::onErrorImpl(folly::exception_wrapper ex) noexcept {
-  debugCheckOnNextOnCompleteOnError();
+void StreamResponder::onError(const std::exception_ptr ex) noexcept {
+  debugCheckOnNextOnError();
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
-      applicationError(ex.what().toStdString());
+      applicationError(folly::exceptionStr(ex).toStdString());
     } break;
     case State::CLOSED:
       break;

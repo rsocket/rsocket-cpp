@@ -3,9 +3,8 @@
 #pragma once
 
 #include <map>
-
 #include "src/Payload.h"
-#include "src/ReactiveStreamsCompat.h"
+#include "yarpl/flowable/Subscriber.h"
 
 namespace reactivesocket {
 namespace tck {
@@ -14,7 +13,7 @@ class MarbleProcessor {
  public:
   explicit MarbleProcessor(
       const std::string /* marble */,
-      const std::shared_ptr<Subscriber<Payload>>&);
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&);
 
   void run();
 
@@ -31,7 +30,7 @@ class MarbleProcessor {
   // Keep a shared_ptr of the Subscriber.  This is necessary in situations
   // where we try to call onNext() after receiving a cancel().  If we dont hold
   // a copy, the Subscriber object would be deleted.
-  std::shared_ptr<Subscriber<Payload>> subscriber_;
+  yarpl::Reference<yarpl::flowable::Subscriber<Payload>> subscriber_;
 
   // Keeps an account of how many messages can be sent.  This could be done
   // with Semaphores (AllowanceSemaphore)

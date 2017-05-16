@@ -15,22 +15,22 @@ class MockRequestHandler : public RequestHandler {
  public:
   MOCK_METHOD3(
       handleRequestChannel_,
-      std::shared_ptr<Subscriber<Payload>>(
+      yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(
           Payload& request,
           StreamId streamId,
-          const std::shared_ptr<Subscriber<Payload>>&));
+          const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&));
   MOCK_METHOD3(
       handleRequestStream_,
       void(
           Payload& request,
           StreamId streamId,
-          const std::shared_ptr<Subscriber<Payload>>&));
+          const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&));
   MOCK_METHOD3(
       handleRequestResponse_,
       void(
           Payload& request,
           StreamId streamId,
-          const std::shared_ptr<Subscriber<Payload>>&));
+          const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&));
   MOCK_METHOD2(
       handleFireAndForgetRequest_,
       void(Payload& request, StreamId streamId));
@@ -46,24 +46,24 @@ class MockRequestHandler : public RequestHandler {
       handleResume_,
       bool(ReactiveSocket& socket, ResumeParameters& resumeParams));
 
-  std::shared_ptr<Subscriber<Payload>> handleRequestChannel(
+  yarpl::Reference<yarpl::flowable::Subscriber<Payload>> handleRequestChannel(
       Payload request,
       StreamId streamId,
-      const std::shared_ptr<Subscriber<Payload>>& response) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) noexcept override {
     return handleRequestChannel_(request, streamId, response);
   }
 
   void handleRequestStream(
       Payload request,
       StreamId streamId,
-      const std::shared_ptr<Subscriber<Payload>>& response) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) noexcept override {
     handleRequestStream_(request, streamId, response);
   }
 
   void handleRequestResponse(
       Payload request,
       StreamId streamId,
-      const std::shared_ptr<Subscriber<Payload>>& response) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) noexcept override {
     handleRequestResponse_(request, streamId, response);
   }
 
@@ -91,22 +91,22 @@ class MockRequestHandler : public RequestHandler {
   }
 
   void handleCleanResume(
-      std::shared_ptr<Subscription> response) noexcept override {}
+      yarpl::Reference<yarpl::flowable::Subscription> response) noexcept override {}
   void handleDirtyResume(
-      std::shared_ptr<Subscription> response) noexcept override {}
+      yarpl::Reference<yarpl::flowable::Subscription> response) noexcept override {}
 
   MOCK_METHOD1(
       onSubscriptionPaused_,
-      void(const std::shared_ptr<Subscription>&));
+      void(const yarpl::Reference<yarpl::flowable::Subscription>&));
   void onSubscriptionPaused(
-      const std::shared_ptr<Subscription>& subscription) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override {
     onSubscriptionPaused_(std::move(subscription));
   }
   void onSubscriptionResumed(
-      const std::shared_ptr<Subscription>& subscription) noexcept override {}
-  void onSubscriberPaused(const std::shared_ptr<Subscriber<Payload>>&
+      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override {}
+  void onSubscriberPaused(const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
                               subscriber) noexcept override {}
-  void onSubscriberResumed(const std::shared_ptr<Subscriber<Payload>>&
+  void onSubscriberResumed(const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
                                subscriber) noexcept override {}
 
   MOCK_METHOD0(socketOnConnected, void());

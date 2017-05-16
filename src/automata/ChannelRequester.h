@@ -6,9 +6,9 @@
 
 #include "src/Payload.h"
 #include "src/SubscriberBase.h"
-#include "src/SubscriptionBase.h"
 #include "src/automata/ConsumerBase.h"
 #include "src/automata/PublisherBase.h"
+#include "yarpl/flowable/Subscriber.h"
 
 namespace folly {
 class exception_wrapper;
@@ -19,22 +19,20 @@ namespace reactivesocket {
 /// Implementation of stream automaton that represents a Channel requester.
 class ChannelRequester : public ConsumerBase,
                          public PublisherBase,
-                         public SubscriberBase {
+                         public yarpl::flowable::Subscriber<Payload> {
  public:
   explicit ChannelRequester(const ConsumerBase::Parameters& params)
-      : ExecutorBase(params.executor), ConsumerBase(params), PublisherBase(0) {}
+      : ConsumerBase(params), PublisherBase(0) {}
 
  private:
-  /// @{
-  void onSubscribeImpl(std::shared_ptr<Subscription>) noexcept override;
-  void onNextImpl(Payload) noexcept override;
-  void onCompleteImpl() noexcept override;
-  void onErrorImpl(folly::exception_wrapper) noexcept override;
-  /// @}
+  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept override;
+  void onNext(Payload) noexcept override;
+  void onComplete() noexcept override;
+  void onError(const std::exception_ptr) noexcept override;
 
   // implementation from ConsumerBase::SubscriptionBase
-  void requestImpl(size_t) noexcept override;
-  void cancelImpl() noexcept override;
+  void request(int64_t) noexcept override;
+  void cancel() noexcept override;
 
   void handlePayload(Payload&& payload, bool complete, bool flagsNext) override;
   void handleRequestN(uint32_t n) override;

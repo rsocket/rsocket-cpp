@@ -7,6 +7,7 @@
 
 
 using namespace ::reactivesocket;
+using namespace yarpl;
 
 using folly::AsyncServerSocket;
 using folly::AsyncSocket;
@@ -22,26 +23,26 @@ std::vector<
     std::pair<std::unique_ptr<ReactiveSocket>, ResumeIdentificationToken>>
     g_reactiveSockets;
 
-class ServerSubscription : public SubscriptionBase {
+class ServerSubscription : public yarpl::flowable::Subscription {
  public:
-  explicit ServerSubscription(std::shared_ptr<Subscriber<Payload>> requester)
-      : ExecutorBase(defaultExecutor()), requester_(std::move(requester)) {}
+  explicit ServerSubscription(yarpl::Reference<yarpl::flowable::Subscriber<Payload>> requester)
+      : requester_(std::move(requester)) {}
 
-  void requestImpl(size_t n) noexcept override {
+  void request(int64_t n) noexcept override {
     LOG(INFO) << "Received request(" << n << ")";
-    for (size_t i = 0; i < n; i++) {
+    for (int64_t i = 0; i < n; i++) {
       VLOG(1) << "Sending " << sentCounter_ + 1;
       requester_->onNext(Payload(std::to_string(++sentCounter_)));
     }
   }
 
-  void cancelImpl() noexcept override {
+  void cancel() noexcept override {
     LOG(INFO) << "Received Cancel.  NOT IMPLEMENTED";
   }
 
  private:
   size_t sentCounter_{0};
-  std::shared_ptr<Subscriber<Payload>> requester_;
+  yarpl::Reference<yarpl::flowable::Subscriber<Payload>> requester_;
 };
 
 class ServerRequestHandler : public DefaultRequestHandler {
@@ -49,9 +50,9 @@ class ServerRequestHandler : public DefaultRequestHandler {
   void handleRequestStream(
       Payload request,
       StreamId streamId,
-      const std::shared_ptr<Subscriber<Payload>>& requester) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& requester) noexcept override {
     LOG(INFO) << "Received RequestStream";
-    requester->onSubscribe(std::make_shared<ServerSubscription>(requester));
+    requester->onSubscribe(make_ref<ServerSubscription>(requester));
   }
 
   void handleFireAndForgetRequest(
@@ -80,31 +81,31 @@ class ServerRequestHandler : public DefaultRequestHandler {
   }
 
   void handleCleanResume(
-      std::shared_ptr<Subscription> response) noexcept override {
+      yarpl::Reference<yarpl::flowable::Subscription> response) noexcept override {
     LOG(INFO) << "Received CleanResume. NOT IMPLEMENTED";
   }
 
   void handleDirtyResume(
-      std::shared_ptr<Subscription> response) noexcept override {
+      yarpl::Reference<yarpl::flowable::Subscription> response) noexcept override {
     LOG(INFO) << "Received DirtyResume. NOT IMPLEMENTED";
   }
 
   void onSubscriptionPaused(
-      const std::shared_ptr<Subscription>& subscription) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override {
     LOG(INFO) << "SubscriptionPaused. NOT IMPLEMENTED";
   }
 
   void onSubscriptionResumed(
-      const std::shared_ptr<Subscription>& subscription) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override {
     LOG(INFO) << "SubscriptionResumed. NOT IMPLEMENTED";
   }
 
-  void onSubscriberPaused(const std::shared_ptr<Subscriber<Payload>>&
+  void onSubscriberPaused(const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
                               subscriber) noexcept override {
     LOG(INFO) << "SubscriberPaused. NOT IMPLEMENTED";
   }
 
-  void onSubscriberResumed(const std::shared_ptr<Subscriber<Payload>>&
+  void onSubscriberResumed(const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
                                subscriber) noexcept override {
     LOG(INFO) << "SubscriberResumed. NOT IMPLEMENTED";
   }

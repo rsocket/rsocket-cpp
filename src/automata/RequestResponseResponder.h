@@ -2,11 +2,9 @@
 
 #pragma once
 
-#include <iosfwd>
-
-#include "src/SubscriberBase.h"
 #include "src/automata/PublisherBase.h"
 #include "src/automata/StreamAutomatonBase.h"
+#include "yarpl/flowable/Subscriber.h"
 
 namespace reactivesocket {
 
@@ -14,28 +12,17 @@ namespace reactivesocket {
 /// responder
 class RequestResponseResponder : public StreamAutomatonBase,
                                  public PublisherBase,
-                                 public SubscriberBase {
+                                 public yarpl::flowable::Subscriber<Payload> {
  public:
-  struct Parameters : StreamAutomatonBase::Parameters {
-    Parameters(
-        const typename StreamAutomatonBase::Parameters& baseParams,
-        folly::Executor& _executor)
-        : StreamAutomatonBase::Parameters(baseParams), executor(_executor) {}
-    folly::Executor& executor;
-  };
-
   explicit RequestResponseResponder(const Parameters& params)
-      : ExecutorBase(params.executor),
-        StreamAutomatonBase(params),
+      : StreamAutomatonBase(params),
         PublisherBase(1) {}
 
  private:
-  /// @{
-  void onSubscribeImpl(std::shared_ptr<Subscription>) noexcept override;
-  void onNextImpl(Payload) noexcept override;
-  void onCompleteImpl() noexcept override;
-  void onErrorImpl(folly::exception_wrapper) noexcept override;
-  /// @}
+  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept override;
+  void onNext(Payload) noexcept override;
+  void onComplete() noexcept override;
+  void onError(const std::exception_ptr) noexcept override;
 
   void handleCancel() override;
   void handleRequestN(uint32_t n) override;

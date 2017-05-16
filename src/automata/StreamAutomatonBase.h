@@ -7,6 +7,7 @@
 #include <memory>
 #include "src/Common.h"
 #include <folly/ExceptionWrapper.h>
+#include <experimental/yarpl/include/yarpl/Refcounted.h>
 
 namespace folly {
 class IOBuf;
@@ -23,14 +24,13 @@ struct Payload;
 ///
 /// The instances might be destroyed on a different thread than they were
 /// created.
-class StreamAutomatonBase {
+class StreamAutomatonBase : public virtual yarpl::Refcounted {
  public:
   /// A dependent type which encapsulates all parameters needed to initialise
   /// any of the classes and the final automata. Must be the only argument to
   /// the
   /// constructor of any class and must be passed by const& to class's Base.
   struct Parameters {
-    Parameters() = default;
     Parameters(std::shared_ptr<StreamsWriter> _writer, StreamId _streamId)
         : writer(std::move(_writer)), streamId(_streamId) {}
 

@@ -20,6 +20,9 @@ class Subscription : public virtual Refcounted {
   }
 
  private:
+  // TODO(lehecka): we can save some bytes by removing reference_ and replace
+  // it with addRef/release calls
+  //
   // We expect to be heap-allocated; until this subscription finishes
   // (is canceled; completes; error's out), hold a reference so we are
   // not deallocated (by the subscriber).

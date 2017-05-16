@@ -6,12 +6,9 @@
 #include "src/FrameTransport.h"
 #include "src/ServerConnectionAcceptor.h"
 #include "src/framed/FramedDuplexConnection.h"
-
 #include "test/InlineConnection.h"
-#include "test/ReactiveStreamsMocksCompat.h"
-
+#include "test/streams/Mocks.h"
 #include <folly/ExceptionWrapper.h>
-
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
