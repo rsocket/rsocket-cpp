@@ -39,10 +39,11 @@ class FlowableOperator : public Flowable<D> {
     Subscription(
         Reference<Flowable<D>> flowable,
         Reference<Subscriber<D>> subscriber)
-        : flowable_(std::move(flowable)), subscriber_(std::move(subscriber)) {}
-
-    ~Subscription() {
-      subscriber_.reset();
+        : flowable_(std::move(flowable)), subscriber_(std::move(subscriber)) {
+      // We expect to be heap-allocated; until this subscription finishes
+      // (is canceled; completes; error's out), hold a reference so we are
+      // not deallocated (by the subscriber).
+      Refcounted::incRef(*this);
     }
 
     void onSubscribe(
@@ -53,13 +54,11 @@ class FlowableOperator : public Flowable<D> {
 
     void onComplete() override {
       subscriber_->onComplete();
-      upstream_.reset();
       release();
     }
 
     void onError(const std::exception_ptr error) override {
       subscriber_->onError(error);
-      upstream_.reset();
       release();
     }
 
@@ -69,8 +68,15 @@ class FlowableOperator : public Flowable<D> {
 
     void cancel() override {
       upstream_->cancel();
-      upstream_.reset();
       release();
+    }
+
+   private:
+    void release() {
+      flowable_.reset();
+      subscriber_.reset();
+      upstream_.reset();
+      Refcounted::decRef(*this);
     }
 
    protected:

@@ -31,9 +31,7 @@ class NewToOldSubscription : public yarpl::flowable::Subscription {
 
   void cancel() override {
     inner_->cancel();
-
     inner_.reset();
-    release();
   }
 
  private:

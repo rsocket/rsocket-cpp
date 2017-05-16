@@ -462,3 +462,21 @@ TEST(Observable, ObserversError) {
 
   EXPECT_TRUE(errored);
 }
+
+TEST(Observable, CancelReleasesObjects) {
+  EXPECT_EQ(0u, Refcounted::objects());
+
+  auto lambda = [](Reference<Observer<int>> observer) {
+      // we will send nothing
+  };
+  auto observable = Observable<int>::create(std::move(lambda));
+
+  EXPECT_EQ(1u, Refcounted::objects());
+
+  auto collector = make_ref<CollectingObserver<int>>();
+  observable->subscribe(collector);
+
+  observable.reset();
+  collector.reset();
+  EXPECT_EQ(0u, Refcounted::objects());
+}

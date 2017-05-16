@@ -72,7 +72,6 @@ void RequestResponseRequester::endStream(StreamCompletionSignal signal) {
       subscriber->onError(std::make_exception_ptr(StreamInterruptedException(static_cast<int>(signal))));
     }
   }
-  Subscription::release();
 }
 
 void RequestResponseRequester::handleError(

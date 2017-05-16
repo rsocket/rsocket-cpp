@@ -38,7 +38,6 @@ void ConsumerBase::endStream(StreamCompletionSignal signal) {
       subscriber->onError(std::make_exception_ptr(StreamInterruptedException(static_cast<int>(signal))));
     }
   }
-  Subscription::release();
   Base::endStream(signal);
 }
 

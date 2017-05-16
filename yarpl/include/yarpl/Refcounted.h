@@ -29,10 +29,19 @@ class Refcounted {
   virtual ~Refcounted() = default;
 #endif /* NDEBUG */
 
- private:
-  template <typename T>
-  friend class Reference;
+  // not intended to be broadly used by the application code
+  // mostly for library code (static to purposely make it more awkward)
+  static void incRef(Refcounted& obj) {
+    obj.incRef();
+  }
 
+  // not intended to be broadly used by the application code
+  // mostly for library code (static to purposely make it more awkward)
+  static void decRef(Refcounted& obj) {
+    obj.decRef();
+  }
+
+ private:
   void incRef() {
     refcount_.fetch_add(1, std::memory_order_relaxed);
   }
@@ -145,13 +154,13 @@ class Reference {
  private:
   void inc() {
     if (pointer_) {
-      pointer_->incRef();
+      Refcounted::incRef(*pointer_);
     }
   }
 
   void dec() {
     if (pointer_) {
-      pointer_->decRef();
+      Refcounted::decRef(*pointer_);
     }
   }
 
