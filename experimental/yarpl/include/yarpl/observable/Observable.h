@@ -33,15 +33,8 @@ class Observable : public virtual Refcounted {
 
   virtual void subscribe(Reference<Observer<T>>) = 0;
 
-  template <
-      typename OnSubscribe,
-      typename = typename std::enable_if<
-          std::is_callable<OnSubscribe(Reference<Observer<T>>), void>::value>::
-          type>
-  static auto create(OnSubscribe&& function) {
-    return Reference<Observable<T>>(new FromPublisherOperator<OnSubscribe>(
-        std::forward<OnSubscribe>(function)));
-  }
+  template <typename OnSubscribe>
+  static auto create(OnSubscribe&&);
 
   template <typename Function>
   auto map(Function&& function);
@@ -59,21 +52,6 @@ class Observable : public virtual Refcounted {
   * @return
   */
   auto toFlowable(BackpressureStrategy strategy);
-
- private:
-  template <typename OnSubscribe>
-  class FromPublisherOperator : public Observable<T> {
-   public:
-    explicit FromPublisherOperator(OnSubscribe&& function)
-        : function_(std::move(function)) {}
-
-    void subscribe(Reference<Observer<T>> subscriber) override {
-      function_(std::move(subscriber));
-    }
-
-   private:
-    OnSubscribe function_;
-  };
 };
 } // observable
 } // yarpl
@@ -82,6 +60,18 @@ class Observable : public virtual Refcounted {
 
 namespace yarpl {
 namespace observable {
+
+template <typename T>
+template <typename OnSubscribe>
+auto Observable<T>::create(OnSubscribe&& function) {
+  static_assert(
+      std::is_callable<OnSubscribe(Reference<Observer<T>>), void>(),
+      "OnSubscribe must have type `void(Reference<Observer<T>>)`");
+
+  return Reference<Observable<T>>(new FromPublisherOperator<T, OnSubscribe>(
+      std::forward<OnSubscribe>(function)));
+}
+
 template <typename T>
 template <typename Function>
 auto Observable<T>::map(Function&& function) {
