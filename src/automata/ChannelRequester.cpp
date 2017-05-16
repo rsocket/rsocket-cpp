@@ -4,8 +4,11 @@
 
 namespace reactivesocket {
 
-void ChannelRequester::onSubscribeImpl(
-    std::shared_ptr<Subscription> subscription) noexcept {
+using namespace yarpl;
+using namespace yarpl::flowable;
+
+void ChannelRequester::onSubscribe(
+    Reference<Subscription> subscription) noexcept {
   CHECK(State::NEW == state_);
   if (ConsumerBase::isTerminated()) {
     subscription->cancel();
@@ -16,7 +19,7 @@ void ChannelRequester::onSubscribeImpl(
   subscription->request(1);
 }
 
-void ChannelRequester::onNextImpl(Payload request) noexcept {
+void ChannelRequester::onNext(Payload request) noexcept {
   switch (state_) {
     case State::NEW: {
       state_ = State::REQUESTED;
@@ -53,7 +56,7 @@ void ChannelRequester::onNextImpl(Payload request) noexcept {
 }
 
 // TODO: consolidate code in onCompleteImpl, onErrorImpl, cancelImpl
-void ChannelRequester::onCompleteImpl() noexcept {
+void ChannelRequester::onComplete() noexcept {
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;
@@ -68,21 +71,22 @@ void ChannelRequester::onCompleteImpl() noexcept {
   }
 }
 
-void ChannelRequester::onErrorImpl(folly::exception_wrapper ex) noexcept {
+void ChannelRequester::onError(const std::exception_ptr ex) noexcept {
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;
       closeStream(StreamCompletionSignal::APPLICATION_ERROR);
       break;
     case State::REQUESTED: {
-      applicationError(ex.what().toStdString());
+      // TODO(lehecka): error message
+      applicationError("ex.what().toStdString()");
     } break;
     case State::CLOSED:
       break;
   }
 }
 
-void ChannelRequester::requestImpl(size_t n) noexcept {
+void ChannelRequester::request(int64_t n) noexcept {
   switch (state_) {
     case State::NEW:
       // The initial request has not been sent out yet, hence we must accumulate
@@ -99,7 +103,7 @@ void ChannelRequester::requestImpl(size_t n) noexcept {
   }
 }
 
-void ChannelRequester::cancelImpl() noexcept {
+void ChannelRequester::cancel() noexcept {
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;

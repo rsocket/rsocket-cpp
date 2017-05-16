@@ -57,21 +57,21 @@ class ResumeCallback : public ClientResumeStatusCallback {
 class ClientRequestHandler : public DefaultRequestHandler {
  public:
   void onSubscriptionPaused(
-      const std::shared_ptr<Subscription>& subscription) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override {
     LOG(INFO) << "subscription paused " << &subscription;
   }
 
   void onSubscriptionResumed(
-      const std::shared_ptr<Subscription>& subscription) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override {
     LOG(INFO) << "subscription resumed " << &subscription;
   }
 
-  void onSubscriberPaused(const std::shared_ptr<Subscriber<Payload>>&
+  void onSubscriberPaused(const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
                               subscriber) noexcept override {
     LOG(INFO) << "subscriber paused " << &subscriber;
   }
 
-  void onSubscriberResumed(const std::shared_ptr<Subscriber<Payload>>&
+  void onSubscriberResumed(const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
                                subscriber) noexcept override {
     LOG(INFO) << "subscriber resumed " << &subscriber;
   }

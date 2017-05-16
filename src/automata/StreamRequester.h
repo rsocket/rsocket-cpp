@@ -22,14 +22,13 @@ class StreamRequester : public ConsumerBase {
   // initialization of the ExecutorBase will be ignored for any of the
   // derived classes
   explicit StreamRequester(const Base::Parameters& params, Payload payload)
-      : ExecutorBase(params.executor),
-        Base(params),
+      : Base(params),
         initialPayload_(std::move(payload)) {}
 
  private:
   // implementation from ConsumerBase::SubscriptionBase
-  void requestImpl(size_t) noexcept override;
-  void cancelImpl() noexcept override;
+  void request(int64_t) noexcept override;
+  void cancel() noexcept override;
 
   void handlePayload(Payload&& payload,
                      bool complete,

@@ -4,37 +4,40 @@
 
 namespace reactivesocket {
 
+using namespace yarpl;
+using namespace yarpl::flowable;
+
 template class NullSubscriberT<Payload>;
 
-void NullSubscription::request(size_t /*n*/) noexcept {}
+void NullSubscription::request(int64_t /*n*/) noexcept {}
 
 void NullSubscription::cancel() noexcept {}
 
-std::shared_ptr<Subscriber<Payload>> NullRequestHandler::handleRequestChannel(
+Reference<Subscriber<Payload>> NullRequestHandler::handleRequestChannel(
     Payload /*request*/,
     StreamId /*streamId*/,
-    const std::shared_ptr<Subscriber<Payload>>& response) noexcept {
+    const Reference<Subscriber<Payload>>& response) noexcept {
   // TODO(lehecka): get rid of onSubscribe call
-  response->onSubscribe(std::make_shared<NullSubscription>());
-  response->onError(std::runtime_error("NullRequestHandler"));
-  return std::make_shared<NullSubscriber>();
+  response->onSubscribe(make_ref<NullSubscription>());
+  response->onError(std::make_exception_ptr(std::runtime_error("NullRequestHandler")));
+  return make_ref<NullSubscriber>();
 }
 
 void NullRequestHandler::handleRequestStream(
     Payload /*request*/,
     StreamId /*streamId*/,
-    const std::shared_ptr<Subscriber<Payload>>& response) noexcept {
+    const Reference<Subscriber<Payload>>& response) noexcept {
   // TODO(lehecka): get rid of onSubscribe call
-  response->onSubscribe(std::make_shared<NullSubscription>());
-  response->onError(std::runtime_error("NullRequestHandler"));
+  response->onSubscribe(make_ref<NullSubscription>());
+  response->onError(std::make_exception_ptr(std::runtime_error("NullRequestHandler")));
 }
 
 void NullRequestHandler::handleRequestResponse(
     Payload /*request*/,
     StreamId /*streamId*/,
-    const std::shared_ptr<Subscriber<Payload>>& response) noexcept {
-  response->onSubscribe(std::make_shared<NullSubscription>());
-  response->onError(std::runtime_error("NullRequestHandler"));
+    const Reference<Subscriber<Payload>>& response) noexcept {
+  response->onSubscribe(make_ref<NullSubscription>());
+  response->onError(std::make_exception_ptr(std::runtime_error("NullRequestHandler")));
 }
 
 void NullRequestHandler::handleFireAndForgetRequest(
@@ -57,18 +60,18 @@ bool NullRequestHandler::handleResume(
 }
 
 void NullRequestHandler::handleCleanResume(
-    std::shared_ptr<Subscription> /* response */) noexcept {}
+    Reference<Subscription> /* response */) noexcept {}
 
 void NullRequestHandler::handleDirtyResume(
-    std::shared_ptr<Subscription> /* response */) noexcept {}
+    Reference<Subscription> /* response */) noexcept {}
 
 void NullRequestHandler::onSubscriptionPaused(
-    const std::shared_ptr<Subscription>&) noexcept {}
+    const Reference<Subscription>&) noexcept {}
 void NullRequestHandler::onSubscriptionResumed(
-    const std::shared_ptr<Subscription>&) noexcept {}
+    const Reference<Subscription>&) noexcept {}
 void NullRequestHandler::onSubscriberPaused(
-    const std::shared_ptr<Subscriber<Payload>>&) noexcept {}
+    const Reference<Subscriber<Payload>>&) noexcept {}
 void NullRequestHandler::onSubscriberResumed(
-    const std::shared_ptr<Subscriber<Payload>>&) noexcept {}
+    const Reference<Subscriber<Payload>>&) noexcept {}
 
 } // reactivesocket

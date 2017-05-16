@@ -14,6 +14,7 @@
 using namespace std::chrono_literals;
 using namespace ::reactivesocket;
 using namespace ::testing;
+using namespace yarpl;
 
 using folly::ScopedEventBaseThread;
 
@@ -25,7 +26,7 @@ TEST_F(ServerFixture, BasicWarmResumption) {
   tests::MyConnectCallback connectCb;
   auto token = ResumeIdentificationToken::generateNew();
   std::unique_ptr<ReactiveSocket> rsocket;
-  auto mySub = std::make_shared<tests::MySubscriber>();
+  auto mySub = make_ref<tests::MySubscriber>();
   Sequence s;
   SCOPE_EXIT {
     clientEvb->runInEventBaseThreadAndWait([&]() { rsocket.reset(); });

@@ -1,13 +1,11 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include <array>
-
 #include <folly/Memory.h>
 #include <folly/io/IOBuf.h>
 #include <gmock/gmock.h>
-
 #include "test/InlineConnection.h"
-#include "test/ReactiveStreamsMocksCompat.h"
+#include "test/streams/Mocks.h"
 
 using namespace ::testing;
 using namespace ::reactivesocket;

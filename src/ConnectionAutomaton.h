@@ -12,7 +12,6 @@
 #include "src/FrameProcessor.h"
 #include "src/FrameSerializer.h"
 #include "src/Payload.h"
-#include "src/ReactiveStreamsCompat.h"
 #include "src/StreamsFactory.h"
 #include "src/StreamsHandler.h"
 
@@ -111,7 +110,7 @@ class ConnectionAutomaton final
   /// ::writeFrame after calling this method.
   void addStream(
       StreamId streamId,
-      std::shared_ptr<StreamAutomatonBase> automaton);
+      yarpl::Reference<StreamAutomatonBase> automaton);
 
   /// Indicates that the stream should be removed from the connection.
   ///

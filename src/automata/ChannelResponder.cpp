@@ -4,16 +4,19 @@
 
 namespace reactivesocket {
 
-void ChannelResponder::onSubscribeImpl(
-    std::shared_ptr<Subscription> subscription) noexcept {
+using namespace yarpl;
+using namespace yarpl::flowable;
+
+void ChannelResponder::onSubscribe(
+    Reference<Subscription> subscription) noexcept {
   if (ConsumerBase::isTerminated()) {
     subscription->cancel();
     return;
   }
-  publisherSubscribe(subscription);
+  publisherSubscribe(std::move(subscription));
 }
 
-void ChannelResponder::onNextImpl(Payload response) noexcept {
+void ChannelResponder::onNext(Payload response) noexcept {
   switch (state_) {
     case State::RESPONDING: {
       debugCheckOnNextOnCompleteOnError();
@@ -25,7 +28,7 @@ void ChannelResponder::onNextImpl(Payload response) noexcept {
   }
 }
 
-void ChannelResponder::onCompleteImpl() noexcept {
+void ChannelResponder::onComplete() noexcept {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
@@ -36,18 +39,19 @@ void ChannelResponder::onCompleteImpl() noexcept {
   }
 }
 
-void ChannelResponder::onErrorImpl(folly::exception_wrapper ex) noexcept {
+void ChannelResponder::onError(const std::exception_ptr ex) noexcept {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
-      applicationError(ex.what().toStdString());
+      // TODO(lehecka): error message
+      applicationError("ex.what().toStdString()");
     } break;
     case State::CLOSED:
       break;
   }
 }
 
-void ChannelResponder::requestImpl(size_t n) noexcept {
+void ChannelResponder::request(int64_t n) noexcept {
   switch (state_) {
     case State::RESPONDING:
       ConsumerBase::generateRequest(n);
@@ -57,7 +61,7 @@ void ChannelResponder::requestImpl(size_t n) noexcept {
   }
 }
 
-void ChannelResponder::cancelImpl() noexcept {
+void ChannelResponder::cancel() noexcept {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;

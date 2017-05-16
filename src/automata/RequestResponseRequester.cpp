@@ -9,15 +9,18 @@
 
 namespace reactivesocket {
 
+using namespace yarpl;
+using namespace yarpl::flowable;
+
 void RequestResponseRequester::subscribe(
-    std::shared_ptr<Subscriber<Payload>> subscriber) {
+    yarpl::Reference<yarpl::flowable::Subscriber<Payload>> subscriber) {
   DCHECK(!isTerminated());
   DCHECK(!consumingSubscriber_);
   consumingSubscriber_ = std::move(subscriber);
-  consumingSubscriber_->onSubscribe(SubscriptionBase::shared_from_this());
+  consumingSubscriber_->onSubscribe(Reference<Subscription>(this));
 }
 
-void RequestResponseRequester::requestImpl(size_t n) noexcept {
+void RequestResponseRequester::request(int64_t n) noexcept {
   if (n == 0) {
     return;
   }
@@ -27,14 +30,14 @@ void RequestResponseRequester::requestImpl(size_t n) noexcept {
     newStream(StreamType::REQUEST_RESPONSE, 1, std::move(initialPayload_));
   } else {
     if (auto subscriber = std::move(consumingSubscriber_)) {
-      subscriber->onError(
-          std::runtime_error("cannot request more than 1 item"));
+      subscriber->onError(std::make_exception_ptr(
+          std::runtime_error("cannot request more than 1 item")));
     }
     closeStream(StreamCompletionSignal::ERROR);
   }
 }
 
-void RequestResponseRequester::cancelImpl() noexcept {
+void RequestResponseRequester::cancel() noexcept {
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;
@@ -66,9 +69,10 @@ void RequestResponseRequester::endStream(StreamCompletionSignal signal) {
         signal == StreamCompletionSignal::CANCEL) { // TODO: remove CANCEL
       subscriber->onComplete();
     } else {
-      subscriber->onError(StreamInterruptedException(static_cast<int>(signal)));
+      subscriber->onError(std::make_exception_ptr(StreamInterruptedException(static_cast<int>(signal))));
     }
   }
+  Subscription::release();
 }
 
 void RequestResponseRequester::handleError(
@@ -81,7 +85,7 @@ void RequestResponseRequester::handleError(
     case State::REQUESTED:
       state_ = State::CLOSED;
       if (auto subscriber = std::move(consumingSubscriber_)) {
-        subscriber->onError(errorPayload);
+        subscriber->onError(errorPayload.to_exception_ptr());
       }
       closeStream(StreamCompletionSignal::ERROR);
       break;

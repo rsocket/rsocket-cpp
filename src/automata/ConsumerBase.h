@@ -10,29 +10,19 @@
 #include "src/ConnectionAutomaton.h"
 #include "src/NullRequestHandler.h"
 #include "src/Payload.h"
-#include "src/ReactiveStreamsCompat.h"
-#include "src/SubscriptionBase.h"
 #include "src/automata/StreamAutomatonBase.h"
+#include "yarpl/flowable/Subscription.h"
 
 namespace reactivesocket {
 
 enum class StreamCompletionSignal;
 
 /// A class that represents a flow-control-aware consumer of data.
-class ConsumerBase : public StreamAutomatonBase, public SubscriptionBase {
+class ConsumerBase : public StreamAutomatonBase, public yarpl::flowable::Subscription {
   using Base = StreamAutomatonBase;
 
  public:
-  struct Parameters : Base::Parameters {
-    Parameters(
-        const typename Base::Parameters& baseParams,
-        folly::Executor& _executor)
-        : Base::Parameters(baseParams), executor(_executor) {}
-    folly::Executor& executor;
-  };
-
-  explicit ConsumerBase(const Parameters& params)
-      : ExecutorBase(params.executor), Base(params) {}
+  using Base::Base;
 
   /// Adds implicit allowance.
   ///
@@ -43,7 +33,7 @@ class ConsumerBase : public StreamAutomatonBase, public SubscriptionBase {
   }
 
   /// @{
-  void subscribe(std::shared_ptr<Subscriber<Payload>> subscriber);
+  void subscribe(yarpl::Reference<yarpl::flowable::Subscriber<Payload>> subscriber);
 
   void generateRequest(size_t n);
   /// @}
@@ -66,8 +56,8 @@ class ConsumerBase : public StreamAutomatonBase, public SubscriptionBase {
   // derived classes should be calling implementation methods, not the top level
   // methods which are for the application code.
   // avoiding potential bugs..
-  using SubscriptionBase::request;
-  using SubscriptionBase::cancel;
+  using Subscription::request;
+  using Subscription::cancel;
 
   void sendRequests();
 
@@ -76,7 +66,7 @@ class ConsumerBase : public StreamAutomatonBase, public SubscriptionBase {
   /// A Subscriber that will consume payloads.
   /// This is responsible for delivering a terminal signal to the
   /// Subscriber once the stream ends.
-  std::shared_ptr<Subscriber<Payload>> consumingSubscriber_;
+  yarpl::Reference<yarpl::flowable::Subscriber<Payload>> consumingSubscriber_;
 
   /// A total, net allowance (requested less delivered) by this consumer.
   AllowanceSemaphore allowance_;

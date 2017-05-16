@@ -5,7 +5,7 @@
 
 namespace reactivesocket {
 
-void StreamRequester::requestImpl(size_t n) noexcept {
+void StreamRequester::request(int64_t n) noexcept {
   if (n == 0) {
     return;
   }
@@ -47,7 +47,7 @@ void StreamRequester::requestImpl(size_t n) noexcept {
   }
 }
 
-void StreamRequester::cancelImpl() noexcept {
+void StreamRequester::cancel() noexcept {
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;

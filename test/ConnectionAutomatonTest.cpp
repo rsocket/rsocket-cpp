@@ -1,7 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include <array>
-
 #include <folly/Memory.h>
 #include <folly/io/Cursor.h>
 #include <gmock/gmock.h>
@@ -12,7 +11,7 @@
 #include "src/framed/FramedDuplexConnection.h"
 #include "src/framed/FramedWriter.h"
 #include "test/InlineConnection.h"
-#include "test/ReactiveStreamsMocksCompat.h"
+#include "test/streams/Mocks.h"
 
 using namespace ::testing;
 using namespace ::reactivesocket;

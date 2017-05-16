@@ -286,7 +286,7 @@ void ConnectionAutomaton::reconnect(
 
 void ConnectionAutomaton::addStream(
     StreamId streamId,
-    std::shared_ptr<StreamAutomatonBase> automaton) {
+    yarpl::Reference<StreamAutomatonBase> automaton) {
   debugCheckCorrectExecutor();
   auto result = streamState_->streams_.emplace(streamId, std::move(automaton));
   (void)result;
@@ -654,7 +654,7 @@ void ConnectionAutomaton::handleUnknownStream(
         return;
       }
       auto automaton = streamsFactory_.createChannelResponder(
-          frame.requestN_, streamId, executor());
+          frame.requestN_, streamId);
       auto requestSink = requestHandler_->handleRequestChannel(
           std::move(frame.payload_), streamId, automaton);
       automaton->subscribe(requestSink);
@@ -666,7 +666,7 @@ void ConnectionAutomaton::handleUnknownStream(
         return;
       }
       auto automaton = streamsFactory_.createStreamResponder(
-          frame.requestN_, streamId, executor());
+          frame.requestN_, streamId);
       requestHandler_->handleRequestStream(
           std::move(frame.payload_), streamId, automaton);
       break;
@@ -677,7 +677,7 @@ void ConnectionAutomaton::handleUnknownStream(
         return;
       }
       auto automaton =
-          streamsFactory_.createRequestResponseResponder(streamId, executor());
+          streamsFactory_.createRequestResponseResponder(streamId);
       requestHandler_->handleRequestResponse(
           std::move(frame.payload_), streamId, automaton);
       break;

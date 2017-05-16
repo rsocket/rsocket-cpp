@@ -4,16 +4,19 @@
 
 namespace reactivesocket {
 
-void StreamResponder::onSubscribeImpl(
-    std::shared_ptr<Subscription> subscription) noexcept {
+using namespace yarpl;
+using namespace yarpl::flowable;
+
+void StreamResponder::onSubscribe(
+    Reference<yarpl::flowable::Subscription> subscription) noexcept {
   if (StreamAutomatonBase::isTerminated()) {
     subscription->cancel();
     return;
   }
-  publisherSubscribe(subscription);
+  publisherSubscribe(std::move(subscription));
 }
 
-void StreamResponder::onNextImpl(Payload response) noexcept {
+void StreamResponder::onNext(Payload response) noexcept {
   debugCheckOnNextOnCompleteOnError();
   switch (state_) {
     case State::RESPONDING: {
@@ -26,7 +29,7 @@ void StreamResponder::onNextImpl(Payload response) noexcept {
   }
 }
 
-void StreamResponder::onCompleteImpl() noexcept {
+void StreamResponder::onComplete() noexcept {
   debugCheckOnNextOnCompleteOnError();
   switch (state_) {
     case State::RESPONDING: {
@@ -38,12 +41,13 @@ void StreamResponder::onCompleteImpl() noexcept {
   }
 }
 
-void StreamResponder::onErrorImpl(folly::exception_wrapper ex) noexcept {
+void StreamResponder::onError(const std::exception_ptr ex) noexcept {
   debugCheckOnNextOnCompleteOnError();
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
-      applicationError(ex.what().toStdString());
+      // TODO(lehecka): error message
+      applicationError("ex.what().toStdString()");
     } break;
     case State::CLOSED:
       break;

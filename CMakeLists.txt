@@ -115,6 +115,8 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/reactivestreams/include)
 include_directories(${GMOCK_SOURCE_DIR}/googlemock/include)
 include_directories(${GMOCK_SOURCE_DIR}/googletest/include)
 
+add_subdirectory(experimental/yarpl)
+
 add_library(
   ReactiveSocket
   src/automata/ChannelRequester.cpp
@@ -190,13 +192,17 @@ add_library(
   src/versions/FrameSerializer_v1_0.cpp
   src/versions/FrameSerializer_v1_0.h)
 
+target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/experimental")
+target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/experimental/yarpl/include")
+target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/experimental/yarpl/src")
+
 target_link_libraries(
   ReactiveSocket
   ${FOLLY_LIBRARIES}
   ${GFLAGS_LIBRARY}
   ${GLOG_LIBRARY})
 
-add_dependencies(ReactiveSocket ReactiveStreams)
+add_dependencies(ReactiveSocket ReactiveStreams yarpl)
 
 target_compile_options(
   ReactiveSocket
@@ -222,7 +228,6 @@ add_executable(
   test/MockStats.h
   test/ReactiveSocketConcurrencyTest.cpp
   test/ReactiveSocketTest.cpp
-  test/ReactiveStreamsMocksCompat.h
   test/SubscriberBaseTest.cpp
   test/Test.cpp
   test/folly/FollyKeepaliveTimerTest.cpp
@@ -236,11 +241,14 @@ add_executable(
   test/integration/ClientUtils.h
   test/integration/ServerFixture.h
   test/integration/ServerFixture.cpp
-  test/integration/WarmResumptionTest.cpp)
+  test/integration/WarmResumptionTest.cpp
+  test/streams/Mocks.h
+  test/FrameTransportTest.cpp)
 
 target_link_libraries(
   tests
   ReactiveSocket
+  yarpl
   ${FOLLY_LIBRARIES}
   ${GMOCK_LIBS}
   ${GFLAGS_LIBRARY}
@@ -373,8 +381,6 @@ target_link_libraries(
         ${CMAKE_THREAD_LIBS_INIT})
 
 add_dependencies(tcpresumeserver gmock)
-
-add_subdirectory(experimental/yarpl)
 
 ########################################
 # RSocket Experimental
