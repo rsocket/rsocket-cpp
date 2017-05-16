@@ -3,7 +3,7 @@
 #pragma once
 
 #include <folly/ExceptionWrapper.h>
-#include "rsocket/RSocketRequestHandler.h"
+#include "rsocket/RSocketResponder.h"
 #include "src/NullRequestHandler.h"
 #include "src/Payload.h"
 #include "src/ReactiveStreamsCompat.h"
@@ -13,7 +13,7 @@
 namespace rsocket {
 namespace tests {
 
-class HelloStreamRequestHandler : public RSocketRequestHandler {
+class HelloStreamRequestHandler : public RSocketResponder {
  public:
   /// Handles a new inbound Stream requested by the other end.
   yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>

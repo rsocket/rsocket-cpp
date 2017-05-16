@@ -18,7 +18,7 @@ using namespace yarpl::single;
 DEFINE_int32(port, 9898, "port to connect to");
 
 class HelloRequestResponseRequestHandler
-    : public rsocket::RSocketRequestHandler {
+    : public rsocket::RSocketResponder {
  public:
   Reference<Single<Payload>> handleRequestResponse(
       Payload request,

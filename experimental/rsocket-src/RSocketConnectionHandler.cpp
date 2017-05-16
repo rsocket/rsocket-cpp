@@ -16,7 +16,7 @@ using namespace reactivesocket;
 
 class RSocketHandlerBridge : public reactivesocket::DefaultRequestHandler {
  public:
-  RSocketHandlerBridge(std::shared_ptr<RSocketRequestHandler> handler)
+  RSocketHandlerBridge(std::shared_ptr<RSocketResponder> handler)
       : handler_(std::move(handler)){};
 
   void handleRequestStream(
@@ -107,7 +107,7 @@ class RSocketHandlerBridge : public reactivesocket::DefaultRequestHandler {
   }
 
  private:
-  std::shared_ptr<RSocketRequestHandler> handler_;
+  std::shared_ptr<RSocketResponder> handler_;
 };
 
 void RSocketConnectionHandler::setupNewSocket(
@@ -122,7 +122,7 @@ void RSocketConnectionHandler::setupNewSocket(
       SocketParameters(setupPayload.resumable, setupPayload.protocolVersion);
   std::shared_ptr<ConnectionSetupRequest> setupRequest =
       std::make_shared<ConnectionSetupRequest>(std::move(setupPayload));
-  std::shared_ptr<RSocketRequestHandler> requestHandler;
+  std::shared_ptr<RSocketResponder> requestHandler;
   try {
     requestHandler = getHandler(setupRequest);
   } catch (const RSocketError& e) {

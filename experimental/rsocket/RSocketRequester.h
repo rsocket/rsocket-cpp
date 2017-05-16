@@ -17,6 +17,19 @@ namespace rsocket {
  *
  * This is most commonly used by an RSocketClient, but due to the symmetric
  * nature of RSocket, this can be used from server->client as well.
+ *
+ * For context within the overall RSocket protocol:
+ *
+ * - Client: The side initiating a connection.
+ * - Server: The side accepting connections from clients.
+ * - Connection: The instance of a transport session between client and server.
+ * - Requester: The side sending a request.
+ *       A connection has at most 2 Requesters. One in each direction.
+ * - Responder: The side receiving a request.
+ *       A connection has at most 2 Responders. One in each direction.
+ *
+ * See https://github.com/rsocket/rsocket/blob/master/Protocol.md#terminology
+ * for more information on how this fits into the RSocket protocol terminology.
  */
 class RSocketRequester {
  public:

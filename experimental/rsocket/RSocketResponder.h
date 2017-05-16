@@ -13,14 +13,27 @@
 namespace rsocket {
 
 /**
- * RequestHandler APIs to handle requests on an RSocket connection.
+ * Responder APIs to handle requests on an RSocket connection.
  *
  * This is most commonly used by an RSocketServer, but due to the symmetric
  * nature of RSocket, this can be used on the client as well.
+ *
+ * For context within the overall RSocket protocol:
+ *
+ * - Client: The side initiating a connection.
+ * - Server: The side accepting connections from clients.
+ * - Connection: The instance of a transport session between client and server.
+ * - Requester: The side sending a request.
+ *       A connection has at most 2 Requesters. One in each direction.
+ * - Responder: The side receiving a request.
+ *       A connection has at most 2 Responders. One in each direction.
+ *
+ * See https://github.com/rsocket/rsocket/blob/master/Protocol.md#terminology
+ * for more information on how this fits into the RSocket protocol terminology.
  */
-class RSocketRequestHandler {
+class RSocketResponder {
  public:
-  virtual ~RSocketRequestHandler() {}
+  virtual ~RSocketResponder() {}
 
   /**
    * Called when a new `requestResponse` occurs from an RSocketRequester.

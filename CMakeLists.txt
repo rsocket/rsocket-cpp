@@ -403,7 +403,7 @@ add_library(
         experimental/rsocket-src/transports/TcpConnectionAcceptor.cpp
         experimental/rsocket/transports/TcpConnectionFactory.h
         experimental/rsocket-src/transports/TcpConnectionFactory.cpp
-        experimental/rsocket/RSocketRequestHandler.h
+        experimental/rsocket/RSocketResponder.h
         experimental/rsocket/RSocketConnectionHandler.h
         experimental/rsocket-src/RSocketConnectionHandler.cpp
 )
