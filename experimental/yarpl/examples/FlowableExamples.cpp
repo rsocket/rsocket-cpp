@@ -7,10 +7,9 @@
 #include <string>
 #include <thread>
 
-#include "yarpl/ThreadScheduler.h"
+#include "yarpl/schedulers/ThreadScheduler.h"
 
-#include "yarpl/Flowables.h"
-#include "yarpl/flowable/Subscribers.h"
+#include "yarpl/Flowable.h"
 
 using namespace yarpl;
 using namespace yarpl::flowable;

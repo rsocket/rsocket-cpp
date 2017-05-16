@@ -5,12 +5,9 @@
 #include <atomic>
 
 #include "yarpl/Observable.h"
-#include "yarpl/Observables.h"
-#include "yarpl/ThreadScheduler.h"
+#include "yarpl/schedulers/ThreadScheduler.h"
 #include "yarpl/flowable/Subscriber.h"
 #include "yarpl/flowable/Subscribers.h"
-#include "yarpl/observable/Observers.h"
-#include "yarpl/observable/Subscriptions.h"
 
 #include "Tuple.h"
 
@@ -369,6 +366,15 @@ TEST(Observable, RangeWithMap) {
       run(std::move(observable)), std::vector<std::string>({"1", "16", "81"}));
 
   EXPECT_EQ(0u, Refcounted::objects());
+}
+
+TEST(Observable, RangeWithFilter) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto observable = Observables::range(0, 10)
+      ->filter([](int64_t v) { return v % 2 != 0; });
+  EXPECT_EQ(
+      run(std::move(observable)), std::vector<int64_t>({1, 3, 5, 7, 9}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
 // TODO: Hits ASAN errors.

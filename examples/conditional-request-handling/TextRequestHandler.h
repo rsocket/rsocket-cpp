@@ -5,7 +5,7 @@
 #include "src/Payload.h"
 #include "rsocket/RSocket.h"
 
-class TextRequestHandler : public rsocket::RSocketRequestHandler {
+class TextRequestHandler : public rsocket::RSocketResponder {
 public:
     /// Handles a new inbound Stream requested by the other end.
     yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>

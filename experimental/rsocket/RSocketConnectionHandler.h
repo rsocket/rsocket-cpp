@@ -4,7 +4,7 @@
 
 #include "rsocket/ConnectionResumeRequest.h"
 #include "rsocket/ConnectionSetupRequest.h"
-#include "rsocket/RSocketRequestHandler.h"
+#include "rsocket/RSocketResponder.h"
 #include "src/FrameTransport.h"
 #include "src/ServerConnectionAcceptor.h"
 
@@ -36,11 +36,11 @@ class RSocketConnectionHandler : public reactivesocket::ConnectionHandler {
 
  private:
   /**
-   * An RSocketRequestHandler is responsible for translating a request stream
+   * An RSocketResponder is responsible for translating a request stream
    * into action. This function provides the appropriate request handler for
    * an RSocket given the setup of the socket.
    */
-  virtual std::shared_ptr<RSocketRequestHandler> getHandler(
+  virtual std::shared_ptr<RSocketResponder> getHandler(
       std::shared_ptr<ConnectionSetupRequest> request) = 0;
 
   /**

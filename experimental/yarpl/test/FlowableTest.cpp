@@ -3,8 +3,7 @@
 
 #include <gtest/gtest.h>
 
-#include "yarpl/Flowables.h"
-#include "yarpl/flowable/Subscribers.h"
+#include "yarpl/Flowable.h"
 
 namespace yarpl {
 namespace flowable {
@@ -21,9 +20,11 @@ class CollectingSubscriber : public Subscriber<T> {
       std::is_copy_constructible<T>::value,
       "CollectingSubscriber needs to copy the value in order to collect it");
 
+  CollectingSubscriber(int64_t requestCount = 100) : requestCount_(requestCount) {}
+
   void onSubscribe(Reference<Subscription> subscription) override {
     Subscriber<T>::onSubscribe(subscription);
-    subscription->request(100);
+    subscription->request(requestCount_);
   }
 
   void onNext(T next) override {
@@ -69,14 +70,15 @@ class CollectingSubscriber : public Subscriber<T> {
   std::string errorMsg_;
   bool complete_{false};
   bool error_{false};
+  int64_t requestCount_;
 };
 
 /// Construct a pipeline with a collecting subscriber against the supplied
 /// flowable.  Return the items that were sent to the subscriber.  If some
 /// exception was sent, the exception is thrown.
 template <typename T>
-std::vector<T> run(Reference<Flowable<T>> flowable) {
-  auto collector = make_ref<CollectingSubscriber<T>>();
+std::vector<T> run(Reference<Flowable<T>> flowable, uint64_t requestCount = 100) {
+  auto collector = make_ref<CollectingSubscriber<T>>(requestCount);
   flowable->subscribe(collector);
   return collector->values();
 }
@@ -155,6 +157,24 @@ TEST(FlowableTest, RangeWithMap) {
                       ->map([](int64_t v) { return std::to_string(v); });
   EXPECT_EQ(
       run(std::move(flowable)), std::vector<std::string>({"1", "16", "81"}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(FlowableTest, RangeWithFilterRequestMoreItems) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto flowable = Flowables::range(0, 10)
+                      ->filter([](int64_t v) { return v % 2 != 0; });
+  EXPECT_EQ(
+      run(std::move(flowable)), std::vector<int64_t>({1, 3, 5, 7, 9}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(FlowableTest, RangeWithFilterRequestLessItems) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto flowable = Flowables::range(0, 10)
+      ->filter([](int64_t v) { return v % 2 != 0; });
+  EXPECT_EQ(
+      run(std::move(flowable), 5), std::vector<int64_t>({1, 3, 5, 7, 9}));
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 

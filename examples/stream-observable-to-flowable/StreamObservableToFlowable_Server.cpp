@@ -10,8 +10,7 @@
 #include "rsocket/RSocket.h"
 #include "rsocket/transports/TcpConnectionAcceptor.h"
 #include "yarpl/Observable.h"
-#include "yarpl/ThreadScheduler.h"
-#include "yarpl/observable/Subscriptions.h"
+#include "yarpl/schedulers/ThreadScheduler.h"
 
 using reactivesocket::Payload;
 using namespace rsocket;
@@ -21,7 +20,7 @@ using namespace yarpl::observable;
 
 DEFINE_int32(port, 9898, "port to connect to");
 
-class PushStreamRequestHandler : public rsocket::RSocketRequestHandler {
+class PushStreamRequestHandler : public rsocket::RSocketResponder {
  public:
   /// Handles a new inbound Stream requested by the other end.
   yarpl::Reference<Flowable<Payload>> handleRequestStream(
