@@ -1,6 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "src/automata/ChannelRequester.h"
+#include <folly/ExceptionString.h>
 
 namespace reactivesocket {
 
@@ -78,8 +79,7 @@ void ChannelRequester::onError(const std::exception_ptr ex) noexcept {
       closeStream(StreamCompletionSignal::APPLICATION_ERROR);
       break;
     case State::REQUESTED: {
-      // TODO(lehecka): error message
-      applicationError("ex.what().toStdString()");
+      applicationError(folly::exceptionStr(ex).toStdString());
     } break;
     case State::CLOSED:
       break;

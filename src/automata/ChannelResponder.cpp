@@ -1,6 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "src/automata/ChannelResponder.h"
+#include <folly/ExceptionString.h>
 
 namespace reactivesocket {
 
@@ -43,8 +44,7 @@ void ChannelResponder::onError(const std::exception_ptr ex) noexcept {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
-      // TODO(lehecka): error message
-      applicationError("ex.what().toStdString()");
+      applicationError(folly::exceptionStr(ex).toStdString());
     } break;
     case State::CLOSED:
       break;
@@ -87,6 +87,7 @@ void ChannelResponder::endStream(StreamCompletionSignal signal) {
   ConsumerBase::endStream(signal);
 }
 
+//TODO: remove this unused function
 void ChannelResponder::processInitialFrame(Frame_REQUEST_CHANNEL&& frame) {
   onNextPayloadFrame(
       frame.requestN_,

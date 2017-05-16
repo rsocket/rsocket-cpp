@@ -20,7 +20,7 @@ using folly::ScopedEventBaseThread;
 
 // A very simple test which tests a basic warm resumption workflow.
 // This setup can be used to test varying scenarious in warm resumption.
-TEST_F(ServerFixture, BasicWarmResumption) {
+TEST_F(ServerFixture, DISABLED_BasicWarmResumption) {
   ScopedEventBaseThread eventBaseThread;
   auto clientEvb = eventBaseThread.getEventBase();
   tests::MyConnectCallback connectCb;

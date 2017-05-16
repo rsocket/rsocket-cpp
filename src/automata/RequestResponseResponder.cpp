@@ -1,6 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "src/automata/RequestResponseResponder.h"
+#include <folly/ExceptionString.h>
 
 namespace reactivesocket {
 
@@ -47,8 +48,7 @@ void RequestResponseResponder::onError(
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
-      // TODO(lehecka): error message
-      applicationError("ex.what().toStdString()");
+      applicationError(folly::exceptionStr(ex).toStdString());
     } break;
     case State::CLOSED:
       break;

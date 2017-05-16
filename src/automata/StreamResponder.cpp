@@ -1,6 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "src/automata/StreamResponder.h"
+#include <folly/ExceptionString.h>
 
 namespace reactivesocket {
 
@@ -44,8 +45,7 @@ void StreamResponder::onError(const std::exception_ptr ex) noexcept {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
-      // TODO(lehecka): error message
-      applicationError("ex.what().toStdString()");
+      applicationError(folly::exceptionStr(ex).toStdString());
     } break;
     case State::CLOSED:
       break;
