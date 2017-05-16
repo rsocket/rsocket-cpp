@@ -17,7 +17,7 @@ class RSocketServerConnectionHandler : public virtual RSocketConnectionHandler {
     onAccept_ = onAccept;
   }
 
-  std::shared_ptr<RSocketRequestHandler> getHandler(
+  std::shared_ptr<RSocketResponder> getHandler(
       std::shared_ptr<ConnectionSetupRequest> request) override {
     return onAccept_(std::move(request));
   }

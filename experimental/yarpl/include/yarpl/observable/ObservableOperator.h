@@ -128,6 +128,47 @@ class MapOperator : public ObservableOperator<U, D> {
 
 template<
     typename U,
+    typename F,
+    typename = typename std::enable_if<std::is_callable<F(U), bool>::value>::type>
+class FilterOperator : public ObservableOperator<U, U> {
+public:
+  FilterOperator(Reference <Observable<U>> upstream, F &&function)
+      : ObservableOperator<U, U>(std::move(upstream)),
+        function_(std::forward<F>(function)) {}
+
+  void subscribe(Reference <Observer<U>> subscriber) override {
+    ObservableOperator<U, U>::upstream_->subscribe(
+        // Note: implicit cast to a reference to a subscriber.
+        Reference<Subscription>(new Subscription(
+            Reference<Observable<U>>(this), std::move(subscriber))));
+  }
+
+private:
+  class Subscription : public ObservableOperator<U, U>::Subscription {
+  public:
+    Subscription(
+        Reference <Observable<U>> flowable,
+        Reference <Observer<U>> subscriber)
+        : ObservableOperator<U, U>::Subscription(
+        std::move(flowable),
+        std::move(subscriber)) {}
+
+    void onNext(U value) override {
+      auto *subscriber =
+          ObservableOperator<U, U>::Subscription::subscriber_.get();
+      auto *flowable = ObservableOperator<U, U>::Subscription::flowable_.get();
+      auto *filter = static_cast<FilterOperator *>(flowable);
+      if (filter->function_(value)) {
+        subscriber->onNext(std::move(value));
+      }
+    }
+  };
+
+  F function_;
+};
+
+template<
+    typename U,
     typename D,
     typename F,
     typename = typename std::enable_if<std::is_assignable<D, U>::value>,
@@ -293,7 +334,7 @@ class SubscribeOnOperator : public ObservableOperator<T, T> {
 template <typename T, typename OnSubscribe>
 class FromPublisherOperator : public Observable<T> {
  public:
-  FromPublisherOperator(OnSubscribe&& function)
+  explicit FromPublisherOperator(OnSubscribe&& function)
       : function_(std::move(function)) {}
 
   void subscribe(Reference<Observer<T>> subscriber) override {

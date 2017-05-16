@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
   // start accepting connections
   rs->startAndPark(
       [textHandler, jsonHandler](std::shared_ptr<ConnectionSetupRequest> r)
-          -> std::shared_ptr<RSocketRequestHandler> {
+          -> std::shared_ptr<RSocketResponder> {
             if (r->getDataMimeType() == "text/plain") {
               LOG(INFO) << "Connection Request => text/plain MimeType";
               return textHandler;

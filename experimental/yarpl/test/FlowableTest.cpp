@@ -3,8 +3,7 @@
 
 #include <gtest/gtest.h>
 
-#include "yarpl/Flowables.h"
-#include "yarpl/flowable/Subscribers.h"
+#include "yarpl/Flowable.h"
 
 namespace yarpl {
 namespace flowable {
@@ -236,6 +235,24 @@ TEST(FlowableTest, StringReduce) {
     });
   EXPECT_EQ(
     run(std::move(flowable)), std::vector<std::string>({"abcdefghi"}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(FlowableTest, RangeWithFilterRequestMoreItems) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto flowable = Flowables::range(0, 10)
+                      ->filter([](int64_t v) { return v % 2 != 0; });
+  EXPECT_EQ(
+      run(std::move(flowable)), std::vector<int64_t>({1, 3, 5, 7, 9}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(FlowableTest, RangeWithFilterRequestLessItems) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto flowable = Flowables::range(0, 10)
+      ->filter([](int64_t v) { return v % 2 != 0; });
+  EXPECT_EQ(
+      run(std::move(flowable), 5), std::vector<int64_t>({1, 3, 5, 7, 9}));
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 

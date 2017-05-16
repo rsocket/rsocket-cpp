@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "yarpl/ThreadScheduler.h"
+#include "yarpl/schedulers/ThreadScheduler.h"
 
 #include <atomic>
 #include <functional>

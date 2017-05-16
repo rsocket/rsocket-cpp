@@ -3,7 +3,6 @@
 #include <exception>
 #include <limits>
 
-#include "../Observable.h"
 #include "Observer.h"
 #include "yarpl/utils/type_traits.h"
 
@@ -73,7 +72,7 @@ class Observers {
   template <typename T, typename Next>
   class Base : public Observer<T> {
    public:
-    Base(Next&& next)
+    explicit Base(Next&& next)
         : next_(std::forward<Next>(next)) {}
 
     void onNext(T value) override {

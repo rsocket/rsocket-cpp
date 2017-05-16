@@ -5,12 +5,9 @@
 #include <atomic>
 
 #include "yarpl/Observable.h"
-#include "yarpl/Observables.h"
-#include "yarpl/ThreadScheduler.h"
+#include "yarpl/schedulers/ThreadScheduler.h"
 #include "yarpl/flowable/Subscriber.h"
 #include "yarpl/flowable/Subscribers.h"
-#include "yarpl/observable/Observers.h"
-#include "yarpl/observable/Subscriptions.h"
 
 #include "Tuple.h"
 
@@ -371,7 +368,6 @@ TEST(Observable, RangeWithMap) {
   EXPECT_EQ(0u, Refcounted::objects());
 }
 
-
 TEST(Observable, RangeWithReduce) {
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
   auto observable = Observables::range(0, 10)
@@ -440,6 +436,15 @@ TEST(Observable, StringReduce) {
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
+TEST(Observable, RangeWithFilter) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto observable = Observables::range(0, 10)
+      ->filter([](int64_t v) { return v % 2 != 0; });
+  EXPECT_EQ(
+      run(std::move(observable)), std::vector<int64_t>({1, 3, 5, 7, 9}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
 // TODO: Hits ASAN errors.
 TEST(Observable, DISABLED_SimpleTake) {
   ASSERT_EQ(0u, Refcounted::objects());
@@ -452,7 +457,8 @@ TEST(Observable, DISABLED_SimpleTake) {
 }
 
 TEST(Observable, Error) {
-  auto observable = Observables::error<int>(std::runtime_error("something broke!"));
+  auto observable =
+      Observables::error<int>(std::runtime_error("something broke!"));
   auto collector = make_ref<CollectingObserver<int>>();
   observable->subscribe(collector);
 

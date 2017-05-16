@@ -16,24 +16,23 @@ using namespace yarpl::flowable;
 
 DEFINE_int32(port, 9898, "port to connect to");
 
-class HelloStreamRequestHandler : public rsocket::RSocketResponder {
+class HelloChannelRequestHandler : public rsocket::RSocketResponder {
  public:
   /// Handles a new inbound Stream requested by the other end.
-  yarpl::Reference<Flowable<reactivesocket::Payload>> handleRequestStream(
-      reactivesocket::Payload request,
+  yarpl::Reference<Flowable<reactivesocket::Payload>> handleRequestChannel(
+      reactivesocket::Payload initialPayload,
+      yarpl::Reference<Flowable<reactivesocket::Payload>> request,
       reactivesocket::StreamId streamId) override {
-    std::cout << "HelloStreamRequestHandler.handleRequestStream " << request
+    std::cout << "Initial request " << initialPayload.cloneDataToString()
               << std::endl;
 
-    // string from payload data
-    auto requestString = request.moveDataToString();
-
-    return Flowables::range(1, 10)->map([name = std::move(requestString)](
-        int64_t v) {
+    // say "Hello" to each name on the input stream
+    return request->map([](Payload p) {
+      std::cout << "Request Stream: " << p.cloneDataToString() << std::endl;
       std::stringstream ss;
-      ss << "Hello " << name << " " << v << "!";
+      ss << "Hello " << p.moveDataToString() << "!";
       std::string s = ss.str();
-      return Payload(s, "metadata");
+      return Payload(s);
     });
   }
 };
@@ -52,10 +51,10 @@ int main(int argc, char* argv[]) {
       std::make_unique<TcpConnectionAcceptor>(std::move(opts)));
 
   // global request handler
-  auto handler = std::make_shared<HelloStreamRequestHandler>();
+  auto handler = std::make_shared<HelloChannelRequestHandler>();
 
-  auto rawRs = rs.get();
-  auto serverThread = std::thread([=] {
+  auto* rawRs = rs.get();
+  auto serverThread = std::thread([rawRs, handler] {
     // start accepting connections
     rawRs->startAndPark([handler](auto r) { return handler; });
   });

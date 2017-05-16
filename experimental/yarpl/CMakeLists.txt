@@ -37,14 +37,16 @@ add_library(
         include/yarpl/Refcounted.h
         # Flowable public API
         include/yarpl/Flowable.h
-        include/yarpl/Flowables.h
+        include/yarpl/flowable/Flowable.h
+        include/yarpl/flowable/Flowables.h
         include/yarpl/flowable/FlowableOperator.h
         include/yarpl/flowable/Subscriber.h
         include/yarpl/flowable/Subscribers.h
         include/yarpl/flowable/Subscription.h
         # Observable public API
         include/yarpl/Observable.h
-        include/yarpl/Observables.h
+        include/yarpl/observable/Observable.h
+        include/yarpl/observable/Observables.h
         include/yarpl/observable/ObservableOperator.h
         include/yarpl/observable/Observer.h
         include/yarpl/observable/Observers.h
@@ -52,6 +54,16 @@ add_library(
         include/yarpl/observable/Subscriptions.h
         include/yarpl/observable/TestObserver.h
         src/yarpl/observable/Subscriptions.cpp
+        # Single
+        include/yarpl/Single.h
+        include/yarpl/single/Single.h
+        include/yarpl/single/Singles.h
+        include/yarpl/single/SingleOperator.h
+        include/yarpl/single/SingleObserver.h
+        include/yarpl/single/SingleObservers.h
+        include/yarpl/single/SingleSubscription.h
+        include/yarpl/single/SingleSubscriptions.h
+        src/yarpl/single/SingleSubscriptions.cpp
         # Flowable private
         src/yarpl/Refcounted.cpp
         src/yarpl/flowable/sources/Flowable_FromObservable.h
@@ -60,8 +72,8 @@ add_library(
         src/yarpl/flowable/utils/SubscriptionHelper.h
         src/yarpl/flowable/utils/SubscriptionHelper.cpp
         # Scheduler
-        include/yarpl/ThreadScheduler.h
-        src/yarpl/ThreadScheduler.cpp
+        include/yarpl/schedulers/ThreadScheduler.h
+        src/yarpl/schedulers/ThreadScheduler.cpp
 )
 
 target_include_directories(
@@ -93,6 +105,7 @@ add_executable(
         yarpl-tests
         test/yarpl-tests.cpp
         test/Observable_test.cpp
+        test/Single_test.cpp
 #        test/FlowableCreateSubscribe_test.cpp
 #        test/Observable_Subscription_test.cpp
 #        test/Flowable_range_test.cpp

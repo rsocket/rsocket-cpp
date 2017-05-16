@@ -2,7 +2,7 @@
 
 #include "HelloStreamRequestHandler.h"
 #include <string>
-#include "yarpl/Flowables.h"
+#include "yarpl/Flowable.h"
 
 using namespace ::reactivesocket;
 using namespace yarpl;

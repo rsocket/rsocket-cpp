@@ -9,7 +9,6 @@
 #include "rsocket/RSocket.h"
 #include "rsocket/transports/TcpConnectionFactory.h"
 #include "yarpl/Flowable.h"
-#include "yarpl/flowable/Subscriber.h"
 
 using namespace ::reactivesocket;
 using namespace ::folly;
@@ -32,23 +31,11 @@ int main(int argc, char* argv[]) {
       std::make_unique<TcpConnectionFactory>(std::move(address)));
   auto rs = rsf->connect().get();
 
-  LOG(INFO) << "------------------ Hello Bob!";
-  auto s1 = yarpl::Reference<ExampleSubscriber>(new ExampleSubscriber(5, 6));
-  rs->requestStream(Payload("Bob"))
-      ->take(5)
-      ->subscribe(
-          yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(s1.get()));
-  s1->awaitTerminalEvent();
+  rs->requestStream(Payload("Bob"))->take(5)->subscribe([](Payload p) {
+    std::cout << "Received: " << p.moveDataToString() << std::endl;
+  });
 
-  LOG(INFO) << "------------------ Hello Jane!";
-  auto s2 = yarpl::Reference<ExampleSubscriber>(new ExampleSubscriber(5, 6));
-  rs->requestStream(Payload("Jane"))
-      ->take(3)
-      ->subscribe(
-          yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(s2.get()));
-  s2->awaitTerminalEvent();
-
-  // TODO on shutdown the destruction of
-  // ScopedEventBaseThread spits out a stacktrace
+  // Wait for a newline on the console to terminate the server.
+  std::getchar();
   return 0;
 }
