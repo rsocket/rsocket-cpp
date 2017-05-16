@@ -19,11 +19,11 @@ DEFINE_int32(port, 9898, "port to connect to");
 class HelloStreamRequestHandler : public rsocket::RSocketResponder {
  public:
   /// Handles a new inbound Stream requested by the other end.
-  yarpl::Reference<Flowable<reactivesocket::Payload>>
-  handleRequestStream(
+  yarpl::Reference<Flowable<reactivesocket::Payload>> handleRequestStream(
       reactivesocket::Payload request,
       reactivesocket::StreamId streamId) override {
-    LOG(INFO) << "HelloStreamRequestHandler.handleRequestStream " << request;
+    std::cout << "HelloStreamRequestHandler.handleRequestStream " << request
+              << std::endl;
 
     // string from payload data
     auto requestString = request.moveDataToString();

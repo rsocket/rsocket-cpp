@@ -12,6 +12,7 @@
 
 #include "../Refcounted.h"
 #include "Subscriber.h"
+#include "Subscribers.h"
 
 namespace yarpl {
 namespace flowable {
@@ -23,6 +24,64 @@ class Flowable : public virtual Refcounted {
   static const auto NO_FLOW_CONTROL = std::numeric_limits<int64_t>::max();
 
   virtual void subscribe(Reference<Subscriber<T>>) = 0;
+
+  /**
+   * Subscribe overload that accepts lambdas.
+   *
+   * @param next
+   * @param batch Optional batch size for request_n. Default: no flow control.
+   */
+  template <
+      typename Next,
+      typename =
+          typename std::enable_if<std::is_callable<Next(T), void>::value>::type>
+  void subscribe(Next&& next, int64_t batch = Flowable<T>::NO_FLOW_CONTROL) {
+    subscribe(Subscribers::create<T>(next, batch));
+  }
+
+  /**
+   * Subscribe overload that accepts lambdas.
+   *
+   * @param next
+   * @param error
+   * @param batch Optional batch size for request_n. Default: no flow control.
+   */
+  template <
+      typename Next,
+      typename Error,
+      typename = typename std::enable_if<
+          std::is_callable<Next(T), void>::value &&
+          std::is_callable<Error(const std::exception_ptr), void>::value>::type>
+  void subscribe(
+      Next&& next,
+      Error&& error,
+      int64_t batch = Flowable<T>::NO_FLOW_CONTROL) {
+    subscribe(Subscribers::create<T>(next, error, batch));
+  }
+
+  /**
+   * Subscribe overload that accepts lambdas.
+   *
+   * @param next
+   * @param error
+   * @param complete
+   * @param batch Optional batch size for request_n. Default: no flow control.
+   */
+  template <
+      typename Next,
+      typename Error,
+      typename Complete,
+      typename = typename std::enable_if<
+          std::is_callable<Next(T), void>::value &&
+          std::is_callable<Error(const std::exception_ptr), void>::value &&
+          std::is_callable<Complete(), void>::value>::type>
+  void subscribe(
+      Next&& next,
+      Error&& error,
+      Complete&& complete,
+      int64_t batch = Flowable<T>::NO_FLOW_CONTROL) {
+    subscribe(Subscribers::create<T>(next, error, complete, batch));
+  }
 
   template <typename Function>
   auto map(Function&& function);
@@ -95,9 +154,9 @@ class Flowable : public virtual Refcounted {
 
         // Turn flow control off for overflow.
         auto const total =
-          (current > std::numeric_limits<int64_t>::max() - delta)
-          ? NO_FLOW_CONTROL
-          : current + delta;
+            (current > std::numeric_limits<int64_t>::max() - delta)
+            ? NO_FLOW_CONTROL
+            : current + delta;
 
         if (requested_.compare_exchange_strong(current, total))
           break;
@@ -225,9 +284,8 @@ class Flowable<T>::EmitterWrapper : public Flowable<T> {
         Reference<Flowable>(this), std::move(subscriber));
   }
 
-  std::tuple<int64_t, bool> emit(
-      Subscriber<T>& subscriber,
-      int64_t requested) override {
+  std::tuple<int64_t, bool> emit(Subscriber<T>& subscriber, int64_t requested)
+      override {
     return emitter_(subscriber, requested);
   }
 
@@ -250,8 +308,8 @@ auto Flowable<T>::map(Function&& function) {
       Reference<Flowable<T>>(this), std::forward<Function>(function)));
 }
 
-template<typename T>
-template<typename Function>
+template <typename T>
+template <typename Function>
 auto Flowable<T>::filter(Function&& function) {
   return Reference<Flowable<T>>(new FilterOperator<T, Function>(
       Reference<Flowable<T>>(this), std::forward<Function>(function)));

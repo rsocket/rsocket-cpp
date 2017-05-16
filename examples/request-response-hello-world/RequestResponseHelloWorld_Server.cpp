@@ -17,14 +17,13 @@ using namespace yarpl::single;
 
 DEFINE_int32(port, 9898, "port to connect to");
 
-class HelloRequestResponseRequestHandler
-    : public rsocket::RSocketResponder {
+class HelloRequestResponseRequestHandler : public rsocket::RSocketResponder {
  public:
   Reference<Single<Payload>> handleRequestResponse(
       Payload request,
       StreamId streamId) override {
-    LOG(INFO) << "HelloRequestResponseRequestHandler.handleRequestResponse "
-              << request;
+    std::cout << "HelloRequestResponseRequestHandler.handleRequestResponse "
+              << request << std::endl;
 
     // string from payload data
     auto requestString = request.moveDataToString();

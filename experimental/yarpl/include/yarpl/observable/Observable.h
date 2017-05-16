@@ -12,6 +12,7 @@
 
 #include "../Refcounted.h"
 #include "Observer.h"
+#include "Observers.h"
 #include "Subscription.h"
 
 #include "../Flowable.h"
@@ -32,6 +33,54 @@ class Observable : public virtual Refcounted {
   static const auto NO_FLOW_CONTROL = std::numeric_limits<int64_t>::max();
 
   virtual void subscribe(Reference<Observer<T>>) = 0;
+
+  /**
+   * Subscribe overload that accepts lambdas.
+   *
+   * @param next
+   */
+  template <
+      typename Next,
+      typename =
+          typename std::enable_if<std::is_callable<Next(T), void>::value>::type>
+  void subscribe(Next&& next) {
+    subscribe(Observers::create<T>(next));
+  }
+
+  /**
+   * Subscribe overload that accepts lambdas.
+   *
+   * @param next
+   * @param error
+   */
+  template <
+      typename Next,
+      typename Error,
+      typename = typename std::enable_if<
+          std::is_callable<Next(T), void>::value &&
+          std::is_callable<Error(const std::exception_ptr), void>::value>::type>
+  void subscribe(Next&& next, Error&& error) {
+    subscribe(Observers::create<T>(next, error));
+  }
+
+  /**
+   * Subscribe overload that accepts lambdas.
+   *
+   * @param next
+   * @param error
+   * @param complete
+   */
+  template <
+      typename Next,
+      typename Error,
+      typename Complete,
+      typename = typename std::enable_if<
+          std::is_callable<Next(T), void>::value &&
+          std::is_callable<Error(const std::exception_ptr), void>::value &&
+          std::is_callable<Complete(), void>::value>::type>
+  void subscribe(Next&& next, Error&& error, Complete&& complete) {
+    subscribe(Observers::create<T>(next, error, complete));
+  }
 
   template <typename OnSubscribe>
   static auto create(OnSubscribe&&);

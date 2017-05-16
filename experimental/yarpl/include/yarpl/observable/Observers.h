@@ -3,7 +3,6 @@
 #include <exception>
 #include <limits>
 
-#include "../Observable.h"
 #include "Observer.h"
 #include "yarpl/utils/type_traits.h"
 

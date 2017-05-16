@@ -26,7 +26,8 @@ class PushStreamRequestHandler : public rsocket::RSocketResponder {
   yarpl::Reference<Flowable<Payload>> handleRequestStream(
       Payload request,
       reactivesocket::StreamId streamId) override {
-    LOG(INFO) << "PushStreamRequestHandler.handleRequestStream " << request;
+    std::cout << "PushStreamRequestHandler.handleRequestStream " << request
+              << std::endl;
 
     // string from payload data
     auto requestString = request.moveDataToString();

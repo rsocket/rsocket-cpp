@@ -23,12 +23,12 @@ class HelloChannelRequestHandler : public rsocket::RSocketResponder {
       reactivesocket::Payload initialPayload,
       yarpl::Reference<Flowable<reactivesocket::Payload>> request,
       reactivesocket::StreamId streamId) override {
-    LOG(INFO) << "HelloChannelRequestHandler.handleRequestChannel "
-              << initialPayload.moveDataToString();
+    std::cout << "Initial request " << initialPayload.cloneDataToString()
+              << std::endl;
 
     // say "Hello" to each name on the input stream
     return request->map([](Payload p) {
-      std::cout << "got request " << p.cloneDataToString() << std::endl;
+      std::cout << "Request Stream: " << p.cloneDataToString() << std::endl;
       std::stringstream ss;
       ss << "Hello " << p.moveDataToString() << "!";
       std::string s = ss.str();

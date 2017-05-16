@@ -35,11 +35,12 @@ int main(int argc, char* argv[]) {
   auto rs = rsf->connect().get();
 
   // perform request on connected RSocket
-  auto s = yarpl::Reference<ExampleSubscriber>(new ExampleSubscriber(5, 6));
-  rs->requestStream(Payload("Jane"))
-      ->subscribe(
-          yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(s.get()));
-  s->awaitTerminalEvent();
+  rs->requestStream(Payload("Jane"))->subscribe([](Payload p) {
+    std::cout << "Received: " << p.moveDataToString() << std::endl;
+  });
+
+  // Wait for a newline on the console to terminate the server.
+  std::getchar();
 
   return 0;
 }

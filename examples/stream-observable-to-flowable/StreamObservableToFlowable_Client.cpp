@@ -35,13 +35,13 @@ int main(int argc, char* argv[]) {
   auto rs = rsf->connect().get();
   rs->requestStream(Payload("TopicX"))
       ->take(10)
-      ->subscribe(Subscribers::create<Payload>(
-          [](const Payload& p) {
+      ->subscribe(
+          [](Payload p) {
             std::cout << p.cloneDataToString() << std::endl;
             // simulate slow consumer
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
           },
-          3 /* request batch size */));
+          3 /* request batch size */);
 
   // Wait for a newline on the console to terminate the server.
   std::getchar();

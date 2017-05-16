@@ -37,10 +37,9 @@ int main(int argc, char* argv[]) {
   auto rs = rsf->connect().get();
 
   // perform request on connected RSocket
-  rs->requestResponse(Payload("Jane"))
-      ->subscribe(SingleObservers::create<Payload>([](Payload p) {
-        std::cout << "Received >> " << p.moveDataToString() << std::endl;
-      }));
+  rs->requestResponse(Payload("Jane"))->subscribe([](Payload p) {
+    std::cout << "Received >> " << p.moveDataToString() << std::endl;
+  });
 
   // Wait for a newline on the console to terminate the client.
   std::getchar();

@@ -2,7 +2,6 @@
 
 #include "yarpl/utils/type_traits.h"
 
-#include "Single.h"
 #include "SingleObserver.h"
 
 namespace yarpl {

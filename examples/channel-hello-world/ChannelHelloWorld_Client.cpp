@@ -34,17 +34,17 @@ int main(int argc, char* argv[]) {
 
   auto rs = rsf->connect().get();
 
-  auto s = yarpl::make_ref<ExampleSubscriber>(5, 6);
   // send stream of strings to the server
-  rs->requestChannel(Flowables::justN({"initialPayload", "Bob", "Jane"})->map([](std::string v) {
-      std::cout << "sending name " << v << std::endl;
-      return Payload(v);
-    }))
-      ->subscribe(
-          yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(s.get()));
-  s->awaitTerminalEvent();
+  rs->requestChannel(Flowables::justN({"initialPayload", "Bob", "Jane"})
+                         ->map([](std::string v) {
+                           std::cout << "Sending: " << v << std::endl;
+                           return Payload(v);
+                         }))
+      ->subscribe([](Payload p) {
+        std::cout << "Received: " << p.moveDataToString() << std::endl;
+      });
 
-  // TODO on shutdown the destruction of
-  // ScopedEventBaseThread spits out a stacktrace
+  // Wait for a newline on the console to terminate the server.
+  std::getchar();
   return 0;
 }

@@ -2,6 +2,7 @@
 
 #include "../Refcounted.h"
 #include "SingleObserver.h"
+#include "SingleObservers.h"
 #include "SingleSubscription.h"
 #include "yarpl/utils/type_traits.h"
 
@@ -12,6 +13,35 @@ template <typename T>
 class Single : public virtual Refcounted {
  public:
   virtual void subscribe(Reference<SingleObserver<T>>) = 0;
+
+  /**
+   * Subscribe overload that accepts lambdas.
+   *
+   * @param success
+   */
+  template <
+      typename Success,
+      typename = typename std::enable_if<
+          std::is_callable<Success(T), void>::value>::type>
+  void subscribe(Success&& next) {
+    subscribe(SingleObservers::create<T>(next));
+  }
+
+  /**
+   * Subscribe overload that accepts lambdas.
+   *
+   * @param success
+   * @param error
+   */
+  template <
+      typename Success,
+      typename Error,
+      typename = typename std::enable_if<
+          std::is_callable<Success(T), void>::value &&
+          std::is_callable<Error(const std::exception_ptr), void>::value>::type>
+  void subscribe(Success&& next, Error&& error) {
+    subscribe(SingleObservers::create<T>(next, error));
+  }
 
   template <
       typename OnSubscribe,
