@@ -106,6 +106,12 @@ class RSocketHandlerBridge : public reactivesocket::DefaultRequestHandler {
             std::move(single), responseSubscriber));
   }
 
+  void handleFireAndForgetRequest(
+      Payload request,
+      StreamId streamId) noexcept override {
+    handler_->handleFireAndForget(std::move(request), std::move(streamId));
+  }
+
  private:
   std::shared_ptr<RSocketResponder> handler_;
 };

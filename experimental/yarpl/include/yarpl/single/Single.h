@@ -1,9 +1,9 @@
 #pragma once
 
-#include "yarpl/utils/type_traits.h"
 #include "../Refcounted.h"
 #include "SingleObserver.h"
 #include "SingleSubscription.h"
+#include "yarpl/utils/type_traits.h"
 
 namespace yarpl {
 namespace single {
@@ -11,9 +11,6 @@ namespace single {
 template <typename T>
 class Single : public virtual Refcounted {
  public:
-  static const auto CANCELED = std::numeric_limits<int64_t>::min();
-  static const auto NO_FLOW_CONTROL = std::numeric_limits<int64_t>::max();
-
   virtual void subscribe(Reference<SingleObserver<T>>) = 0;
 
   template <
@@ -44,6 +41,78 @@ class Single : public virtual Refcounted {
     OnSubscribe function_;
   };
 };
+
+// specialization of Single<void>
+template <typename OnSubscribe>
+class SingleVoidFromPublisherOperator;
+
+template <>
+class Single<void> : public virtual Refcounted {
+ public:
+  virtual void subscribe(Reference<SingleObserver<void>>) = 0;
+
+  /**
+   * subscribe overload taking lambda for onSuccess that is called upon writing
+   * to the network
+   * @tparam Success
+   * @param s
+   */
+  template <
+      typename Success,
+      typename = typename std::enable_if<
+          std::is_callable<Success(), void>::value>::type>
+  void subscribe(Success&& s) {
+    class SuccessSingleObserver : public SingleObserver<void> {
+     public:
+      SuccessSingleObserver(Success&& s) : success_{std::move(s)} {}
+
+      void onSubscribe(Reference<SingleSubscription> subscription) override {
+        SingleObserver<void>::onSubscribe(std::move(subscription));
+      }
+
+      virtual void onSuccess() override {
+        success_();
+        SingleObserver<void>::onSuccess();
+      }
+
+      // No further calls to the subscription after this method is invoked.
+      virtual void onError(const std::exception_ptr eptr) override {
+        SingleObserver<void>::onError(eptr);
+      }
+
+     private:
+      Success success_;
+    };
+
+    subscribe(make_ref<SuccessSingleObserver>(std::forward<Success>(s)));
+  };
+
+  template <
+      typename OnSubscribe,
+      typename = typename std::enable_if<std::is_callable<
+          OnSubscribe(Reference<SingleObserver<void>>),
+          void>::value>::type>
+  static auto create(OnSubscribe&& function) {
+    return Reference<Single<void>>(
+        new SingleVoidFromPublisherOperator<OnSubscribe>(
+            std::forward<OnSubscribe>(function)));
+  }
+};
+
+template <typename OnSubscribe>
+class SingleVoidFromPublisherOperator : public Single<void> {
+ public:
+  explicit SingleVoidFromPublisherOperator(OnSubscribe&& function)
+      : function_(std::move(function)) {}
+
+  void subscribe(Reference<SingleObserver<void>> subscriber) override {
+    function_(std::move(subscriber));
+  }
+
+ private:
+  OnSubscribe function_;
+};
+
 } // observable
 } // yarpl
 

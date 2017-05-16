@@ -495,6 +495,40 @@ target_link_libraries(
         ${GLOG_LIBRARY}
         ${CMAKE_THREAD_LIBS_INIT})
 
+# fire-and-forget-hello-world
+
+add_executable(
+        example_fire-and-forget-hello-world-server
+        examples/fire-and-forget-hello-world/FireAndForgetHelloWorld_Server.cpp
+)
+
+target_link_libraries(
+        example_fire-and-forget-hello-world-server
+        ReactiveSocket
+        rsocket_experimental
+        reactivesocket_examples_util
+        yarpl
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
+
+add_executable(
+        example_fire-and-forget-hello-world-client
+        examples/fire-and-forget-hello-world/FireAndForgetHelloWorld_Client.cpp
+)
+
+target_link_libraries(
+        example_fire-and-forget-hello-world-client
+        ReactiveSocket
+        rsocket_experimental
+        reactivesocket_examples_util
+        yarpl
+        ${FOLLY_LIBRARIES}
+        ${GFLAGS_LIBRARY}
+        ${GLOG_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT})
+
 
 # stream-hello-world
 

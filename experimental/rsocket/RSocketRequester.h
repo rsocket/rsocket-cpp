@@ -53,7 +53,7 @@ class RSocketRequester {
    * @param payload
    */
   yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
-  requestStream(reactivesocket::Payload payload);
+  requestStream(reactivesocket::Payload request);
 
   /**
     * Start a channel (streams in both directions).
@@ -66,7 +66,7 @@ class RSocketRequester {
   yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
   requestChannel(
       yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
-          payloads);
+          requests);
 
   /**
    * Send a single request and get a single response.
@@ -77,17 +77,24 @@ class RSocketRequester {
    * @param payload
    */
   yarpl::Reference<yarpl::single::Single<reactivesocket::Payload>>
-  requestResponse(reactivesocket::Payload payload);
+  requestResponse(reactivesocket::Payload request);
 
   /**
    * Send a single Payload with no response.
+   *
+   * The returned Single<void> invokes onSuccess or onError
+   * based on client-side success or failure. Once the payload is
+   * sent to the network it is "forgotten" and the Single<void> will
+   * be finished with no further response indicating success
+   * or failure on the server.
    *
    * Interaction model details can be found at
    * https://github.com/ReactiveSocket/reactivesocket/blob/master/Protocol.md#request-fire-n-forget
    *
    * @param payload
    */
-  void requestFireAndForget(reactivesocket::Payload payload);
+  yarpl::Reference<yarpl::single::Single<void>> fireAndForget(
+      reactivesocket::Payload request);
 
   /**
    * Send metadata without response.
