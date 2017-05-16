@@ -558,10 +558,10 @@ class InitialRequestNDeliveredTest : public testing::Test {
   yarpl::Reference<yarpl::flowable::MockSubscription> validatingSubscription;
 
   const size_t kStreamId{1};
-  const size_t kRequestN{500};
+  const int64_t kRequestN{500};
 
   std::atomic<bool> done{false};
-  size_t expectedRequestN{kRequestN};
+  int64_t expectedRequestN{kRequestN};
   folly::EventBase eventBase_;
   FrameSerializerV0_1 frameSerializer;
 };

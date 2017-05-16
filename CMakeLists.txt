@@ -276,6 +276,7 @@ add_executable(
 target_link_libraries(
         tcpclient
         ReactiveSocket
+        yarpl
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
         ${GMOCK_LIBS}
@@ -295,6 +296,7 @@ add_executable(
 target_link_libraries(
         tcpserver
         ReactiveSocket
+        yarpl
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
         ${GMOCK_LIBS}
@@ -319,6 +321,7 @@ add_executable(
 target_link_libraries(
         tckclient
         ReactiveSocket
+        yarpl
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
         ${GLOG_LIBRARY}
@@ -335,6 +338,7 @@ add_executable(
 target_link_libraries(
         tckserver
         ReactiveSocket
+        yarpl
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
         ${GMOCK_LIBS}
@@ -355,6 +359,7 @@ add_executable(
 target_link_libraries(
         tcpresumeclient
         ReactiveSocket
+        yarpl
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
         ${GMOCK_LIBS}
@@ -374,6 +379,7 @@ add_executable(
 target_link_libraries(
         tcpresumeserver
         ReactiveSocket
+        yarpl
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}
         ${GMOCK_LIBS}

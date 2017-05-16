@@ -16,22 +16,22 @@
 using namespace ::testing;
 using namespace ::reactivesocket;
 using namespace ::folly;
+using namespace yarpl;
 
 DEFINE_string(address, "9898", "host:port to listen to");
 
 namespace {
-class ServerSubscription : public SubscriptionBase {
+class ServerSubscription : public yarpl::flowable::Subscription {
  public:
   explicit ServerSubscription(
-      std::shared_ptr<Subscriber<Payload>> response,
+      yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response,
       size_t numElems = 2)
-      : ExecutorBase(defaultExecutor()),
-        response_(std::move(response)),
+      : response_(std::move(response)),
         numElems_(numElems) {}
 
  private:
   // Subscription methods
-  void requestImpl(size_t n) noexcept override {
+  void request(int64_t n) noexcept override {
     for (size_t i = 0; i < numElems_; i++) {
       response_->onNext(Payload("from server " + std::to_string(i)));
     }
@@ -41,9 +41,9 @@ class ServerSubscription : public SubscriptionBase {
     //    response_.onError(std::runtime_error("XXX"));
   }
 
-  void cancelImpl() noexcept override {}
+  void cancel() noexcept override {}
 
-  std::shared_ptr<Subscriber<Payload>> response_;
+  yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response_;
   size_t numElems_;
 };
 
@@ -53,19 +53,19 @@ class ServerRequestHandler : public DefaultRequestHandler {
   void handleRequestStream(
       Payload request,
       StreamId streamId,
-      const std::shared_ptr<Subscriber<Payload>>& response) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) noexcept override {
     LOG(INFO) << "ServerRequestHandler.handleRequestStream " << request;
 
-    response->onSubscribe(std::make_shared<ServerSubscription>(response));
+    response->onSubscribe(make_ref<ServerSubscription>(response));
   }
 
   void handleRequestResponse(
       Payload request,
       StreamId streamId,
-      const std::shared_ptr<Subscriber<Payload>>& response) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) noexcept override {
     LOG(INFO) << "ServerRequestHandler.handleRequestResponse " << request;
 
-    response->onSubscribe(std::make_shared<ServerSubscription>(response, 1));
+    response->onSubscribe(make_ref<ServerSubscription>(response, 1));
   }
 
   void handleFireAndForgetRequest(

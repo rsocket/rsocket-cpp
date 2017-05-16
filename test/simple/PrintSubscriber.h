@@ -2,19 +2,18 @@
 
 #pragma once
 
-#include <folly/ExceptionWrapper.h>
 #include "src/Payload.h"
-#include "src/ReactiveStreamsCompat.h"
+#include "yarpl/flowable/Subscriber.h"
 
 namespace reactivesocket {
-class PrintSubscriber : public Subscriber<Payload> {
+class PrintSubscriber : public yarpl::flowable::Subscriber<Payload> {
  public:
   ~PrintSubscriber();
 
   void onSubscribe(
-      std::shared_ptr<Subscription> subscription) noexcept override;
+      yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept override;
   void onNext(Payload element) noexcept override;
   void onComplete() noexcept override;
-  void onError(folly::exception_wrapper ex) noexcept override;
+  void onError(std::exception_ptr ex) noexcept override;
 };
 }

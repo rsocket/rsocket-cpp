@@ -19,6 +19,7 @@
 using namespace ::testing;
 using namespace ::reactivesocket;
 using namespace ::folly;
+using namespace yarpl;
 
 DEFINE_string(host, "localhost", "host to connect to");
 DEFINE_int32(port, 9898, "host:port to connect to");
@@ -133,7 +134,7 @@ int main(int argc, char* argv[]) {
 
     LOG(INFO) << "requestStream:";
     reactiveSocket->requestStream(
-        Payload("from client"), std::make_shared<PrintSubscriber>());
+        Payload("from client"), make_ref<PrintSubscriber>());
 
     LOG(INFO) << "connecting RS ...";
     reactiveSocket->clientConnect(
@@ -150,7 +151,7 @@ int main(int argc, char* argv[]) {
     reactiveSocket->disconnect();
     LOG(INFO) << "requestStream:";
     reactiveSocket->requestStream(
-        Payload("from client2"), std::make_shared<PrintSubscriber>());
+        Payload("from client2"), make_ref<PrintSubscriber>());
   });
 
   std::getline(std::cin, input);

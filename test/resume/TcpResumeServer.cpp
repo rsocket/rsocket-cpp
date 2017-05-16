@@ -18,6 +18,7 @@
 using namespace ::testing;
 using namespace ::reactivesocket;
 using namespace ::folly;
+using namespace yarpl;
 
 DEFINE_string(address, "9898", "host:port to listen to");
 
@@ -68,7 +69,7 @@ class ServerRequestHandler : public DefaultRequestHandler {
       const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) noexcept override {
     LOG(INFO) << "ServerRequestHandler.handleRequestStream " << request;
 
-    response->onSubscribe(std::make_shared<ServerSubscription>(response));
+    response->onSubscribe(make_ref<ServerSubscription>(response));
   }
 
   void handleFireAndForgetRequest(
@@ -157,7 +158,7 @@ class MyConnectionHandler : public ConnectionHandler {
       LOG(INFO) << "socket disconnect: " << ex.what();
       // to verify these frames will be queued up
       rs->requestStream(
-          Payload("from server resume"), std::make_shared<PrintSubscriber>());
+          Payload("from server resume"), make_ref<PrintSubscriber>());
     });
     rs->onClosed([](const folly::exception_wrapper& ex) {
       LOG(INFO) << "socket closed: " << ex.what();
