@@ -46,7 +46,7 @@ void ChannelRequester::onNext(Payload request) noexcept {
       }
     } break;
     case State::REQUESTED: {
-      debugCheckOnNextOnCompleteOnError();
+      debugCheckOnNextOnError();
       writePayload(std::move(request), 0);
       break;
     }

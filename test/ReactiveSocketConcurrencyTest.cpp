@@ -194,7 +194,7 @@ class ClientSideConcurrencyTest : public testing::Test {
   bool isDone_{false};
 };
 
-TEST_F(ClientSideConcurrencyTest, RequestResponseTest) {
+TEST_F(ClientSideConcurrencyTest, DISABLED_RequestResponseTest) {
   thread2.getEventBase()->runInEventBaseThread([&] {
     clientSock->requestResponse(Payload(originalPayload()), clientInput);
   });
@@ -202,14 +202,14 @@ TEST_F(ClientSideConcurrencyTest, RequestResponseTest) {
   LOG(INFO) << "test done";
 }
 
-TEST_F(ClientSideConcurrencyTest, RequestStreamTest) {
+TEST_F(ClientSideConcurrencyTest, DISABLED_RequestStreamTest) {
   thread2.getEventBase()->runInEventBaseThread([&] {
     clientSock->requestStream(Payload(originalPayload()), clientInput);
   });
   wainUntilDone();
 }
 
-TEST_F(ClientSideConcurrencyTest, RequestChannelTest) {
+TEST_F(ClientSideConcurrencyTest, DISABLED_RequestChannelTest) {
   clientTerminatesInteraction_ = false;
 
   yarpl::Reference<yarpl::flowable::Subscriber<Payload>> clientOutput;
@@ -566,7 +566,7 @@ class InitialRequestNDeliveredTest : public testing::Test {
   FrameSerializerV0_1 frameSerializer;
 };
 
-TEST_F(InitialRequestNDeliveredTest, RequestResponse) {
+TEST_F(InitialRequestNDeliveredTest, DISABLED_RequestResponse) {
   expectedRequestN = 1;
   Frame_REQUEST_RESPONSE requestFrame(kStreamId, FrameFlags::EMPTY, Payload());
   testConnectionSub->onNext(
@@ -574,7 +574,7 @@ TEST_F(InitialRequestNDeliveredTest, RequestResponse) {
   loopEventBaseUntilDone();
 }
 
-TEST_F(InitialRequestNDeliveredTest, RequestStream) {
+TEST_F(InitialRequestNDeliveredTest, DISABLED_RequestStream) {
   Frame_REQUEST_STREAM requestFrame(
       kStreamId, FrameFlags::EMPTY, kRequestN, Payload());
   testConnectionSub->onNext(

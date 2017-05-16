@@ -17,11 +17,10 @@ void RequestResponseResponder::onSubscribe(
 }
 
 void RequestResponseResponder::onNext(Payload response) noexcept {
-  debugCheckOnNextOnCompleteOnError();
+  debugCheckOnNextOnError();
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
-      debugCheckOnNextOnCompleteOnError();
       writePayload(std::move(response), true);
       closeStream(StreamCompletionSignal::COMPLETE);
       break;
@@ -32,7 +31,6 @@ void RequestResponseResponder::onNext(Payload response) noexcept {
 }
 
 void RequestResponseResponder::onComplete() noexcept {
-  debugCheckOnNextOnCompleteOnError();
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
@@ -45,7 +43,7 @@ void RequestResponseResponder::onComplete() noexcept {
 
 void RequestResponseResponder::onError(
     const std::exception_ptr ex) noexcept {
-  debugCheckOnNextOnCompleteOnError();
+  debugCheckOnNextOnError();
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;

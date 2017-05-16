@@ -17,10 +17,9 @@ void StreamResponder::onSubscribe(
 }
 
 void StreamResponder::onNext(Payload response) noexcept {
-  debugCheckOnNextOnCompleteOnError();
+  debugCheckOnNextOnError();
   switch (state_) {
     case State::RESPONDING: {
-      debugCheckOnNextOnCompleteOnError();
       writePayload(std::move(response), false);
       break;
     }
@@ -30,7 +29,6 @@ void StreamResponder::onNext(Payload response) noexcept {
 }
 
 void StreamResponder::onComplete() noexcept {
-  debugCheckOnNextOnCompleteOnError();
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
@@ -42,7 +40,7 @@ void StreamResponder::onComplete() noexcept {
 }
 
 void StreamResponder::onError(const std::exception_ptr ex) noexcept {
-  debugCheckOnNextOnCompleteOnError();
+  debugCheckOnNextOnError();
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;

@@ -17,9 +17,9 @@ void ChannelResponder::onSubscribe(
 }
 
 void ChannelResponder::onNext(Payload response) noexcept {
+  debugCheckOnNextOnError();
   switch (state_) {
     case State::RESPONDING: {
-      debugCheckOnNextOnCompleteOnError();
       writePayload(std::move(response), false);
       break;
     }

@@ -52,8 +52,8 @@ TEST(ReactiveSocketTest, RequestChannel) {
 
   auto clientInput = make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
   auto serverInput = make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
-  auto clientOutputSub = yarpl::Reference<StrictMock<yarpl::flowable::MockSubscription>>();
-  auto serverOutputSub = yarpl::Reference<StrictMock<yarpl::flowable::MockSubscription>>();
+  auto clientOutputSub = make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
+  auto serverOutputSub = make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
   yarpl::Reference<yarpl::flowable::Subscription> clientInputSub, serverInputSub;
   yarpl::Reference<yarpl::flowable::Subscriber<Payload>> clientOutput, serverOutput;
 
@@ -178,7 +178,7 @@ TEST(ReactiveSocketTest, RequestStreamComplete) {
   clientConn->connectTo(*serverConn);
 
   auto clientInput = make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
-  auto serverOutputSub = yarpl::Reference<StrictMock<yarpl::flowable::MockSubscription>>();
+  auto serverOutputSub = make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
   yarpl::Reference<yarpl::flowable::Subscription> clientInputSub;
   yarpl::Reference<yarpl::flowable::Subscriber<Payload>> serverOutput;
 
@@ -273,7 +273,7 @@ TEST(ReactiveSocketTest, RequestStreamCancel) {
   clientConn->connectTo(*serverConn);
 
   auto clientInput = make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
-  auto serverOutputSub = yarpl::Reference<StrictMock<yarpl::flowable::MockSubscription>>();
+  auto serverOutputSub = make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
   yarpl::Reference<yarpl::flowable::Subscription> clientInputSub;
   yarpl::Reference<yarpl::flowable::Subscriber<Payload>> serverOutput;
 
@@ -365,7 +365,7 @@ TEST(ReactiveSocketTest, RequestStream) {
   clientConn->connectTo(*serverConn);
 
   auto clientInput = make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
-  auto serverOutputSub = yarpl::Reference<StrictMock<yarpl::flowable::MockSubscription>>();
+  auto serverOutputSub = make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
   yarpl::Reference<yarpl::flowable::Subscription> clientInputSub;
   yarpl::Reference<yarpl::flowable::Subscriber<Payload>> serverOutput;
 
@@ -521,7 +521,7 @@ TEST(ReactiveSocketTest, RequestStreamSurplusResponse) {
   clientConn->connectTo(*serverConn);
 
   auto clientInput = make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
-  auto serverOutputSub = yarpl::Reference<StrictMock<yarpl::flowable::MockSubscription>>();
+  auto serverOutputSub = make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
   yarpl::Reference<yarpl::flowable::Subscription> clientInputSub;
   yarpl::Reference<yarpl::flowable::Subscriber<Payload>> serverOutput;
 

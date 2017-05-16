@@ -56,7 +56,7 @@ class PublisherBase {
     DCHECK(!producingSubscription_);
   }
 
-  void debugCheckOnNextOnCompleteOnError() {
+  void debugCheckOnNextOnError() {
     DCHECK(producingSubscription_);
   }
 
