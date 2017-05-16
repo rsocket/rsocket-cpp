@@ -2,10 +2,15 @@
 
 #pragma once
 
-#include <memory>
-#include <unordered_set>
 #include "src/Common.h"
 #include "src/ConnectionSetupPayload.h"
+
+#include <folly/Baton.h>
+#include <folly/Synchronized.h>
+
+#include <memory>
+#include <mutex>
+#include <unordered_set>
 
 namespace folly {
 class EventBase;
@@ -61,7 +66,10 @@ class ServerConnectionAcceptor final {
       std::unique_ptr<DuplexConnection> connection,
       std::shared_ptr<ConnectionHandler> connectionHandler);
 
- protected:
+  /// Close all FrameTransports and wait until they all get handled.
+  void stop();
+
+ private:
   friend OneFrameProcessor;
 
   void processFrame(
@@ -73,13 +81,20 @@ class ServerConnectionAcceptor final {
       const std::shared_ptr<ConnectionHandler>& connectionHandler,
       std::shared_ptr<FrameTransport> transport,
       folly::exception_wrapper ex);
-  void removeConnection(const std::shared_ptr<FrameTransport>& transport);
+
+  void erase(std::shared_ptr<FrameTransport>);
+
+  std::shared_ptr<FrameSerializer> getOrAutodetectFrameSerializer(
+      const folly::IOBuf&);
 
  private:
-  std::shared_ptr<FrameSerializer> getOrAutodetectFrameSerializer(
-      const folly::IOBuf& firstFrame);
+  folly::Synchronized<
+      std::unordered_set<std::shared_ptr<FrameTransport>>,
+      std::mutex>
+      connections_;
 
-  std::unordered_set<std::shared_ptr<FrameTransport>> connections_;
+  folly::Optional<folly::Baton<>> shutdown_;
+
   std::shared_ptr<FrameSerializer> defaultFrameSerializer_;
 };
 

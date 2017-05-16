@@ -47,11 +47,14 @@ RSocketServer::RSocketServer(
       acceptor_(ProtocolVersion::Unknown) {}
 
 RSocketServer::~RSocketServer() {
-  // Stop accepting new connections.
+  // Will stop forwarding connections from lazyAcceptor_ to acceptor_.
+  isShutdown_ = true;
+
+  // Stop accepting new connections from the network.
   lazyAcceptor_->stop();
 
-  // FIXME(alexanderm): This is where we /should/ close the FrameTransports
-  // sitting around in the ServerConnectionAcceptor, but we can't yet...
+  // Close out all outstanding FrameTransports in acceptor_.
+  acceptor_.stop();
 
   // Asynchronously close all existing ReactiveSockets.  If there are none, then
   // we can do an early exit.
@@ -92,8 +95,9 @@ void RSocketServer::start(OnAccept onAccept) {
                   folly::Executor& executor) {
         LOG(INFO) << "Going to accept duplex connection";
 
-        // FIXME(alexanderm): This isn't thread safe
-        acceptor_.accept(std::move(conn), connectionHandler_);
+        if (isShutdown_) {
+          acceptor_.accept(std::move(conn), connectionHandler_);
+        }
       })
       .onError([](const folly::exception_wrapper& ex) {
         LOG(FATAL) << "Failed to start ConnectionAcceptor: " << ex.what();

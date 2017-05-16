@@ -135,18 +135,16 @@ TEST_F(ServerConnectionAcceptorTest, SetupFrame) {
 TEST_F(ServerConnectionAcceptorTest, ResumeFrameNoSession) {
   std::unique_ptr<folly::IOBuf> data;
   EXPECT_CALL(*clientInput_, onNext_(_))
-    .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& buffer) {
-      data = std::move(buffer);
-    }));
+      .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& buffer) {
+        data = std::move(buffer);
+      }));
 
+  auto const protocol = FrameSerializer::getCurrentProtocolVersion();
+  auto token = ResumeIdentificationToken::generateNew();
 
-  ResumeParameters resumeParams(
-      ResumeIdentificationToken::generateNew(),
-      1,
-      2,
-      FrameSerializer::getCurrentProtocolVersion());
-  EXPECT_CALL(*handler_, resumeSocket(_, _))
-      .WillOnce(Return(false));
+  ResumeParameters resumeParams(std::move(token), 1, 2, protocol);
+  EXPECT_CALL(*handler_, resumeSocket(_, _)).WillOnce(Return(false));
+  EXPECT_CALL(*handler_, connectionError(_, _));
 
   auto frameSerializer = FrameSerializer::createCurrentVersion();
   acceptor_.accept(std::move(serverConnection_), handler_);
@@ -154,10 +152,10 @@ TEST_F(ServerConnectionAcceptorTest, ResumeFrameNoSession) {
       resumeParams.token,
       resumeParams.serverPosition,
       resumeParams.clientPosition,
-      FrameSerializer::getCurrentProtocolVersion())));
+      protocol)));
 
   Frame_ERROR errorFrame;
-  ASSERT_TRUE(data != nullptr);
+  ASSERT_NE(data, nullptr);
   EXPECT_TRUE(frameSerializer->deserializeFrom(errorFrame, std::move(data)));
   EXPECT_EQ(errorFrame.errorCode_, ErrorCode::CONNECTION_ERROR);
 
@@ -165,11 +163,10 @@ TEST_F(ServerConnectionAcceptorTest, ResumeFrameNoSession) {
 }
 
 TEST_F(ServerConnectionAcceptorTest, ResumeFrame) {
-  ResumeParameters resumeParams(
-      ResumeIdentificationToken::generateNew(),
-      1,
-      2,
-      FrameSerializer::getCurrentProtocolVersion());
+  auto token = ResumeIdentificationToken::generateNew();
+  auto const protocol = FrameSerializer::getCurrentProtocolVersion();
+
+  ResumeParameters resumeParams(std::move(token), 1, 2, protocol);
   EXPECT_CALL(*handler_, resumeSocket(_, _))
       .WillOnce(Invoke(
           [&](std::shared_ptr<FrameTransport> transport,
@@ -188,7 +185,7 @@ TEST_F(ServerConnectionAcceptorTest, ResumeFrame) {
       resumeParams.token,
       resumeParams.serverPosition,
       resumeParams.clientPosition,
-      FrameSerializer::getCurrentProtocolVersion())));
+      protocol)));
   clientOutput_->onComplete();
 }
 
@@ -218,17 +215,16 @@ TEST_F(ServerConnectionAcceptorTest, VerifyTransport) {
       resumeParams.serverPosition,
       resumeParams.clientPosition,
       FrameSerializer::getCurrentProtocolVersion())));
-  EXPECT_TRUE(wfp.use_count() > 0);
+  EXPECT_GT(wfp.use_count(), 0);
   clientOutput_->onComplete();
   transport_->close(folly::exception_wrapper());
 }
 
 TEST_F(ServerConnectionAcceptorTest, VerifyAsyncProcessorFrame) {
-  ResumeParameters resumeParams(
-      ResumeIdentificationToken::generateNew(),
-      1,
-      2,
-      FrameSerializer::getCurrentProtocolVersion());
+  auto token = ResumeIdentificationToken::generateNew();
+  auto const protocol = FrameSerializer::getCurrentProtocolVersion();
+
+  ResumeParameters resumeParams(std::move(token), 1, 2, protocol);
   std::shared_ptr<FrameTransport> transport_;
   EXPECT_CALL(*handler_, resumeSocket(_, _))
       .WillOnce(Invoke(
@@ -245,7 +241,7 @@ TEST_F(ServerConnectionAcceptorTest, VerifyAsyncProcessorFrame) {
       resumeParams.token,
       resumeParams.serverPosition,
       resumeParams.clientPosition,
-      FrameSerializer::getCurrentProtocolVersion())));
+      protocol)));
 
   // The transport won't have a processor now, try sending a frame
   clientOutput_->onNext(frameSerializer->serializeOut(Frame_REQUEST_FNF(
