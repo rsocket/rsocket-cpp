@@ -11,7 +11,7 @@
 #include "src/internal/ClientResumeStatusCallback.h"
 #include "src/statemachine/RSocketStateMachine.h"
 #include "src/framing/FrameTransport.h"
-#include "RequestHandler.h"
+#include "src/temporary_home/RequestHandler.h"
 
 namespace reactivesocket {
 
@@ -31,7 +31,6 @@ ReactiveSocket::ReactiveSocket(
     folly::Executor& executor)
     : connection_(std::make_shared<RSocketStateMachine>(
           executor,
-          this,
           std::move(handler),
           std::move(stats),
           std::move(keepaliveTimer),

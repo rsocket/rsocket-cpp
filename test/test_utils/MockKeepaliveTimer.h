@@ -8,7 +8,7 @@
 #include <gmock/gmock.h>
 
 #include "src/statemachine/RSocketStateMachine.h"
-#include "src/temporary_home/ReactiveSocket.h"
+#include "test/deprecated/ReactiveSocket.h"
 
 namespace reactivesocket {
 class MockKeepaliveTimer : public KeepaliveTimer {

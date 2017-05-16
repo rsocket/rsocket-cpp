@@ -73,7 +73,6 @@ TEST(ConnectionAutomatonTest, InvalidFrameHeader) {
   std::shared_ptr<RSocketStateMachine> connectionAutomaton;
   connectionAutomaton = std::make_shared<RSocketStateMachine>(
       defaultExecutor(),
-      nullptr,
       std::make_shared<NullRequestHandler>(),
       Stats::noop(),
       nullptr,
@@ -149,7 +148,6 @@ static void terminateTest(
   std::shared_ptr<RSocketStateMachine> connectionAutomaton;
   connectionAutomaton = std::make_shared<RSocketStateMachine>(
       defaultExecutor(),
-      nullptr,
       std::make_shared<NullRequestHandler>(),
       Stats::noop(),
       nullptr,
@@ -249,7 +247,6 @@ TEST(ConnectionAutomatonTest, RefuseFrame) {
   std::shared_ptr<RSocketStateMachine> connectionAutomaton;
   connectionAutomaton = std::make_shared<RSocketStateMachine>(
       defaultExecutor(),
-      nullptr,
       std::make_shared<NullRequestHandler>(),
       Stats::noop(),
       nullptr,

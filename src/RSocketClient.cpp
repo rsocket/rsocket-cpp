@@ -2,9 +2,9 @@
 
 #include "RSocketClient.h"
 #include "RSocketRequester.h"
-#include "src/temporary_home/NullRequestHandler.h"
-#include "src/temporary_home/ReactiveSocket.h"
+#include "src/temporary_home/Stats.h"
 #include "src/internal/FollyKeepaliveTimer.h"
+#include "src/temporary_home/NullRequestHandler.h"
 
 using namespace reactivesocket;
 using namespace folly;
@@ -26,21 +26,39 @@ Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect() {
       EventBase& eventBase) {
     LOG(INFO) << "RSocketClient => onConnect received DuplexConnection";
 
-    auto r = ReactiveSocket::fromClientConnection(
+    auto rs = std::make_shared<RSocketStateMachine>(
         eventBase,
-        std::move(framedConnection),
-        // TODO need to optionally allow this being passed in for a duplex
-        // client
+        // need to allow Responder being passed in optionally
         std::make_unique<NullRequestHandler>(),
-        // TODO need to allow this being passed in
-        ConnectionSetupPayload(
-            "text/plain", "text/plain", Payload("meta", "data")),
+        // need to allow stats being passed in
         Stats::noop(),
         // TODO need to optionally allow defining the keepalive timer
         std::make_unique<FollyKeepaliveTimer>(
-            eventBase, std::chrono::milliseconds(5000)));
+            eventBase, std::chrono::milliseconds(5000)),
+    ReactiveSocketMode::CLIENT);
 
-    auto rsocket = RSocketRequester::create(std::move(r), eventBase);
+    // TODO need to allow this being passed in
+    auto setupPayload = ConnectionSetupPayload(
+        "text/plain", "text/plain", Payload("meta", "data"));
+
+    rs->setFrameSerializer(
+        setupPayload.protocolVersion == ProtocolVersion::Unknown
+            ? FrameSerializer::createCurrentVersion()
+            : FrameSerializer::createFrameSerializer(
+                  setupPayload.protocolVersion));
+
+    rs->setResumable(setupPayload.resumable);
+
+    if (setupPayload.protocolVersion != ProtocolVersion::Unknown) {
+      CHECK_EQ(
+          setupPayload.protocolVersion, rs->getSerializerProtocolVersion());
+    }
+
+    auto frameTransport =
+        std::make_shared<FrameTransport>(std::move(framedConnection));
+    rs->setUpFrame(std::move(frameTransport), std::move(setupPayload));
+
+    auto rsocket = RSocketRequester::create(std::move(rs), eventBase);
     // store it so it lives as long as the RSocketClient
     rsockets_.push_back(rsocket);
     promise->setValue(rsocket);

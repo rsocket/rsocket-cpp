@@ -7,7 +7,7 @@
 #include "src/internal/ClientResumeStatusCallback.h"
 #include "src/framing/FrameTransport.h"
 #include "src/temporary_home/NullRequestHandler.h"
-#include "src/temporary_home/ReactiveSocket.h"
+#include "test/deprecated/ReactiveSocket.h"
 #include "src/internal/FollyKeepaliveTimer.h"
 #include "src/framing/FramedDuplexConnection.h"
 #include "src/transports/tcp/TcpDuplexConnection.h"

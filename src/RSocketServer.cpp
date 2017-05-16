@@ -24,14 +24,16 @@ class RSocketServerConnectionHandler : public virtual RSocketConnectionHandler {
 
   void manageSocket(
       std::shared_ptr<ConnectionSetupRequest> request,
-      std::unique_ptr<reactivesocket::ReactiveSocket> socket) override {
-    socket->onClosed([ this, socket = socket.get() ](
-        const folly::exception_wrapper&) {
-      // Enqueue another event to remove and delete it.  We cannot delete
-      // the ReactiveSocket now as it still needs to finish processing the
-      // onClosed handlers in the stack frame above us.
-      socket->executor().add([this, socket] { server_->removeSocket(socket); });
-    });
+      std::shared_ptr<reactivesocket::RSocketStateMachine> socket) override {
+    // TODO restore this behavior
+    //    socket->onClosed([ this, socket = socket.get() ](
+    //        const folly::exception_wrapper&) {
+    //      // Enqueue another event to remove and delete it.  We cannot delete
+    //      // the ReactiveSocket now as it still needs to finish processing the
+    //      // onClosed handlers in the stack frame above us.
+    //      socket->executor().add([this, socket] {
+    //      server_->removeSocket(socket); });
+    //    });
 
     server_->addSocket(std::move(socket));
   }
@@ -63,10 +65,11 @@ RSocketServer::~RSocketServer() {
 
     shutdown_.emplace();
 
-    for (auto& socket : *locked) {
-      // close() has to be called on the same executor as the socket.
-      socket->executor().add([s = socket.get()] { s->close(); });
-    }
+    // TODO restore this behavior
+    //    for (auto& socket : *locked) {
+    //       close() has to be called on the same executor as the socket.
+    //      socket->executor().add([s = socket.get()] { s->close(); });
+    //    }
   }
 
   // Wait for all ReactiveSockets to close.
@@ -88,8 +91,7 @@ void RSocketServer::start(OnAccept onAccept) {
 
   lazyAcceptor_
       ->start([this](
-                  std::unique_ptr<DuplexConnection> conn,
-                  folly::Executor& executor) {
+          std::unique_ptr<DuplexConnection> conn, folly::Executor& executor) {
         LOG(INFO) << "Going to accept duplex connection";
 
         // FIXME(alexanderm): This isn't thread safe
@@ -109,20 +111,15 @@ void RSocketServer::unpark() {
   waiting_.post();
 }
 
-void RSocketServer::addSocket(std::unique_ptr<ReactiveSocket> socket) {
+void RSocketServer::addSocket(
+    std::shared_ptr<reactivesocket::RSocketStateMachine> socket) {
   sockets_.lock()->insert(std::move(socket));
 }
 
-void RSocketServer::removeSocket(ReactiveSocket* socket) {
-  // This is a hack.  We make a unique_ptr so that we can use it to
-  // search the set.  However, we release the unique_ptr so it doesn't
-  // try to free the ReactiveSocket too.
-  std::unique_ptr<ReactiveSocket> ptr{socket};
-
+void RSocketServer::removeSocket(
+    std::shared_ptr<reactivesocket::RSocketStateMachine> socket) {
   auto locked = sockets_.lock();
-  locked->erase(ptr);
-
-  ptr.release();
+  locked->erase(socket);
 
   LOG(INFO) << "Removed ReactiveSocket";
 

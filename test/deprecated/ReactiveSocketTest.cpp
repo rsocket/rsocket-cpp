@@ -12,7 +12,7 @@
 #include <thread>
 #include "src/framing/FrameTransport.h"
 #include "src/temporary_home/NullRequestHandler.h"
-#include "src/temporary_home/ReactiveSocket.h"
+#include "test/deprecated/ReactiveSocket.h"
 #include "src/internal/FollyKeepaliveTimer.h"
 #include "test/test_utils/InlineConnection.h"
 #include "test/test_utils/MockKeepaliveTimer.h"
@@ -73,7 +73,7 @@ TEST(ReactiveSocketTest, RequestChannel) {
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
@@ -198,7 +198,7 @@ TEST(ReactiveSocketTest, RequestStreamComplete) {
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
@@ -293,7 +293,7 @@ TEST(ReactiveSocketTest, RequestStreamCancel) {
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
@@ -385,7 +385,7 @@ auto clientSock = ReactiveSocket::fromClientConnection(
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
@@ -541,7 +541,7 @@ TEST(ReactiveSocketTest, RequestStreamSurplusResponse) {
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
@@ -620,7 +620,7 @@ TEST(ReactiveSocketTest, RequestResponse) {
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
@@ -764,7 +764,7 @@ TEST(ReactiveSocketTest, RequestFireAndForget) {
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
@@ -809,7 +809,7 @@ TEST(ReactiveSocketTest, RequestMetadataPush) {
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
@@ -853,7 +853,7 @@ TEST(ReactiveSocketTest, SetupData) {
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
@@ -885,7 +885,7 @@ TEST(ReactiveSocketTest, SetupWithKeepaliveAndStats) {
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
@@ -1002,7 +1002,7 @@ TEST(ReactiveSocketTest, DISABLED_Destructor) {
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
@@ -1090,7 +1090,7 @@ TEST(ReactiveSocketTest, ReactiveSocketOverInlineConnection) {
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .WillRepeatedly(Return(nullptr));
 
   auto serverSock = ReactiveSocket::fromServerConnection(
@@ -1121,9 +1121,8 @@ TEST(ReactiveSocketTest, CloseWithError) {
 
   const folly::StringPiece errString{"Hahaha"};
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
-      .WillRepeatedly(Invoke([&](auto& socket, auto&) {
-        socket.closeConnectionError(errString.str());
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
+      .WillRepeatedly(Invoke([&](auto&) {
         return nullptr;
       }));
 
@@ -1244,7 +1243,7 @@ class ReactiveSocketOnErrorOnShutdownTest : public testing::Test {
     EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
     auto& serverHandlerRef = *serverHandler;
 
-    EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+    EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
         .WillRepeatedly(Return(nullptr));
 
     serverSock = ReactiveSocket::fromServerConnection(
@@ -1380,7 +1379,7 @@ class ReactiveSocketRegressionTest : public Test {
     EXPECT_CALL(connection, getOutput())
         .WillOnce(Return(std::make_shared<MockSubscriber<IOBufPtr>>()));
 
-    EXPECT_CALL(requestHandler_, handleSetupPayload_(_, _))
+    EXPECT_CALL(requestHandler_, handleSetupPayload_(_))
         .WillRepeatedly(Return(nullptr));
 
     EXPECT_CALL(requestHandler_, socketOnConnected()).Times(1);
@@ -1439,7 +1438,7 @@ class ReactiveSocketEmptyPayloadTest : public testing::Test {
     EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
     auto& serverHandlerRef = *serverHandler;
 
-    EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+    EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
         .WillRepeatedly(Return(nullptr));
 
     serverSock = ReactiveSocket::fromServerConnection(

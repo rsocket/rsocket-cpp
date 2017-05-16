@@ -12,7 +12,7 @@
 #include <gmock/gmock.h>
 
 #include "test/test_utils/MockStats.h"
-#include "src/temporary_home/ReactiveSocket.h"
+#include "test/deprecated/ReactiveSocket.h"
 #include "src/framing/FramedDuplexConnection.h"
 #include "src/framing/FrameSerializer_v0_1.h"
 #include "test/test_utils/InlineConnection.h"
@@ -51,7 +51,7 @@ class ClientSideConcurrencyTest : public testing::Test {
     EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
     auto& serverHandlerRef = *serverHandler;
 
-    EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+    EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
         .WillRepeatedly(Return(nullptr));
 
     serverSock = ReactiveSocket::fromServerConnection(
@@ -257,7 +257,7 @@ class ServerSideConcurrencyTest : public testing::Test {
     auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
     auto& serverHandlerRef = *serverHandler;
 
-    EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+    EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
         .WillRepeatedly(Return(nullptr));
 
     thread2.getEventBase()->runImmediatelyOrRunInEventBaseThreadAndWait([&] {
@@ -491,7 +491,7 @@ class InitialRequestNDeliveredTest : public testing::Test {
     EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
     auto& serverHandlerRef = *serverHandler;
 
-    EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+    EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
         .WillRepeatedly(Return(nullptr));
 
     EXPECT_CALL(serverHandlerRef, handleRequestStream_(_, _, _))

@@ -9,6 +9,7 @@
 #include "src/DuplexConnection.h"
 #include "src/temporary_home/Executor.h"
 #include "src/framing/Frame.h"
+#include "src/framing/FrameTransport.h"
 #include "src/framing/FrameProcessor.h"
 #include "src/framing/FrameSerializer.h"
 #include "src/Payload.h"
@@ -22,7 +23,6 @@ class ClientResumeStatusCallback;
 class RSocketStateMachine;
 class DuplexConnection;
 class Frame_ERROR;
-class FrameTransport;
 class KeepaliveTimer;
 class RequestHandler;
 class ResumeCache;
@@ -55,13 +55,12 @@ class FrameSink {
 class RSocketStateMachine final
     : public FrameSink,
       public FrameProcessor,
-      public ExecutorBase,
+      ExecutorBase,
       public StreamsWriter,
       public std::enable_shared_from_this<RSocketStateMachine> {
  public:
   RSocketStateMachine(
       folly::Executor& executor,
-      ReactiveSocket* reactiveSocket,
       std::shared_ptr<RequestHandler> requestHandler,
       std::shared_ptr<Stats> stats,
       std::unique_ptr<KeepaliveTimer> keepaliveTimer_,
@@ -266,8 +265,6 @@ class RSocketStateMachine final
       override;
 
   bool ensureOrAutodetectFrameSerializer(const folly::IOBuf& firstFrame);
-
-  ReactiveSocket* reactiveSocket_;
 
   const std::shared_ptr<Stats> stats_;
   ReactiveSocketMode mode_;

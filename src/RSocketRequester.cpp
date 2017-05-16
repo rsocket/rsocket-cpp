@@ -14,7 +14,7 @@ using namespace yarpl;
 namespace rsocket {
 
 std::shared_ptr<RSocketRequester> RSocketRequester::create(
-    std::unique_ptr<ReactiveSocket> srs,
+    std::shared_ptr<RSocketStateMachine> srs,
     EventBase& eventBase) {
   auto customDeleter = [&eventBase](RSocketRequester* pRequester) {
     eventBase.runImmediatelyOrRunInEventBaseThreadAndWait([&pRequester] {
@@ -29,7 +29,7 @@ std::shared_ptr<RSocketRequester> RSocketRequester::create(
 }
 
 RSocketRequester::RSocketRequester(
-    std::unique_ptr<ReactiveSocket> srs,
+    std::shared_ptr<RSocketStateMachine> srs,
     EventBase& eventBase)
     : reactiveSocket_(std::move(srs)), eventBase_(eventBase) {}
 
@@ -53,7 +53,8 @@ RSocketRequester::requestChannel(
       subscriber = std::move(subscriber),
       srs = std::move(srs)
     ]() mutable {
-      auto responseSink = srs->requestChannel(std::move(subscriber));
+      auto responseSink = srs->streamsFactory().createChannelRequester(
+          std::move(std::move(subscriber)));
       requestStream->subscribe(std::move(responseSink));
     });
   });
@@ -70,7 +71,10 @@ RSocketRequester::requestStream(Payload request) {
       request = std::move(request),
       subscriber = std::move(subscriber),
       srs = std::move(srs)
-    ]() mutable { srs->requestStream(std::move(request), std::move(subscriber)); });
+    ]() mutable {
+      srs->streamsFactory().createStreamRequester(
+          std::move(request), std::move(subscriber));
+    });
   });
 }
 
@@ -84,8 +88,8 @@ RSocketRequester::requestResponse(Payload request) {
             singleSubscriber)
         : singleSubscriber_{std::move(singleSubscriber)} {}
 
-    void onSubscribe(
-        yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept override {
+    void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
+                         subscription) noexcept override {
       // register cancellation callback with SingleSubscriber
       auto singleSubscription = yarpl::single::SingleSubscriptions::create(
           [subscription] { subscription->cancel(); });
@@ -119,10 +123,9 @@ RSocketRequester::requestResponse(Payload request) {
           subscriber = std::move(subscriber),
           srs = std::move(srs)
         ]() mutable {
-          srs->requestResponse(
+            srs->streamsFactory().createRequestResponseRequester(
               std::move(request),
-              make_ref<SingleToSubscriberBridge>(
-                  std::move(subscriber)));
+              make_ref<SingleToSubscriberBridge>(std::move(subscriber)));
         });
       });
 }

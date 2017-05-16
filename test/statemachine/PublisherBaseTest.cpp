@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/temporary_home/ReactiveSocket.h"
+#include "test/deprecated/ReactiveSocket.h"
 #include "src/temporary_home/SubscriberBase.h"
 #include "src/statemachine/PublisherBase.h"
 #include "test/test_utils/MockRequestHandler.h"

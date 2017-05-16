@@ -48,13 +48,11 @@ void NullRequestHandler::handleMetadataPush(
     std::unique_ptr<folly::IOBuf> /*request*/) noexcept {}
 
 std::shared_ptr<StreamState> NullRequestHandler::handleSetupPayload(
-    ReactiveSocket& socket,
     ConnectionSetupPayload /*request*/) noexcept {
   return nullptr;
 }
 
 bool NullRequestHandler::handleResume(
-    ReactiveSocket& socket,
     ResumeParameters) noexcept {
   return false;
 }

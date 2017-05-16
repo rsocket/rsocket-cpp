@@ -8,7 +8,7 @@
 #include "src/framing/FrameTransport.h"
 #include "src/temporary_home/NullRequestHandler.h"
 #include "src/temporary_home/ServerConnectionAcceptor.h"
-#include "src/temporary_home/ReactiveSocket.h"
+#include "test/deprecated/ReactiveSocket.h"
 #include "src/temporary_home/SubscriptionBase.h"
 #include "src/framing/FramedDuplexConnection.h"
 #include "src/transports/tcp/TcpDuplexConnection.h"
@@ -86,14 +86,12 @@ class ServerRequestHandler : public DefaultRequestHandler {
   }
 
   std::shared_ptr<StreamState> handleSetupPayload(
-      ReactiveSocket& socket,
       ConnectionSetupPayload request) noexcept override {
     CHECK(false) << "unexpected call";
     return nullptr;
   }
 
   bool handleResume(
-      ReactiveSocket& socket,
       ResumeParameters) noexcept override {
     CHECK(false) << "unexpected call";
     return false;

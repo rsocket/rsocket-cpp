@@ -5,7 +5,7 @@
 #include <folly/io/async/AsyncServerSocket.h>
 
 #include "src/temporary_home/NullRequestHandler.h"
-#include "src/temporary_home/ReactiveSocket.h"
+#include "test/deprecated/ReactiveSocket.h"
 #include "src/temporary_home/ServerConnectionAcceptor.h"
 #include "src/temporary_home/SubscriptionBase.h"
 #include "src/framing/FramedDuplexConnection.h"

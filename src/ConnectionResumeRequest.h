@@ -2,8 +2,6 @@
 
 #pragma once
 
-#include "src/temporary_home/ReactiveSocket.h"
-
 namespace rsocket {
 
 /**

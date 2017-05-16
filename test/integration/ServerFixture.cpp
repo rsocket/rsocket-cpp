@@ -67,14 +67,12 @@ class ServerRequestHandler : public DefaultRequestHandler {
   }
 
   std::shared_ptr<StreamState> handleSetupPayload(
-      ReactiveSocket& socket,
       ConnectionSetupPayload request) noexcept override {
     LOG(INFO) << "Received SetupPayload. NOT IMPLEMENTED";
     return nullptr;
   }
 
   bool handleResume(
-      ReactiveSocket& socket,
       ResumeParameters) noexcept override {
     LOG(INFO) << "Received Resume. NOT IMPLEMENTED";
     return false;
