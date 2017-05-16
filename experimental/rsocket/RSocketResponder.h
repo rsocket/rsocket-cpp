@@ -87,5 +87,20 @@ class RSocketResponder {
     return yarpl::flowable::Flowables::error<reactivesocket::Payload>(
         std::logic_error("handleRequestChannel not implemented"));
   }
+
+  /**
+   * Called when a new `fireAndForget` occurs from an RSocketRequester.
+   *
+   * No response.
+   *
+   * @param request
+   * @param streamId
+   * @return
+   */
+  virtual void handleFireAndForget(
+      reactivesocket::Payload request,
+      reactivesocket::StreamId streamId) {
+    // no default implementation, no error response to provide
+  }
 };
 }

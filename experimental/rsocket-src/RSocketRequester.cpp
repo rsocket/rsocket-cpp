@@ -135,11 +135,25 @@ RSocketRequester::requestResponse(Payload request) {
       });
 }
 
-void RSocketRequester::requestFireAndForget(Payload request) {
-  eventBase_.runInEventBaseThread(
-      [ this, request = std::move(request) ]() mutable {
-        reactiveSocket_->requestFireAndForget(std::move(request));
-      });
+yarpl::Reference<yarpl::single::Single<void>> RSocketRequester::fireAndForget(
+    reactivesocket::Payload request) {
+  return yarpl::single::Single<void>::create([
+    eb = &eventBase_,
+    request = std::move(request),
+    srs = reactiveSocket_
+  ](yarpl::Reference<yarpl::single::SingleObserver<void>> subscriber) mutable {
+    eb->runInEventBaseThread([
+      request = std::move(request),
+      subscriber = std::move(subscriber),
+      srs = std::move(srs)
+    ]() mutable {
+      // TODO pass in SingleSubscriber for underlying layers to
+      // call onSuccess/onError once put on network
+      srs->requestFireAndForget(std::move(request));
+      // right now just immediately call onSuccess
+      subscriber->onSuccess();
+    });
+  });
 }
 
 void RSocketRequester::metadataPush(std::unique_ptr<folly::IOBuf> metadata) {
