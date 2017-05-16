@@ -77,13 +77,9 @@ class ResumeCache {
     return size_;
   }
 
-  void onStreamClosed(StreamId streamId) {
-    // This is crude. We could try to preserve the stream type in
-    // RSocketStateMachine and pass it down explicitly here.
-    activeRequestStreams_.erase(streamId);
-    activeRequestChannels_.erase(streamId);
-    activeRequestResponses_.erase(streamId);
-  }
+  void onStreamOpen(StreamId streamId, FrameType frameType);
+
+  void onStreamClosed(StreamId streamId);
 
  private:
   void addFrame(const folly::IOBuf&, size_t);

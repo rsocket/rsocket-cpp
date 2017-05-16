@@ -377,8 +377,6 @@ void RSocketStateMachine::processFrameImpl(
   stats_->frameRead(frameType);
 
   auto streamIdPtr = frameSerializer_->peekStreamId(*frame);
-
-
   if (!streamIdPtr) {
     // Failed to deserialize the frame.
     closeWithError(Frame_ERROR::invalidFrame());

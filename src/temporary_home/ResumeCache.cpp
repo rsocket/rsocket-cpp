@@ -48,15 +48,7 @@ void ResumeCache::trackReceivedFrame(
     const folly::IOBuf& serializedFrame,
     const FrameType frameType,
     const StreamId streamId) {
-
-  if (frameType == FrameType::REQUEST_STREAM) {
-    activeRequestStreams_.insert(streamId);
-  } else if (frameType == FrameType::REQUEST_CHANNEL) {
-    activeRequestChannels_.insert(streamId);
-  } else if (frameType == FrameType::REQUEST_RESPONSE) {
-    activeRequestResponses_.insert(streamId);
-  }
-
+  onStreamOpen(streamId, frameType);
   if (shouldTrackFrame(frameType)) {
     VLOG(6) << "received frame " << frameType;
     // TODO(tmont): this could be expensive, find a better way to get length
@@ -70,13 +62,7 @@ void ResumeCache::trackSentFrame(
     const folly::Optional<StreamId> streamIdPtr) {
   if (streamIdPtr) {
     const StreamId streamId = *streamIdPtr;
-    if (frameType == FrameType::REQUEST_STREAM) {
-      activeRequestStreams_.insert(streamId);
-    } else if (frameType == FrameType::REQUEST_CHANNEL) {
-      activeRequestChannels_.insert(streamId);
-    } else if (frameType == FrameType::REQUEST_RESPONSE) {
-      activeRequestResponses_.insert(streamId);
-    }
+    onStreamOpen(streamId, frameType);
   }
 
   if (shouldTrackFrame(frameType)) {
@@ -188,6 +174,24 @@ void ResumeCache::sendFramesFromPosition(
   while (found != frames_.end()) {
     frameTransport.outputFrameOrEnqueue(found->second->clone());
     found++;
+  }
+}
+
+void ResumeCache::onStreamClosed(StreamId streamId) {
+  // This is crude. We could try to preserve the stream type in
+  // RSocketStateMachine and pass it down explicitly here.
+  activeRequestStreams_.erase(streamId);
+  activeRequestChannels_.erase(streamId);
+  activeRequestResponses_.erase(streamId);
+}
+
+void ResumeCache::onStreamOpen(StreamId streamId, FrameType frameType) {
+  if (frameType == FrameType::REQUEST_STREAM) {
+    activeRequestStreams_.insert(streamId);
+  } else if (frameType == FrameType::REQUEST_CHANNEL) {
+    activeRequestChannels_.insert(streamId);
+  } else if (frameType == FrameType::REQUEST_RESPONSE) {
+    activeRequestResponses_.insert(streamId);
   }
 }
 
