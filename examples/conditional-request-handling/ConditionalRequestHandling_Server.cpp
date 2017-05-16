@@ -4,9 +4,9 @@
 #include <folly/portability/GFlags.h>
 #include <iostream>
 
-#include "rsocket/RSocket.h"
-#include "rsocket/RSocketErrors.h"
-#include "rsocket/transports/TcpConnectionAcceptor.h"
+#include "src/RSocket.h"
+#include "src/RSocketErrors.h"
+#include "src/transports/tcp/TcpConnectionAcceptor.h"
 #include "JsonRequestHandler.h"
 #include "TextRequestHandler.h"
 

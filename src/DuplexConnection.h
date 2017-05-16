@@ -3,7 +3,7 @@
 #pragma once
 
 #include <memory>
-#include "src/ReactiveStreamsCompat.h"
+#include "src/internal/ReactiveStreamsCompat.h"
 
 namespace folly {
 class IOBuf;

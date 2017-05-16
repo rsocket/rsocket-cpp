@@ -4,13 +4,13 @@
 
 #include <folly/io/async/AsyncSocket.h>
 
-#include "src/ClientResumeStatusCallback.h"
-#include "src/FrameTransport.h"
-#include "src/NullRequestHandler.h"
-#include "src/ReactiveSocket.h"
-#include "src/folly/FollyKeepaliveTimer.h"
-#include "src/framed/FramedDuplexConnection.h"
-#include "src/tcp/TcpDuplexConnection.h"
+#include "src/internal/ClientResumeStatusCallback.h"
+#include "src/framing/FrameTransport.h"
+#include "src/temporary_home/NullRequestHandler.h"
+#include "src/temporary_home/ReactiveSocket.h"
+#include "src/internal/FollyKeepaliveTimer.h"
+#include "src/framing/FramedDuplexConnection.h"
+#include "src/transports/tcp/TcpDuplexConnection.h"
 
 namespace reactivesocket {
 namespace tests {
@@ -43,30 +43,30 @@ class ResumeCallback : public ClientResumeStatusCallback {
 class ClientRequestHandler : public DefaultRequestHandler {
  public:
   void onSubscriptionPaused(
-      const std::shared_ptr<Subscription>& subscription) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override {
     LOG(INFO) << "Subscription Paused";
   }
 
   void onSubscriptionResumed(
-      const std::shared_ptr<Subscription>& subscription) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override {
     LOG(INFO) << "Subscription Resumed";
   }
 
-  void onSubscriberPaused(const std::shared_ptr<Subscriber<Payload>>&
+  void onSubscriberPaused(const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
                               subscriber) noexcept override {
     LOG(INFO) << "Subscriber Paused";
   }
 
-  void onSubscriberResumed(const std::shared_ptr<Subscriber<Payload>>&
+  void onSubscriberResumed(const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
                                subscriber) noexcept override {
     LOG(INFO) << "Subscriber Resumed";
   }
 };
 
-class MySubscriber : public Subscriber<Payload> {
+class MySubscriber : public yarpl::flowable::Subscriber<Payload> {
  public:
 
-  void onSubscribe(std::shared_ptr<Subscription> sub) noexcept override {
+  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription> sub) noexcept override {
     subscription_ = sub;
     onSubscribe_();
   }
@@ -81,15 +81,15 @@ class MySubscriber : public Subscriber<Payload> {
 
   void onComplete() noexcept override {}
 
-  void onError(folly::exception_wrapper ex) noexcept override {}
+  void onError(std::exception_ptr ex) noexcept override {}
 
   // methods for testing
-  void request(size_t n) {
+  void request(int64_t n) {
     subscription_->request(n);
   }
 
  private:
-  std::shared_ptr<Subscription> subscription_;
+  yarpl::Reference<yarpl::flowable::Subscription> subscription_;
 };
 
 // Utility function to create a FrameTransport.

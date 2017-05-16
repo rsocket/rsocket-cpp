@@ -5,7 +5,7 @@
 #include <folly/io/IOBuf.h>
 #include <memory>
 #include <string>
-#include "src/Common.h"
+#include "src/internal/Common.h"
 
 namespace reactivesocket {
 

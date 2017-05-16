@@ -4,12 +4,12 @@
 
 #include <folly/io/async/AsyncServerSocket.h>
 
-#include "src/NullRequestHandler.h"
-#include "src/ReactiveSocket.h"
-#include "src/ServerConnectionAcceptor.h"
-#include "src/SubscriptionBase.h"
-#include "src/framed/FramedDuplexConnection.h"
-#include "src/tcp/TcpDuplexConnection.h"
+#include "src/temporary_home/NullRequestHandler.h"
+#include "src/temporary_home/ReactiveSocket.h"
+#include "src/temporary_home/ServerConnectionAcceptor.h"
+#include "src/temporary_home/SubscriptionBase.h"
+#include "src/framing/FramedDuplexConnection.h"
+#include "src/transports/tcp/TcpDuplexConnection.h"
 
 // A fixture class to init/destroy a ReactiveSocket server.  This can be used
 // to run different types of unittests.  The server's processes the request(n)

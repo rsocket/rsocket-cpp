@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "rsocket/RSocket.h"
+#include "src/RSocket.h"
 #include "src/Payload.h"
 
 class JsonRequestHandler : public rsocket::RSocketResponder {

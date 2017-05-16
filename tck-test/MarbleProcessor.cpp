@@ -51,7 +51,7 @@ namespace tck {
 
 MarbleProcessor::MarbleProcessor(
     const std::string marble,
-    const std::shared_ptr<Subscriber<Payload>>& subscriber)
+    const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& subscriber)
     : marble_(std::move(marble)), subscriber_(std::move(subscriber)) {
   // Remove '-' which is of no consequence for the tests
   marble_.erase(
@@ -79,7 +79,7 @@ void MarbleProcessor::run() {
         while (!canTerminate_)
           ;
         LOG(INFO) << "Sending onError";
-        subscriber_->onError(std::runtime_error("Marble Triggered Error"));
+        subscriber_->onError(std::make_exception_ptr(std::runtime_error("Marble Triggered Error")));
         return;
       case '|':
         while (!canTerminate_)

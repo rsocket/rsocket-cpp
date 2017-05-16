@@ -5,16 +5,14 @@
 #include <condition_variable>
 #include <mutex>
 #include <vector>
-
 #include <folly/ExceptionWrapper.h>
-
 #include "src/Payload.h"
-#include "src/ReactiveStreamsCompat.h"
+#include "yarpl/flowable/Subscriber.h"
 
 namespace reactivesocket {
 namespace tck {
 
-class TestSubscriber : public reactivesocket::Subscriber<Payload> {
+class TestSubscriber : public yarpl::flowable::Subscriber<Payload> {
  public:
   explicit TestSubscriber(int initialRequestN = 0);
 
@@ -36,15 +34,15 @@ class TestSubscriber : public reactivesocket::Subscriber<Payload> {
 
  protected:
   void onSubscribe(
-      std::shared_ptr<Subscription> subscription) noexcept override;
+      yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept override;
   void onNext(Payload element) noexcept override;
   void onComplete() noexcept override;
-  void onError(folly::exception_wrapper ex) noexcept override;
+  void onError(std::exception_ptr ex) noexcept override;
 
  private:
   void assertTerminated();
 
-  std::shared_ptr<Subscription> subscription_;
+  yarpl::Reference<yarpl::flowable::Subscription> subscription_;
   int initialRequestN_{0};
 
   std::atomic<bool> canceled_{false};
@@ -56,7 +54,7 @@ class TestSubscriber : public reactivesocket::Subscriber<Payload> {
   std::condition_variable valuesCV_;
   std::atomic<int> valuesCount_{0};
 
-  std::vector<folly::exception_wrapper> errors_;
+  std::vector<std::exception_ptr> errors_;
 
   std::condition_variable terminatedCV_;
   std::atomic<bool> completed_{false}; // by onComplete

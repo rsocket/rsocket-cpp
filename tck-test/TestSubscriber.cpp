@@ -133,7 +133,7 @@ void TestSubscriber::assertTerminated() {
 }
 
 void TestSubscriber::onSubscribe(
-    std::shared_ptr<Subscription> subscription) noexcept {
+    yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept {
   VLOG(4) << "OnSubscribe in TestSubscriber";
   subscription_ = subscription;
   if (initialRequestN_ > 0) {
@@ -166,7 +166,7 @@ void TestSubscriber::onComplete() noexcept {
   terminatedCV_.notify_one();
 }
 
-void TestSubscriber::onError(folly::exception_wrapper ex) noexcept {
+void TestSubscriber::onError(std::exception_ptr ex) noexcept {
   LOG(INFO) << "... received onError from Publisher";
   {
     std::unique_lock<std::mutex> lock(mutex_);

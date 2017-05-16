@@ -3,7 +3,7 @@
 #include "src/Payload.h"
 #include <folly/String.h>
 #include <folly/io/Cursor.h>
-#include "src/Frame.h"
+#include "src/framing/Frame.h"
 
 namespace reactivesocket {
 
