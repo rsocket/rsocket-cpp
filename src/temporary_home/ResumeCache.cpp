@@ -47,10 +47,14 @@ ResumeCache::~ResumeCache() {
 void ResumeCache::trackReceivedFrame(
     const folly::IOBuf& serializedFrame,
     const FrameType frameType,
-    const folly::Optional<StreamId> streamIdPtr) {
-  if (frameType == FrameType::REQUEST_STREAM && streamIdPtr) {
-    const StreamId streamId = *streamIdPtr;
-    activeStreams_.insert(streamId);
+    const StreamId streamId) {
+
+  if (frameType == FrameType::REQUEST_STREAM) {
+    activeRequestStreams_.insert(streamId);
+  } else if (frameType == FrameType::REQUEST_CHANNEL) {
+    activeRequestChannels_.insert(streamId);
+  } else if (frameType == FrameType::REQUEST_RESPONSE) {
+    activeRequestResponses_.insert(streamId);
   }
 
   if (shouldTrackFrame(frameType)) {
@@ -64,9 +68,15 @@ void ResumeCache::trackSentFrame(
     const folly::IOBuf& serializedFrame,
     const FrameType frameType,
     const folly::Optional<StreamId> streamIdPtr) {
-  if (frameType == FrameType::REQUEST_STREAM && streamIdPtr) {
+  if (streamIdPtr) {
     const StreamId streamId = *streamIdPtr;
-    activeStreams_.insert(streamId);
+    if (frameType == FrameType::REQUEST_STREAM) {
+      activeRequestStreams_.insert(streamId);
+    } else if (frameType == FrameType::REQUEST_CHANNEL) {
+      activeRequestChannels_.insert(streamId);
+    } else if (frameType == FrameType::REQUEST_RESPONSE) {
+      activeRequestResponses_.insert(streamId);
+    }
   }
 
   if (shouldTrackFrame(frameType)) {

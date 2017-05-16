@@ -39,7 +39,7 @@ class ResumeCache {
   void trackReceivedFrame(
       const folly::IOBuf& serializedFrame,
       const FrameType frameType,
-      const folly::Optional<StreamId> streamIdPtr);
+      const StreamId streamId);
 
   // Tracks a sent frame.
   void trackSentFrame(
@@ -78,7 +78,11 @@ class ResumeCache {
   }
 
   void onStreamClosed(StreamId streamId) {
-    activeStreams_.erase(streamId);
+    // This is crude. We could try to preserve the stream type in
+    // RSocketStateMachine and pass it down explicitly here.
+    activeRequestStreams_.erase(streamId);
+    activeRequestChannels_.erase(streamId);
+    activeRequestResponses_.erase(streamId);
   }
 
  private:
@@ -97,8 +101,14 @@ class ResumeCache {
   // Inferred position of the rcvd frames
   ResumePosition impliedPosition_{0};
 
-  // Only active REQUEST_STREAMs are preserved here
-  std::set<StreamId> activeStreams_;
+  // Active REQUEST_STREAMs are preserved here
+  std::set<StreamId> activeRequestStreams_;
+
+  // Active REQUEST_CHANNELs are preserved here
+  std::set<StreamId> activeRequestChannels_;
+
+  // Active REQUEST_RESPONSEs are preserved here
+  std::set<StreamId> activeRequestResponses_;
 
   std::deque<std::pair<ResumePosition, std::unique_ptr<folly::IOBuf>>> frames_;
 

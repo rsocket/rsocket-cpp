@@ -378,10 +378,6 @@ void RSocketStateMachine::processFrameImpl(
 
   auto streamIdPtr = frameSerializer_->peekStreamId(*frame);
 
-  // TODO(tmont): If a frame is invalid, it will still be tracked. However, we
-  // actually want that. We want to keep
-  // each side in sync, even if a frame is invalid.
-  resumeCache_->trackReceivedFrame(*frame, frameType, streamIdPtr);
 
   if (!streamIdPtr) {
     // Failed to deserialize the frame.
@@ -389,6 +385,7 @@ void RSocketStateMachine::processFrameImpl(
     return;
   }
   auto streamId = *streamIdPtr;
+  resumeCache_->trackReceivedFrame(*frame, frameType, streamId);
   if (streamId == 0) {
     handleConnectionFrame(frameType, std::move(frame));
     return;
