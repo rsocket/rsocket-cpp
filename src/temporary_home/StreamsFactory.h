@@ -23,8 +23,13 @@ class StreamsFactory {
   yarpl::Reference<yarpl::flowable::Subscriber<Payload>> createChannelRequester(
       yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSink);
 
+  StreamId createStreamRequester(
+      Payload request,
+      yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSink);
+
   void createStreamRequester(
       Payload request,
+      StreamId streamId,
       yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSink);
 
   void createRequestResponseRequester(
@@ -46,6 +51,7 @@ class StreamsFactory {
 
   bool registerNewPeerStreamId(StreamId streamId);
   StreamId getNextStreamId();
+  void setNextStreamId(StreamId nextStreamId);
 
  private:
   RSocketStateMachine& connection_;

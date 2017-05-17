@@ -5,6 +5,7 @@
 #include <memory>
 #include "src/internal/Common.h"
 #include "src/temporary_home/ConnectionSetupPayload.h"
+#include "src/temporary_home/ResumeCache.h"
 #include "src/Payload.h"
 #include "Stats.h"
 #include "yarpl/flowable/Subscriber.h"
@@ -54,6 +55,7 @@ class ReactiveSocket {
   static std::unique_ptr<ReactiveSocket> disconnectedClient(
       folly::Executor& executor,
       std::unique_ptr<RequestHandler> handler,
+      std::shared_ptr<ResumeCache> resumeCache,
       std::shared_ptr<Stats> stats = Stats::noop(),
       std::unique_ptr<KeepaliveTimer> keepaliveTimer =
           std::unique_ptr<KeepaliveTimer>(nullptr),
@@ -79,6 +81,11 @@ class ReactiveSocket {
   void requestStream(
       Payload payload,
       yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSink);
+
+  bool requestStream(
+      Payload payload,
+      yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSink,
+      std::string streamName);
 
   void requestResponse(
       Payload payload,
@@ -127,6 +134,7 @@ class ReactiveSocket {
   ReactiveSocket(
       ReactiveSocketMode mode,
       std::shared_ptr<RequestHandler> handler,
+      std::shared_ptr<ResumeCache> resumeCache,
       std::shared_ptr<Stats> stats,
       std::unique_ptr<KeepaliveTimer> keepaliveTimer,
       folly::Executor& executor);

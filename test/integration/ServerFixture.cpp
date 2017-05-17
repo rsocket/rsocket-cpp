@@ -165,7 +165,7 @@ class MyAcceptCallback : public AsyncServerSocket::AcceptCallback {
   MyAcceptCallback(EventBase& eventBase)
       : eventBase_(eventBase),
         connectionHandler_(std::make_shared<MyConnectionHandler>(eventBase)),
-        connectionAcceptor_(ProtocolVersion::Latest) {}
+        connectionAcceptor_(FrameSerializer::getCurrentProtocolVersion()) {}
 
   virtual void connectionAccepted(
       int fd,

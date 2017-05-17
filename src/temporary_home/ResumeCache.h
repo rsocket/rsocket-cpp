@@ -29,7 +29,7 @@ class FrameTransport;
 class ResumeCache {
  public:
   explicit ResumeCache(
-      std::shared_ptr<Stats> stats,
+      std::shared_ptr<Stats> stats = Stats::noop(),
       size_t capacity = DEFAULT_CAPACITY)
       : stats_(std::move(stats)), capacity_(capacity) {}
   ~ResumeCache();
@@ -73,6 +73,15 @@ class ResumeCache {
     return clientPosition <= impliedPosition_;
   }
 
+  void setStreamName(StreamId streamId, const std::string& streamName) {
+    streamNameMap_[streamId] = streamName;
+  }
+
+  StreamId getStreamId(const std::string& streamName) const;
+
+  std::unordered_map<StreamId, std::string /* streamName */>
+  getResumableStreams();
+
   size_t size() const {
     return size_;
   }
@@ -94,6 +103,8 @@ class ResumeCache {
   ResumePosition impliedPosition_{0};
 
   std::unordered_map<StreamId, ResumePosition> streamMap_;
+
+  std::unordered_map<StreamId, std::string /* streamName */> streamNameMap_;
 
   std::deque<std::pair<ResumePosition, std::unique_ptr<folly::IOBuf>>> frames_;
 

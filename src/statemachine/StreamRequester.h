@@ -25,6 +25,17 @@ class StreamRequester : public ConsumerBase {
       : Base(params),
         initialPayload_(std::move(payload)) {}
 
+  /// State of the Subscription requester.
+  enum class State : uint8_t {
+    NEW,
+    REQUESTED,
+    CLOSED,
+  };
+
+  void setState(State state) {
+    state_ = state;
+  }
+
  private:
   // implementation from ConsumerBase::SubscriptionBase
   void request(int64_t) noexcept override;
@@ -37,18 +48,13 @@ class StreamRequester : public ConsumerBase {
 
   void endStream(StreamCompletionSignal) override;
 
-  /// State of the Subscription requester.
-  enum class State : uint8_t {
-    NEW,
-    REQUESTED,
-    CLOSED,
-  } state_{State::NEW};
-
   /// An allowance accumulated before the stream is initialised.
   /// Remaining part of the allowance is forwarded to the ConsumerBase.
   AllowanceSemaphore initialResponseAllowance_;
 
   /// Initial payload which has to be sent with 1st request.
   Payload initialPayload_;
+
+  State state_{State::NEW};
 };
 } // reactivesocket

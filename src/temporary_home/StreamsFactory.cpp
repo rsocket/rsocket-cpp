@@ -35,12 +35,27 @@ Reference<yarpl::flowable::Subscriber<Payload>> StreamsFactory::createChannelReq
 
 void StreamsFactory::createStreamRequester(
     Payload request,
+    StreamId streamId,
     Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
-  StreamRequester::Parameters params(connection_.shared_from_this(), getNextStreamId());
+  StreamRequester::Parameters params(connection_.shared_from_this(), streamId);
+  auto automaton =
+      yarpl::make_ref<StreamRequester>(params, std::move(request));
+  automaton->setState(StreamRequester::State::REQUESTED);
+  connection_.addStream(params.streamId, automaton);
+  automaton->subscribe(std::move(responseSink));
+}
+
+StreamId StreamsFactory::createStreamRequester(
+    Payload request,
+    yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
+  auto nextStreamId = getNextStreamId();
+  StreamRequester::Parameters params(
+      connection_.shared_from_this(), nextStreamId);
   auto automaton =
       yarpl::make_ref<StreamRequester>(params, std::move(request));
   connection_.addStream(params.streamId, automaton);
   automaton->subscribe(std::move(responseSink));
+  return nextStreamId;
 }
 
 void StreamsFactory::createRequestResponseRequester(
@@ -58,6 +73,12 @@ StreamId StreamsFactory::getNextStreamId() {
   CHECK(streamId <= std::numeric_limits<int32_t>::max() - 2);
   nextStreamId_ += 2;
   return streamId;
+}
+
+void StreamsFactory::setNextStreamId(StreamId nextStreamId) {
+  if (nextStreamId > nextStreamId_) {
+    nextStreamId_ = nextStreamId;
+  }
 }
 
 bool StreamsFactory::registerNewPeerStreamId(StreamId streamId) {

@@ -26,12 +26,13 @@ RSocketStateMachine::RSocketStateMachine(
     std::shared_ptr<RequestHandler> requestHandler,
     std::shared_ptr<Stats> stats,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer,
-    ReactiveSocketMode mode)
+    ReactiveSocketMode mode,
+    std::shared_ptr<ResumeCache> resumeCache)
     : ExecutorBase(executor),
       reactiveSocket_(reactiveSocket),
       stats_(stats),
       mode_(mode),
-      resumeCache_(std::make_shared<ResumeCache>(stats)),
+      resumeCache_(std::move(resumeCache)),
       streamState_(std::make_shared<StreamState>(*stats)),
       requestHandler_(std::move(requestHandler)),
       keepaliveTimer_(std::move(keepaliveTimer)),
@@ -185,6 +186,22 @@ void RSocketStateMachine::close(
 
   closeStreams(signal);
   closeFrameTransport(std::move(ex), signal);
+}
+
+void RSocketStateMachine::resumeStreamsFromCache() {
+  auto resumableStreams = resumeCache_->getResumableStreams();
+  StreamId maxStreamId = 0;
+  for (auto const& it : resumableStreams) {
+    auto sub = requestHandler_->handleResumeStream(it.second /* streamName */);
+    streamsFactory_.createStreamRequester(
+        Payload(), it.first /* streamId */, sub);
+    if (it.first > maxStreamId) {
+      maxStreamId = it.first;
+    }
+  }
+  if (maxStreamId != 0) {
+    streamsFactory_.setNextStreamId(maxStreamId + 2);
+  }
 }
 
 void RSocketStateMachine::closeFrameTransport(
@@ -917,6 +934,16 @@ void RSocketStateMachine::setUpFrame(
 
 ProtocolVersion RSocketStateMachine::getSerializerProtocolVersion() {
   return frameSerializer_->protocolVersion();
+}
+
+void RSocketStateMachine::setStreamName(
+    StreamId streamId,
+    const std::string& streamName) {
+  return resumeCache_->setStreamName(streamId, streamName);
+}
+
+StreamId RSocketStateMachine::getStreamId(const std::string& streamName) const {
+  return resumeCache_->getStreamId(streamName);
 }
 
 void RSocketStateMachine::writeNewStream(

@@ -67,6 +67,11 @@ class MockRequestHandler : public RequestHandler {
     handleRequestResponse_(request, streamId, response);
   }
 
+  virtual yarpl::Reference<yarpl::flowable::Subscriber<Payload>>
+  handleResumeStream(std::string streamName) noexcept override {
+    LOG(FATAL) << "handleResumeStream not implemented";
+  }
+
   void handleFireAndForgetRequest(
       Payload request,
       StreamId streamId) noexcept override {

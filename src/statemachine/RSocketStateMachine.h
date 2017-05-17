@@ -12,6 +12,7 @@
 #include "src/framing/FrameProcessor.h"
 #include "src/framing/FrameSerializer.h"
 #include "src/Payload.h"
+#include "src/temporary_home/ResumeCache.h"
 #include "src/temporary_home/StreamsFactory.h"
 #include "src/temporary_home/StreamsHandler.h"
 
@@ -65,7 +66,9 @@ class RSocketStateMachine final
       std::shared_ptr<RequestHandler> requestHandler,
       std::shared_ptr<Stats> stats,
       std::unique_ptr<KeepaliveTimer> keepaliveTimer_,
-      ReactiveSocketMode mode);
+      ReactiveSocketMode mode,
+      std::shared_ptr<ResumeCache> resumeCache = 
+          std::make_shared<ResumeCache>());
 
   void closeWithError(Frame_ERROR&& error);
   void disconnectOrCloseWithError(Frame_ERROR&& error) override;
@@ -88,6 +91,8 @@ class RSocketStateMachine final
   /// This may synchronously deliver terminal signals to all
   /// StreamAutomatonBase attached to this ConnectionAutomaton.
   void close(folly::exception_wrapper, StreamCompletionSignal);
+
+  void resumeStreamsFromCache();
 
   std::shared_ptr<FrameTransport> detachFrameTransport();
 
@@ -204,6 +209,10 @@ class RSocketStateMachine final
   Stats& stats() {
     return *stats_;
   }
+
+  void setStreamName(StreamId streamId, const std::string& streamName);
+
+  StreamId getStreamId(const std::string& streamName) const;
 
  private:
   /// Performs the same actions as ::endStream without propagating closure
