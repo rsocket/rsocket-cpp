@@ -321,4 +321,4 @@ static void BM_Baseline_TCP_Latency(benchmark::State &state)
 BENCHMARK(BM_Baseline_TCP_Latency)
     ->Arg(32)->Arg(128)->Arg(4096);
 
-BENCHMARK_MAIN();
+BENCHMARK_MAIN()

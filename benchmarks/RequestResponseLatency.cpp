@@ -184,11 +184,11 @@ class BM_RsFixture : public benchmark::Fixture
   {
   }
 
-  void SetUp(benchmark::State &state) noexcept override
+  void SetUp(const benchmark::State& state) noexcept override
   {
   }
 
-  void TearDown(benchmark::State &state) noexcept override
+  void TearDown(const benchmark::State& state) noexcept override
   {
   }
 
