@@ -10,7 +10,7 @@ using namespace rsocket::tests;
 using namespace rsocket::tests::client_server;
 
 TEST(RSocketClientServer, StartAndShutdown) {
-  makeServer(randPort());
+  makeServer(randPort(), std::make_shared<HelloStreamRequestHandler>());
   makeClient(randPort());
 }
 
@@ -18,7 +18,7 @@ TEST(RSocketClientServer, StartAndShutdown) {
 // wrong EventBase for the AsyncSocket.
 TEST(RSocketClientServer, DISABLED_SimpleConnect) {
   auto const port = randPort();
-  auto server = makeServer(port);
+  auto server = makeServer(port, std::make_shared<HelloStreamRequestHandler>());
   auto client = makeClient(port);
   auto requester = client->connect().get();
 }
