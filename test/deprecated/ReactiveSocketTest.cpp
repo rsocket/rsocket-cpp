@@ -1186,35 +1186,35 @@ class ReactiveSocketIgnoreRequestTest : public testing::Test {
         }));
   }
 
+  static Payload testPayload() {
+      return Payload("foo");
+  }
+
   std::unique_ptr<ReactiveSocket> clientSock;
   std::unique_ptr<ReactiveSocket> serverSock;
 
   yarpl::Reference<StrictMock<yarpl::flowable::MockSubscriber<Payload>>> clientInput{
       make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>()};
   yarpl::Reference<yarpl::flowable::Subscription> clientInputSub;
-
-  const std::unique_ptr<folly::IOBuf> originalPayload{
-      folly::IOBuf::copyBuffer("foo")};
 };
 
 TEST_F(ReactiveSocketIgnoreRequestTest, IgnoreRequestResponse) {
-  clientSock->requestResponse(Payload(originalPayload->clone()), clientInput);
+  clientSock->requestResponse(testPayload(), clientInput);
 }
 
 TEST_F(ReactiveSocketIgnoreRequestTest, IgnoreRequestStream) {
-  clientSock->requestStream(Payload(originalPayload->clone()), clientInput);
+  clientSock->requestStream(testPayload(), clientInput);
 }
 
 TEST_F(ReactiveSocketIgnoreRequestTest, IgnoreRequestChannel) {
   auto clientOutput = clientSock->requestChannel(clientInput);
 
   auto clientOutputSub = make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
-  EXPECT_CALL(*clientOutputSub, request_(1)).WillOnce(Invoke([&](size_t) {
-    clientOutput->onNext(Payload(originalPayload->clone()));
+  EXPECT_CALL(*clientOutputSub, request_(1)).WillOnce(Invoke([clientOutput](size_t) {
+    clientOutput->onNext(testPayload());
   }));
-  EXPECT_CALL(*clientOutputSub, cancel_()).WillOnce(Invoke([&]() {
+  EXPECT_CALL(*clientOutputSub, cancel_()).WillOnce(Invoke([clientOutput]() {
     clientOutput->onComplete();
-    clientOutput = nullptr;
   }));
 
   clientOutput->onSubscribe(clientOutputSub);
