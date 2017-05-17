@@ -148,6 +148,8 @@ void RSocketConnectionHandler::setupNewSocket(
 
   manageSocket(setupRequest, rs);
 
+  // TODO ---> this code needs to be moved inside RSocketStateMachine
+
   // Connect last, after all state has been set up.
   rs->setResumable(socketParams.resumable);
 
@@ -157,6 +159,10 @@ void RSocketConnectionHandler::setupNewSocket(
   }
 
   rs->connect(std::move(frameTransport), true, socketParams.protocolVersion);
+
+  // TODO <---- up to here
+  // TODO and then a simple API such as:
+  // TODO rs->connectServer(frameTransport, params)
 }
 
 bool RSocketConnectionHandler::resumeSocket(

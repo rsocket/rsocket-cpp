@@ -2,9 +2,9 @@
 
 #include "RSocketClient.h"
 #include "RSocketRequester.h"
-#include "src/temporary_home/Stats.h"
 #include "src/internal/FollyKeepaliveTimer.h"
 #include "src/temporary_home/NullRequestHandler.h"
+#include "src/temporary_home/Stats.h"
 
 using namespace reactivesocket;
 using namespace folly;
@@ -35,11 +35,13 @@ Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect() {
         // TODO need to optionally allow defining the keepalive timer
         std::make_unique<FollyKeepaliveTimer>(
             eventBase, std::chrono::milliseconds(5000)),
-    ReactiveSocketMode::CLIENT);
+        ReactiveSocketMode::CLIENT);
 
     // TODO need to allow this being passed in
     auto setupPayload = ConnectionSetupPayload(
         "text/plain", "text/plain", Payload("meta", "data"));
+
+    // TODO ---> this code needs to be moved inside RSocketStateMachine
 
     rs->setFrameSerializer(
         setupPayload.protocolVersion == ProtocolVersion::Unknown
@@ -57,6 +59,10 @@ Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect() {
     auto frameTransport =
         std::make_shared<FrameTransport>(std::move(framedConnection));
     rs->setUpFrame(std::move(frameTransport), std::move(setupPayload));
+
+    // TODO <---- up to here
+    // TODO and then a simple API such as:
+    // TODO rs->connectAndSendSetup(frameTransport, params, setupPayload)
 
     auto rsocket = RSocketRequester::create(std::move(rs), eventBase);
     // store it so it lives as long as the RSocketClient
