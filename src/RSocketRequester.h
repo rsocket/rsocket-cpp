@@ -108,7 +108,7 @@ class RSocketRequester {
   RSocketRequester(
       std::shared_ptr<reactivesocket::RSocketStateMachine> srs,
       folly::EventBase& eventBase);
-  std::shared_ptr<reactivesocket::RSocketStateMachine> reactiveSocket_;
+  std::shared_ptr<reactivesocket::RSocketStateMachine> stateMachine_;
   folly::EventBase& eventBase_;
 };
 }
