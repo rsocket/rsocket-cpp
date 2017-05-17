@@ -42,4 +42,5 @@ struct Tuple {
   static std::atomic<int> destroyedCount;
   static std::atomic<int> instanceCount;
 };
-};
+
+} // yarpl

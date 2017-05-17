@@ -188,11 +188,11 @@ public:
     {
     }
 
-    void SetUp(benchmark::State &state) override
+    void SetUp(const benchmark::State& state) override
     {
     }
 
-    void TearDown(benchmark::State &state) override
+    void TearDown(const benchmark::State& state) override
     {
     }
 
