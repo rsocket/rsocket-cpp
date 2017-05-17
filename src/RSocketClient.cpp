@@ -2,11 +2,11 @@
 
 #include "RSocketClient.h"
 #include "RSocketRequester.h"
+#include "RSocketStats.h"
 #include "src/internal/FollyKeepaliveTimer.h"
 #include "src/temporary_home/NullRequestHandler.h"
-#include "src/temporary_home/Stats.h"
 
-using namespace reactivesocket;
+using namespace rsocket;
 using namespace folly;
 
 namespace rsocket {
@@ -31,15 +31,15 @@ Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect() {
         // need to allow Responder being passed in optionally
         std::make_unique<NullRequestHandler>(),
         // need to allow stats being passed in
-        Stats::noop(),
+        RSocketStats::noop(),
         // TODO need to optionally allow defining the keepalive timer
         std::make_unique<FollyKeepaliveTimer>(
             eventBase, std::chrono::milliseconds(5000)),
         ReactiveSocketMode::CLIENT);
 
     // TODO need to allow this being passed in
-    auto setupPayload = ConnectionSetupPayload(
-        "text/plain", "text/plain", Payload("meta", "data"));
+    auto setupPayload =
+        SetupParameters("text/plain", "text/plain", Payload("meta", "data"));
 
     // TODO ---> this code needs to be moved inside RSocketStateMachine
 

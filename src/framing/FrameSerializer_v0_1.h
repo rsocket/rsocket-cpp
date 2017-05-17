@@ -4,7 +4,7 @@
 
 #include "src/framing/FrameSerializer_v0.h"
 
-namespace reactivesocket {
+namespace rsocket {
 
 class FrameSerializerV0_1 : public FrameSerializerV0 {
  public:

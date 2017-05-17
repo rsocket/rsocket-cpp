@@ -10,7 +10,6 @@
 #include "src/transports/tcp/TcpConnectionFactory.h"
 #include "yarpl/Flowable.h"
 
-using namespace ::reactivesocket;
 using namespace ::folly;
 using namespace ::rsocket_example;
 using namespace ::rsocket;

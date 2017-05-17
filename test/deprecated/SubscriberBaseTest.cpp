@@ -6,7 +6,7 @@
 #include "test/streams/Mocks.h"
 
 using namespace ::testing;
-using namespace ::reactivesocket;
+using namespace ::rsocket;
 
 class SubscriberBaseMock : public SubscriberBaseT<int> {
  public:
@@ -78,9 +78,8 @@ TEST(SubscriberBaseTest, OnNextDelivered) {
           [&](std::shared_ptr<Subscription> s) { outSubscription = s; }));
 
   EXPECT_CALL(*subscriber, onNextImpl_(_)).Times(3);
-  EXPECT_CALL(*subscriber, onCompleteImpl_()).WillOnce(Invoke([&]() {
-    done = true;
-  }));
+  EXPECT_CALL(*subscriber, onCompleteImpl_())
+      .WillOnce(Invoke([&]() { done = true; }));
   EXPECT_CALL(*subscriber, onErrorImpl_(_)).Times(0);
 
   auto subscription = std::make_shared<MockSubscription>();

@@ -5,13 +5,13 @@
 #include "src/Payload.h"
 #include "yarpl/flowable/Subscriber.h"
 
-namespace reactivesocket {
+namespace rsocket {
 class PrintSubscriber : public yarpl::flowable::Subscriber<Payload> {
  public:
   ~PrintSubscriber();
 
-  void onSubscribe(
-      yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept override;
+  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
+                       subscription) noexcept override;
   void onNext(Payload element) noexcept override;
   void onComplete() noexcept override;
   void onError(std::exception_ptr ex) noexcept override;

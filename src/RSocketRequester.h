@@ -35,7 +35,7 @@ namespace rsocket {
 class RSocketRequester {
  public:
   static std::shared_ptr<RSocketRequester> create(
-      std::shared_ptr<reactivesocket::RSocketStateMachine> srs,
+      std::shared_ptr<rsocket::RSocketStateMachine> srs,
       folly::EventBase& executor);
   // TODO figure out how to use folly::Executor instead of EventBase
 
@@ -53,8 +53,8 @@ class RSocketRequester {
    *
    * @param payload
    */
-  yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
-  requestStream(reactivesocket::Payload request);
+  yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>> requestStream(
+      rsocket::Payload request);
 
   /**
     * Start a channel (streams in both directions).
@@ -64,10 +64,8 @@ class RSocketRequester {
     *
     * @param request
     */
-  yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
-  requestChannel(
-      yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
-          requests);
+  yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>> requestChannel(
+      yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>> requests);
 
   /**
    * Send a single request and get a single response.
@@ -77,8 +75,8 @@ class RSocketRequester {
    *
    * @param payload
    */
-  yarpl::Reference<yarpl::single::Single<reactivesocket::Payload>>
-  requestResponse(reactivesocket::Payload request);
+  yarpl::Reference<yarpl::single::Single<rsocket::Payload>> requestResponse(
+      rsocket::Payload request);
 
   /**
    * Send a single Payload with no response.
@@ -95,7 +93,7 @@ class RSocketRequester {
    * @param payload
    */
   yarpl::Reference<yarpl::single::Single<void>> fireAndForget(
-      reactivesocket::Payload request);
+      rsocket::Payload request);
 
   /**
    * Send metadata without response.
@@ -106,9 +104,9 @@ class RSocketRequester {
 
  private:
   RSocketRequester(
-      std::shared_ptr<reactivesocket::RSocketStateMachine> srs,
+      std::shared_ptr<rsocket::RSocketStateMachine> srs,
       folly::EventBase& eventBase);
-  std::shared_ptr<reactivesocket::RSocketStateMachine> stateMachine_;
+  std::shared_ptr<rsocket::RSocketStateMachine> stateMachine_;
   folly::EventBase& eventBase_;
 };
 }

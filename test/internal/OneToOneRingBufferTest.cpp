@@ -9,9 +9,9 @@
 
 #include "src/concurrent/OneToOneRingBuffer.h"
 
-using namespace ::reactivesocket;
+using namespace ::rsocket;
 using namespace ::testing;
-using namespace ::reactivesocket::RingBufferDescriptor;
+using namespace ::rsocket::RingBufferDescriptor;
 
 using buffer_t = std::array<uint8_t, 64 * 1024 + TRAILER_LENGTH>;
 using odd_sized_buffer_t = std::array<uint8_t, 64 * 1024 - 1 + TRAILER_LENGTH>;

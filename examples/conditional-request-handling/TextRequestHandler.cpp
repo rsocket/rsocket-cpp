@@ -4,12 +4,11 @@
 #include <string>
 #include "yarpl/Flowable.h"
 
-using namespace reactivesocket;
 using namespace rsocket;
 using namespace yarpl::flowable;
 
 /// Handles a new inbound Stream requested by the other end.
-yarpl::Reference<Flowable<reactivesocket::Payload>>
+yarpl::Reference<Flowable<rsocket::Payload>>
 TextRequestHandler::handleRequestStream(Payload request, StreamId streamId) {
   LOG(INFO) << "TextRequestHandler.handleRequestStream " << request;
 

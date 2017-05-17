@@ -5,7 +5,7 @@
 #include "src/framing/FramedReader.h"
 #include "src/framing/FramedWriter.h"
 
-namespace reactivesocket {
+namespace rsocket {
 
 FramedDuplexConnection::FramedDuplexConnection(
     std::unique_ptr<DuplexConnection> connection,

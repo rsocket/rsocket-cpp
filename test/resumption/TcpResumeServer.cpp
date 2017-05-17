@@ -6,17 +6,17 @@
 #include <gmock/gmock.h>
 
 #include "src/framing/FrameTransport.h"
+#include "src/framing/FramedDuplexConnection.h"
 #include "src/temporary_home/NullRequestHandler.h"
 #include "src/temporary_home/ServerConnectionAcceptor.h"
-#include "test/deprecated/ReactiveSocket.h"
 #include "src/temporary_home/SubscriptionBase.h"
-#include "src/framing/FramedDuplexConnection.h"
 #include "src/transports/tcp/TcpDuplexConnection.h"
+#include "test/deprecated/ReactiveSocket.h"
 #include "test/test_utils/PrintSubscriber.h"
 #include "test/test_utils/StatsPrinter.h"
 
 using namespace ::testing;
-using namespace ::reactivesocket;
+using namespace ::rsocket;
 using namespace ::folly;
 using namespace yarpl;
 
@@ -30,7 +30,8 @@ std::vector<
 
 class ServerSubscription : public yarpl::flowable::Subscription {
  public:
-  explicit ServerSubscription(yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response)
+  explicit ServerSubscription(
+      yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response)
       : response_(std::move(response)) {}
 
   ~ServerSubscription() {
@@ -66,7 +67,8 @@ class ServerRequestHandler : public DefaultRequestHandler {
   void handleRequestStream(
       Payload request,
       StreamId streamId,
-      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+          response) noexcept override {
     LOG(INFO) << "ServerRequestHandler.handleRequestStream " << request;
 
     response->onSubscribe(make_ref<ServerSubscription>(response));
@@ -86,46 +88,49 @@ class ServerRequestHandler : public DefaultRequestHandler {
   }
 
   std::shared_ptr<StreamState> handleSetupPayload(
-      ConnectionSetupPayload request) noexcept override {
+      SetupParameters request) noexcept override {
     CHECK(false) << "unexpected call";
     return nullptr;
   }
 
-  bool handleResume(
-      ResumeParameters) noexcept override {
+  bool handleResume(ResumeParameters) noexcept override {
     CHECK(false) << "unexpected call";
     return false;
   }
 
-  void handleCleanResume(
-      yarpl::Reference<yarpl::flowable::Subscription> response) noexcept override {
+  void handleCleanResume(yarpl::Reference<yarpl::flowable::Subscription>
+                             response) noexcept override {
     LOG(INFO) << "clean resume stream"
               << "\n";
   }
 
-  void handleDirtyResume(
-      yarpl::Reference<yarpl::flowable::Subscription> response) noexcept override {
+  void handleDirtyResume(yarpl::Reference<yarpl::flowable::Subscription>
+                             response) noexcept override {
     LOG(INFO) << "dirty resume stream"
               << "\n";
   }
 
   void onSubscriptionPaused(
-      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscription>&
+          subscription) noexcept override {
     LOG(INFO) << "subscription paused " << &subscription;
   }
 
   void onSubscriptionResumed(
-      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscription>&
+          subscription) noexcept override {
     LOG(INFO) << "subscription resumed " << &subscription;
   }
 
-  void onSubscriberPaused(const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
-                              subscriber) noexcept override {
+  void onSubscriberPaused(
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+          subscriber) noexcept override {
     LOG(INFO) << "subscriber paused " << &subscriber;
   }
 
-  void onSubscriberResumed(const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
-                               subscriber) noexcept override {
+  void onSubscriberResumed(
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+          subscriber) noexcept override {
     LOG(INFO) << "subscriber resumed " << &subscriber;
   }
 
@@ -136,20 +141,19 @@ class ServerRequestHandler : public DefaultRequestHandler {
 
 class MyConnectionHandler : public ConnectionHandler {
  public:
-  MyConnectionHandler(EventBase& eventBase, std::shared_ptr<Stats> stats)
+  MyConnectionHandler(EventBase& eventBase, std::shared_ptr<RSocketStats> stats)
       : eventBase_(eventBase), stats_(std::move(stats)) {}
 
   void setupNewSocket(
       std::shared_ptr<FrameTransport> frameTransport,
-      ConnectionSetupPayload setupPayload) override {
+      SetupParameters setupPayload) override {
     LOG(INFO) << "MyConnectionHandler::setupNewSocket " << setupPayload;
 
     std::unique_ptr<RequestHandler> requestHandler =
         std::make_unique<ServerRequestHandler>(nullptr);
 
-    std::unique_ptr<ReactiveSocket> rs =
-        ReactiveSocket::disconnectedServer(
-            eventBase_, std::move(requestHandler), stats_);
+    std::unique_ptr<ReactiveSocket> rs = ReactiveSocket::disconnectedServer(
+        eventBase_, std::move(requestHandler), stats_);
 
     rs->onConnected([]() { LOG(INFO) << "socket connected"; });
     rs->onDisconnected([rs = rs.get()](const folly::exception_wrapper& ex) {
@@ -202,12 +206,12 @@ class MyConnectionHandler : public ConnectionHandler {
 
  private:
   EventBase& eventBase_;
-  std::shared_ptr<Stats> stats_;
+  std::shared_ptr<RSocketStats> stats_;
 };
 
 class Callback : public AsyncServerSocket::AcceptCallback {
  public:
-  Callback(EventBase& eventBase, std::shared_ptr<Stats> stats)
+  Callback(EventBase& eventBase, std::shared_ptr<RSocketStats> stats)
       : eventBase_(eventBase),
         stats_(stats),
         connectionHandler_(
@@ -243,7 +247,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
   // only one for demo purposes. Should be token dependent.
   std::shared_ptr<StreamState> streamState_;
   EventBase& eventBase_;
-  std::shared_ptr<Stats> stats_;
+  std::shared_ptr<RSocketStats> stats_;
   bool shuttingDown{false};
   std::shared_ptr<MyConnectionHandler> connectionHandler_;
   ServerConnectionAcceptor connectionAcceptor_;
@@ -263,7 +267,7 @@ int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
 
-  auto statsPrinter = std::make_shared<reactivesocket::StatsPrinter>();
+  auto statsPrinter = std::make_shared<rsocket::StatsPrinter>();
 
   EventBase eventBase;
   auto thread = std::thread([&eventBase]() { eventBase.loopForever(); });

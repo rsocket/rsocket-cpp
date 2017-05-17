@@ -1,33 +1,33 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "test/deprecated/ReactiveSocket.h"
-#include "src/temporary_home/SubscriberBase.h"
 #include "src/statemachine/PublisherBase.h"
+#include "src/temporary_home/SubscriberBase.h"
+#include "test/deprecated/ReactiveSocket.h"
 #include "test/test_utils/MockRequestHandler.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 using namespace ::testing;
-using namespace ::reactivesocket;
+using namespace ::rsocket;
 using namespace yarpl;
 
 namespace {
 
-class UserSubscriber : public yarpl::flowable::Subscriber<Payload>, private PublisherBase {
+class UserSubscriber : public yarpl::flowable::Subscriber<Payload>,
+                       private PublisherBase {
  public:
   UserSubscriber() : PublisherBase(5) {}
   using PublisherBase::pausePublisherStream;
   using PublisherBase::publisherSubscribe;
 
-  void onSubscribe(
-      yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept override {
+  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
+                       subscription) noexcept override {
     publisherSubscribe(std::move(subscription));
   }
 
-  void onNext(::reactivesocket::Payload element) noexcept override {
+  void onNext(::rsocket::Payload element) noexcept override {
     FAIL();
-
   }
 
   void onComplete() noexcept override {

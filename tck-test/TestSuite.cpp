@@ -4,7 +4,7 @@
 
 #include <glog/logging.h>
 
-namespace reactivesocket {
+namespace rsocket {
 namespace tck {
 
 bool TestCommand::valid() const {

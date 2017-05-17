@@ -10,7 +10,7 @@ namespace observable {
 class Observables {
  public:
   static Reference<Observable<int64_t>> range(int64_t start, int64_t end) {
-    auto lambda = [ start, end ](Reference<Observer<int64_t>> observer) {
+    auto lambda = [start, end](Reference<Observer<int64_t>> observer) {
       for (int64_t i = start; i < end; ++i) {
         observer->onNext(i);
       }
@@ -48,9 +48,9 @@ class Observables {
   template <
       typename T,
       typename OnSubscribe,
-      typename = typename std::enable_if<std::is_callable<
-          OnSubscribe(Reference<Observer<T>>),
-          void>::value>::type>
+      typename = typename std::enable_if<
+          std::is_callable<OnSubscribe(Reference<Observer<T>>), void>::value>::
+          type>
   static Reference<Observable<T>> create(OnSubscribe&& function) {
     return Reference<Observable<T>>(new FromPublisherOperator<T, OnSubscribe>(
         std::forward<OnSubscribe>(function)));

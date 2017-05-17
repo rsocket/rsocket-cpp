@@ -4,15 +4,15 @@
 
 #include <folly/io/async/AsyncSocket.h>
 
-#include "src/internal/ClientResumeStatusCallback.h"
 #include "src/framing/FrameTransport.h"
-#include "src/temporary_home/NullRequestHandler.h"
-#include "test/deprecated/ReactiveSocket.h"
-#include "src/internal/FollyKeepaliveTimer.h"
 #include "src/framing/FramedDuplexConnection.h"
+#include "src/internal/ClientResumeStatusCallback.h"
+#include "src/internal/FollyKeepaliveTimer.h"
+#include "src/temporary_home/NullRequestHandler.h"
 #include "src/transports/tcp/TcpDuplexConnection.h"
+#include "test/deprecated/ReactiveSocket.h"
 
-namespace reactivesocket {
+namespace rsocket {
 namespace tests {
 
 class MyConnectCallback : public folly::AsyncSocket::ConnectCallback {
@@ -43,30 +43,34 @@ class ResumeCallback : public ClientResumeStatusCallback {
 class ClientRequestHandler : public DefaultRequestHandler {
  public:
   void onSubscriptionPaused(
-      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscription>&
+          subscription) noexcept override {
     LOG(INFO) << "Subscription Paused";
   }
 
   void onSubscriptionResumed(
-      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscription>&
+          subscription) noexcept override {
     LOG(INFO) << "Subscription Resumed";
   }
 
-  void onSubscriberPaused(const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
-                              subscriber) noexcept override {
+  void onSubscriberPaused(
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+          subscriber) noexcept override {
     LOG(INFO) << "Subscriber Paused";
   }
 
-  void onSubscriberResumed(const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
-                               subscriber) noexcept override {
+  void onSubscriberResumed(
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+          subscriber) noexcept override {
     LOG(INFO) << "Subscriber Resumed";
   }
 };
 
 class MySubscriber : public yarpl::flowable::Subscriber<Payload> {
  public:
-
-  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription> sub) noexcept override {
+  void onSubscribe(
+      yarpl::Reference<yarpl::flowable::Subscription> sub) noexcept override {
     subscription_ = sub;
     onSubscribe_();
   }
@@ -104,7 +108,7 @@ std::shared_ptr<FrameTransport> getFrameTransport(
   LOG(INFO) << "Attempting connection to " << addr.describe();
   std::unique_ptr<DuplexConnection> connection =
       std::make_unique<TcpDuplexConnection>(
-          std::move(socket), inlineExecutor(), Stats::noop());
+          std::move(socket), inlineExecutor(), RSocketStats::noop());
   std::unique_ptr<DuplexConnection> framedConnection =
       std::make_unique<FramedDuplexConnection>(
           std::move(connection), *eventBase);
@@ -119,7 +123,7 @@ std::unique_ptr<ReactiveSocket> getRSocket(folly::EventBase* eventBase) {
   rsocket = ReactiveSocket::disconnectedClient(
       *eventBase,
       std::move(requestHandler),
-      Stats::noop(),
+      RSocketStats::noop(),
       std::make_unique<FollyKeepaliveTimer>(
           *eventBase, std::chrono::seconds(10)));
   rsocket->onConnected([]() { LOG(INFO) << "ClientSocket connected"; });
@@ -133,8 +137,8 @@ std::unique_ptr<ReactiveSocket> getRSocket(folly::EventBase* eventBase) {
 }
 
 // Utility function to create a SetupPayload
-ConnectionSetupPayload getSetupPayload(ResumeIdentificationToken token) {
-  return ConnectionSetupPayload(
+SetupParameters getSetupPayload(ResumeIdentificationToken token) {
+  return SetupParameters(
       "text/plain", "text/plain", Payload("meta", "data"), true, token);
 }
 }

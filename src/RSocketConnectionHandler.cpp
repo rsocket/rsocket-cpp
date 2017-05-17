@@ -7,17 +7,17 @@
 #include <folly/io/async/EventBaseManager.h>
 
 #include "RSocketErrors.h"
+#include "RSocketStats.h"
 #include "src/statemachine/RSocketStateMachine.h"
 #include "src/temporary_home/NullRequestHandler.h"
 #include "src/temporary_home/OldNewBridge.h"
-#include "src/temporary_home/Stats.h"
 
 namespace rsocket {
 
-using namespace reactivesocket;
+using namespace rsocket;
 using namespace yarpl;
 
-class RSocketHandlerBridge : public reactivesocket::DefaultRequestHandler {
+class RSocketHandlerBridge : public rsocket::DefaultRequestHandler {
  public:
   RSocketHandlerBridge(std::shared_ptr<RSocketResponder> handler)
       : handler_(std::move(handler)){};
@@ -115,14 +115,14 @@ class RSocketHandlerBridge : public reactivesocket::DefaultRequestHandler {
 
 void RSocketConnectionHandler::setupNewSocket(
     std::shared_ptr<FrameTransport> frameTransport,
-    ConnectionSetupPayload setupPayload) {
+    SetupParameters setupPayload) {
   LOG(INFO) << "RSocketServer => received new setup payload";
 
   // FIXME(alexanderm): Handler should be tied to specific executor
   auto executor = folly::EventBaseManager::get()->getExistingEventBase();
 
   auto socketParams =
-      SocketParameters(setupPayload.resumable, setupPayload.protocolVersion);
+      RSocketParameters(setupPayload.resumable, setupPayload.protocolVersion);
   std::shared_ptr<ConnectionSetupRequest> setupRequest =
       std::make_shared<ConnectionSetupRequest>(std::move(setupPayload));
   std::shared_ptr<RSocketResponder> requestHandler;
@@ -142,7 +142,7 @@ void RSocketConnectionHandler::setupNewSocket(
   auto rs = std::make_shared<RSocketStateMachine>(
       *executor,
       std::move(handlerBridge),
-      Stats::noop(),
+      RSocketStats::noop(),
       nullptr,
       ReactiveSocketMode::SERVER);
 

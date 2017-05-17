@@ -36,7 +36,7 @@ std::string getThreadId() {
 void fromPublisherExample() {
   auto onSubscribe = [](Reference<Subscriber<int>> subscriber) {
     class Subscription : public ::yarpl::flowable::Subscription {
-    public:
+     public:
       virtual void request(int64_t delta) override {
         // TODO
       }

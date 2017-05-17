@@ -5,7 +5,7 @@
 #include "src/internal/AllowanceSemaphore.h"
 
 using namespace ::testing;
-using namespace ::reactivesocket;
+using namespace ::rsocket;
 
 TEST(AllowanceSemaphoreTest, Finite) {
   AllowanceSemaphore sem;

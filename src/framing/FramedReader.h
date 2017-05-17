@@ -9,7 +9,7 @@
 #include "src/temporary_home/SubscriberBase.h"
 #include "src/temporary_home/SubscriptionBase.h"
 
-namespace reactivesocket {
+namespace rsocket {
 
 struct ProtocolVersion;
 
@@ -18,7 +18,7 @@ class FramedReader : public SubscriberBaseT<std::unique_ptr<folly::IOBuf>>,
                      public EnableSharedFromThisBase<FramedReader> {
  public:
   explicit FramedReader(
-      std::shared_ptr<reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
+      std::shared_ptr<rsocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
           frames,
       folly::Executor& executor,
       std::shared_ptr<ProtocolVersion> protocolVersion)
@@ -52,8 +52,7 @@ class FramedReader : public SubscriberBaseT<std::unique_ptr<folly::IOBuf>>,
 
   using EnableSharedFromThisBase<FramedReader>::shared_from_this;
 
-  std::shared_ptr<reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
-      frames_;
+  std::shared_ptr<rsocket::Subscriber<std::unique_ptr<folly::IOBuf>>> frames_;
   std::shared_ptr<Subscription> streamSubscription_;
 
   AllowanceSemaphore allowance_{0};

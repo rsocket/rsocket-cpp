@@ -10,7 +10,7 @@ namespace folly {
 class Executor;
 }
 
-namespace reactivesocket {
+namespace rsocket {
 
 class RSocketStateMachine;
 class ChannelResponder;
@@ -31,7 +31,7 @@ class StreamsFactory {
       Payload payload,
       yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSink);
 
-  // TODO: the return type should not be the automaton type, but something
+  // TODO: the return type should not be the stateMachine type, but something
   // generic
   yarpl::Reference<ChannelResponder> createChannelResponder(
       uint32_t initialRequestN,
@@ -41,8 +41,8 @@ class StreamsFactory {
       uint32_t initialRequestN,
       StreamId streamId);
 
-  yarpl::Reference<yarpl::flowable::Subscriber<Payload>> createRequestResponseResponder(
-      StreamId streamId);
+  yarpl::Reference<yarpl::flowable::Subscriber<Payload>>
+  createRequestResponseResponder(StreamId streamId);
 
   bool registerNewPeerStreamId(StreamId streamId);
   StreamId getNextStreamId();

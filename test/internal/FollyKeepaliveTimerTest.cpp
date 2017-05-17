@@ -12,7 +12,7 @@
 #include "src/framing/FramedDuplexConnection.h"
 
 using namespace ::testing;
-using namespace ::reactivesocket;
+using namespace ::rsocket;
 
 namespace {
 class MockConnectionAutomaton : public FrameSink {

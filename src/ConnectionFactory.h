@@ -11,7 +11,7 @@ class EventBase;
 namespace rsocket {
 
 using OnConnect = std::function<
-    void(std::unique_ptr<reactivesocket::DuplexConnection>, folly::EventBase&)>;
+    void(std::unique_ptr<rsocket::DuplexConnection>, folly::EventBase&)>;
 
 /**
  * Common interface for a client to create connections and turn them into

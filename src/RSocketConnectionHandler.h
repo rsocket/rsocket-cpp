@@ -2,9 +2,9 @@
 
 #pragma once
 
+#include "RSocketResponder.h"
 #include "src/ConnectionResumeRequest.h"
 #include "src/ConnectionSetupRequest.h"
-#include "RSocketResponder.h"
 #include "src/framing/FrameTransport.h"
 #include "src/temporary_home/ServerConnectionAcceptor.h"
 
@@ -26,18 +26,18 @@ namespace rsocket {
  *
  * TODO: Resumability
  */
-class RSocketConnectionHandler : public reactivesocket::ConnectionHandler {
+class RSocketConnectionHandler : public rsocket::ConnectionHandler {
  public:
   virtual void setupNewSocket(
-      std::shared_ptr<reactivesocket::FrameTransport> frameTransport,
-      reactivesocket::ConnectionSetupPayload setupPayload) override;
+      std::shared_ptr<rsocket::FrameTransport> frameTransport,
+      rsocket::SetupParameters setupPayload) override;
 
   virtual bool resumeSocket(
-      std::shared_ptr<reactivesocket::FrameTransport> frameTransport,
-      reactivesocket::ResumeParameters) override;
+      std::shared_ptr<rsocket::FrameTransport> frameTransport,
+      rsocket::ResumeParameters) override;
 
   virtual void connectionError(
-      std::shared_ptr<reactivesocket::FrameTransport>,
+      std::shared_ptr<rsocket::FrameTransport>,
       folly::exception_wrapper ex) override;
 
  private:
@@ -55,7 +55,7 @@ class RSocketConnectionHandler : public reactivesocket::ConnectionHandler {
    */
   virtual void manageSocket(
       std::shared_ptr<ConnectionSetupRequest> request,
-      std::shared_ptr<reactivesocket::RSocketStateMachine> socket) = 0;
+      std::shared_ptr<rsocket::RSocketStateMachine> socket) = 0;
 };
 
 } // namespace rsocket

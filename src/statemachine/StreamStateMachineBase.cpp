@@ -1,35 +1,37 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/statemachine/StreamAutomatonBase.h"
+#include "src/statemachine/StreamStateMachineBase.h"
 #include <folly/io/IOBuf.h>
 #include "RSocketStateMachine.h"
-#include "src/temporary_home/StreamsHandler.h"
+#include "StreamsHandler.h"
 
-namespace reactivesocket {
+namespace rsocket {
 
-void StreamAutomatonBase::handlePayload(Payload&& payload,
-                                        bool complete,
-                                        bool flagsNext) {
+void StreamStateMachineBase::handlePayload(
+    Payload&& payload,
+    bool complete,
+    bool flagsNext) {
   VLOG(4) << "Unexpected handlePayload";
 }
 
-void StreamAutomatonBase::handleRequestN(uint32_t n) {
+void StreamStateMachineBase::handleRequestN(uint32_t n) {
   VLOG(4) << "Unexpected handleRequestN";
 }
 
-void StreamAutomatonBase::handleError(folly::exception_wrapper errorPayload) {
+void StreamStateMachineBase::handleError(
+    folly::exception_wrapper errorPayload) {
   VLOG(4) << "Unexpected handleError";
 }
 
-void StreamAutomatonBase::handleCancel() {
+void StreamStateMachineBase::handleCancel() {
   VLOG(4) << "Unexpected handleCancel";
 }
 
-void StreamAutomatonBase::endStream(StreamCompletionSignal) {
+void StreamStateMachineBase::endStream(StreamCompletionSignal) {
   isTerminated_ = true;
 }
 
-void StreamAutomatonBase::newStream(
+void StreamStateMachineBase::newStream(
     StreamType streamType,
     uint32_t initialRequestN,
     Payload payload,
@@ -38,15 +40,15 @@ void StreamAutomatonBase::newStream(
       streamId_, streamType, initialRequestN, std::move(payload), completed);
 }
 
-void StreamAutomatonBase::writePayload(Payload&& payload, bool complete) {
+void StreamStateMachineBase::writePayload(Payload&& payload, bool complete) {
   writer_->writePayload(streamId_, std::move(payload), complete);
 }
 
-void StreamAutomatonBase::writeRequestN(uint32_t n) {
+void StreamStateMachineBase::writeRequestN(uint32_t n) {
   writer_->writeRequestN(streamId_, n);
 }
 
-void StreamAutomatonBase::applicationError(std::string errorPayload) {
+void StreamStateMachineBase::applicationError(std::string errorPayload) {
   // TODO: a bad frame for a stream should not bring down the whole socket
   // https://github.com/ReactiveSocket/reactivesocket-cpp/issues/311
   writer_->writeCloseStream(
@@ -56,7 +58,7 @@ void StreamAutomatonBase::applicationError(std::string errorPayload) {
   closeStream(StreamCompletionSignal::APPLICATION_ERROR);
 }
 
-void StreamAutomatonBase::errorStream(std::string errorPayload) {
+void StreamStateMachineBase::errorStream(std::string errorPayload) {
   writer_->writeCloseStream(
       streamId_,
       StreamCompletionSignal::ERROR,
@@ -64,19 +66,19 @@ void StreamAutomatonBase::errorStream(std::string errorPayload) {
   closeStream(StreamCompletionSignal::ERROR);
 }
 
-void StreamAutomatonBase::cancelStream() {
+void StreamStateMachineBase::cancelStream() {
   writer_->writeCloseStream(
       streamId_, StreamCompletionSignal::CANCEL, Payload());
   closeStream(StreamCompletionSignal::CANCEL);
 }
 
-void StreamAutomatonBase::completeStream() {
+void StreamStateMachineBase::completeStream() {
   writer_->writeCloseStream(
       streamId_, StreamCompletionSignal::COMPLETE, Payload());
   closeStream(StreamCompletionSignal::COMPLETE);
 }
 
-void StreamAutomatonBase::closeStream(StreamCompletionSignal signal) {
+void StreamStateMachineBase::closeStream(StreamCompletionSignal signal) {
   writer_->onStreamClosed(streamId_, signal);
   // TODO: set writer_ to nullptr
 }

@@ -134,6 +134,8 @@ add_library(
   src/RSocketRequester.h
   src/RSocketRequester.cpp
   src/RSocketErrors.h
+  src/RSocketParameters.cpp
+  src/RSocketParameters.h
   src/ConnectionAcceptor.h
   src/ConnectionFactory.h
   src/ConnectionSetupRequest.h
@@ -158,19 +160,22 @@ add_library(
   src/statemachine/RequestResponseRequester.h
   src/statemachine/RequestResponseResponder.cpp
   src/statemachine/RequestResponseResponder.h
-  src/statemachine/StreamAutomatonBase.cpp
-  src/statemachine/StreamAutomatonBase.h
+  src/statemachine/StreamStateMachineBase.cpp
+  src/statemachine/StreamStateMachineBase.h
   src/statemachine/StreamRequester.cpp
   src/statemachine/StreamRequester.h
   src/statemachine/StreamResponder.cpp
   src/statemachine/StreamResponder.h
+  src/statemachine/StreamsFactory.cpp
+  src/statemachine/StreamsFactory.h
+  src/statemachine/StreamsHandler.h
+  src/statemachine/StreamState.cpp
+  src/statemachine/StreamState.h
   src/internal/ClientResumeStatusCallback.h
   src/internal/Common.cpp
   src/internal/Common.h
   src/statemachine/RSocketStateMachine.cpp
   src/statemachine/RSocketStateMachine.h
-  src/temporary_home/ConnectionSetupPayload.cpp
-  src/temporary_home/ConnectionSetupPayload.h
   src/DuplexConnection.h
   src/internal/EnableSharedFromThis.h
   src/temporary_home/Executor.cpp
@@ -196,17 +201,12 @@ add_library(
   src/Payload.h
   src/internal/ReactiveStreamsCompat.h
   src/temporary_home/RequestHandler.h
-  src/temporary_home/ResumeCache.cpp
-  src/temporary_home/ResumeCache.h
+  src/internal/ResumeCache.cpp
+  src/internal/ResumeCache.h
   src/temporary_home/ServerConnectionAcceptor.cpp
   src/temporary_home/ServerConnectionAcceptor.h
-  src/temporary_home/Stats.cpp
-  src/temporary_home/Stats.h
-  src/temporary_home/StreamsFactory.cpp
-  src/temporary_home/StreamsFactory.h
-  src/temporary_home/StreamsHandler.h
-  src/temporary_home/StreamState.cpp
-  src/temporary_home/StreamState.h
+  src/RSocketStats.cpp
+  src/RSocketStats.h
   src/temporary_home/SubscriberBase.h
   src/temporary_home/SubscriptionBase.h
   src/transports/tcp/TcpDuplexConnection.cpp

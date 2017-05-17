@@ -4,25 +4,24 @@
 
 #include <folly/io/IOBuf.h>
 #include <string>
-#include "src/internal/Common.h"
-#include "src/framing/FrameSerializer.h"
 #include "src/Payload.h"
+#include "src/framing/FrameSerializer.h"
+#include "src/internal/Common.h"
 
-namespace reactivesocket {
+namespace rsocket {
 
-class SocketParameters {
+class RSocketParameters {
  public:
-  SocketParameters(bool _resumable, ProtocolVersion _protocolVersion)
+  RSocketParameters(bool _resumable, ProtocolVersion _protocolVersion)
       : resumable(_resumable), protocolVersion(std::move(_protocolVersion)) {}
 
   bool resumable;
   ProtocolVersion protocolVersion;
 };
 
-// TODO: rename this and the whole file to SetupParams
-class ConnectionSetupPayload : public SocketParameters {
+class SetupParameters : public RSocketParameters {
  public:
-  explicit ConnectionSetupPayload(
+  explicit SetupParameters(
       std::string _metadataMimeType = "",
       std::string _dataMimeType = "",
       Payload _payload = Payload(),
@@ -31,7 +30,7 @@ class ConnectionSetupPayload : public SocketParameters {
           ResumeIdentificationToken::generateNew(),
       ProtocolVersion _protocolVersion =
           FrameSerializer::getCurrentProtocolVersion())
-      : SocketParameters(_resumable, _protocolVersion),
+      : RSocketParameters(_resumable, _protocolVersion),
         metadataMimeType(std::move(_metadataMimeType)),
         dataMimeType(std::move(_dataMimeType)),
         payload(std::move(_payload)),
@@ -43,16 +42,16 @@ class ConnectionSetupPayload : public SocketParameters {
   ResumeIdentificationToken token;
 };
 
-std::ostream& operator<<(std::ostream&, const ConnectionSetupPayload&);
+std::ostream& operator<<(std::ostream&, const SetupParameters&);
 
-class ResumeParameters : public SocketParameters {
+class ResumeParameters : public RSocketParameters {
  public:
   ResumeParameters(
       ResumeIdentificationToken _token,
       ResumePosition _serverPosition,
       ResumePosition _clientPosition,
       ProtocolVersion _protocolVersion)
-      : SocketParameters(true, _protocolVersion),
+      : RSocketParameters(true, _protocolVersion),
         token(std::move(_token)),
         serverPosition(_serverPosition),
         clientPosition(_clientPosition) {}

@@ -6,7 +6,7 @@
 #include "src/DuplexConnection.h"
 #include "src/internal/ReactiveStreamsCompat.h"
 
-namespace reactivesocket {
+namespace rsocket {
 
 /// An intra-thread implementation of DuplexConnection that synchronously passes
 /// signals to the other connection it was connected to.

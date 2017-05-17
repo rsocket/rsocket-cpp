@@ -4,24 +4,24 @@
 
 #include <iosfwd>
 #include "src/Payload.h"
-#include "src/statemachine/StreamAutomatonBase.h"
-#include "yarpl/flowable/Subscription.h"
+#include "src/statemachine/StreamStateMachineBase.h"
 #include "yarpl/flowable/Subscriber.h"
+#include "yarpl/flowable/Subscription.h"
 
-namespace reactivesocket {
+namespace rsocket {
 
-/// Implementation of stream automaton that represents a RequestResponse
+/// Implementation of stream stateMachine that represents a RequestResponse
 /// requester
-class RequestResponseRequester : public StreamAutomatonBase,
+class RequestResponseRequester : public StreamStateMachineBase,
                                  public yarpl::flowable::Subscription {
-  using Base = StreamAutomatonBase;
+  using Base = StreamStateMachineBase;
 
  public:
   explicit RequestResponseRequester(const Parameters& params, Payload payload)
-      : Base(params),
-        initialPayload_(std::move(payload)) {}
+      : Base(params), initialPayload_(std::move(payload)) {}
 
-  void subscribe(yarpl::Reference<yarpl::flowable::Subscriber<Payload>> subscriber);
+  void subscribe(
+      yarpl::Reference<yarpl::flowable::Subscriber<Payload>> subscriber);
 
  private:
   void request(int64_t) noexcept override;

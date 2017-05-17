@@ -15,9 +15,8 @@ template <typename T, typename OnSubscribe>
 class FromPublisherOperator;
 
 // specialization of Single<void>
-template<typename OnSubscribe>
+template <typename OnSubscribe>
 class SingleVoidFromPublisherOperator;
-
 }
 
 template <typename T>
@@ -60,8 +59,9 @@ class Single : public virtual Refcounted {
           OnSubscribe(Reference<SingleObserver<T>>),
           void>::value>::type>
   static auto create(OnSubscribe&& function) {
-    return Reference<Single<T>>(new details::FromPublisherOperator<T, OnSubscribe>(
-        std::forward<OnSubscribe>(function)));
+    return Reference<Single<T>>(
+        new details::FromPublisherOperator<T, OnSubscribe>(
+            std::forward<OnSubscribe>(function)));
   }
 
   template <typename Function>
@@ -137,10 +137,10 @@ class FromPublisherOperator : public Single<T> {
   OnSubscribe function_;
 };
 
-template<typename OnSubscribe>
+template <typename OnSubscribe>
 class SingleVoidFromPublisherOperator : public Single<void> {
  public:
-  explicit SingleVoidFromPublisherOperator(OnSubscribe &&function)
+  explicit SingleVoidFromPublisherOperator(OnSubscribe&& function)
       : function_(std::move(function)) {}
 
   void subscribe(Reference<SingleObserver<void>> subscriber) override {

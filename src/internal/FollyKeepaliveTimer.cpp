@@ -2,7 +2,7 @@
 
 #include "FollyKeepaliveTimer.h"
 
-namespace reactivesocket {
+namespace rsocket {
 
 FollyKeepaliveTimer::FollyKeepaliveTimer(
     folly::EventBase& eventBase,

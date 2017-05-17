@@ -4,10 +4,10 @@
 #include <folly/futures/InlineExecutor.h>
 #include <folly/futures/QueuedImmediateExecutor.h>
 #include <folly/io/IOBuf.h>
-#include "src/internal/StackTraceUtils.h"
 #include "SubscriberBase.h"
+#include "src/internal/StackTraceUtils.h"
 
-namespace reactivesocket {
+namespace rsocket {
 
 // just instantiating of the template here
 template class SubscriberBaseT<Payload>;

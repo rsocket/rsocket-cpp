@@ -7,7 +7,7 @@
 #include <string>
 #include "src/internal/Common.h"
 
-namespace reactivesocket {
+namespace rsocket {
 
 enum class FrameFlags : uint16_t;
 

@@ -4,7 +4,7 @@
 
 #include <memory>
 
-namespace reactivesocket {
+namespace rsocket {
 
 // the purpose of these classes it to allow virtual inheritance of
 // std::enable_shared_from_this<T> which is not allowed because of the

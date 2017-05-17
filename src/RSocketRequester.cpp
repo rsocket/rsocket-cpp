@@ -6,7 +6,7 @@
 #include <folly/ExceptionWrapper.h>
 #include "internal/ScheduledSubscriber.h"
 
-using namespace reactivesocket;
+using namespace rsocket;
 using namespace folly;
 using namespace yarpl;
 
@@ -36,9 +36,9 @@ RSocketRequester::~RSocketRequester() {
   LOG(INFO) << "RSocketRequester => destroy";
 }
 
-yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
+yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
 RSocketRequester::requestChannel(
-    yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
+    yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
         requestStream) {
   return yarpl::flowable::Flowables::fromPublisher<Payload>([
     eb = &eventBase_,
@@ -53,7 +53,7 @@ RSocketRequester::requestChannel(
     ]() mutable {
       auto responseSink = srs->streamsFactory().createChannelRequester(
           yarpl::make_ref<ScheduledSubscriptionSubscriber<Payload>>(std::move(subscriber), *eb));
-        // TODO the responseSink needs to be wrapped with thread scheduling
+        // responseSink is wrapped with thread scheduling
         // so all emissions happen on the right thread
       requestStream->subscribe(
           yarpl::make_ref<ScheduledSubscriber<Payload>>(std::move(responseSink), *eb));
@@ -81,7 +81,7 @@ RSocketRequester::requestStream(Payload request) {
   });
 }
 
-yarpl::Reference<yarpl::single::Single<reactivesocket::Payload>>
+yarpl::Reference<yarpl::single::Single<rsocket::Payload>>
 RSocketRequester::requestResponse(Payload request) {
   // TODO bridge in use until SingleSubscriber is used internally
   class SingleToSubscriberBridge : public yarpl::flowable::Subscriber<Payload> {
@@ -127,7 +127,7 @@ RSocketRequester::requestResponse(Payload request) {
           subscriber = std::move(subscriber),
           srs = std::move(srs)
         ]() mutable {
-            srs->streamsFactory().createRequestResponseRequester(
+          srs->streamsFactory().createRequestResponseRequester(
               std::move(request),
               make_ref<SingleToSubscriberBridge>(std::move(subscriber)));
         });
@@ -135,7 +135,7 @@ RSocketRequester::requestResponse(Payload request) {
 }
 
 yarpl::Reference<yarpl::single::Single<void>> RSocketRequester::fireAndForget(
-    reactivesocket::Payload request) {
+    rsocket::Payload request) {
   return yarpl::single::Single<void>::create([
     eb = &eventBase_,
     request = std::move(request),

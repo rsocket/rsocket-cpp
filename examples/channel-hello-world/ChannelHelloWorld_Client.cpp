@@ -12,7 +12,6 @@
 
 #include "yarpl/Flowable.h"
 
-using namespace reactivesocket;
 using namespace rsocket_example;
 using namespace rsocket;
 using namespace yarpl::flowable;

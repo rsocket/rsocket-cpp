@@ -2,12 +2,12 @@
 
 #pragma once
 
+#include <src/RSocketStats.h>
 #include <src/temporary_home/Executor.h>
-#include <src/temporary_home/Stats.h>
-#include "src/internal/Common.h"
 #include "src/DuplexConnection.h"
+#include "src/internal/Common.h"
 
-namespace reactivesocket {
+namespace rsocket {
 
 class FramedReader;
 class FramedWriter;

@@ -9,9 +9,9 @@
 #include <gmock/gmock.h>
 #include "test/deprecated/ReactiveSocket.h"
 
+#include "src/framing/FramedDuplexConnection.h"
 #include "src/temporary_home/NullRequestHandler.h"
 #include "src/temporary_home/SubscriptionBase.h"
-#include "src/framing/FramedDuplexConnection.h"
 #include "src/transports/tcp/TcpDuplexConnection.h"
 
 #include "test/test_utils/StatsPrinter.h"
@@ -19,7 +19,7 @@
 #include "tck-test/MarbleProcessor.h"
 
 using namespace ::testing;
-using namespace ::reactivesocket;
+using namespace ::rsocket;
 using namespace ::folly;
 using namespace yarpl;
 
@@ -104,12 +104,12 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     auto socket =
         folly::AsyncSocket::UniquePtr(new AsyncSocket(&eventBase_, fd));
 
-    std::shared_ptr<Stats> stats;
+    std::shared_ptr<RSocketStats> stats;
 
     if (FLAGS_enable_stats_printer) {
-      stats.reset(new reactivesocket::StatsPrinter());
+      stats.reset(new rsocket::StatsPrinter());
     } else {
-      stats = Stats::noop();
+      stats = RSocketStats::noop();
     }
 
     std::unique_ptr<DuplexConnection> connection =
@@ -220,7 +220,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     }
 
     std::shared_ptr<StreamState> handleSetupPayload(
-        ConnectionSetupPayload request) noexcept override {
+        SetupParameters request) noexcept override {
       LOG(INFO) << "handleSetupPayload " << request;
       return nullptr;
     }

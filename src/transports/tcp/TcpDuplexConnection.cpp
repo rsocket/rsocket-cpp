@@ -6,7 +6,7 @@
 #include "src/temporary_home/SubscriberBase.h"
 #include "src/temporary_home/SubscriptionBase.h"
 
-namespace reactivesocket {
+namespace rsocket {
 using namespace ::folly;
 
 class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
@@ -17,7 +17,7 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
   explicit TcpReaderWriter(
       folly::AsyncSocket::UniquePtr&& socket,
       folly::Executor& executor,
-      std::shared_ptr<Stats> stats)
+      std::shared_ptr<RSocketStats> stats)
       : ExecutorBase(executor),
         stats_(std::move(stats)),
         socket_(std::move(socket)) {}
@@ -27,7 +27,7 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
   }
 
   void setInput(
-      std::shared_ptr<reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
+      std::shared_ptr<rsocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
           inputSubscriber) {
     CHECK(!inputSubscriber_);
     inputSubscriber_ = std::move(inputSubscriber);
@@ -36,7 +36,7 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
     socket_->setReadCB(this);
   }
 
-  const std::shared_ptr<Stats> stats_;
+  const std::shared_ptr<RSocketStats> stats_;
 
  private:
   void onSubscribeImpl(
@@ -125,14 +125,14 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
   folly::IOBufQueue readBuffer_{folly::IOBufQueue::cacheChainLength()};
   folly::AsyncSocket::UniquePtr socket_;
 
-  std::shared_ptr<reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
+  std::shared_ptr<rsocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
       inputSubscriber_;
 };
 
 TcpDuplexConnection::TcpDuplexConnection(
     folly::AsyncSocket::UniquePtr&& socket,
     folly::Executor& executor,
-    std::shared_ptr<Stats> stats)
+    std::shared_ptr<RSocketStats> stats)
     : tcpReaderWriter_(std::make_shared<TcpReaderWriter>(
           std::move(socket),
           executor,

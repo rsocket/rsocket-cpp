@@ -2,12 +2,11 @@
 
 #include "ConnectionSetupRequest.h"
 
-using namespace reactivesocket;
+using namespace rsocket;
 
 namespace rsocket {
 
-ConnectionSetupRequest::ConnectionSetupRequest(
-    ConnectionSetupPayload setupPayload)
+ConnectionSetupRequest::ConnectionSetupRequest(SetupParameters setupPayload)
     : setupPayload_(std::move(setupPayload)) {}
 
 const std::string& ConnectionSetupRequest::getMetadataMimeType() const {

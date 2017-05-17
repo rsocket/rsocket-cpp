@@ -6,7 +6,7 @@
 #include <folly/io/IOBuf.h>
 #include <random>
 
-namespace reactivesocket {
+namespace rsocket {
 
 namespace {
 constexpr const char* HEX_CHARS = {"0123456789abcdef"};

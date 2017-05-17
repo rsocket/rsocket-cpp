@@ -3,23 +3,23 @@
 #pragma once
 
 #include "src/statemachine/PublisherBase.h"
-#include "src/statemachine/StreamAutomatonBase.h"
+#include "src/statemachine/StreamStateMachineBase.h"
 #include "yarpl/flowable/Subscriber.h"
 
-namespace reactivesocket {
+namespace rsocket {
 
-/// Implementation of stream automaton that represents a RequestResponse
+/// Implementation of stream stateMachine that represents a RequestResponse
 /// responder
-class RequestResponseResponder : public StreamAutomatonBase,
+class RequestResponseResponder : public StreamStateMachineBase,
                                  public PublisherBase,
                                  public yarpl::flowable::Subscriber<Payload> {
  public:
   explicit RequestResponseResponder(const Parameters& params)
-      : StreamAutomatonBase(params),
-        PublisherBase(1) {}
+      : StreamStateMachineBase(params), PublisherBase(1) {}
 
  private:
-  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept override;
+  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
+                       subscription) noexcept override;
   void onNext(Payload) noexcept override;
   void onComplete() noexcept override;
   void onError(const std::exception_ptr) noexcept override;

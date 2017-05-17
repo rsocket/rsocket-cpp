@@ -3,12 +3,12 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <gtest/gtest.h>
-#include "src/framing/Frame.h"
 #include "src/Payload.h"
+#include "src/framing/Frame.h"
 #include "src/framing/FrameSerializer_v0_1.h"
 
 using namespace ::testing;
-using namespace ::reactivesocket;
+using namespace ::rsocket;
 
 TEST(PayloadTest, EmptyMetadata) {
   Payload p("some error message");

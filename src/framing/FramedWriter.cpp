@@ -4,7 +4,7 @@
 #include <folly/io/Cursor.h>
 #include "FrameSerializer_v1_0.h"
 
-namespace reactivesocket {
+namespace rsocket {
 
 constexpr static const auto kMaxFrameLength = 0xFFFFFF; // 24bit max value
 

@@ -14,7 +14,7 @@ namespace folly {
 class EventBase;
 }
 
-namespace reactivesocket {
+namespace rsocket {
 
 class ReactiveSocket;
 

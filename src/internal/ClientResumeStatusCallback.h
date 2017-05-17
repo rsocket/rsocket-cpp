@@ -4,7 +4,7 @@
 
 #include <folly/ExceptionWrapper.h>
 
-namespace reactivesocket {
+namespace rsocket {
 
 class ClientResumeStatusCallback {
  public:

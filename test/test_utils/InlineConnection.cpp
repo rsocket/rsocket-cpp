@@ -6,7 +6,7 @@
 #include <gmock/gmock.h>
 #include "test/streams/Mocks.h"
 
-namespace reactivesocket {
+namespace rsocket {
 
 InlineConnection::~InlineConnection() {
   this_->instanceTerminated_ = true;

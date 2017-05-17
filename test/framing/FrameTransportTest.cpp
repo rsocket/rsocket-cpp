@@ -6,10 +6,10 @@
 #include "test/test_utils/InlineConnection.h"
 
 using namespace ::testing;
-using namespace ::reactivesocket;
+using namespace ::rsocket;
 
 TEST(FrameTransportTest, OnSubscribeAfterClose) {
-  class NullSubscription : public reactivesocket::Subscription {
+  class NullSubscription : public rsocket::Subscription {
    public:
     // Subscription methods
     void request(size_t n) noexcept override {}

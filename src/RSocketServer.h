@@ -71,24 +71,28 @@ class RSocketServer {
   //      std::function<std::shared_ptr<RequestHandler>(
   //          std::unique_ptr<ConnectionResumeRequest>)>);
 
-  // TODO version supporting Stats and other params
+  // TODO version supporting RSocketStats and other params
   // RSocketServer::start(OnAccept onAccept, ServerSetup setupParams)
 
   friend class RSocketServerConnectionHandler;
 
  private:
-  void addConnection(std::shared_ptr<reactivesocket::RSocketStateMachine>, folly::Executor&);
-  void removeConnection(std::shared_ptr<reactivesocket::RSocketStateMachine>);
+  void addConnection(
+      std::shared_ptr<rsocket::RSocketStateMachine>,
+      folly::Executor&);
+  void removeConnection(std::shared_ptr<rsocket::RSocketStateMachine>);
 
   //////////////////////////////////////////////////////////////////////////////
 
   std::unique_ptr<ConnectionAcceptor> lazyAcceptor_;
-  reactivesocket::ServerConnectionAcceptor acceptor_;
+  rsocket::ServerConnectionAcceptor acceptor_;
   bool started{false};
 
   /// Set of currently open ReactiveSockets.
   folly::Synchronized<
-      std::unordered_map<std::shared_ptr<reactivesocket::RSocketStateMachine>, folly::Executor&>,
+      std::unordered_map<
+          std::shared_ptr<rsocket::RSocketStateMachine>,
+          folly::Executor&>,
       std::mutex>
       sockets_;
 

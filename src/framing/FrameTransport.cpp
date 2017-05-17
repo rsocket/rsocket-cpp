@@ -5,7 +5,7 @@
 #include "src/DuplexConnection.h"
 #include "src/framing/Frame.h"
 
-namespace reactivesocket {
+namespace rsocket {
 
 FrameTransport::FrameTransport(std::unique_ptr<DuplexConnection> connection)
     : connection_(std::move(connection)) {

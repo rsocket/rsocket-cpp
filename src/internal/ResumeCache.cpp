@@ -4,13 +4,13 @@
 
 #include <algorithm>
 
-#include "src/statemachine/RSocketStateMachine.h"
 #include "src/framing/Frame.h"
 #include "src/framing/FrameTransport.h"
+#include "src/statemachine/RSocketStateMachine.h"
 
 namespace {
 
-using reactivesocket::FrameType;
+using rsocket::FrameType;
 
 bool shouldTrackFrame(const FrameType frameType) {
   switch (frameType) {
@@ -38,7 +38,7 @@ bool shouldTrackFrame(const FrameType frameType) {
 
 } // anonymous
 
-namespace reactivesocket {
+namespace rsocket {
 
 ResumeCache::~ResumeCache() {
   clearFrames(position_);

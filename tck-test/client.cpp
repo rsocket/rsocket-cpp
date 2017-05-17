@@ -7,8 +7,8 @@
 #include <folly/portability/GFlags.h>
 #include "test/deprecated/ReactiveSocket.h"
 
-#include "src/temporary_home/NullRequestHandler.h"
 #include "src/framing/FramedDuplexConnection.h"
+#include "src/temporary_home/NullRequestHandler.h"
 #include "src/transports/tcp/TcpDuplexConnection.h"
 
 #include "tck-test/TestFileParser.h"
@@ -23,8 +23,8 @@ DEFINE_string(
     "Comma separated names of tests to run. By default run all tests");
 DEFINE_int32(timeout, 5, "timeout (in secs) for connecting to the server");
 
-using namespace reactivesocket;
-using namespace reactivesocket::tck;
+using namespace rsocket;
+using namespace rsocket::tck;
 
 namespace {
 

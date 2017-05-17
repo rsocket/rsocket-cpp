@@ -3,7 +3,7 @@
 #include "src/statemachine/StreamRequester.h"
 #include <folly/MoveWrapper.h>
 
-namespace reactivesocket {
+namespace rsocket {
 
 void StreamRequester::request(int64_t n) noexcept {
   if (n == 0) {
@@ -77,9 +77,10 @@ void StreamRequester::endStream(StreamCompletionSignal signal) {
   Base::endStream(signal);
 }
 
-void StreamRequester::handlePayload(Payload&& payload,
-                                    bool complete,
-                                    bool flagsNext) {
+void StreamRequester::handlePayload(
+    Payload&& payload,
+    bool complete,
+    bool flagsNext) {
   bool end = false;
   switch (state_) {
     case State::NEW:

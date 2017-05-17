@@ -3,10 +3,10 @@
 #pragma once
 
 #include <src/DuplexConnection.h>
-#include <src/temporary_home/Stats.h>
+#include <src/RSocketStats.h>
 
-namespace reactivesocket {
-class StatsPrinter : public Stats {
+namespace rsocket {
+class StatsPrinter : public RSocketStats {
  public:
   void socketCreated() override;
   void socketClosed(StreamCompletionSignal signal) override;
@@ -14,10 +14,10 @@ class StatsPrinter : public Stats {
 
   void duplexConnectionCreated(
       const std::string& type,
-      reactivesocket::DuplexConnection* connection) override;
+      rsocket::DuplexConnection* connection) override;
   void duplexConnectionClosed(
       const std::string& type,
-      reactivesocket::DuplexConnection* connection) override;
+      rsocket::DuplexConnection* connection) override;
 
   void bytesWritten(size_t bytes) override;
   void bytesRead(size_t bytes) override;

@@ -5,10 +5,10 @@
 
 #include <gmock/gmock.h>
 
-#include "test/handlers/HelloStreamRequestHandler.h"
 #include "src/RSocket.h"
 #include "src/transports/tcp/TcpConnectionAcceptor.h"
 #include "src/transports/tcp/TcpConnectionFactory.h"
+#include "test/handlers/HelloStreamRequestHandler.h"
 
 using namespace rsocket;
 using namespace rsocket::tests;

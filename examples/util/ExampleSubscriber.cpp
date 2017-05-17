@@ -3,7 +3,7 @@
 #include "examples/util/ExampleSubscriber.h"
 #include <iostream>
 
-using namespace ::reactivesocket;
+using namespace ::rsocket;
 
 namespace rsocket_example {
 

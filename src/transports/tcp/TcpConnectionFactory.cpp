@@ -9,7 +9,7 @@
 #include "src/framing/FramedDuplexConnection.h"
 #include "src/transports/tcp/TcpDuplexConnection.h"
 
-using namespace reactivesocket;
+using namespace rsocket;
 
 namespace rsocket {
 
@@ -45,7 +45,7 @@ class ConnectCallback : public folly::AsyncSocket::ConnectCallback {
     VLOG(4) << "connectSuccess() on " << address_;
 
     auto connection = std::make_unique<TcpDuplexConnection>(
-        std::move(socket_), *evb, Stats::noop());
+        std::move(socket_), *evb, RSocketStats::noop());
     auto framedConnection =
         std::make_unique<FramedDuplexConnection>(std::move(connection), *evb);
 

@@ -11,7 +11,7 @@
 #include "test/streams/Mocks.h"
 
 using namespace ::testing;
-using namespace ::reactivesocket;
+using namespace ::rsocket;
 
 TEST(FramedWriterTest, Subscribe) {
   auto subscriber =
