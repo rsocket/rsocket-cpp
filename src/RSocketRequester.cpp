@@ -1,11 +1,10 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "RSocketRequester.h"
-
 #include "src/temporary_home/OldNewBridge.h"
 #include "yarpl/Flowable.h"
-
 #include <folly/ExceptionWrapper.h>
+#include "internal/ScheduledSubscriber.h"
 
 using namespace reactivesocket;
 using namespace folly;
@@ -41,23 +40,23 @@ yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
 RSocketRequester::requestChannel(
     yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
         requestStream) {
-  auto& eb = eventBase_;
-  auto srs = stateMachine_;
   return yarpl::flowable::Flowables::fromPublisher<Payload>([
-    &eb,
+    eb = &eventBase_,
     requestStream = std::move(requestStream),
-    srs = std::move(srs)
+    srs = stateMachine_
   ](yarpl::Reference<yarpl::flowable::Subscriber<Payload>> subscriber) mutable {
-    eb.runInEventBaseThread([
+    eb->runInEventBaseThread([
       requestStream = std::move(requestStream),
       subscriber = std::move(subscriber),
-      srs = std::move(srs)
+      srs = std::move(srs),
+      eb
     ]() mutable {
       auto responseSink = srs->streamsFactory().createChannelRequester(
-          std::move(std::move(subscriber)));
+          yarpl::make_ref<ScheduledSubscriptionSubscriber<Payload>>(std::move(subscriber), *eb));
         // TODO the responseSink needs to be wrapped with thread scheduling
         // so all emissions happen on the right thread
-      requestStream->subscribe(std::move(responseSink));
+      requestStream->subscribe(
+          yarpl::make_ref<ScheduledSubscriber<Payload>>(std::move(responseSink), *eb));
     });
   });
 }
@@ -72,10 +71,12 @@ RSocketRequester::requestStream(Payload request) {
     eb->runInEventBaseThread([
       request = std::move(request),
       subscriber = std::move(subscriber),
-      srs = std::move(srs)
+      srs = std::move(srs),
+      eb
     ]() mutable {
       srs->streamsFactory().createStreamRequester(
-          std::move(request), std::move(subscriber));
+          std::move(request),
+          yarpl::make_ref<ScheduledSubscriptionSubscriber<Payload>>(std::move(subscriber), *eb));
     });
   });
 }
@@ -99,6 +100,7 @@ RSocketRequester::requestResponse(Payload request) {
       singleSubscriber_->onSubscribe(std::move(singleSubscription));
 
       // kick off request (TODO this is not needed once we use the proper type)
+      // this is executed on the correct subscription's eventBase
       subscription->request(1);
     }
     void onNext(Payload payload) noexcept override {

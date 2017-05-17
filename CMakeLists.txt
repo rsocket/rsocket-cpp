@@ -216,7 +216,13 @@ add_library(
   src/framing/FrameSerializer_v0_1.cpp
   src/framing/FrameSerializer_v0_1.h
   src/framing/FrameSerializer_v1_0.cpp
-  src/framing/FrameSerializer_v1_0.h)
+  src/framing/FrameSerializer_v1_0.h
+  src/internal/ScheduledSubscription.cpp
+  src/internal/ScheduledSubscription.h
+  src/internal/ScheduledSubscriber.h
+  src/internal/ScheduledRSocketResponder.cpp
+  src/internal/ScheduledRSocketResponder.h
+  src/internal/ScheduledSingleObserver.h)
 
 target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/include")
 target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/src")
