@@ -240,40 +240,18 @@ enable_testing()
 
 add_executable(
   tests
+  test/Test.cpp
   test/RSocketClientServerTest.cpp
+  test/PayloadTest.cpp
   test/handlers/HelloStreamRequestHandler.h
   test/handlers/HelloStreamRequestHandler.cpp
-  test/statemachine/RSocketStateMachineTest.cpp
-  test/framing/FramedReaderTest.cpp
-  test/framing/FramedWriterTest.cpp
-  test/statemachine/PublisherBaseTest.cpp
   test/framing/FrameTest.cpp
-  test/test_utils/InlineConnection.cpp
-  test/test_utils/InlineConnection.h
-  test/test_utils/InlineConnectionTest.cpp
   test/test_utils/MockKeepaliveTimer.h
   test/test_utils/MockRequestHandler.h
   test/test_utils/MockStats.h
-  test/deprecated/ReactiveSocketConcurrencyTest.cpp
-  test/deprecated/ReactiveSocketTest.cpp
-  test/deprecated/SubscriberBaseTest.cpp
-  test/Test.cpp
   test/internal/FollyKeepaliveTimerTest.cpp
-  test/resumption/ReactiveSocketResumabilityTest.cpp
   test/internal/AllowanceSemaphoreTest.cpp
-  test/resumption/ResumeIdentificationTokenTest.cpp
-  test/ServerConnectionAcceptorTest.cpp
-  test/PayloadTest.cpp
-  test/resumption/ResumeCacheTest.cpp
-  test/StreamStateTest.cpp
-  test/integration/ClientUtils.h
-  test/integration/ServerFixture.h
-  test/integration/ServerFixture.cpp
-  test/integration/WarmResumptionTest.cpp
-  test/streams/Mocks.h
-  test/framing/FrameTransportTest.cpp
-  test/deprecated/ReactiveSocket.cpp
-  test/deprecated/ReactiveSocket.h
+  test/statemachine/StreamStateTest.cpp
 )
 
 target_link_libraries(
@@ -294,98 +272,52 @@ add_dependencies(tests gmock ReactiveSocket)
 
 add_test(NAME ReactiveSocketTests COMMAND tests)
 
-add_executable(
-  tckclient
-  tck-test/client.cpp
-  tck-test/TestFileParser.cpp
-  tck-test/TestFileParser.h
-  tck-test/TestSubscriber.cpp
-  tck-test/TestSubscriber.h
-  tck-test/TestSuite.cpp
-  tck-test/TestSuite.h
-  tck-test/TestInterpreter.cpp
-  tck-test/TestInterpreter.h
-  tck-test/TypedCommands.h
-  test/deprecated/ReactiveSocket.cpp
-  test/deprecated/ReactiveSocket.h
-)
-
-target_link_libraries(
-  tckclient
-  ReactiveSocket
-  yarpl
-  ${FOLLY_LIBRARIES}
-  ${GFLAGS_LIBRARY}
-  ${GLOG_LIBRARY}
-  ${CMAKE_THREAD_LIBS_INIT})
-
-add_executable(
-  tckserver
-  tck-test/server.cpp
-  tck-test/MarbleProcessor.cpp
-  tck-test/MarbleProcessor.h
-  test/test_utils/StatsPrinter.cpp
-  test/test_utils/StatsPrinter.h
-  test/deprecated/ReactiveSocket.cpp
-  test/deprecated/ReactiveSocket.h
-)
-
-target_link_libraries(
-  tckserver
-  ReactiveSocket
-  yarpl
-  ${FOLLY_LIBRARIES}
-  ${GFLAGS_LIBRARY}
-  ${GMOCK_LIBS}
-  ${GLOG_LIBRARY}
-  ${DOUBLE-CONVERSION}
-  ${CMAKE_THREAD_LIBS_INIT})
-
-add_executable(
-  tcpresumeclient
-  test/resumption/TcpResumeClient.cpp
-  test/test_utils/PrintSubscriber.cpp
-  test/test_utils/PrintSubscriber.h
-  test/test_utils/StatsPrinter.cpp
-  test/test_utils/StatsPrinter.h
-  test/deprecated/ReactiveSocket.cpp
-  test/deprecated/ReactiveSocket.h
-)
-
-target_link_libraries(
-  tcpresumeclient
-  ReactiveSocket
-  yarpl
-  ${FOLLY_LIBRARIES}
-  ${GFLAGS_LIBRARY}
-  ${GMOCK_LIBS}
-  ${GLOG_LIBRARY}
-  ${CMAKE_THREAD_LIBS_INIT})
-
-add_dependencies(tcpresumeclient gmock)
-
-add_executable(
-  tcpresumeserver
-  test/resumption/TcpResumeServer.cpp
-  test/test_utils/PrintSubscriber.cpp
-  test/test_utils/PrintSubscriber.h
-  test/test_utils/StatsPrinter.cpp
-  test/test_utils/StatsPrinter.h
-  test/deprecated/ReactiveSocket.cpp
-  test/deprecated/ReactiveSocket.h
-)
-
-target_link_libraries(
-  tcpresumeserver
-  ReactiveSocket
-  yarpl
-  ${FOLLY_LIBRARIES}
-  ${GFLAGS_LIBRARY}
-  ${GMOCK_LIBS}
-  ${GLOG_LIBRARY}
-  ${CMAKE_THREAD_LIBS_INIT})
-
-add_dependencies(tcpresumeserver gmock)
+#add_executable(
+#  tckclient
+#  tck-test/client.cpp
+#  tck-test/TestFileParser.cpp
+#  tck-test/TestFileParser.h
+#  tck-test/TestSubscriber.cpp
+#  tck-test/TestSubscriber.h
+#  tck-test/TestSuite.cpp
+#  tck-test/TestSuite.h
+#  tck-test/TestInterpreter.cpp
+#  tck-test/TestInterpreter.h
+#  tck-test/TypedCommands.h
+#  test/deprecated/ReactiveSocket.cpp
+#  test/deprecated/ReactiveSocket.h
+#)
+#
+#target_link_libraries(
+#  tckclient
+#  ReactiveSocket
+#  yarpl
+#  ${FOLLY_LIBRARIES}
+#  ${GFLAGS_LIBRARY}
+#  ${GLOG_LIBRARY}
+#  ${CMAKE_THREAD_LIBS_INIT})
+#
+#add_executable(
+#  tckserver
+#  tck-test/server.cpp
+#  tck-test/MarbleProcessor.cpp
+#  tck-test/MarbleProcessor.h
+#  test/test_utils/StatsPrinter.cpp
+#  test/test_utils/StatsPrinter.h
+#  test/deprecated/ReactiveSocket.cpp
+#  test/deprecated/ReactiveSocket.h
+#)
+#
+#target_link_libraries(
+#  tckserver
+#  ReactiveSocket
+#  yarpl
+#  ${FOLLY_LIBRARIES}
+#  ${GFLAGS_LIBRARY}
+#  ${GMOCK_LIBS}
+#  ${GLOG_LIBRARY}
+#  ${DOUBLE-CONVERSION}
+#  ${CMAKE_THREAD_LIBS_INIT})
 
 ########################################
 # Examples
