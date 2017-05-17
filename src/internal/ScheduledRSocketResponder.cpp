@@ -8,71 +8,73 @@
 namespace rsocket {
 
 ScheduledRSocketResponder::ScheduledRSocketResponder(
-      std::shared_ptr<RSocketResponder> inner,
-      folly::EventBase& eventBase) : inner_(std::move(inner)), eventBase_(eventBase) {}
+    std::shared_ptr<RSocketResponder> inner,
+    folly::EventBase &eventBase) : inner_(std::move(inner)),
+                                   eventBase_(eventBase) {}
 
-  yarpl::Reference<yarpl::single::Single<reactivesocket::Payload>>
-  ScheduledRSocketResponder::handleRequestResponse(
-      reactivesocket::Payload request,
-      reactivesocket::StreamId streamId) {
-    auto innerFlowable = inner_->handleRequestResponse(std::move(request),
+yarpl::Reference<yarpl::single::Single<Payload>>
+ScheduledRSocketResponder::handleRequestResponse(
+    Payload request,
+    StreamId streamId) {
+  auto innerFlowable = inner_->handleRequestResponse(std::move(request),
                                                      streamId);
-    return yarpl::single::Singles::create<reactivesocket::Payload>(
-    [innerFlowable = std::move(innerFlowable), eventBase = &eventBase_](
-        yarpl::Reference<yarpl::single::SingleObserver<reactivesocket::Payload>>
-    observer) {
-      innerFlowable->subscribe(yarpl::make_ref<
-          ScheduledSingleObserver<reactivesocket::Payload>>
-                                   (std::move(observer), *eventBase));
-    });
-  }
-
-yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
-ScheduledRSocketResponder::handleRequestStream(
-    reactivesocket::Payload request,
-    reactivesocket::StreamId streamId) {
-  auto innerFlowable = inner_->handleRequestStream(std::move(request),
-                                                   streamId);
-  return yarpl::flowable::Flowables::fromPublisher<reactivesocket::Payload>(
+  return yarpl::single::Singles::create<Payload>(
   [innerFlowable = std::move(innerFlowable), eventBase = &eventBase_](
-      yarpl::Reference<yarpl::flowable::Subscriber<reactivesocket::Payload>>
-  subscriber) {
+      yarpl::Reference<yarpl::single::SingleObserver<Payload>>
+  observer) {
     innerFlowable->subscribe(yarpl::make_ref<
-        ScheduledSubscriber<reactivesocket::Payload>>
-    (std::move(subscriber), *eventBase));
+        ScheduledSingleObserver<Payload>>
+                                 (std::move(observer), *eventBase));
   });
 }
 
-  yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
-  ScheduledRSocketResponder::handleRequestChannel(
-      reactivesocket::Payload request,
-      yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
-      requestStream,
-      reactivesocket::StreamId streamId) {
-    auto requestStreamFlowable = yarpl::flowable::Flowables::fromPublisher<reactivesocket::Payload>(
-    [requestStream = std::move(requestStream), eventBase = &eventBase_](
-        yarpl::Reference<yarpl::flowable::Subscriber<reactivesocket::Payload>>
-    subscriber) {
-      requestStream->subscribe(yarpl::make_ref<
-          ScheduledSubscriptionSubscriber<reactivesocket::Payload>>
-                                   (std::move(subscriber), *eventBase));
-    });
-    auto innerFlowable = inner_->handleRequestChannel(std::move(request),
-                                                     std::move(requestStreamFlowable),
-                                                     streamId);
-    return yarpl::flowable::Flowables::fromPublisher<reactivesocket::Payload>(
-    [innerFlowable = std::move(innerFlowable), eventBase = &eventBase_](
-        yarpl::Reference<yarpl::flowable::Subscriber<reactivesocket::Payload>>
-    subscriber) {
-      innerFlowable->subscribe(yarpl::make_ref<
-          ScheduledSubscriber<reactivesocket::Payload>>
-                                   (std::move(subscriber), *eventBase));
-    });
-  }
+yarpl::Reference<yarpl::flowable::Flowable<Payload>>
+ScheduledRSocketResponder::handleRequestStream(
+    Payload request,
+    StreamId streamId) {
+  auto innerFlowable = inner_->handleRequestStream(std::move(request),
+                                                   streamId);
+  return yarpl::flowable::Flowables::fromPublisher<Payload>(
+  [innerFlowable = std::move(innerFlowable), eventBase = &eventBase_](
+      yarpl::Reference<yarpl::flowable::Subscriber<Payload>>
+  subscriber) {
+    innerFlowable->subscribe(yarpl::make_ref<
+        ScheduledSubscriber<Payload>>
+                                 (std::move(subscriber), *eventBase));
+  });
+}
+
+yarpl::Reference<yarpl::flowable::Flowable<Payload>>
+ScheduledRSocketResponder::handleRequestChannel(
+    Payload request,
+    yarpl::Reference<yarpl::flowable::Flowable<Payload>>
+    requestStream,
+    StreamId streamId) {
+  auto requestStreamFlowable = yarpl::flowable::Flowables::fromPublisher<Payload>(
+  [requestStream = std::move(requestStream), eventBase = &eventBase_](
+      yarpl::Reference<yarpl::flowable::Subscriber<Payload>>
+  subscriber) {
+    requestStream->subscribe(yarpl::make_ref<
+        ScheduledSubscriptionSubscriber<Payload>>
+                                 (std::move(subscriber), *eventBase));
+  });
+  auto innerFlowable = inner_->handleRequestChannel(std::move(request),
+                                                    std::move(
+                                                        requestStreamFlowable),
+                                                    streamId);
+  return yarpl::flowable::Flowables::fromPublisher<Payload>(
+  [innerFlowable = std::move(innerFlowable), eventBase = &eventBase_](
+      yarpl::Reference<yarpl::flowable::Subscriber<Payload>>
+  subscriber) {
+    innerFlowable->subscribe(yarpl::make_ref<
+        ScheduledSubscriber<Payload>>
+                                 (std::move(subscriber), *eventBase));
+  });
+}
 
 void ScheduledRSocketResponder::handleFireAndForget(
-    reactivesocket::Payload request,
-    reactivesocket::StreamId streamId) {
+    Payload request,
+    StreamId streamId) {
   inner_->handleFireAndForget(std::move(request), streamId);
 }
 

@@ -18,32 +18,32 @@ class ScheduledRSocketResponder : public RSocketResponder {
  public:
   ScheduledRSocketResponder(
       std::shared_ptr<RSocketResponder> inner,
-      folly::EventBase& eventBase);
+      folly::EventBase &eventBase);
 
-  yarpl::Reference<yarpl::single::Single<reactivesocket::Payload>>
+  yarpl::Reference<yarpl::single::Single<Payload>>
   handleRequestResponse(
-      reactivesocket::Payload request,
-      reactivesocket::StreamId streamId) override;
+      Payload request,
+      StreamId streamId) override;
 
-  yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
+  yarpl::Reference<yarpl::flowable::Flowable<Payload>>
   handleRequestStream(
-      reactivesocket::Payload request,
-      reactivesocket::StreamId streamId) override;
+      Payload request,
+      StreamId streamId) override;
 
-  yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
+  yarpl::Reference<yarpl::flowable::Flowable<Payload>>
   handleRequestChannel(
-      reactivesocket::Payload request,
-      yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
+      Payload request,
+      yarpl::Reference<yarpl::flowable::Flowable<Payload>>
       requestStream,
-      reactivesocket::StreamId streamId) override;
+      StreamId streamId) override;
 
   void handleFireAndForget(
-      reactivesocket::Payload request,
-      reactivesocket::StreamId streamId) override;
+      Payload request,
+      StreamId streamId) override;
 
  private:
   std::shared_ptr<RSocketResponder> inner_;
-  folly::EventBase& eventBase_;
+  folly::EventBase &eventBase_;
 };
 
 } // rsocket

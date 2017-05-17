@@ -18,14 +18,15 @@ class ScheduledSubscription : public yarpl::flowable::Subscription {
  public:
   ScheduledSubscription(
       yarpl::Reference<yarpl::flowable::Subscription> inner,
-      folly::EventBase& eventBase);
+      folly::EventBase &eventBase);
 
   void request(int64_t n) noexcept override;
+
   void cancel() noexcept override;
 
  private:
   yarpl::Reference<yarpl::flowable::Subscription> inner_;
-  folly::EventBase& eventBase_;
+  folly::EventBase &eventBase_;
 };
 
 } // rsocket

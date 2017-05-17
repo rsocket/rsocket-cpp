@@ -17,33 +17,37 @@ class ScheduledSubscriber : public yarpl::flowable::Subscriber<T> {
  public:
   ScheduledSubscriber(
       yarpl::Reference<yarpl::flowable::Subscriber<T>> inner,
-      folly::EventBase& eventBase) : inner_(std::move(inner)), eventBase_(eventBase) {}
+      folly::EventBase &eventBase) : inner_(std::move(inner)),
+                                     eventBase_(eventBase) {}
 
-  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription> subscription) override {
-    if(eventBase_.isInEventBaseThread()) {
+  void onSubscribe(
+      yarpl::Reference<yarpl::flowable::Subscription> subscription) override {
+    if (eventBase_.isInEventBaseThread()) {
       inner_->onSubscribe(std::move(subscription));
     } else {
       eventBase_.runInEventBaseThread(
-        [inner = inner_, subscription = std::move(subscription)] {
-          inner->onSubscribe(std::move(subscription));
-        });
+      [inner = inner_, subscription = std::move(subscription)]
+      {
+        inner->onSubscribe(std::move(subscription));
+      });
     }
   }
 
   // No further calls to the subscription after this method is invoked.
   void onComplete() override {
-    if(eventBase_.isInEventBaseThread()) {
+    if (eventBase_.isInEventBaseThread()) {
       inner_->onComplete();
     } else {
       eventBase_.runInEventBaseThread(
-      [inner = inner_] {
+      [inner = inner_]
+      {
         inner->onComplete();
       });
     }
   }
 
   void onError(const std::exception_ptr ex) override {
-    if(eventBase_.isInEventBaseThread()) {
+    if (eventBase_.isInEventBaseThread()) {
       inner_->onError(std::move(ex));
     } else {
       eventBase_.runInEventBaseThread(
@@ -54,7 +58,7 @@ class ScheduledSubscriber : public yarpl::flowable::Subscriber<T> {
   }
 
   void onNext(T value) override {
-    if(eventBase_.isInEventBaseThread()) {
+    if (eventBase_.isInEventBaseThread()) {
       inner_->onNext(std::move(value));
     } else {
       eventBase_.runInEventBaseThread(
@@ -66,7 +70,7 @@ class ScheduledSubscriber : public yarpl::flowable::Subscriber<T> {
 
  private:
   yarpl::Reference<yarpl::flowable::Subscriber<T>> inner_;
-  folly::EventBase& eventBase_;
+  folly::EventBase &eventBase_;
 };
 
 //
@@ -78,10 +82,13 @@ class ScheduledSubscriptionSubscriber : public yarpl::flowable::Subscriber<T> {
  public:
   ScheduledSubscriptionSubscriber(
       yarpl::Reference<yarpl::flowable::Subscriber<T>> inner,
-      folly::EventBase& eventBase) : inner_(std::move(inner)), eventBase_(eventBase) {}
+      folly::EventBase &eventBase) : inner_(std::move(inner)),
+                                     eventBase_(eventBase) {}
 
-  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription> subscription) override {
-    inner_->onSubscribe(yarpl::make_ref<ScheduledSubscription>(subscription, eventBase_));
+  void onSubscribe(
+      yarpl::Reference<yarpl::flowable::Subscription> subscription) override {
+    inner_->onSubscribe(
+        yarpl::make_ref<ScheduledSubscription>(subscription, eventBase_));
   }
 
   // No further calls to the subscription after this method is invoked.
@@ -99,7 +106,7 @@ class ScheduledSubscriptionSubscriber : public yarpl::flowable::Subscriber<T> {
 
  private:
   yarpl::Reference<yarpl::flowable::Subscriber<T>> inner_;
-  folly::EventBase& eventBase_;
+  folly::EventBase &eventBase_;
 };
 
 } // rsocket
