@@ -55,6 +55,8 @@ RSocketRequester::requestChannel(
     ]() mutable {
       auto responseSink = srs->streamsFactory().createChannelRequester(
           std::move(std::move(subscriber)));
+        // TODO the responseSink needs to be wrapped with thread scheduling
+        // so all emissions happen on the right thread
       requestStream->subscribe(std::move(responseSink));
     });
   });

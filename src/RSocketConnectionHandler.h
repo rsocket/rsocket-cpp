@@ -25,8 +25,6 @@ namespace rsocket {
  * the RSocket.
  *
  * TODO: Resumability
- *
- * TODO: Concurrency (number of threads)
  */
 class RSocketConnectionHandler : public reactivesocket::ConnectionHandler {
  public:
