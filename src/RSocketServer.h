@@ -40,14 +40,20 @@ class RSocketServer {
   /**
    * Start the ConnectionAcceptor and begin handling connections.
    *
-   * This method is asynchronous.
+   * This method blocks until the server has started. It returns if successful
+   * or throws an exception if failure occurs.
+   *
+   * This method assumes it will be called only once.
    */
   void start(OnAccept);
 
   /**
    * Start the ConnectionAcceptor and begin handling connections.
    *
-   * This method will block the calling thread.
+   * This method will block the calling thread as long as the server is running.
+   * It will throw an exception if a failure occurs on startup.
+   *
+   * This method assumes it will be called only once.
    */
   void startAndPark(OnAccept);
 
@@ -71,18 +77,18 @@ class RSocketServer {
   friend class RSocketServerConnectionHandler;
 
  private:
-  void addSocket(std::shared_ptr<reactivesocket::RSocketStateMachine>);
-  void removeSocket(std::shared_ptr<reactivesocket::RSocketStateMachine>);
+  void addConnection(std::shared_ptr<reactivesocket::RSocketStateMachine>, folly::Executor&);
+  void removeConnection(std::shared_ptr<reactivesocket::RSocketStateMachine>);
 
   //////////////////////////////////////////////////////////////////////////////
 
   std::unique_ptr<ConnectionAcceptor> lazyAcceptor_;
   reactivesocket::ServerConnectionAcceptor acceptor_;
-  std::shared_ptr<reactivesocket::ConnectionHandler> connectionHandler_;
+  bool started{false};
 
   /// Set of currently open ReactiveSockets.
   folly::Synchronized<
-      std::unordered_set<std::shared_ptr<reactivesocket::RSocketStateMachine>>,
+      std::unordered_map<std::shared_ptr<reactivesocket::RSocketStateMachine>, folly::Executor&>,
       std::mutex>
       sockets_;
 

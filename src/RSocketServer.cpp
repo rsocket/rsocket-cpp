@@ -5,6 +5,7 @@
 #include <folly/ExceptionWrapper.h>
 
 #include "RSocketConnectionHandler.h"
+#include "src/statemachine/RSocketStateMachine.h"
 
 using namespace reactivesocket;
 
@@ -12,10 +13,11 @@ namespace rsocket {
 
 class RSocketServerConnectionHandler : public virtual RSocketConnectionHandler {
  public:
-  RSocketServerConnectionHandler(RSocketServer* server, OnAccept onAccept) {
-    server_ = server;
-    onAccept_ = onAccept;
-  }
+  RSocketServerConnectionHandler(
+      RSocketServer* server,
+      OnAccept onAccept,
+      folly::Executor& executor)
+      : server_{server}, onAccept_{std::move(onAccept)}, executor_{executor} {}
 
   std::shared_ptr<RSocketResponder> getHandler(
       std::shared_ptr<ConnectionSetupRequest> request) override {
@@ -24,23 +26,25 @@ class RSocketServerConnectionHandler : public virtual RSocketConnectionHandler {
 
   void manageSocket(
       std::shared_ptr<ConnectionSetupRequest> request,
-      std::shared_ptr<reactivesocket::RSocketStateMachine> socket) override {
-    // TODO restore this behavior
-    //    socket->onClosed([ this, socket = socket.get() ](
-    //        const folly::exception_wrapper&) {
-    //      // Enqueue another event to remove and delete it.  We cannot delete
-    //      // the ReactiveSocket now as it still needs to finish processing the
-    //      // onClosed handlers in the stack frame above us.
-    //      socket->executor().add([this, socket] {
-    //      server_->removeSocket(socket); });
-    //    });
+      std::shared_ptr<reactivesocket::RSocketStateMachine> stateMachine)
+      override {
+    stateMachine->addClosedListener(
+        [this, stateMachine](const folly::exception_wrapper&) {
+          // Enqueue another event to remove and delete it.  We cannot delete
+          // the RSocketStateMachine now as it still needs to finish processing
+          // the onClosed handlers in the stack frame above us.
+          executor_.add([this, stateMachine] {
+            server_->removeConnection(stateMachine);
+          });
+        });
 
-    server_->addSocket(std::move(socket));
+    server_->addConnection(std::move(stateMachine), executor_);
   }
 
  private:
   RSocketServer* server_;
   OnAccept onAccept_;
+  folly::Executor& executor_;
 };
 
 RSocketServer::RSocketServer(
@@ -65,11 +69,14 @@ RSocketServer::~RSocketServer() {
 
     shutdown_.emplace();
 
-    // TODO restore this behavior
-    //    for (auto& socket : *locked) {
-    //       close() has to be called on the same executor as the socket.
-    //      socket->executor().add([s = socket.get()] { s->close(); });
-    //    }
+    for (auto& connectionPair : *locked) {
+      // close() has to be called on the same executor as the socket
+      auto& executor_ = connectionPair.second;
+      executor_.add([s = connectionPair.first] {
+        s->close(
+            folly::exception_wrapper(), StreamCompletionSignal::SOCKET_CLOSED);
+      });
+    }
   }
 
   // Wait for all ReactiveSockets to close.
@@ -80,26 +87,26 @@ RSocketServer::~RSocketServer() {
 }
 
 void RSocketServer::start(OnAccept onAccept) {
-  if (connectionHandler_) {
+  if (started) {
     throw std::runtime_error("RSocketServer::start() already called.");
   }
+  started = true;
 
   LOG(INFO) << "Initializing connection acceptor on start";
 
-  connectionHandler_ =
-      std::make_unique<RSocketServerConnectionHandler>(this, onAccept);
-
   lazyAcceptor_
-      ->start([this](
-          std::unique_ptr<DuplexConnection> conn, folly::Executor& executor) {
+      ->start([ this, onAccept = std::move(onAccept) ](
+          std::unique_ptr<DuplexConnection> conn, folly::Executor & executor) {
         LOG(INFO) << "Going to accept duplex connection";
 
+        auto connectionHandler_ =
+            std::make_shared<RSocketServerConnectionHandler>(
+                this, onAccept, executor);
+
         // FIXME(alexanderm): This isn't thread safe
-        acceptor_.accept(std::move(conn), connectionHandler_);
+        acceptor_.accept(std::move(conn), std::move(connectionHandler_));
       })
-      .onError([](const folly::exception_wrapper& ex) {
-        LOG(FATAL) << "Failed to start ConnectionAcceptor: " << ex.what();
-      });
+      .get(); // block until finished and return or throw
 }
 
 void RSocketServer::startAndPark(OnAccept onAccept) {
@@ -111,12 +118,13 @@ void RSocketServer::unpark() {
   waiting_.post();
 }
 
-void RSocketServer::addSocket(
-    std::shared_ptr<reactivesocket::RSocketStateMachine> socket) {
-  sockets_.lock()->insert(std::move(socket));
+void RSocketServer::addConnection(
+    std::shared_ptr<reactivesocket::RSocketStateMachine> socket,
+    folly::Executor& executor) {
+  sockets_.lock()->insert({std::move(socket), executor});
 }
 
-void RSocketServer::removeSocket(
+void RSocketServer::removeConnection(
     std::shared_ptr<reactivesocket::RSocketStateMachine> socket) {
   auto locked = sockets_.lock();
   locked->erase(socket);
