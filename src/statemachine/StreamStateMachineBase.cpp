@@ -7,9 +7,10 @@
 
 namespace rsocket {
 
-void StreamStateMachineBase::handlePayload(Payload&& payload,
-                                        bool complete,
-                                        bool flagsNext) {
+void StreamStateMachineBase::handlePayload(
+    Payload&& payload,
+    bool complete,
+    bool flagsNext) {
   VLOG(4) << "Unexpected handlePayload";
 }
 
@@ -17,7 +18,8 @@ void StreamStateMachineBase::handleRequestN(uint32_t n) {
   VLOG(4) << "Unexpected handleRequestN";
 }
 
-void StreamStateMachineBase::handleError(folly::exception_wrapper errorPayload) {
+void StreamStateMachineBase::handleError(
+    folly::exception_wrapper errorPayload) {
   VLOG(4) << "Unexpected handleError";
 }
 

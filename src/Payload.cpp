@@ -44,10 +44,10 @@ std::string Payload::moveDataToString() {
 }
 
 std::string Payload::cloneDataToString() const {
-    if (!data) {
-        return "";
-    }
-    return data->cloneAsValue().moveToFbString().toStdString();
+  if (!data) {
+    return "";
+  }
+  return data->cloneAsValue().moveToFbString().toStdString();
 }
 
 void Payload::clear() {

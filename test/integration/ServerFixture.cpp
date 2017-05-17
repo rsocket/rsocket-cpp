@@ -1,10 +1,9 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
+#include "test/integration/ServerFixture.h"
 #include <folly/Conv.h>
 #include <gflags/gflags.h>
-#include "test/integration/ServerFixture.h"
 #include <gflags/gflags.h>
-
 
 using namespace ::rsocket;
 using namespace yarpl;
@@ -25,7 +24,8 @@ std::vector<
 
 class ServerSubscription : public yarpl::flowable::Subscription {
  public:
-  explicit ServerSubscription(yarpl::Reference<yarpl::flowable::Subscriber<Payload>> requester)
+  explicit ServerSubscription(
+      yarpl::Reference<yarpl::flowable::Subscriber<Payload>> requester)
       : requester_(std::move(requester)) {}
 
   void request(int64_t n) noexcept override {
@@ -50,7 +50,8 @@ class ServerRequestHandler : public DefaultRequestHandler {
   void handleRequestStream(
       Payload request,
       StreamId streamId,
-      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& requester) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+          requester) noexcept override {
     LOG(INFO) << "Received RequestStream";
     requester->onSubscribe(make_ref<ServerSubscription>(requester));
   }
@@ -72,39 +73,42 @@ class ServerRequestHandler : public DefaultRequestHandler {
     return nullptr;
   }
 
-  bool handleResume(
-      ResumeParameters) noexcept override {
+  bool handleResume(ResumeParameters) noexcept override {
     LOG(INFO) << "Received Resume. NOT IMPLEMENTED";
     return false;
   }
 
-  void handleCleanResume(
-      yarpl::Reference<yarpl::flowable::Subscription> response) noexcept override {
+  void handleCleanResume(yarpl::Reference<yarpl::flowable::Subscription>
+                             response) noexcept override {
     LOG(INFO) << "Received CleanResume. NOT IMPLEMENTED";
   }
 
-  void handleDirtyResume(
-      yarpl::Reference<yarpl::flowable::Subscription> response) noexcept override {
+  void handleDirtyResume(yarpl::Reference<yarpl::flowable::Subscription>
+                             response) noexcept override {
     LOG(INFO) << "Received DirtyResume. NOT IMPLEMENTED";
   }
 
   void onSubscriptionPaused(
-      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscription>&
+          subscription) noexcept override {
     LOG(INFO) << "SubscriptionPaused. NOT IMPLEMENTED";
   }
 
   void onSubscriptionResumed(
-      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscription>&
+          subscription) noexcept override {
     LOG(INFO) << "SubscriptionResumed. NOT IMPLEMENTED";
   }
 
-  void onSubscriberPaused(const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
-                              subscriber) noexcept override {
+  void onSubscriberPaused(
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+          subscriber) noexcept override {
     LOG(INFO) << "SubscriberPaused. NOT IMPLEMENTED";
   }
 
-  void onSubscriberResumed(const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
-                               subscriber) noexcept override {
+  void onSubscriberResumed(
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+          subscriber) noexcept override {
     LOG(INFO) << "SubscriberResumed. NOT IMPLEMENTED";
   }
 };

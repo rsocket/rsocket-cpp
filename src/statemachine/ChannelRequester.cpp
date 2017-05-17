@@ -134,9 +134,10 @@ void ChannelRequester::endStream(StreamCompletionSignal signal) {
   ConsumerBase::endStream(signal);
 }
 
-void ChannelRequester::handlePayload(Payload&& payload,
-                                     bool complete,
-                                     bool flagsNext) {
+void ChannelRequester::handlePayload(
+    Payload&& payload,
+    bool complete,
+    bool flagsNext) {
   bool end = false;
   switch (state_) {
     case State::NEW:

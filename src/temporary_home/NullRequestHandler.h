@@ -3,8 +3,8 @@
 #pragma once
 
 #include <folly/ExceptionWrapper.h>
-#include "src/RSocketParameters.h"
 #include "RequestHandler.h"
+#include "src/RSocketParameters.h"
 
 namespace rsocket {
 
@@ -14,8 +14,8 @@ class NullSubscriberT : public yarpl::flowable::Subscriber<T> {
   virtual ~NullSubscriberT() = default;
 
   // Subscriber methods
-  void onSubscribe(
-      yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept override {
+  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
+                       subscription) noexcept override {
     subscription->cancel();
   }
   void onNext(T element) noexcept override {}
@@ -38,17 +38,20 @@ class NullRequestHandler : public RequestHandler {
   yarpl::Reference<yarpl::flowable::Subscriber<Payload>> handleRequestChannel(
       Payload request,
       StreamId streamId,
-      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) noexcept override;
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+          response) noexcept override;
 
   void handleRequestStream(
       Payload request,
       StreamId streamId,
-      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) noexcept override;
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+          response) noexcept override;
 
   void handleRequestResponse(
       Payload request,
       StreamId streamId,
-      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) noexcept override;
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+          response) noexcept override;
 
   void handleFireAndForgetRequest(
       Payload request,
@@ -62,19 +65,23 @@ class NullRequestHandler : public RequestHandler {
 
   bool handleResume(ResumeParameters) noexcept override;
 
-  void handleCleanResume(
-      yarpl::Reference<yarpl::flowable::Subscription> response) noexcept override;
-  void handleDirtyResume(
-      yarpl::Reference<yarpl::flowable::Subscription> response) noexcept override;
+  void handleCleanResume(yarpl::Reference<yarpl::flowable::Subscription>
+                             response) noexcept override;
+  void handleDirtyResume(yarpl::Reference<yarpl::flowable::Subscription>
+                             response) noexcept override;
 
   void onSubscriptionPaused(
-      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override;
+      const yarpl::Reference<yarpl::flowable::Subscription>&
+          subscription) noexcept override;
   void onSubscriptionResumed(
-      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override;
+      const yarpl::Reference<yarpl::flowable::Subscription>&
+          subscription) noexcept override;
   void onSubscriberPaused(
-      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& subscriber) noexcept override;
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+          subscriber) noexcept override;
   void onSubscriberResumed(
-      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& subscriber) noexcept override;
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+          subscriber) noexcept override;
 };
 
 using DefaultRequestHandler = NullRequestHandler;

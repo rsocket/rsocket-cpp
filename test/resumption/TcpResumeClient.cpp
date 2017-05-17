@@ -6,13 +6,13 @@
 #include <folly/portability/GFlags.h>
 #include <gmock/gmock.h>
 
-#include "src/internal/ClientResumeStatusCallback.h"
 #include "src/framing/FrameTransport.h"
-#include "src/temporary_home/NullRequestHandler.h"
-#include "test/deprecated/ReactiveSocket.h"
-#include "src/internal/FollyKeepaliveTimer.h"
 #include "src/framing/FramedDuplexConnection.h"
+#include "src/internal/ClientResumeStatusCallback.h"
+#include "src/internal/FollyKeepaliveTimer.h"
+#include "src/temporary_home/NullRequestHandler.h"
 #include "src/transports/tcp/TcpDuplexConnection.h"
+#include "test/deprecated/ReactiveSocket.h"
 #include "test/test_utils/PrintSubscriber.h"
 #include "test/test_utils/StatsPrinter.h"
 
@@ -58,22 +58,26 @@ class ResumeCallback : public ClientResumeStatusCallback {
 class ClientRequestHandler : public DefaultRequestHandler {
  public:
   void onSubscriptionPaused(
-      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscription>&
+          subscription) noexcept override {
     LOG(INFO) << "subscription paused " << &subscription;
   }
 
   void onSubscriptionResumed(
-      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscription>&
+          subscription) noexcept override {
     LOG(INFO) << "subscription resumed " << &subscription;
   }
 
-  void onSubscriberPaused(const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
-                              subscriber) noexcept override {
+  void onSubscriberPaused(
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+          subscriber) noexcept override {
     LOG(INFO) << "subscriber paused " << &subscriber;
   }
 
-  void onSubscriberResumed(const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
-                               subscriber) noexcept override {
+  void onSubscriberResumed(
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+          subscriber) noexcept override {
     LOG(INFO) << "subscriber resumed " << &subscriber;
   }
 };

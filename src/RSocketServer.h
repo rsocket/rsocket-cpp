@@ -77,7 +77,9 @@ class RSocketServer {
   friend class RSocketServerConnectionHandler;
 
  private:
-  void addConnection(std::shared_ptr<rsocket::RSocketStateMachine>, folly::Executor&);
+  void addConnection(
+      std::shared_ptr<rsocket::RSocketStateMachine>,
+      folly::Executor&);
   void removeConnection(std::shared_ptr<rsocket::RSocketStateMachine>);
 
   //////////////////////////////////////////////////////////////////////////////
@@ -88,7 +90,9 @@ class RSocketServer {
 
   /// Set of currently open ReactiveSockets.
   folly::Synchronized<
-      std::unordered_map<std::shared_ptr<rsocket::RSocketStateMachine>, folly::Executor&>,
+      std::unordered_map<
+          std::shared_ptr<rsocket::RSocketStateMachine>,
+          folly::Executor&>,
       std::mutex>
       sockets_;
 

@@ -25,7 +25,8 @@ class StreamState {
 
   std::deque<std::unique_ptr<folly::IOBuf>> moveOutputPendingFrames();
 
-  std::unordered_map<StreamId, yarpl::Reference<StreamStateMachineBase>> streams_;
+  std::unordered_map<StreamId, yarpl::Reference<StreamStateMachineBase>>
+      streams_;
 
  private:
   /// Called to update stats when outputFrames_ is about to be cleared.

@@ -7,8 +7,8 @@
 #include <folly/portability/GFlags.h>
 #include "test/deprecated/ReactiveSocket.h"
 
-#include "src/temporary_home/NullRequestHandler.h"
 #include "src/framing/FramedDuplexConnection.h"
+#include "src/temporary_home/NullRequestHandler.h"
 #include "src/transports/tcp/TcpDuplexConnection.h"
 
 #include "tck-test/TestFileParser.h"

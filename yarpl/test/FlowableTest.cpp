@@ -1,5 +1,5 @@
-#include <vector>
 #include <type_traits>
+#include <vector>
 
 #include <gtest/gtest.h>
 
@@ -20,7 +20,8 @@ class CollectingSubscriber : public Subscriber<T> {
       std::is_copy_constructible<T>::value,
       "CollectingSubscriber needs to copy the value in order to collect it");
 
-  CollectingSubscriber(int64_t requestCount = 100) : requestCount_(requestCount) {}
+  CollectingSubscriber(int64_t requestCount = 100)
+      : requestCount_(requestCount) {}
 
   void onSubscribe(Reference<Subscription> subscription) override {
     Subscriber<T>::onSubscribe(subscription);
@@ -43,8 +44,7 @@ class CollectingSubscriber : public Subscriber<T> {
 
     try {
       std::rethrow_exception(ex);
-    }
-    catch (const std::exception& e) {
+    } catch (const std::exception& e) {
       errorMsg_ = e.what();
     }
   }
@@ -77,7 +77,9 @@ class CollectingSubscriber : public Subscriber<T> {
 /// flowable.  Return the items that were sent to the subscriber.  If some
 /// exception was sent, the exception is thrown.
 template <typename T>
-std::vector<T> run(Reference<Flowable<T>> flowable, uint64_t requestCount = 100) {
+std::vector<T> run(
+    Reference<Flowable<T>> flowable,
+    uint64_t requestCount = 100) {
   auto collector = make_ref<CollectingSubscriber<T>>(requestCount);
   flowable->subscribe(collector);
   return collector->values();
@@ -110,33 +112,26 @@ TEST(FlowableTest, JustFlowable) {
 
 TEST(FlowableTest, JustIncomplete) {
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-  auto flowable = Flowables::justN<std::string>({"a", "b", "c"})
-    ->take(2);
-  EXPECT_EQ(
-    run(std::move(flowable)),
-    std::vector<std::string>({"a", "b"}));
+  auto flowable = Flowables::justN<std::string>({"a", "b", "c"})->take(2);
+  EXPECT_EQ(run(std::move(flowable)), std::vector<std::string>({"a", "b"}));
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
 
-  flowable = Flowables::justN<std::string>({"a", "b", "c"})
-    ->take(2)
-    ->take(1);
-  EXPECT_EQ(
-    run(std::move(flowable)),
-    std::vector<std::string>({"a"}));
+  flowable = Flowables::justN<std::string>({"a", "b", "c"})->take(2)->take(1);
+  EXPECT_EQ(run(std::move(flowable)), std::vector<std::string>({"a"}));
   flowable.reset();
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
 
   flowable = Flowables::justN<std::string>(
-      {"a", "b", "c", "d", "e", "f", "g", "h", "i"})
-    ->map([](std::string s) {
-        s[0] = ::toupper(s[0]);
-        return s;
-      })
-    ->take(5);
+                 {"a", "b", "c", "d", "e", "f", "g", "h", "i"})
+                 ->map([](std::string s) {
+                   s[0] = ::toupper(s[0]);
+                   return s;
+                 })
+                 ->take(5);
 
   EXPECT_EQ(
-    run(std::move(flowable)),
-    std::vector<std::string>({"A", "B", "C", "D", "E"}));
+      run(std::move(flowable)),
+      std::vector<std::string>({"A", "B", "C", "D", "E"}));
   flowable.reset();
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
 }
@@ -162,19 +157,17 @@ TEST(FlowableTest, RangeWithMap) {
 
 TEST(FlowableTest, RangeWithFilterRequestMoreItems) {
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-  auto flowable = Flowables::range(0, 10)
-                      ->filter([](int64_t v) { return v % 2 != 0; });
-  EXPECT_EQ(
-      run(std::move(flowable)), std::vector<int64_t>({1, 3, 5, 7, 9}));
+  auto flowable =
+      Flowables::range(0, 10)->filter([](int64_t v) { return v % 2 != 0; });
+  EXPECT_EQ(run(std::move(flowable)), std::vector<int64_t>({1, 3, 5, 7, 9}));
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
 TEST(FlowableTest, RangeWithFilterRequestLessItems) {
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-  auto flowable = Flowables::range(0, 10)
-      ->filter([](int64_t v) { return v % 2 != 0; });
-  EXPECT_EQ(
-      run(std::move(flowable), 5), std::vector<int64_t>({1, 3, 5, 7, 9}));
+  auto flowable =
+      Flowables::range(0, 10)->filter([](int64_t v) { return v % 2 != 0; });
+  EXPECT_EQ(run(std::move(flowable), 5), std::vector<int64_t>({1, 3, 5, 7, 9}));
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
@@ -227,10 +220,9 @@ TEST(FlowableTest, SubscribersComplete) {
   bool completed = false;
 
   auto subscriber = Subscribers::create<int>(
-    [](int) { unreachable(); },
-    [](std::exception_ptr) { unreachable(); },
-    [&] { completed = true; }
-  );
+      [](int) { unreachable(); },
+      [](std::exception_ptr) { unreachable(); },
+      [&] { completed = true; });
 
   flowable->subscribe(std::move(subscriber));
   flowable.reset();
@@ -249,10 +241,9 @@ TEST(FlowableTest, SubscribersError) {
   bool errored = false;
 
   auto subscriber = Subscribers::create<int>(
-    [](int) { unreachable(); },
-    [&](std::exception_ptr) { errored = true; },
-    [] { unreachable(); }
-  );
+      [](int) { unreachable(); },
+      [&](std::exception_ptr) { errored = true; },
+      [] { unreachable(); });
 
   flowable->subscribe(std::move(subscriber));
   flowable.reset();

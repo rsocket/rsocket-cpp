@@ -178,33 +178,33 @@ class Reference {
   T* pointer_{nullptr};
 };
 
-template< typename T, typename U>
-bool operator==( const Reference<T>& lhs, const Reference<U>& rhs ) noexcept {
+template <typename T, typename U>
+bool operator==(const Reference<T>& lhs, const Reference<U>& rhs) noexcept {
   return lhs.get() == rhs.get();
 }
 
-template< typename T, typename U>
-bool operator!=( const Reference<T>& lhs, const Reference<U>& rhs ) noexcept {
+template <typename T, typename U>
+bool operator!=(const Reference<T>& lhs, const Reference<U>& rhs) noexcept {
   return lhs.get() != rhs.get();
 }
 
-template< typename T >
-bool operator==( const Reference<T>& lhs, std::nullptr_t) noexcept {
+template <typename T>
+bool operator==(const Reference<T>& lhs, std::nullptr_t) noexcept {
   return lhs.get() == nullptr;
 }
 
-template< typename T >
-bool operator!=( const Reference<T>& lhs, std::nullptr_t) noexcept {
+template <typename T>
+bool operator!=(const Reference<T>& lhs, std::nullptr_t) noexcept {
   return lhs.get() != nullptr;
 }
 
-template< typename T >
-bool operator==( std::nullptr_t, const Reference<T>& rhs ) noexcept {
+template <typename T>
+bool operator==(std::nullptr_t, const Reference<T>& rhs) noexcept {
   return rhs.get() == nullptr;
 }
 
-template< typename T >
-bool operator!=( std::nullptr_t, const Reference<T>& rhs ) noexcept {
+template <typename T>
+bool operator!=(std::nullptr_t, const Reference<T>& rhs) noexcept {
   return rhs.get() != nullptr;
 }
 ////////////////////////////////////////////////////////////////////////////////

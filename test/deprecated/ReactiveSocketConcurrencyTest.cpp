@@ -11,13 +11,13 @@
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <gmock/gmock.h>
 
-#include "test/test_utils/MockStats.h"
-#include "test/deprecated/ReactiveSocket.h"
-#include "src/framing/FramedDuplexConnection.h"
 #include "src/framing/FrameSerializer_v0_1.h"
+#include "src/framing/FramedDuplexConnection.h"
+#include "test/deprecated/ReactiveSocket.h"
+#include "test/streams/Mocks.h"
 #include "test/test_utils/InlineConnection.h"
 #include "test/test_utils/MockRequestHandler.h"
-#include "test/streams/Mocks.h"
+#include "test/test_utils/MockStats.h"
 
 using namespace ::testing;
 using namespace ::rsocket;
@@ -58,62 +58,65 @@ class ClientSideConcurrencyTest : public testing::Test {
         defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 
     EXPECT_CALL(*clientInput, onSubscribe_(_))
-        .WillOnce(Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
-          clientInputSub = sub;
-          // request is called from the thread1
-          // but delivered on thread2
-          thread1.getEventBase()->runInEventBaseThreadAndWait(
-              [&]() { sub->request(2); });
-        }));
+        .WillOnce(
+            Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
+              clientInputSub = sub;
+              // request is called from the thread1
+              // but delivered on thread2
+              thread1.getEventBase()->runInEventBaseThreadAndWait(
+                  [&]() { sub->request(2); });
+            }));
     // The request reaches the other end and triggers new responder to be set
     // up.
     EXPECT_CALL(serverHandlerRef, handleRequestResponse_(_, _, _))
         .Times(AtMost(1))
-        .WillOnce(Invoke(
-            [&](Payload& request,
-                StreamId streamId,
-                yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response) {
-              serverOutput = response;
-              serverOutput->onSubscribe(serverOutputSub);
-            }));
+        .WillOnce(Invoke([&](
+            Payload& request,
+            StreamId streamId,
+            yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response) {
+          serverOutput = response;
+          serverOutput->onSubscribe(serverOutputSub);
+        }));
     EXPECT_CALL(serverHandlerRef, handleRequestStream_(_, _, _))
         .Times(AtMost(1))
-        .WillOnce(Invoke(
-            [&](Payload& request,
-                StreamId streamId,
-                yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response) {
-              serverOutput = response;
-              serverOutput->onSubscribe(serverOutputSub);
-            }));
+        .WillOnce(Invoke([&](
+            Payload& request,
+            StreamId streamId,
+            yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response) {
+          serverOutput = response;
+          serverOutput->onSubscribe(serverOutputSub);
+        }));
     EXPECT_CALL(serverHandlerRef, handleRequestChannel_(_, _, _))
         .Times(AtMost(1))
-        .WillOnce(Invoke(
-            [&](Payload& request,
-                StreamId streamId,
-                yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response) {
-              EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
+        .WillOnce(Invoke([&](
+            Payload& request,
+            StreamId streamId,
+            yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response) {
+          EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
 
-              EXPECT_CALL(*serverInput, onSubscribe_(_))
-                  .WillOnce(Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
+          EXPECT_CALL(*serverInput, onSubscribe_(_))
+              .WillOnce(Invoke(
+                  [&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
                     EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
                     serverInputSub = sub;
                     sub->request(2);
                   }));
-              EXPECT_CALL(*serverInput, onNext_(_))
-                  .WillOnce(Invoke([&](Payload& payload) {
-                    EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
-                    serverInputSub->cancel();
-                    serverInputSub = nullptr;
-                  }));
-              EXPECT_CALL(*serverInput, onComplete_()).WillOnce(Invoke([&]() {
+          EXPECT_CALL(*serverInput, onNext_(_))
+              .WillOnce(Invoke([&](Payload& payload) {
+                EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
+                serverInputSub->cancel();
+                serverInputSub = nullptr;
+              }));
+          EXPECT_CALL(*serverInput, onComplete_())
+              .WillOnce(Invoke([&]() {
                 EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
               }));
 
-              serverOutput = response;
-              serverOutput->onSubscribe(serverOutputSub);
+          serverOutput = response;
+          serverOutput->onSubscribe(serverOutputSub);
 
-              return serverInput;
-            }));
+          return serverInput;
+        }));
 
     EXPECT_CALL(*serverOutputSub, request_(_))
         // The server delivers them immediately.
@@ -133,18 +136,20 @@ class ClientSideConcurrencyTest : public testing::Test {
           }
         }));
 
-    EXPECT_CALL(*serverOutputSub, cancel_()).WillOnce(Invoke([&]() {
-      serverOutput->onComplete();
-      serverOutput = nullptr;
-    }));
+    EXPECT_CALL(*serverOutputSub, cancel_())
+        .WillOnce(Invoke([&]() {
+          serverOutput->onComplete();
+          serverOutput = nullptr;
+        }));
 
-    EXPECT_CALL(*clientInput, onComplete_()).WillOnce(Invoke([&]() {
-      if (!clientTerminatesInteraction_) {
-        clientInputSub->cancel();
-        clientInputSub = nullptr;
-        done();
-      }
-    }));
+    EXPECT_CALL(*clientInput, onComplete_())
+        .WillOnce(Invoke([&]() {
+          if (!clientTerminatesInteraction_) {
+            clientInputSub->cancel();
+            clientInputSub = nullptr;
+            done();
+          }
+        }));
   }
 
   ~ClientSideConcurrencyTest() {
@@ -175,16 +180,19 @@ class ClientSideConcurrencyTest : public testing::Test {
   std::unique_ptr<ReactiveSocket> clientSock;
   std::unique_ptr<ReactiveSocket> serverSock;
 
-  yarpl::Reference<StrictMock<yarpl::flowable::MockSubscriber<Payload>>> clientInput{
-      make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>()};
+  yarpl::Reference<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>
+      clientInput{
+          make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>()};
   yarpl::Reference<yarpl::flowable::Subscription> clientInputSub;
 
   yarpl::Reference<yarpl::flowable::Subscriber<Payload>> serverOutput;
-  yarpl::Reference<StrictMock<yarpl::flowable::MockSubscription>> serverOutputSub{
-      make_ref<StrictMock<yarpl::flowable::MockSubscription>>()};
+  yarpl::Reference<StrictMock<yarpl::flowable::MockSubscription>>
+      serverOutputSub{
+          make_ref<StrictMock<yarpl::flowable::MockSubscription>>()};
 
-  yarpl::Reference<StrictMock<yarpl::flowable::MockSubscriber<Payload>>> serverInput{
-      make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>()};
+  yarpl::Reference<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>
+      serverInput{
+          make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>()};
   yarpl::Reference<yarpl::flowable::Subscription> serverInputSub;
 
   bool clientTerminatesInteraction_{true};
@@ -217,13 +225,15 @@ TEST_F(ClientSideConcurrencyTest, DISABLED_RequestChannelTest) {
     clientOutput = clientSock->requestChannel(clientInput);
   });
 
-  auto clientOutputSub = make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
-  EXPECT_CALL(*clientOutputSub, request_(1)).WillOnce(Invoke([&](size_t) {
-    thread1.getEventBase()->runInEventBaseThread([clientOutput]() {
-      // first payload for the server RequestHandler
-      clientOutput->onNext(Payload(originalPayload()));
-    });
-  }));
+  auto clientOutputSub =
+      make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
+  EXPECT_CALL(*clientOutputSub, request_(1))
+      .WillOnce(Invoke([&](size_t) {
+        thread1.getEventBase()->runInEventBaseThread([clientOutput]() {
+          // first payload for the server RequestHandler
+          clientOutput->onNext(Payload(originalPayload()));
+        });
+      }));
   EXPECT_CALL(*clientOutputSub, request_(2))
       .WillOnce(Invoke([clientOutput](int64_t) {
         // second payload for the server input subscriber
@@ -270,10 +280,11 @@ class ServerSideConcurrencyTest : public testing::Test {
     });
 
     EXPECT_CALL(*clientInput, onSubscribe_(_))
-        .WillOnce(Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
-          clientInputSub = sub;
-          sub->request(3);
-        }));
+        .WillOnce(
+            Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
+              clientInputSub = sub;
+              sub->request(3);
+            }));
     // The request reaches the other end and triggers new responder to be set
     // up.
     EXPECT_CALL(serverHandlerRef, handleRequestResponse_(_, _, _))
@@ -281,7 +292,8 @@ class ServerSideConcurrencyTest : public testing::Test {
         .WillOnce(Invoke(
             [&](Payload& request,
                 StreamId streamId,
-                const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) {
+                const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+                    response) {
               serverOutput = response;
               serverOutput->onSubscribe(serverOutputSub);
             }));
@@ -290,7 +302,8 @@ class ServerSideConcurrencyTest : public testing::Test {
         .WillOnce(Invoke(
             [&](Payload& request,
                 StreamId streamId,
-                const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) {
+                const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+                    response) {
               serverOutput = response;
               serverOutput->onSubscribe(serverOutputSub);
             }));
@@ -299,23 +312,26 @@ class ServerSideConcurrencyTest : public testing::Test {
         .WillOnce(Invoke(
             [&](Payload& request,
                 StreamId streamId,
-                const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) {
+                const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+                    response) {
               clientTerminatesInteraction_ = false;
 
               EXPECT_CALL(*serverInput, onSubscribe_(_))
-                  .WillOnce(Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
-                    serverInputSub = sub;
-                    thread1.getEventBase()->runInEventBaseThreadAndWait(
-                        [&]() { sub->request(2); });
-                  }));
+                  .WillOnce(Invoke(
+                      [&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
+                        serverInputSub = sub;
+                        thread1.getEventBase()->runInEventBaseThreadAndWait(
+                            [&]() { sub->request(2); });
+                      }));
 
               // TODO(t15917213): Re-enable this assertion!
               // EXPECT_CALL(*serverInput, onNext_(_)).Times(1);
 
               // because we cancel the stream in onSubscribe
-              EXPECT_CALL(*serverInput, onComplete_()).WillOnce(Invoke([&]() {
-                EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
-              }));
+              EXPECT_CALL(*serverInput, onComplete_())
+                  .WillOnce(Invoke([&]() {
+                    EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
+                  }));
 
               serverOutput = response;
               serverOutput->onSubscribe(serverOutputSub);
@@ -348,19 +364,21 @@ class ServerSideConcurrencyTest : public testing::Test {
           }
         }));
 
-    EXPECT_CALL(*serverOutputSub, cancel_()).WillRepeatedly(Invoke([&]() {
-      EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
-      serverOutput->onComplete();
-      serverOutput = nullptr;
-    }));
+    EXPECT_CALL(*serverOutputSub, cancel_())
+        .WillRepeatedly(Invoke([&]() {
+          EXPECT_TRUE(thread2.getEventBase()->isInEventBaseThread());
+          serverOutput->onComplete();
+          serverOutput = nullptr;
+        }));
 
-    EXPECT_CALL(*clientInput, onComplete_()).WillOnce(Invoke([&]() {
-      if (!clientTerminatesInteraction_) {
-        clientInputSub->cancel();
-        clientInputSub = nullptr;
-        done();
-      }
-    }));
+    EXPECT_CALL(*clientInput, onComplete_())
+        .WillOnce(Invoke([&]() {
+          if (!clientTerminatesInteraction_) {
+            clientInputSub->cancel();
+            clientInputSub = nullptr;
+            done();
+          }
+        }));
   }
 
   ~ServerSideConcurrencyTest() {
@@ -391,16 +409,19 @@ class ServerSideConcurrencyTest : public testing::Test {
   std::unique_ptr<ReactiveSocket> clientSock;
   std::unique_ptr<ReactiveSocket> serverSock;
 
-  yarpl::Reference<StrictMock<yarpl::flowable::MockSubscriber<Payload>>> clientInput{
-      make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>()};
+  yarpl::Reference<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>
+      clientInput{
+          make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>()};
   yarpl::Reference<yarpl::flowable::Subscription> clientInputSub;
 
   yarpl::Reference<yarpl::flowable::Subscriber<Payload>> serverOutput;
-  yarpl::Reference<StrictMock<yarpl::flowable::MockSubscription>> serverOutputSub{
-      make_ref<StrictMock<yarpl::flowable::MockSubscription>>()};
+  yarpl::Reference<StrictMock<yarpl::flowable::MockSubscription>>
+      serverOutputSub{
+          make_ref<StrictMock<yarpl::flowable::MockSubscription>>()};
 
-  yarpl::Reference<NiceMock<yarpl::flowable::MockSubscriber<Payload>>> serverInput{
-      make_ref<NiceMock<yarpl::flowable::MockSubscriber<Payload>>>()};
+  yarpl::Reference<NiceMock<yarpl::flowable::MockSubscriber<Payload>>>
+      serverInput{
+          make_ref<NiceMock<yarpl::flowable::MockSubscriber<Payload>>>()};
   yarpl::Reference<yarpl::flowable::Subscription> serverInputSub;
 
   bool clientTerminatesInteraction_{true};
@@ -426,7 +447,8 @@ TEST_F(ServerSideConcurrencyTest, DISABLED_RequestStreamTest) {
 TEST_F(ServerSideConcurrencyTest, DISABLED_RequestChannelTest) {
   auto clientOutput = clientSock->requestChannel(clientInput);
 
-  auto clientOutputSub = make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
+  auto clientOutputSub =
+      make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
   EXPECT_CALL(*clientOutputSub, request_(1))
       .WillOnce(Invoke([clientOutput](size_t n) {
         // first payload for the server RequestHandler
@@ -471,9 +493,8 @@ class InitialRequestNDeliveredTest : public testing::Test {
           // allow receiving frames from the automaton
           subscription->request(std::numeric_limits<size_t>::max());
         }));
-    EXPECT_CALL(*testOutputSubscriber, onComplete_()).WillOnce(Invoke([&]() {
-      done = true;
-    }));
+    EXPECT_CALL(*testOutputSubscriber, onComplete_())
+        .WillOnce(Invoke([&]() { done = true; }));
 
     testConnection->setInput(testOutputSubscriber);
     testConnectionSub->onSubscribe(testInputSubscription);
@@ -499,7 +520,8 @@ class InitialRequestNDeliveredTest : public testing::Test {
         .WillOnce(Invoke(
             [&](Payload& request,
                 StreamId streamId,
-                const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) {
+                const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+                    response) {
               thread2.getEventBase()->runInEventBaseThread([response, this] {
                 /* sleep override */ std::this_thread::sleep_for(
                     std::chrono::milliseconds(5));
@@ -511,7 +533,8 @@ class InitialRequestNDeliveredTest : public testing::Test {
         .WillOnce(Invoke(
             [&](Payload& request,
                 StreamId streamId,
-                const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) {
+                const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+                    response) {
               thread2.getEventBase()->runInEventBaseThread([response, this] {
                 /* sleep override */ std::this_thread::sleep_for(
                     std::chrono::milliseconds(5));

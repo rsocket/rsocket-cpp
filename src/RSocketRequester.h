@@ -53,8 +53,8 @@ class RSocketRequester {
    *
    * @param payload
    */
-  yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
-  requestStream(rsocket::Payload request);
+  yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>> requestStream(
+      rsocket::Payload request);
 
   /**
     * Start a channel (streams in both directions).
@@ -64,10 +64,8 @@ class RSocketRequester {
     *
     * @param request
     */
-  yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
-  requestChannel(
-      yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
-          requests);
+  yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>> requestChannel(
+      yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>> requests);
 
   /**
    * Send a single request and get a single response.
@@ -77,8 +75,8 @@ class RSocketRequester {
    *
    * @param payload
    */
-  yarpl::Reference<yarpl::single::Single<rsocket::Payload>>
-  requestResponse(rsocket::Payload request);
+  yarpl::Reference<yarpl::single::Single<rsocket::Payload>> requestResponse(
+      rsocket::Payload request);
 
   /**
    * Send a single Payload with no response.

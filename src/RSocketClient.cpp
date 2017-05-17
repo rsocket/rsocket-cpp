@@ -2,9 +2,9 @@
 
 #include "RSocketClient.h"
 #include "RSocketRequester.h"
+#include "RSocketStats.h"
 #include "src/internal/FollyKeepaliveTimer.h"
 #include "src/temporary_home/NullRequestHandler.h"
-#include "RSocketStats.h"
 
 using namespace rsocket;
 using namespace folly;
@@ -38,8 +38,8 @@ Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect() {
         ReactiveSocketMode::CLIENT);
 
     // TODO need to allow this being passed in
-    auto setupPayload = SetupParameters(
-        "text/plain", "text/plain", Payload("meta", "data"));
+    auto setupPayload =
+        SetupParameters("text/plain", "text/plain", Payload("meta", "data"));
 
     // TODO ---> this code needs to be moved inside RSocketStateMachine
 

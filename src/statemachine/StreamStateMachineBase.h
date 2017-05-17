@@ -2,12 +2,12 @@
 
 #pragma once
 
+#include <folly/ExceptionWrapper.h>
+#include <yarpl/Refcounted.h>
 #include <functional>
 #include <iosfwd>
 #include <memory>
 #include "src/internal/Common.h"
-#include <folly/ExceptionWrapper.h>
-#include <yarpl/Refcounted.h>
 
 namespace folly {
 class IOBuf;
@@ -55,7 +55,8 @@ class StreamStateMachineBase : public virtual yarpl::Refcounted {
   /// 1. no other signal can be delivered during or after this one,
   /// 2. "unsubscribe handshake" guarantees that the signal will be delivered
   ///   exactly once, even if the state machine initiated stream closure,
-  /// 3. per "unsubscribe handshake", the state machine must deliver corresponding
+  /// 3. per "unsubscribe handshake", the state machine must deliver
+  /// corresponding
   ///   terminal signal to the connection.
   virtual void endStream(StreamCompletionSignal signal);
   /// @}

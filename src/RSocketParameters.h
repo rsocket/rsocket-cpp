@@ -4,15 +4,15 @@
 
 #include <folly/io/IOBuf.h>
 #include <string>
-#include "src/internal/Common.h"
-#include "src/framing/FrameSerializer.h"
 #include "src/Payload.h"
+#include "src/framing/FrameSerializer.h"
+#include "src/internal/Common.h"
 
 namespace rsocket {
 
 class RSocketParameters {
  public:
-    RSocketParameters(bool _resumable, ProtocolVersion _protocolVersion)
+  RSocketParameters(bool _resumable, ProtocolVersion _protocolVersion)
       : resumable(_resumable), protocolVersion(std::move(_protocolVersion)) {}
 
   bool resumable;

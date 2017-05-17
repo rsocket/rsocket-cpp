@@ -3,10 +3,10 @@
 #pragma once
 
 #include <memory>
-#include "src/internal/Common.h"
-#include "src/RSocketParameters.h"
 #include "src/Payload.h"
+#include "src/RSocketParameters.h"
 #include "src/RSocketStats.h"
+#include "src/internal/Common.h"
 #include "yarpl/flowable/Subscriber.h"
 #include "yarpl/flowable/Subscription.h"
 
@@ -24,7 +24,7 @@ class RequestHandler;
 
 folly::Executor& defaultExecutor();
 
-    // TODO eliminate this class and use RSocketStateMachine directly
+// TODO eliminate this class and use RSocketStateMachine directly
 class ReactiveSocket {
  public:
   ReactiveSocket(ReactiveSocket&&) = delete;

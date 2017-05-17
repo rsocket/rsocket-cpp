@@ -1,17 +1,17 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include <array>
 #include <folly/Memory.h>
 #include <folly/io/Cursor.h>
 #include <gmock/gmock.h>
 #include <src/framing/FrameSerializer.h>
 #include <src/temporary_home/NullRequestHandler.h>
-#include "src/statemachine/RSocketStateMachine.h"
+#include <array>
 #include "src/framing/FrameTransport.h"
 #include "src/framing/FramedDuplexConnection.h"
 #include "src/framing/FramedWriter.h"
-#include "test/test_utils/InlineConnection.h"
+#include "src/statemachine/RSocketStateMachine.h"
 #include "test/streams/Mocks.h"
+#include "test/test_utils/InlineConnection.h"
 
 using namespace ::testing;
 using namespace ::rsocket;
@@ -136,11 +136,12 @@ static void terminateTest(
           }
         }));
   }
-  EXPECT_CALL(*testOutputSubscriber, onComplete_()).WillOnce(Invoke([&]() {
-    if (inOnComplete) {
-      testOutputSubscriber->subscription()->cancel();
-    }
-  }));
+  EXPECT_CALL(*testOutputSubscriber, onComplete_())
+      .WillOnce(Invoke([&]() {
+        if (inOnComplete) {
+          testOutputSubscriber->subscription()->cancel();
+        }
+      }));
 
   testConnection->setInput(testOutputSubscriber);
   testConnectionOutput->onSubscribe(inputSubscription);

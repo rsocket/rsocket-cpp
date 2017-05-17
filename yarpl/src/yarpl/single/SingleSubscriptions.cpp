@@ -36,11 +36,14 @@ bool CallbackSubscription::isCancelled() const {
   return cancelled_;
 }
 
-Reference<SingleSubscription> SingleSubscriptions::create(std::function<void()> onCancel) {
-  return Reference<SingleSubscription>(new CallbackSubscription(std::move(onCancel)));
+Reference<SingleSubscription> SingleSubscriptions::create(
+    std::function<void()> onCancel) {
+  return Reference<SingleSubscription>(
+      new CallbackSubscription(std::move(onCancel)));
 }
 
-Reference<SingleSubscription> SingleSubscriptions::create(std::atomic_bool& cancelled) {
+Reference<SingleSubscription> SingleSubscriptions::create(
+    std::atomic_bool& cancelled) {
   return create([&cancelled]() { cancelled = true; });
 }
 
@@ -48,7 +51,8 @@ Reference<SingleSubscription> SingleSubscriptions::empty() {
   return Reference<SingleSubscription>(new AtomicBoolSubscription());
 }
 
-Reference<AtomicBoolSubscription> SingleSubscriptions::atomicBoolSubscription() {
+Reference<AtomicBoolSubscription>
+SingleSubscriptions::atomicBoolSubscription() {
   return Reference<AtomicBoolSubscription>(new AtomicBoolSubscription());
 }
 } // single

@@ -4,13 +4,13 @@
 
 #include <folly/io/async/AsyncSocket.h>
 
-#include "src/internal/ClientResumeStatusCallback.h"
 #include "src/framing/FrameTransport.h"
-#include "src/temporary_home/NullRequestHandler.h"
-#include "test/deprecated/ReactiveSocket.h"
-#include "src/internal/FollyKeepaliveTimer.h"
 #include "src/framing/FramedDuplexConnection.h"
+#include "src/internal/ClientResumeStatusCallback.h"
+#include "src/internal/FollyKeepaliveTimer.h"
+#include "src/temporary_home/NullRequestHandler.h"
 #include "src/transports/tcp/TcpDuplexConnection.h"
+#include "test/deprecated/ReactiveSocket.h"
 
 namespace rsocket {
 namespace tests {
@@ -43,30 +43,34 @@ class ResumeCallback : public ClientResumeStatusCallback {
 class ClientRequestHandler : public DefaultRequestHandler {
  public:
   void onSubscriptionPaused(
-      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscription>&
+          subscription) noexcept override {
     LOG(INFO) << "Subscription Paused";
   }
 
   void onSubscriptionResumed(
-      const yarpl::Reference<yarpl::flowable::Subscription>& subscription) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscription>&
+          subscription) noexcept override {
     LOG(INFO) << "Subscription Resumed";
   }
 
-  void onSubscriberPaused(const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
-                              subscriber) noexcept override {
+  void onSubscriberPaused(
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+          subscriber) noexcept override {
     LOG(INFO) << "Subscriber Paused";
   }
 
-  void onSubscriberResumed(const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
-                               subscriber) noexcept override {
+  void onSubscriberResumed(
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+          subscriber) noexcept override {
     LOG(INFO) << "Subscriber Resumed";
   }
 };
 
 class MySubscriber : public yarpl::flowable::Subscriber<Payload> {
  public:
-
-  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription> sub) noexcept override {
+  void onSubscribe(
+      yarpl::Reference<yarpl::flowable::Subscription> sub) noexcept override {
     subscription_ = sub;
     onSubscribe_();
   }

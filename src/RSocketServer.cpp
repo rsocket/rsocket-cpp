@@ -26,8 +26,7 @@ class RSocketServerConnectionHandler : public virtual RSocketConnectionHandler {
 
   void manageSocket(
       std::shared_ptr<ConnectionSetupRequest> request,
-      std::shared_ptr<rsocket::RSocketStateMachine> stateMachine)
-      override {
+      std::shared_ptr<rsocket::RSocketStateMachine> stateMachine) override {
     stateMachine->addClosedListener(
         [this, stateMachine](const folly::exception_wrapper&) {
           // Enqueue another event to remove and delete it.  We cannot delete

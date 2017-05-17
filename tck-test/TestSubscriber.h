@@ -2,10 +2,10 @@
 
 #pragma once
 
+#include <folly/ExceptionWrapper.h>
 #include <condition_variable>
 #include <mutex>
 #include <vector>
-#include <folly/ExceptionWrapper.h>
 #include "src/Payload.h"
 #include "yarpl/flowable/Subscriber.h"
 
@@ -33,8 +33,8 @@ class TestSubscriber : public yarpl::flowable::Subscriber<Payload> {
   void assertCanceled();
 
  protected:
-  void onSubscribe(
-      yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept override;
+  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
+                       subscription) noexcept override;
   void onNext(Payload element) noexcept override;
   void onComplete() noexcept override;
   void onError(std::exception_ptr ex) noexcept override;

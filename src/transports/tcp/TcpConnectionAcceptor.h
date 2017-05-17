@@ -42,9 +42,9 @@ class TcpConnectionAcceptor : public ConnectionAcceptor {
    * Bind an AsyncServerSocket and start accepting TCP connections.
    */
   folly::Future<folly::Unit> start(
-      std::function<void(
-          std::unique_ptr<rsocket::DuplexConnection>,
-          folly::EventBase&)>) override;
+      std::function<
+          void(std::unique_ptr<rsocket::DuplexConnection>, folly::EventBase&)>)
+      override;
 
   /**
    * Shutdown the AsyncServerSocket and associated listener thread.
@@ -61,9 +61,8 @@ class TcpConnectionAcceptor : public ConnectionAcceptor {
   /// thread.
   std::vector<std::unique_ptr<SocketCallback>> callbacks_;
 
-  std::function<void(
-      std::unique_ptr<rsocket::DuplexConnection>,
-      folly::EventBase&)>
+  std::function<
+      void(std::unique_ptr<rsocket::DuplexConnection>, folly::EventBase&)>
       onAccept_;
 
   /// The socket listening for new connections.

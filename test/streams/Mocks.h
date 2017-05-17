@@ -2,14 +2,14 @@
 
 #pragma once
 
-#include <cassert>
-#include <exception>
+#include <folly/ExceptionWrapper.h>
 #include <glog/logging.h>
 #include <gmock/gmock.h>
-#include <folly/ExceptionWrapper.h>
 #include <reactive-streams/ReactiveStreams.h>
 #include <yarpl/flowable/Subscriber.h>
 #include <yarpl/flowable/Subscription.h>
+#include <cassert>
+#include <exception>
 #include "src/internal/ReactiveStreamsCompat.h"
 
 namespace yarpl {
@@ -31,8 +31,8 @@ class MockPublisher : public reactivestreams::Publisher<T> {
       subscribe_,
       void(yarpl::Reference<yarpl::flowable::Subscriber<T>> subscriber));
 
-  void subscribe(
-      yarpl::Reference<yarpl::flowable::Subscriber<T>> subscriber) noexcept override {
+  void subscribe(yarpl::Reference<yarpl::flowable::Subscriber<T>>
+                     subscriber) noexcept override {
     subscribe_(std::move(subscriber));
   }
 };
@@ -81,15 +81,17 @@ class MockSubscriber : public yarpl::flowable::Subscriber<T> {
     VLOG(2) << "dtor MockSubscriber " << this;
   }
 
-  MOCK_METHOD1(onSubscribe_, void(yarpl::Reference<yarpl::flowable::Subscription> subscription));
+  MOCK_METHOD1(
+      onSubscribe_,
+      void(yarpl::Reference<yarpl::flowable::Subscription> subscription));
   MOCK_METHOD1_T(onNext_, void(T& value));
   MOCK_METHOD0(onComplete_, void());
   MOCK_METHOD1(onError_, void(const std::exception_ptr ex));
 
-  void onSubscribe(
-      yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept override {
-    subscription_ = yarpl::make_ref<SubscriptionShim>(
-        std::move(subscription), checkpoint_);
+  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
+                       subscription) noexcept override {
+    subscription_ =
+        yarpl::make_ref<SubscriptionShim>(std::move(subscription), checkpoint_);
     // We allow registering the same subscriber with multiple Publishers.
     EXPECT_CALL(*checkpoint_, Call()).Times(testing::AtLeast(1));
     onSubscribe_(subscription_);
@@ -161,12 +163,9 @@ class MockPublisher : public Publisher<T> {
     VLOG(2) << "dtor MockPublisher " << this;
   }
 
-  MOCK_METHOD1_T(
-      subscribe_,
-      void(std::shared_ptr<Subscriber<T>> subscriber));
+  MOCK_METHOD1_T(subscribe_, void(std::shared_ptr<Subscriber<T>> subscriber));
 
-  void subscribe(
-      std::shared_ptr<Subscriber<T>> subscriber) noexcept override {
+  void subscribe(std::shared_ptr<Subscriber<T>> subscriber) noexcept override {
     subscribe_(std::move(subscriber));
   }
 };

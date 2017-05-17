@@ -9,9 +9,9 @@
 #include <gmock/gmock.h>
 #include "test/deprecated/ReactiveSocket.h"
 
+#include "src/framing/FramedDuplexConnection.h"
 #include "src/temporary_home/NullRequestHandler.h"
 #include "src/temporary_home/SubscriptionBase.h"
-#include "src/framing/FramedDuplexConnection.h"
 #include "src/transports/tcp/TcpDuplexConnection.h"
 
 #include "test/test_utils/StatsPrinter.h"

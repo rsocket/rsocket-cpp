@@ -33,8 +33,8 @@ class FramedWriter : public SubscriberBaseT<std::unique_ptr<folly::IOBuf>>,
 
  private:
   // Subscriber methods
-  void onSubscribeImpl(std::shared_ptr<rsocket::Subscription>
-                           subscription) noexcept override;
+  void onSubscribeImpl(
+      std::shared_ptr<rsocket::Subscription> subscription) noexcept override;
   void onNextImpl(std::unique_ptr<folly::IOBuf> element) noexcept override;
   void onCompleteImpl() noexcept override;
   void onErrorImpl(folly::exception_wrapper ex) noexcept override;
@@ -51,8 +51,7 @@ class FramedWriter : public SubscriberBaseT<std::unique_ptr<folly::IOBuf>>,
 
   using EnableSharedFromThisBase<FramedWriter>::shared_from_this;
 
-  std::shared_ptr<rsocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
-      stream_;
+  std::shared_ptr<rsocket::Subscriber<std::unique_ptr<folly::IOBuf>>> stream_;
   std::shared_ptr<::reactivestreams::Subscription> writerSubscription_;
   std::shared_ptr<ProtocolVersion> protocolVersion_;
 };

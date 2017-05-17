@@ -1,9 +1,9 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "PrintSubscriber.h"
+#include <folly/ExceptionString.h>
 #include <folly/Memory.h>
 #include <folly/io/IOBufQueue.h>
-#include <folly/ExceptionString.h>
 #include <glog/logging.h>
 
 namespace rsocket {
@@ -27,6 +27,7 @@ void PrintSubscriber::onComplete() noexcept {
 }
 
 void PrintSubscriber::onError(std::exception_ptr ex) noexcept {
-  LOG(INFO) << "PrintSubscriber " << this << " onError " << folly::exceptionStr(ex);
+  LOG(INFO) << "PrintSubscriber " << this << " onError "
+            << folly::exceptionStr(ex);
 }
 }

@@ -4,17 +4,17 @@
 
 #include <list>
 #include <memory>
-#include "src/internal/AllowanceSemaphore.h"
-#include "src/internal/Common.h"
-#include "src/DuplexConnection.h"
-#include "src/temporary_home/Executor.h"
-#include "src/framing/Frame.h"
-#include "src/framing/FrameTransport.h"
-#include "src/framing/FrameProcessor.h"
-#include "src/framing/FrameSerializer.h"
-#include "src/Payload.h"
 #include "StreamsFactory.h"
 #include "StreamsHandler.h"
+#include "src/DuplexConnection.h"
+#include "src/Payload.h"
+#include "src/framing/Frame.h"
+#include "src/framing/FrameProcessor.h"
+#include "src/framing/FrameSerializer.h"
+#include "src/framing/FrameTransport.h"
+#include "src/internal/AllowanceSemaphore.h"
+#include "src/internal/Common.h"
+#include "src/temporary_home/Executor.h"
 
 namespace rsocket {
 
@@ -123,7 +123,8 @@ class RSocketStateMachine final
   /// 1. no other signal can be delivered during or after this one,
   /// 2. "unsubscribe handshake" guarantees that the signal will be delivered
   ///   at least once, even if the stateMachine initiated stream closure,
-  /// 3. per "unsubscribe handshake", the stateMachine must deliver corresponding
+  /// 3. per "unsubscribe handshake", the stateMachine must deliver
+  /// corresponding
   ///   terminal signal to the connection.
   ///
   /// Additionally, in order to simplify implementation of stream stateMachine:
@@ -186,10 +187,10 @@ class RSocketStateMachine final
     return streamsFactory_;
   }
 
-
   ProtocolVersion getSerializerProtocolVersion();
-  void setUpFrame(std::shared_ptr<FrameTransport> frameTransport,
-                  SetupParameters setupPayload);
+  void setUpFrame(
+      std::shared_ptr<FrameTransport> frameTransport,
+      SetupParameters setupPayload);
 
   void metadataPush(std::unique_ptr<folly::IOBuf> metadata);
 
@@ -223,8 +224,9 @@ class RSocketStateMachine final
   void onTerminalImpl(folly::exception_wrapper);
   /// @}
 
-  void handleConnectionFrame(FrameType frameType,
-                             std::unique_ptr<folly::IOBuf>);
+  void handleConnectionFrame(
+      FrameType frameType,
+      std::unique_ptr<folly::IOBuf>);
   void handleStreamFrame(
       StreamId streamId,
       FrameType frameType,

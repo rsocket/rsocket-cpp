@@ -77,9 +77,10 @@ void StreamRequester::endStream(StreamCompletionSignal signal) {
   Base::endStream(signal);
 }
 
-void StreamRequester::handlePayload(Payload&& payload,
-                                    bool complete,
-                                    bool flagsNext) {
+void StreamRequester::handlePayload(
+    Payload&& payload,
+    bool complete,
+    bool flagsNext) {
   bool end = false;
   switch (state_) {
     case State::NEW:

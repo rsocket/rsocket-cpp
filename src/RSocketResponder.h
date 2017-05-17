@@ -45,9 +45,7 @@ class RSocketResponder {
    * @return
    */
   virtual yarpl::Reference<yarpl::single::Single<rsocket::Payload>>
-  handleRequestResponse(
-      rsocket::Payload request,
-      rsocket::StreamId streamId) {
+  handleRequestResponse(rsocket::Payload request, rsocket::StreamId streamId) {
     return yarpl::single::Singles::error<rsocket::Payload>(
         std::logic_error("handleRequestResponse not implemented"));
   }
@@ -62,9 +60,7 @@ class RSocketResponder {
    * @return
    */
   virtual yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
-  handleRequestStream(
-      rsocket::Payload request,
-      rsocket::StreamId streamId) {
+  handleRequestStream(rsocket::Payload request, rsocket::StreamId streamId) {
     return yarpl::flowable::Flowables::error<rsocket::Payload>(
         std::logic_error("handleRequestStream not implemented"));
   }

@@ -19,7 +19,8 @@ Reference<Subscriber<Payload>> NullRequestHandler::handleRequestChannel(
     const Reference<Subscriber<Payload>>& response) noexcept {
   // TODO(lehecka): get rid of onSubscribe call
   response->onSubscribe(make_ref<NullSubscription>());
-  response->onError(std::make_exception_ptr(std::runtime_error("NullRequestHandler")));
+  response->onError(
+      std::make_exception_ptr(std::runtime_error("NullRequestHandler")));
   return make_ref<NullSubscriber>();
 }
 
@@ -29,7 +30,8 @@ void NullRequestHandler::handleRequestStream(
     const Reference<Subscriber<Payload>>& response) noexcept {
   // TODO(lehecka): get rid of onSubscribe call
   response->onSubscribe(make_ref<NullSubscription>());
-  response->onError(std::make_exception_ptr(std::runtime_error("NullRequestHandler")));
+  response->onError(
+      std::make_exception_ptr(std::runtime_error("NullRequestHandler")));
 }
 
 void NullRequestHandler::handleRequestResponse(
@@ -37,7 +39,8 @@ void NullRequestHandler::handleRequestResponse(
     StreamId /*streamId*/,
     const Reference<Subscriber<Payload>>& response) noexcept {
   response->onSubscribe(make_ref<NullSubscription>());
-  response->onError(std::make_exception_ptr(std::runtime_error("NullRequestHandler")));
+  response->onError(
+      std::make_exception_ptr(std::runtime_error("NullRequestHandler")));
 }
 
 void NullRequestHandler::handleFireAndForgetRequest(
@@ -52,8 +55,7 @@ std::shared_ptr<StreamState> NullRequestHandler::handleSetupPayload(
   return nullptr;
 }
 
-bool NullRequestHandler::handleResume(
-    ResumeParameters) noexcept {
+bool NullRequestHandler::handleResume(ResumeParameters) noexcept {
   return false;
 }
 

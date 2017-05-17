@@ -87,7 +87,7 @@ void ChannelResponder::endStream(StreamCompletionSignal signal) {
   ConsumerBase::endStream(signal);
 }
 
-//TODO: remove this unused function
+// TODO: remove this unused function
 void ChannelResponder::processInitialFrame(Frame_REQUEST_CHANNEL&& frame) {
   onNextPayloadFrame(
       frame.requestN_,
@@ -96,14 +96,11 @@ void ChannelResponder::processInitialFrame(Frame_REQUEST_CHANNEL&& frame) {
       true);
 }
 
-void ChannelResponder::handlePayload(Payload&& payload,
-                                     bool complete,
-                                     bool flagsNext) {
-  onNextPayloadFrame(
-      0,
-      std::move(payload),
-      complete,
-      flagsNext);
+void ChannelResponder::handlePayload(
+    Payload&& payload,
+    bool complete,
+    bool flagsNext) {
+  onNextPayloadFrame(0, std::move(payload), complete, flagsNext);
 }
 
 void ChannelResponder::onNextPayloadFrame(
