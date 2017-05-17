@@ -1,5 +1,6 @@
 #pragma once
 
+#include <folly/Baton.h>
 #include "../Refcounted.h"
 #include "SingleObserver.h"
 #include "SingleObservers.h"
@@ -51,6 +52,28 @@ class Single : public virtual Refcounted {
           std::is_callable<Error(const std::exception_ptr), void>::value>::type>
   void subscribe(Success&& next, Error&& error) {
     subscribe(SingleObservers::create<T>(next, error));
+  }
+
+  /**
+   * Blocking subscribe that accepts lambdas.
+   *
+   * This blocks the current thread waiting on the response.
+   *
+   * @param success
+   */
+  template <
+      typename Success,
+      typename = typename std::enable_if<
+          std::is_callable<Success(T), void>::value>::type>
+  void subscribeBlocking(Success&& next) {
+    auto waiting_ = std::make_shared<folly::Baton<>>();
+    subscribe(SingleObservers::create<T>(
+        [ next = std::forward<Success>(next), waiting_ ](T t) {
+          next(std::move(t));
+          waiting_->post();
+        }));
+      // TODO get errors and throw if one is received
+    waiting_->wait();
   }
 
   template <
