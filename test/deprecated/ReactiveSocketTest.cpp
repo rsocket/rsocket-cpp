@@ -1123,7 +1123,14 @@ TEST(ReactiveSocketTest, CloseWithError) {
 
   EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .WillRepeatedly(Invoke([&](auto&) {
-        return nullptr;
+          // TODO this has become somewhat odd ...
+          // it used to receive ReactiveSocket in the callback
+          // but no longer does as part of the refactor away from
+          // using ReactiveSocket.h
+          // so to make this test pass for now it uses the clientSock
+          // reference it creates outside of this callback
+          clientSock->closeConnectionError(errString.str());
+          return nullptr;
       }));
 
   auto serverSock = ReactiveSocket::disconnectedServer(
