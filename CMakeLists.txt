@@ -251,7 +251,8 @@ add_executable(
   test/test_utils/MockStats.h
   test/internal/FollyKeepaliveTimerTest.cpp
   test/internal/AllowanceSemaphoreTest.cpp
-  test/statemachine/StreamStateTest.cpp
+  test/RSocketTests.h
+  test/RequestResponseTest.cpp
 )
 
 target_link_libraries(
