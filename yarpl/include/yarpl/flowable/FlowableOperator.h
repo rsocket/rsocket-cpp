@@ -312,6 +312,58 @@ class TakeOperator : public FlowableOperator<T, T> {
 };
 
 template <typename T>
+class SkipOperator : public FlowableOperator<T, T> {
+ public:
+  SkipOperator(Reference<Flowable<T>> upstream, int64_t offset)
+      : FlowableOperator<T, T>(std::move(upstream)), offset_(offset) {}
+
+  void subscribe(Reference<Subscriber<T>> subscriber) override {
+    FlowableOperator<T, T>::upstream_->subscribe(
+        Reference<Subscription>(new Subscription(
+            Reference<Flowable<T>>(this), offset_, std::move(subscriber))));
+  }
+
+ private:
+  class Subscription : public FlowableOperator<T, T>::Subscription {
+    using Super = typename FlowableOperator<T,T>::Subscription;
+   public:
+    Subscription(
+        Reference<Flowable<T>> flowable,
+        int64_t offset,
+        Reference<Subscriber<T>> subscriber)
+        : FlowableOperator<T, T>::Subscription(
+             std::move(flowable),
+             std::move(subscriber)),
+         offset_(offset) {}
+
+    void onNext(T value) override {
+      if (offset_ <= 0) {
+        if (pending_ > 0) {
+          --pending_;
+          Super::subscriberOnNext(
+              std::move(value));
+        }
+      } else {
+        --offset_;
+      }
+    }
+
+    void request(int64_t delta) override {
+      if (delta > 0) {
+        pending_ += delta;
+        Super::request(delta);
+      }
+    }
+
+   private:
+    int64_t pending_{0};
+    int64_t offset_;
+  };
+
+  const int64_t offset_;
+};
+
+template <typename T>
 class SubscribeOnOperator : public FlowableOperator<T, T> {
  public:
   SubscribeOnOperator(Reference<Flowable<T>> upstream, Scheduler& scheduler)

@@ -286,6 +286,18 @@ TEST(FlowableTest, SimpleTake) {
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
+TEST(FlowableTest, SimpleSkip) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  EXPECT_EQ(run(Flowables::range(0, 10)->skip(8)), std::vector<int64_t>({8, 9}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(FlowableTest, OverflowSkip) {
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+  EXPECT_EQ(run(Flowables::range(0, 10)->skip(12)), std::vector<int64_t>({}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
 TEST(FlowableTest, FlowableError) {
   auto flowable = Flowables::error<int>(std::runtime_error("something broke!"));
   auto collector = make_ref<CollectingSubscriber<int>>();
