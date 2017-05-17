@@ -60,8 +60,13 @@ ExternalProject_Add(
 
 find_package(Threads)
 
+string(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_LOWER)
+
 if(APPLE)
   set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl")
+  if("${BUILD_TYPE_LOWER}" MATCHES "debug")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,integer -fno-sanitize=unsigned-integer-overflow")
+  endif()
 endif()
 
 if(NOT META_CXX_STD)
@@ -76,11 +81,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter -Woverloaded-virtu
 
 set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Werror)
 
-string(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_LOWER)
 if("${BUILD_TYPE_LOWER}" MATCHES "debug")
   message("debug mode was set")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unreachable-code")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,integer -fno-sanitize=unsigned-integer-overflow")
 else()
   message("release mode was set")
 endif()
