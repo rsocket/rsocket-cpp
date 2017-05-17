@@ -78,8 +78,7 @@ script:
   - cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_FLAGS="${CXX_FLAGS}" -DCMAKE_EXE_LINKER_FLAGS="${CXX_LINKER_FLAGS}" -DMETA_CXX_STD=$CPP_VERSION
   - make -j8
   - ./tests
-  - ./rsocket_tests
-  - ./experimental/yarpl/yarpl-tests
+  - ./yarpl/yarpl-tests
   - cd ..
   - ./scripts/prepare_tck_drivers.sh
 # Commenting out TCK until it is upgraded to new APIs
