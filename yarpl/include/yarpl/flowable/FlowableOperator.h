@@ -219,8 +219,8 @@ class TakeOperator : public FlowableOperator<T, T> {
         FlowableOperator<T, T>::Subscription::subscriber_->onNext(
             std::move(value));
         if (limit_ == 0) {
+          FlowableOperator<T, T>::Subscription::subscriber_->onComplete();
           FlowableOperator<T, T>::Subscription::cancel();
-          FlowableOperator<T, T>::Subscription::onComplete();
         }
       }
     }
