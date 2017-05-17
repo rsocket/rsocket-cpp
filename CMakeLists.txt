@@ -13,9 +13,9 @@ if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
   "and run CMake from there. You may need to remove CMakeCache.txt.")
 endif()
 
-# default built type is Release
+# default built type is Debug
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build" FORCE)
+  set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build" FORCE)
 endif(NOT CMAKE_BUILD_TYPE)
 
 # default is to use ReactiveStreams location from github directly
@@ -55,7 +55,7 @@ ExternalProject_Add(
   ReactiveStreams
   GIT_REPOSITORY ${REACTIVE_STREAMS_GIT_URL}
   GIT_TAG d2fd61252b51a57a2916ee52fcd54b7f5d563591
-  CMAKE_ARGS "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/reactivestreams"
+  CMAKE_ARGS "-DCMAKE_BUILD_TYPE=Debug" "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/reactivestreams"
 )
 
 find_package(Threads)
@@ -80,6 +80,7 @@ string(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_LOWER)
 if("${BUILD_TYPE_LOWER}" MATCHES "debug")
   message("debug mode was set")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unreachable-code")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,integer -fno-sanitize=unsigned-integer-overflow")
 else()
   message("release mode was set")
 endif()
