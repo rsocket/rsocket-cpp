@@ -274,7 +274,8 @@ add_executable(
   test/framing/FrameTransportTest.cpp
   test/deprecated/ReactiveSocket.cpp
   test/deprecated/ReactiveSocket.h
-)
+  test/RSocketTests.h
+  test/RequestResponseTest.cpp)
 
 target_link_libraries(
   tests
