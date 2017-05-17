@@ -1,5 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
+#include <condition_variable>
 #include <benchmark/benchmark.h>
 #include <thread>
 #include <folly/io/async/ScopedEventBaseThread.h>
