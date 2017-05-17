@@ -32,7 +32,7 @@ void NullRequestHandler::handleRequestStream(
   response->onError(std::make_exception_ptr(std::runtime_error("NullRequestHandler")));
 }
 
-std::shared_ptr<Subscriber<Payload>> NullRequestHandler::handleResumeStream(
+Reference<Subscriber<Payload>> NullRequestHandler::handleResumeStream(
     std::string streamName) noexcept {
   LOG(FATAL) << "handleResumeStream handler not provided";
 }

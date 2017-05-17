@@ -14,6 +14,7 @@
 using namespace std::chrono_literals;
 using namespace ::reactivesocket;
 using namespace ::testing;
+using namespace yarpl;
 
 using folly::ScopedEventBaseThread;
 
@@ -25,7 +26,7 @@ TEST_F(ServerFixture, ColdResumptionBasic) {
   tests::MyConnectCallback connectCb;
   auto token = ResumeIdentificationToken::generateNew();
   std::unique_ptr<ReactiveSocket> rsocket;
-  auto mySub1 = std::make_shared<tests::MySubscriber>();
+  auto mySub1 = make_ref<tests::MySubscriber>();
   auto resumeCache = std::make_shared<ResumeCache>();
   Sequence s;
   SCOPE_EXIT {
@@ -62,7 +63,7 @@ TEST_F(ServerFixture, ColdResumptionBasic) {
 
   // Disconnect. Simulate a cold restart
   clientEvb->runInEventBaseThreadAndWait([&]() { rsocket.reset(); });
-  auto mySub2 = std::make_shared<tests::MySubscriber>();
+  auto mySub2 = make_ref<tests::MySubscriber>();
   auto requestHandler = std::make_unique<tests::ClientRequestHandler>();
 
   // Get resume callbacks
@@ -101,8 +102,8 @@ TEST_F(ServerFixture, ColdResumption2Streams) {
   tests::MyConnectCallback connectCb;
   auto token = ResumeIdentificationToken::generateNew();
   std::unique_ptr<ReactiveSocket> rsocket;
-  auto mySub1 = std::make_shared<tests::MySubscriber>();
-  auto mySub2 = std::make_shared<tests::MySubscriber>();
+  auto mySub1 = make_ref<tests::MySubscriber>();
+  auto mySub2 = make_ref<tests::MySubscriber>();
   auto resumeCache = std::make_shared<ResumeCache>();
   Sequence s;
   SCOPE_EXIT {
@@ -154,8 +155,8 @@ TEST_F(ServerFixture, ColdResumption2Streams) {
   // Disconnect. Simulate a cold restart
   clientEvb->runInEventBaseThreadAndWait([&]() { rsocket.reset(); });
   auto requestHandler = std::make_unique<tests::ClientRequestHandler>();
-  mySub1 = std::make_shared<tests::MySubscriber>();
-  mySub2 = std::make_shared<tests::MySubscriber>();
+  mySub1 = make_ref<tests::MySubscriber>();
+  mySub2 = make_ref<tests::MySubscriber>();
   bool mySub1P2 = false;
   bool mySub2P2 = false;
 

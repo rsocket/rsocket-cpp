@@ -30,7 +30,7 @@ class RequestHandler {
       const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) noexcept = 0;
 
   /// Handles a Stream resumed after cold restart
-  virtual std::shared_ptr<Subscriber<Payload>> handleResumeStream(
+  virtual yarpl::Reference<yarpl::flowable::Subscriber<Payload>> handleResumeStream(
       std::string streamName) noexcept = 0;
 
   /// Handles a new inbound RequestResponse requested by the other end.

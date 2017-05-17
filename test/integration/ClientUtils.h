@@ -62,14 +62,14 @@ class ClientRequestHandler : public DefaultRequestHandler {
     LOG(INFO) << "Subscriber Resumed";
   }
 
-  std::shared_ptr<Subscriber<Payload>> handleResumeStream(
+  yarpl::Reference<yarpl::flowable::Subscriber<Payload>> handleResumeStream(
       std::string streamName) noexcept override {
     LOG(INFO) << "Stream Resumed - " << streamName;
     return handleResumeStream_(streamName);
   }
   MOCK_METHOD1(
       handleResumeStream_,
-      std::shared_ptr<Subscriber<Payload>>(std::string));
+      yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(std::string));
 };
 
 class MySubscriber : public yarpl::flowable::Subscriber<Payload> {

@@ -194,7 +194,7 @@ void RSocketStateMachine::resumeStreamsFromCache() {
   for (auto const& it : resumableStreams) {
     auto sub = requestHandler_->handleResumeStream(it.second /* streamName */);
     streamsFactory_.createStreamRequester(
-        Payload(), sub, it.first /* streamId */, executor());
+        Payload(), it.first /* streamId */, sub);
     if (it.first > maxStreamId) {
       maxStreamId = it.first;
     }
@@ -942,7 +942,7 @@ void RSocketStateMachine::setStreamName(
   return resumeCache_->setStreamName(streamId, streamName);
 }
 
-StreamId ConnectionAutomaton::getStreamId(const std::string& streamName) const {
+StreamId RSocketStateMachine::getStreamId(const std::string& streamName) const {
   return resumeCache_->getStreamId(streamName);
 }
 

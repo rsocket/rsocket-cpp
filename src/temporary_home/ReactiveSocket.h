@@ -5,6 +5,7 @@
 #include <memory>
 #include "src/internal/Common.h"
 #include "src/temporary_home/ConnectionSetupPayload.h"
+#include "src/temporary_home/ResumeCache.h"
 #include "src/Payload.h"
 #include "Stats.h"
 #include "yarpl/flowable/Subscriber.h"

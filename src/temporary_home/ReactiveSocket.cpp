@@ -40,7 +40,6 @@ ReactiveSocket::ReactiveSocket(
           std::move(resumeCache))),
       executor_(executor) {
   debugCheckCorrectExecutor();
-  connection_->resumeStreamsFromCache();
   connection_->stats().socketCreated();
 }
 
@@ -84,6 +83,7 @@ ReactiveSocket::disconnectedClient(
       protocolVersion == ProtocolVersion::Unknown
           ? FrameSerializer::createCurrentVersion()
           : FrameSerializer::createFrameSerializer(protocolVersion));
+  socket->connection_->resumeStreamsFromCache();
   return socket;
 }
 
@@ -155,7 +155,7 @@ bool ReactiveSocket::requestStream(
   if (streamId == 0) {
     // new stream
     streamId = connection_->streamsFactory().createStreamRequester(
-        std::move(request), std::move(responseSink), executor_);
+        std::move(request), std::move(responseSink));
     connection_->setStreamName(streamId, streamName);
     return true;
   } else {

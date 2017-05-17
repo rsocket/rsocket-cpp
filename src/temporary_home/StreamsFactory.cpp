@@ -33,23 +33,10 @@ Reference<yarpl::flowable::Subscriber<Payload>> StreamsFactory::createChannelReq
   return automaton;
 }
 
-StreamId StreamsFactory::createStreamRequester(
-    Payload request,
-    std::shared_ptr<Subscriber<Payload>> responseSink) {
-  auto nextStreamId = getNextStreamId();
-  StreamRequester::Parameters params(
-      connection_.shared_from_this(), nextStreamId);
-  auto automaton =
-      yarpl::make_ref<StreamRequester>(params, std::move(request));
-  connection_.addStream(params.streamId, automaton);
-  automaton->subscribe(std::move(responseSink));
-  return nextStreamId;
-}
-
 void StreamsFactory::createStreamRequester(
     Payload request,
-		StreamId streamId,
-    std::shared_ptr<Subscriber<Payload>> responseSink) {
+    StreamId streamId,
+    Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
   StreamRequester::Parameters params(connection_.shared_from_this(), streamId);
   auto automaton =
       yarpl::make_ref<StreamRequester>(params, std::move(request));
@@ -58,14 +45,17 @@ void StreamsFactory::createStreamRequester(
   automaton->subscribe(std::move(responseSink));
 }
 
-void StreamsFactory::createStreamRequester(
+StreamId StreamsFactory::createStreamRequester(
     Payload request,
-    Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
-  StreamRequester::Parameters params(connection_.shared_from_this(), getNextStreamId());
+    yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
+  auto nextStreamId = getNextStreamId();
+  StreamRequester::Parameters params(
+      connection_.shared_from_this(), nextStreamId);
   auto automaton =
       yarpl::make_ref<StreamRequester>(params, std::move(request));
   connection_.addStream(params.streamId, automaton);
   automaton->subscribe(std::move(responseSink));
+  return nextStreamId;
 }
 
 void StreamsFactory::createRequestResponseRequester(
@@ -83,6 +73,12 @@ StreamId StreamsFactory::getNextStreamId() {
   CHECK(streamId <= std::numeric_limits<int32_t>::max() - 2);
   nextStreamId_ += 2;
   return streamId;
+}
+
+void StreamsFactory::setNextStreamId(StreamId nextStreamId) {
+  if (nextStreamId > nextStreamId_) {
+    nextStreamId_ = nextStreamId;
+  }
 }
 
 bool StreamsFactory::registerNewPeerStreamId(StreamId streamId) {
