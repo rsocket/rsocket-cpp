@@ -39,14 +39,12 @@ TEST_F(ServerFixture, DISABLED_BasicWarmResumption) {
   std::unique_lock<std::mutex> lk(cvM);
 
   // Get a few subscriptions (happens right after connecting)
-  EXPECT_CALL(*mySub, onSubscribe_()).WillOnce(Invoke([&]() {
-    mySub->request(3);
-  }));
+  EXPECT_CALL(*mySub, onSubscribe_())
+      .WillOnce(Invoke([&]() { mySub->request(3); }));
   EXPECT_CALL(*mySub, onNext_("1"));
   EXPECT_CALL(*mySub, onNext_("2"));
-  EXPECT_CALL(*mySub, onNext_("3")).WillOnce(Invoke([&](std::string) {
-    cv.notify_all();
-  }));
+  EXPECT_CALL(*mySub, onNext_("3"))
+      .WillOnce(Invoke([&](std::string) { cv.notify_all(); }));
 
   // Create a RSocket and RequestStream
   clientEvb->runInEventBaseThreadAndWait([&]() {
@@ -71,9 +69,8 @@ TEST_F(ServerFixture, DISABLED_BasicWarmResumption) {
   // Get subscriptions for buffered request (happens right after
   // reconnecting)
   EXPECT_CALL(*mySub, onNext_("4"));
-  EXPECT_CALL(*mySub, onNext_("5")).WillOnce(Invoke([&](std::string) {
-    cv.notify_all();
-  }));
+  EXPECT_CALL(*mySub, onNext_("5"))
+      .WillOnce(Invoke([&](std::string) { cv.notify_all(); }));
 
   // Reconnect
   clientEvb->runInEventBaseThreadAndWait([&]() {

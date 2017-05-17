@@ -20,7 +20,6 @@ template <typename T>
 class FlowableFromObservableSubscription
     : public yarpl::flowable::Subscription,
       public yarpl::observable::Observer<T> {
-
  public:
   FlowableFromObservableSubscription(
       Reference<yarpl::observable::Observable<T>> observable,
@@ -96,7 +95,6 @@ class FlowableFromObservableSubscription
   }
 
  private:
-
   void release() {
     observable_.reset();
     subscriber_.reset();

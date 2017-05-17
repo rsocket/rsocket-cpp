@@ -8,8 +8,8 @@
 
 #include <folly/Optional.h>
 
-#include "src/internal/Common.h"
 #include "src/RSocketStats.h"
+#include "src/internal/Common.h"
 
 namespace folly {
 class IOBuf;

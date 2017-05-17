@@ -1,9 +1,9 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "StreamsFactory.h"
-#include "src/statemachine/RSocketStateMachine.h"
 #include "src/statemachine/ChannelRequester.h"
 #include "src/statemachine/ChannelResponder.h"
+#include "src/statemachine/RSocketStateMachine.h"
 #include "src/statemachine/RequestResponseRequester.h"
 #include "src/statemachine/RequestResponseResponder.h"
 #include "src/statemachine/StreamRequester.h"
@@ -24,9 +24,11 @@ StreamsFactory::StreamsFactory(
               : 2 /*streams initiated by the server MUST use
                     even-numbered stream identifiers*/) {}
 
-Reference<yarpl::flowable::Subscriber<Payload>> StreamsFactory::createChannelRequester(
+Reference<yarpl::flowable::Subscriber<Payload>>
+StreamsFactory::createChannelRequester(
     Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
-  ChannelRequester::Parameters params(connection_.shared_from_this(), getNextStreamId());
+  ChannelRequester::Parameters params(
+      connection_.shared_from_this(), getNextStreamId());
   auto stateMachine = yarpl::make_ref<ChannelRequester>(params);
   connection_.addStream(params.streamId, stateMachine);
   stateMachine->subscribe(std::move(responseSink));
@@ -36,7 +38,8 @@ Reference<yarpl::flowable::Subscriber<Payload>> StreamsFactory::createChannelReq
 void StreamsFactory::createStreamRequester(
     Payload request,
     Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
-  StreamRequester::Parameters params(connection_.shared_from_this(), getNextStreamId());
+  StreamRequester::Parameters params(
+      connection_.shared_from_this(), getNextStreamId());
   auto stateMachine =
       yarpl::make_ref<StreamRequester>(params, std::move(request));
   connection_.addStream(params.streamId, stateMachine);
@@ -46,7 +49,8 @@ void StreamsFactory::createStreamRequester(
 void StreamsFactory::createRequestResponseRequester(
     Payload payload,
     Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
-  RequestResponseRequester::Parameters params(connection_.shared_from_this(), getNextStreamId());
+  RequestResponseRequester::Parameters params(
+      connection_.shared_from_this(), getNextStreamId());
   auto stateMachine =
       yarpl::make_ref<RequestResponseRequester>(params, std::move(payload));
   connection_.addStream(params.streamId, stateMachine);
@@ -81,12 +85,14 @@ Reference<ChannelResponder> StreamsFactory::createChannelResponder(
     uint32_t initialRequestN,
     StreamId streamId) {
   ChannelResponder::Parameters params(connection_.shared_from_this(), streamId);
-  auto stateMachine = yarpl::make_ref<ChannelResponder>(initialRequestN, params);
+  auto stateMachine =
+      yarpl::make_ref<ChannelResponder>(initialRequestN, params);
   connection_.addStream(streamId, stateMachine);
   return stateMachine;
 }
 
-Reference<yarpl::flowable::Subscriber<Payload>> StreamsFactory::createStreamResponder(
+Reference<yarpl::flowable::Subscriber<Payload>>
+StreamsFactory::createStreamResponder(
     uint32_t initialRequestN,
     StreamId streamId) {
   StreamResponder::Parameters params(connection_.shared_from_this(), streamId);
@@ -96,9 +102,9 @@ Reference<yarpl::flowable::Subscriber<Payload>> StreamsFactory::createStreamResp
 }
 
 Reference<yarpl::flowable::Subscriber<Payload>>
-StreamsFactory::createRequestResponseResponder(
-    StreamId streamId) {
-  RequestResponseResponder::Parameters params(connection_.shared_from_this(), streamId);
+StreamsFactory::createRequestResponseResponder(StreamId streamId) {
+  RequestResponseResponder::Parameters params(
+      connection_.shared_from_this(), streamId);
   auto stateMachine = yarpl::make_ref<RequestResponseResponder>(params);
   connection_.addStream(streamId, stateMachine);
   return stateMachine;

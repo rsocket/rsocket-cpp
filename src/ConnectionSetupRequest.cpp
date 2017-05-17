@@ -6,8 +6,7 @@ using namespace rsocket;
 
 namespace rsocket {
 
-ConnectionSetupRequest::ConnectionSetupRequest(
-    SetupParameters setupPayload)
+ConnectionSetupRequest::ConnectionSetupRequest(SetupParameters setupPayload)
     : setupPayload_(std::move(setupPayload)) {}
 
 const std::string& ConnectionSetupRequest::getMetadataMimeType() const {

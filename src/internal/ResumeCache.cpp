@@ -4,9 +4,9 @@
 
 #include <algorithm>
 
-#include "src/statemachine/RSocketStateMachine.h"
 #include "src/framing/Frame.h"
 #include "src/framing/FrameTransport.h"
+#include "src/statemachine/RSocketStateMachine.h"
 
 namespace {
 

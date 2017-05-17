@@ -3,8 +3,8 @@
 #pragma once
 
 #include "src/internal/EnableSharedFromThis.h"
-#include "src/temporary_home/Executor.h"
 #include "src/internal/ReactiveStreamsCompat.h"
+#include "src/temporary_home/Executor.h"
 
 namespace rsocket {
 
@@ -23,16 +23,12 @@ class SubscriptionBase : public Subscription,
 
   void request(size_t n) noexcept override final {
     auto thisPtr = this->shared_from_this();
-    runInExecutor([thisPtr, n]() {
-      thisPtr->requestImpl(n);
-    });
+    runInExecutor([thisPtr, n]() { thisPtr->requestImpl(n); });
   }
 
   void cancel() noexcept override final {
     auto thisPtr = this->shared_from_this();
-    runInExecutor([thisPtr]() {
-      thisPtr->cancelImpl();
-    });
+    runInExecutor([thisPtr]() { thisPtr->cancelImpl(); });
   }
 };
 

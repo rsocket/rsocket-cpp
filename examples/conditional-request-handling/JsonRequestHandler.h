@@ -2,14 +2,13 @@
 
 #pragma once
 
-#include "src/RSocket.h"
 #include "src/Payload.h"
+#include "src/RSocket.h"
 
 class JsonRequestHandler : public rsocket::RSocketResponder {
  public:
   /// Handles a new inbound Stream requested by the other end.
   yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
-  handleRequestStream(
-      rsocket::Payload request,
-      rsocket::StreamId streamId) override;
+  handleRequestStream(rsocket::Payload request, rsocket::StreamId streamId)
+      override;
 };

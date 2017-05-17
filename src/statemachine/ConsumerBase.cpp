@@ -11,7 +11,8 @@ namespace rsocket {
 using namespace yarpl;
 using namespace yarpl::flowable;
 
-void ConsumerBase::subscribe(Reference<yarpl::flowable::Subscriber<Payload>> subscriber) {
+void ConsumerBase::subscribe(
+    Reference<yarpl::flowable::Subscriber<Payload>> subscriber) {
   if (Base::isTerminated()) {
     subscriber->onSubscribe(make_ref<NullSubscription>());
     subscriber->onComplete();
@@ -35,7 +36,8 @@ void ConsumerBase::endStream(StreamCompletionSignal signal) {
         signal == StreamCompletionSignal::CANCEL) { // TODO: remove CANCEL
       subscriber->onComplete();
     } else {
-      subscriber->onError(std::make_exception_ptr(StreamInterruptedException(static_cast<int>(signal))));
+      subscriber->onError(std::make_exception_ptr(
+          StreamInterruptedException(static_cast<int>(signal))));
     }
   }
   Base::endStream(signal);
@@ -85,7 +87,8 @@ void ConsumerBase::sendRequests() {
 
 void ConsumerBase::handleFlowControlError() {
   if (auto subscriber = std::move(consumingSubscriber_)) {
-    subscriber->onError(std::make_exception_ptr(std::runtime_error("surplus response")));
+    subscriber->onError(
+        std::make_exception_ptr(std::runtime_error("surplus response")));
   }
   errorStream("flow control error");
 }

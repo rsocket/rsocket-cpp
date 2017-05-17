@@ -1,16 +1,16 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
+#include <folly/ExceptionWrapper.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include "src/RSocketParameters.h"
 #include "src/framing/FrameProcessor.h"
 #include "src/framing/FrameSerializer.h"
 #include "src/framing/FrameTransport.h"
-#include "src/temporary_home/ServerConnectionAcceptor.h"
 #include "src/framing/FramedDuplexConnection.h"
-#include "test/test_utils/InlineConnection.h"
+#include "src/temporary_home/ServerConnectionAcceptor.h"
 #include "test/streams/Mocks.h"
-#include <folly/ExceptionWrapper.h>
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
+#include "test/test_utils/InlineConnection.h"
 
 using namespace rsocket;
 using namespace testing;
@@ -106,14 +106,13 @@ TEST_F(ServerConnectionAcceptorTest, SetupFrame) {
   SetupParameters setupPayload(
       "metadataMimeType", "dataMimeType", Payload(), true);
   EXPECT_CALL(*handler_, doSetupNewSocket(_, _))
-      .WillOnce(Invoke(
-          [&](std::shared_ptr<FrameTransport> transport,
-              SetupParameters& payload) {
-            ASSERT_EQ(setupPayload.token, payload.token);
-            ASSERT_EQ(setupPayload.metadataMimeType, payload.metadataMimeType);
-            ASSERT_EQ(setupPayload.dataMimeType, payload.dataMimeType);
-            transport->close(folly::exception_wrapper());
-          }));
+      .WillOnce(Invoke([&](
+          std::shared_ptr<FrameTransport> transport, SetupParameters& payload) {
+        ASSERT_EQ(setupPayload.token, payload.token);
+        ASSERT_EQ(setupPayload.metadataMimeType, payload.metadataMimeType);
+        ASSERT_EQ(setupPayload.dataMimeType, payload.dataMimeType);
+        transport->close(folly::exception_wrapper());
+      }));
 
   auto frameSerializer = FrameSerializer::createCurrentVersion();
   acceptor_.accept(std::move(serverConnection_), handler_);
@@ -135,18 +134,16 @@ TEST_F(ServerConnectionAcceptorTest, SetupFrame) {
 TEST_F(ServerConnectionAcceptorTest, ResumeFrameNoSession) {
   std::unique_ptr<folly::IOBuf> data;
   EXPECT_CALL(*clientInput_, onNext_(_))
-    .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& buffer) {
-      data = std::move(buffer);
-    }));
-
+      .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& buffer) {
+        data = std::move(buffer);
+      }));
 
   ResumeParameters resumeParams(
       ResumeIdentificationToken::generateNew(),
       1,
       2,
       FrameSerializer::getCurrentProtocolVersion());
-  EXPECT_CALL(*handler_, resumeSocket(_, _))
-      .WillOnce(Return(false));
+  EXPECT_CALL(*handler_, resumeSocket(_, _)).WillOnce(Return(false));
 
   auto frameSerializer = FrameSerializer::createCurrentVersion();
   acceptor_.accept(std::move(serverConnection_), handler_);
@@ -248,19 +245,17 @@ TEST_F(ServerConnectionAcceptorTest, VerifyAsyncProcessorFrame) {
       FrameSerializer::getCurrentProtocolVersion())));
 
   // The transport won't have a processor now, try sending a frame
-  clientOutput_->onNext(frameSerializer->serializeOut(Frame_REQUEST_FNF(
-      1,
-      FrameFlags::EMPTY,
-      Payload())));
+  clientOutput_->onNext(frameSerializer->serializeOut(
+      Frame_REQUEST_FNF(1, FrameFlags::EMPTY, Payload())));
 
   auto processor = std::make_shared<NiceMock<MockFrameProcessor>>();
-  EXPECT_CALL(*processor, onTerminal(_))
-    .Times(Exactly(0));
+  EXPECT_CALL(*processor, onTerminal(_)).Times(Exactly(0));
   EXPECT_CALL(*processor, processFrame_(_))
-    .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& frame) {
-      Frame_REQUEST_FNF fnfFrame;
-      EXPECT_TRUE(frameSerializer->deserializeFrom(fnfFrame, std::move(frame)));
-    }));
+      .WillOnce(Invoke([&](std::unique_ptr<folly::IOBuf>& frame) {
+        Frame_REQUEST_FNF fnfFrame;
+        EXPECT_TRUE(
+            frameSerializer->deserializeFrom(fnfFrame, std::move(frame)));
+      }));
 
   transport_->setFrameProcessor(processor);
 
@@ -299,9 +294,9 @@ TEST_F(ServerConnectionAcceptorTest, VerifyAsyncProcessorTerminal) {
 
   auto processor = std::make_shared<StrictMock<MockFrameProcessor>>();
   EXPECT_CALL(*processor, onTerminal(_))
-    .WillOnce(Invoke([&](folly::exception_wrapper ex) {
-      EXPECT_THAT(ex.what().toStdString(), HasSubstr("too bad"));
-    }));
+      .WillOnce(Invoke([&](folly::exception_wrapper ex) {
+        EXPECT_THAT(ex.what().toStdString(), HasSubstr("too bad"));
+      }));
 
   transport_->setFrameProcessor(processor);
 

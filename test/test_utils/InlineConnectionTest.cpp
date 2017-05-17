@@ -1,9 +1,9 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include <array>
 #include <folly/Memory.h>
 #include <folly/io/IOBuf.h>
 #include <gmock/gmock.h>
+#include <array>
 #include "InlineConnection.h"
 #include "test/streams/Mocks.h"
 
@@ -67,18 +67,22 @@ TEST(InlineConnectionTest, PingPong) {
         ASSERT_TRUE(folly::IOBufEqual()(originalPayload, payload));
       }));
 
-  EXPECT_CALL(*outputSub[1], cancel_()).InSequence(s).WillOnce(Invoke([&]() {
-    output[1]
-        ->onComplete(); // "Unsubscribe handshake". Calls input[0]->onComplete()
-    inputSub[1]->cancel(); // Close the other direction. // equivalent to
-    // outputSub[0]->cancel();
-  }));
+  EXPECT_CALL(*outputSub[1], cancel_())
+      .InSequence(s)
+      .WillOnce(Invoke([&]() {
+        output[1]->onComplete(); // "Unsubscribe handshake". Calls
+                                 // input[0]->onComplete()
+        inputSub[1]->cancel(); // Close the other direction. // equivalent to
+        // outputSub[0]->cancel();
+      }));
   EXPECT_CALL(*input[0], onComplete_())
       .InSequence(s); // This finishes the handshake.
-  EXPECT_CALL(*outputSub[0], cancel_()).InSequence(s).WillOnce(Invoke([&]() {
-    output[0]
-        ->onComplete(); // "Unsubscribe handshake". Calls input[1]->onComplete()
-  }));
+  EXPECT_CALL(*outputSub[0], cancel_())
+      .InSequence(s)
+      .WillOnce(Invoke([&]() {
+        output[0]->onComplete(); // "Unsubscribe handshake". Calls
+                                 // input[1]->onComplete()
+      }));
   EXPECT_CALL(*input[1], onComplete_())
       .InSequence(s); // This finishes the handshake.
 

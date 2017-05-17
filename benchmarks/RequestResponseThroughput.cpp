@@ -1,14 +1,14 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include <benchmark/benchmark.h>
-#include <thread>
-#include <condition_variable>
-#include <folly/io/async/ScopedEventBaseThread.h>
 #include <folly/ExceptionString.h>
-#include <iostream>
-#include <src/transports/tcp/TcpConnectionAcceptor.h>
+#include <folly/io/async/ScopedEventBaseThread.h>
 #include <src/temporary_home/NullRequestHandler.h>
 #include <src/temporary_home/SubscriptionBase.h>
+#include <src/transports/tcp/TcpConnectionAcceptor.h>
+#include <condition_variable>
+#include <iostream>
+#include <thread>
 #include "src/RSocket.h"
 #include "src/transports/tcp/TcpConnectionFactory.h"
 #include "yarpl/Flowable.h"
@@ -24,234 +24,221 @@ DEFINE_string(host, "localhost", "host to connect to");
 DEFINE_int32(port, 9898, "host:port to connect to");
 
 class BM_Subscription : public SubscriptionBase {
-public:
-    explicit BM_Subscription(
-        std::shared_ptr<Subscriber<Payload>> subscriber,
-        size_t length)
-        : ExecutorBase(defaultExecutor()),
+ public:
+  explicit BM_Subscription(
+      std::shared_ptr<Subscriber<Payload>> subscriber,
+      size_t length)
+      : ExecutorBase(defaultExecutor()),
         subscriber_(std::move(subscriber)),
         data_(length, 'a'),
-        cancelled_(false)
-    {
+        cancelled_(false) {}
+
+ private:
+  void requestImpl(size_t n) noexcept override {
+    LOG(INFO) << "requested=" << n;
+
+    if (cancelled_) {
+      LOG(INFO) << "emission stopped by cancellation";
+      return;
     }
 
-private:
-    void requestImpl(size_t n) noexcept override
-    {
-        LOG(INFO) << "requested=" << n;
+    subscriber_->onNext(Payload(data_));
+    subscriber_->onComplete();
+  }
 
-        if (cancelled_) {
-            LOG(INFO) << "emission stopped by cancellation";
-            return;
-        }
+  void cancelImpl() noexcept override {
+    LOG(INFO) << "cancellation received";
+    cancelled_ = true;
+  }
 
-        subscriber_->onNext(Payload(data_));
-        subscriber_->onComplete();
-    }
-
-    void cancelImpl() noexcept override
-    {
-        LOG(INFO) << "cancellation received";
-        cancelled_ = true;
-    }
-
-    std::shared_ptr<Subscriber<Payload>> subscriber_;
-    std::string data_;
-    std::atomic_bool cancelled_;
+  std::shared_ptr<Subscriber<Payload>> subscriber_;
+  std::string data_;
+  std::atomic_bool cancelled_;
 };
 
-class BM_RequestHandler : public RSocketResponder
-{
-public:
-    // TODO(lehecka): enable when we have support for request-response
-    yarpl::Reference<yarpl::flowable::Flowable<  Payload>>
-    handleRequestStream(
-        Payload request,
-        StreamId streamId) override {
-        CHECK(false) << "not implemented";
-    }
+class BM_RequestHandler : public RSocketResponder {
+ public:
+  // TODO(lehecka): enable when we have support for request-response
+  yarpl::Reference<yarpl::flowable::Flowable<Payload>> handleRequestStream(
+      Payload request,
+      StreamId streamId) override {
+    CHECK(false) << "not implemented";
+  }
 
-    // void handleRequestResponse(
-    //     Payload request, StreamId streamId, const std::shared_ptr<Subscriber<Payload>> &response) noexcept override
-    // {
-    //     LOG(INFO) << "BM_RequestHandler.handleRequestResponse " << request;
+  // void handleRequestResponse(
+  //     Payload request, StreamId streamId, const
+  //     std::shared_ptr<Subscriber<Payload>> &response) noexcept override
+  // {
+  //     LOG(INFO) << "BM_RequestHandler.handleRequestResponse " << request;
 
-    //     response->onSubscribe(
-    //         std::make_shared<BM_Subscription>(response, MESSAGE_LENGTH));
-    // }
+  //     response->onSubscribe(
+  //         std::make_shared<BM_Subscription>(response, MESSAGE_LENGTH));
+  // }
 
-    // std::shared_ptr<StreamState> handleSetupPayload(
-    //     ReactiveSocket &socket, ConnectionSetupPayload request) noexcept override
-    // {
-    //     LOG(INFO) << "BM_RequestHandler.handleSetupPayload " << request;
-    //     return nullptr;
-    // }
+  // std::shared_ptr<StreamState> handleSetupPayload(
+  //     ReactiveSocket &socket, ConnectionSetupPayload request) noexcept
+  //     override
+  // {
+  //     LOG(INFO) << "BM_RequestHandler.handleSetupPayload " << request;
+  //     return nullptr;
+  // }
 };
 
-class BM_Subscriber
-    : public yarpl::flowable::Subscriber<Payload> {
-public:
-    ~BM_Subscriber()
-    {
-        LOG(INFO) << "BM_Subscriber destroy " << this;
-    }
+class BM_Subscriber : public yarpl::flowable::Subscriber<Payload> {
+ public:
+  ~BM_Subscriber() {
+    LOG(INFO) << "BM_Subscriber destroy " << this;
+  }
 
-    BM_Subscriber()
-        : initialRequest_(8),
-        thresholdForRequest_(initialRequest_ * 0.75)
-    {
-        LOG(INFO) << "BM_Subscriber " << this << " created with => "
-            << "  Initial Request: " << initialRequest_
-            << "  Threshold for re-request: " << thresholdForRequest_;
-    }
+  BM_Subscriber()
+      : initialRequest_(8), thresholdForRequest_(initialRequest_ * 0.75) {
+    LOG(INFO) << "BM_Subscriber " << this << " created with => "
+              << "  Initial Request: " << initialRequest_
+              << "  Threshold for re-request: " << thresholdForRequest_;
+  }
 
-    void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept override
-    {
-        LOG(INFO) << "BM_Subscriber " << this << " onSubscribe";
-        subscription_ = std::move(subscription);
-        requested_ = initialRequest_;
-        subscription_->request(initialRequest_);
-    }
+  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
+                       subscription) noexcept override {
+    LOG(INFO) << "BM_Subscriber " << this << " onSubscribe";
+    subscription_ = std::move(subscription);
+    requested_ = initialRequest_;
+    subscription_->request(initialRequest_);
+  }
 
-    void onNext(  Payload element) noexcept override
-    {
-        LOG(INFO) << "BM_Subscriber " << this
-            << " onNext as string: " << element.moveDataToString();
+  void onNext(Payload element) noexcept override {
+    LOG(INFO) << "BM_Subscriber " << this
+              << " onNext as string: " << element.moveDataToString();
 
-        if (--requested_ == thresholdForRequest_) {
-            int toRequest = (initialRequest_ - thresholdForRequest_);
-            LOG(INFO) << "BM_Subscriber " << this << " requesting " << toRequest
+    if (--requested_ == thresholdForRequest_) {
+      int toRequest = (initialRequest_ - thresholdForRequest_);
+      LOG(INFO) << "BM_Subscriber " << this << " requesting " << toRequest
                 << " more items";
-            requested_ += toRequest;
-            subscription_->request(toRequest);
-        }
+      requested_ += toRequest;
+      subscription_->request(toRequest);
     }
+  }
 
-    void onComplete() noexcept override
-    {
-        LOG(INFO) << "BM_Subscriber " << this << " onComplete";
-        terminated_ = true;
-        completed_ = true;
-        terminalEventCV_.notify_all();
-    }
+  void onComplete() noexcept override {
+    LOG(INFO) << "BM_Subscriber " << this << " onComplete";
+    terminated_ = true;
+    completed_ = true;
+    terminalEventCV_.notify_all();
+  }
 
-    void onError(std::exception_ptr ex) noexcept override
-    {
-        LOG(INFO) << "BM_Subscriber " << this << " onError " << folly::exceptionStr(ex);
-        terminated_ = true;
-        terminalEventCV_.notify_all();
-    }
+  void onError(std::exception_ptr ex) noexcept override {
+    LOG(INFO) << "BM_Subscriber " << this << " onError "
+              << folly::exceptionStr(ex);
+    terminated_ = true;
+    terminalEventCV_.notify_all();
+  }
 
-    void awaitTerminalEvent()
-    {
-        LOG(INFO) << "BM_Subscriber " << this << " block thread";
-        // now block this thread
-        std::unique_lock<std::mutex> lk(m_);
-        // if shutdown gets implemented this would then be released by it
-        terminalEventCV_.wait(lk, [this] { return terminated_; });
-        LOG(INFO) << "BM_Subscriber " << this << " unblocked";
-    }
+  void awaitTerminalEvent() {
+    LOG(INFO) << "BM_Subscriber " << this << " block thread";
+    // now block this thread
+    std::unique_lock<std::mutex> lk(m_);
+    // if shutdown gets implemented this would then be released by it
+    terminalEventCV_.wait(lk, [this] { return terminated_; });
+    LOG(INFO) << "BM_Subscriber " << this << " unblocked";
+  }
 
-    bool completed()
-    {
-        return completed_;
-    }
+  bool completed() {
+    return completed_;
+  }
 
-private:
-    int initialRequest_;
-    int thresholdForRequest_;
-    int requested_;
+ private:
+  int initialRequest_;
+  int thresholdForRequest_;
+  int requested_;
   yarpl::Reference<yarpl::flowable::Subscription> subscription_;
-    bool terminated_{false};
-    std::mutex m_;
-    std::condition_variable terminalEventCV_;
-    std::atomic_bool completed_{false};
+  bool terminated_{false};
+  std::mutex m_;
+  std::condition_variable terminalEventCV_;
+  std::atomic_bool completed_{false};
 };
 
-class BM_RsFixture : public benchmark::Fixture
-{
-public:
-    BM_RsFixture() :
-        host_(FLAGS_host),
+class BM_RsFixture : public benchmark::Fixture {
+ public:
+  BM_RsFixture()
+      : host_(FLAGS_host),
         port_(static_cast<uint16_t>(FLAGS_port)),
         serverRs_(RSocket::createServer(std::make_unique<TcpConnectionAcceptor>(
             TcpConnectionAcceptor::Options{port_}))),
-        handler_(std::make_shared<BM_RequestHandler>())
-    {
-        FLAGS_v = 0;
-        FLAGS_minloglevel = 6;
-        serverRs_->start([this](auto r) { return handler_; });
-    }
+        handler_(std::make_shared<BM_RequestHandler>()) {
+    FLAGS_v = 0;
+    FLAGS_minloglevel = 6;
+    serverRs_->start([this](auto r) { return handler_; });
+  }
 
-    virtual ~BM_RsFixture()
-    {
-    }
+  virtual ~BM_RsFixture() {}
 
-    void SetUp(const benchmark::State& state) override
-    {
-    }
+  void SetUp(const benchmark::State& state) override {}
 
-    void TearDown(const benchmark::State& state) override
-    {
-    }
+  void TearDown(const benchmark::State& state) override {}
 
-    std::string host_;
-    uint16_t port_;
-    std::unique_ptr<RSocketServer> serverRs_;
-    std::shared_ptr<BM_RequestHandler> handler_;
+  std::string host_;
+  uint16_t port_;
+  std::unique_ptr<RSocketServer> serverRs_;
+  std::shared_ptr<BM_RequestHandler> handler_;
 };
 
-BENCHMARK_DEFINE_F(BM_RsFixture, BM_RequestResponse_Throughput)(benchmark::State &state)
-{
-// TODO(lehecka): enable test
-//    folly::SocketAddress address;
-//    address.setFromHostPort(host_, port_);
-//
-//    auto clientRs = RSocket::createClient(std::make_unique<TcpConnectionFactory>(
-//        std::move(address)));
-//    int reqs = 0;
-//    int numSubscribers = state.range(0);
-//    int mask = numSubscribers - 1;
-//
-//    yarpl::Reference<BM_Subscriber> subs[MAX_REQUESTS+1];
-//
-//    auto rs = clientRs->connect().get();
-//
-//    while (state.KeepRunning())
-//    {
-//        int index = reqs & mask;
-//
-//        if (nullptr != subs[index])
-//        {
-//            while (!subs[index]->completed())
-//            {
-//                std::this_thread::yield();
-//            }
-//
-//            subs[index].reset();
-//        }
-//
-//        subs[index] = make_ref<BM_Subscriber>();
-//        rs->requestResponse(Payload("BM_RequestResponse"))->subscribe(subs[index]);
-//        reqs++;
-//    }
-//
-//    for (int i = 0; i < numSubscribers; i++)
-//    {
-//        if (subs[i])
-//        {
-//            subs[i]->awaitTerminalEvent();
-//        }
-//    }
-//
-//    char label[256];
-//
-//    std::snprintf(label, sizeof(label), "Max Requests: %d, Message Length: %d", numSubscribers, MESSAGE_LENGTH);
-//    state.SetLabel(label);
-//
-//    state.SetItemsProcessed(reqs);
+BENCHMARK_DEFINE_F(BM_RsFixture, BM_RequestResponse_Throughput)
+(benchmark::State& state) {
+  // TODO(lehecka): enable test
+  //    folly::SocketAddress address;
+  //    address.setFromHostPort(host_, port_);
+  //
+  //    auto clientRs =
+  //    RSocket::createClient(std::make_unique<TcpConnectionFactory>(
+  //        std::move(address)));
+  //    int reqs = 0;
+  //    int numSubscribers = state.range(0);
+  //    int mask = numSubscribers - 1;
+  //
+  //    yarpl::Reference<BM_Subscriber> subs[MAX_REQUESTS+1];
+  //
+  //    auto rs = clientRs->connect().get();
+  //
+  //    while (state.KeepRunning())
+  //    {
+  //        int index = reqs & mask;
+  //
+  //        if (nullptr != subs[index])
+  //        {
+  //            while (!subs[index]->completed())
+  //            {
+  //                std::this_thread::yield();
+  //            }
+  //
+  //            subs[index].reset();
+  //        }
+  //
+  //        subs[index] = make_ref<BM_Subscriber>();
+  //        rs->requestResponse(Payload("BM_RequestResponse"))->subscribe(subs[index]);
+  //        reqs++;
+  //    }
+  //
+  //    for (int i = 0; i < numSubscribers; i++)
+  //    {
+  //        if (subs[i])
+  //        {
+  //            subs[i]->awaitTerminalEvent();
+  //        }
+  //    }
+  //
+  //    char label[256];
+  //
+  //    std::snprintf(label, sizeof(label), "Max Requests: %d, Message Length:
+  //    %d", numSubscribers, MESSAGE_LENGTH);
+  //    state.SetLabel(label);
+  //
+  //    state.SetItemsProcessed(reqs);
 }
 
-BENCHMARK_REGISTER_F(BM_RsFixture, BM_RequestResponse_Throughput)->Arg(1)->Arg(2)->Arg(8)->Arg(16)->Arg(32);
+BENCHMARK_REGISTER_F(BM_RsFixture, BM_RequestResponse_Throughput)
+    ->Arg(1)
+    ->Arg(2)
+    ->Arg(8)
+    ->Arg(16)
+    ->Arg(32);
 
 BENCHMARK_MAIN()

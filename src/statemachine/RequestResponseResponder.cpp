@@ -42,8 +42,7 @@ void RequestResponseResponder::onComplete() noexcept {
   }
 }
 
-void RequestResponseResponder::onError(
-    const std::exception_ptr ex) noexcept {
+void RequestResponseResponder::onError(const std::exception_ptr ex) noexcept {
   debugCheckOnNextOnError();
   switch (state_) {
     case State::RESPONDING: {

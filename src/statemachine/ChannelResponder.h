@@ -4,9 +4,9 @@
 
 #include <iosfwd>
 
-#include "src/temporary_home/SubscriberBase.h"
 #include "src/statemachine/ConsumerBase.h"
 #include "src/statemachine/PublisherBase.h"
+#include "src/temporary_home/SubscriberBase.h"
 #include "yarpl/flowable/Subscriber.h"
 
 namespace rsocket {
@@ -19,13 +19,13 @@ class ChannelResponder : public ConsumerBase,
   explicit ChannelResponder(
       uint32_t initialRequestN,
       const ConsumerBase::Parameters& params)
-      : ConsumerBase(params),
-        PublisherBase(initialRequestN) {}
+      : ConsumerBase(params), PublisherBase(initialRequestN) {}
 
   void processInitialFrame(Frame_REQUEST_CHANNEL&&);
 
  private:
-  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept override;
+  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
+                       subscription) noexcept override;
   void onNext(Payload) noexcept override;
   void onComplete() noexcept override;
   void onError(const std::exception_ptr) noexcept override;

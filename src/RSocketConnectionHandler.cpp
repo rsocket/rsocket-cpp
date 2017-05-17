@@ -7,10 +7,10 @@
 #include <folly/io/async/EventBaseManager.h>
 
 #include "RSocketErrors.h"
+#include "RSocketStats.h"
 #include "src/statemachine/RSocketStateMachine.h"
 #include "src/temporary_home/NullRequestHandler.h"
 #include "src/temporary_home/OldNewBridge.h"
-#include "RSocketStats.h"
 
 namespace rsocket {
 

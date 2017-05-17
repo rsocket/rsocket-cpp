@@ -4,11 +4,11 @@
 #include <gmock/gmock.h>
 
 #include "src/temporary_home/NullRequestHandler.h"
-#include "test/test_utils/MockRequestHandler.h"
 #include "test/deprecated/ReactiveSocket.h"
-#include "test/test_utils/InlineConnection.h"
-#include "test/test_utils/MockStats.h"
 #include "test/streams/Mocks.h"
+#include "test/test_utils/InlineConnection.h"
+#include "test/test_utils/MockRequestHandler.h"
+#include "test/test_utils/MockStats.h"
 
 using namespace ::testing;
 using namespace ::rsocket;
@@ -48,12 +48,14 @@ TEST(ReactiveSocketResumabilityTest, Disconnect) {
       SetupParameters("", "", Payload(), true),
       stats);
 
-  auto responseSubscriber = make_ref<yarpl::flowable::MockSubscriber<Payload>>();
+  auto responseSubscriber =
+      make_ref<yarpl::flowable::MockSubscriber<Payload>>();
   EXPECT_CALL(*responseSubscriber, onSubscribe_(_))
       .Times(1)
-      .WillOnce(Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> subscription) {
-        subscription->request(std::numeric_limits<size_t>::max());
-      }));
+      .WillOnce(Invoke(
+          [&](yarpl::Reference<yarpl::flowable::Subscription> subscription) {
+            subscription->request(std::numeric_limits<size_t>::max());
+          }));
 
   EXPECT_CALL(*responseSubscriber, onComplete_()).Times(0);
   EXPECT_CALL(*responseSubscriber, onError_(_)).Times(0);

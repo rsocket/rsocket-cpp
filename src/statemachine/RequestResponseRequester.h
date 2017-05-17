@@ -5,8 +5,8 @@
 #include <iosfwd>
 #include "src/Payload.h"
 #include "src/statemachine/StreamStateMachineBase.h"
-#include "yarpl/flowable/Subscription.h"
 #include "yarpl/flowable/Subscriber.h"
+#include "yarpl/flowable/Subscription.h"
 
 namespace rsocket {
 
@@ -18,10 +18,10 @@ class RequestResponseRequester : public StreamStateMachineBase,
 
  public:
   explicit RequestResponseRequester(const Parameters& params, Payload payload)
-      : Base(params),
-        initialPayload_(std::move(payload)) {}
+      : Base(params), initialPayload_(std::move(payload)) {}
 
-  void subscribe(yarpl::Reference<yarpl::flowable::Subscriber<Payload>> subscriber);
+  void subscribe(
+      yarpl::Reference<yarpl::flowable::Subscriber<Payload>> subscriber);
 
  private:
   void request(int64_t) noexcept override;

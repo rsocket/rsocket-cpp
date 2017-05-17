@@ -35,7 +35,8 @@ class ObservableOperator : public Observable<D> {
   /// against Operators.  Each operator subscription has two functions: as a
   /// subscriber for the previous stage; as a subscription for the next one,
   /// the user-supplied subscriber being the last of the pipeline stages.
-  class Subscription : public ::yarpl::observable::Subscription, public Observer<U> {
+  class Subscription : public ::yarpl::observable::Subscription,
+                       public Observer<U> {
    public:
     Subscription(
         Reference<Observable<D>> flowable,
@@ -49,7 +50,8 @@ class ObservableOperator : public Observable<D> {
     void onSubscribe(
         Reference<::yarpl::observable::Subscription> subscription) override {
       upstream_ = std::move(subscription);
-      subscriber_->onSubscribe(Reference<::yarpl::observable::Subscription>(this));
+      subscriber_->onSubscribe(
+          Reference<::yarpl::observable::Subscription>(this));
     }
 
     void onComplete() override {
@@ -126,38 +128,39 @@ class MapOperator : public ObservableOperator<U, D> {
   F function_;
 };
 
-template<
+template <
     typename U,
     typename F,
-    typename = typename std::enable_if<std::is_callable<F(U), bool>::value>::type>
+    typename =
+        typename std::enable_if<std::is_callable<F(U), bool>::value>::type>
 class FilterOperator : public ObservableOperator<U, U> {
-public:
-  FilterOperator(Reference <Observable<U>> upstream, F &&function)
+ public:
+  FilterOperator(Reference<Observable<U>> upstream, F&& function)
       : ObservableOperator<U, U>(std::move(upstream)),
         function_(std::forward<F>(function)) {}
 
-  void subscribe(Reference <Observer<U>> subscriber) override {
+  void subscribe(Reference<Observer<U>> subscriber) override {
     ObservableOperator<U, U>::upstream_->subscribe(
         // Note: implicit cast to a reference to a subscriber.
         Reference<Subscription>(new Subscription(
             Reference<Observable<U>>(this), std::move(subscriber))));
   }
 
-private:
+ private:
   class Subscription : public ObservableOperator<U, U>::Subscription {
-  public:
+   public:
     Subscription(
-        Reference <Observable<U>> flowable,
-        Reference <Observer<U>> subscriber)
+        Reference<Observable<U>> flowable,
+        Reference<Observer<U>> subscriber)
         : ObservableOperator<U, U>::Subscription(
-        std::move(flowable),
-        std::move(subscriber)) {}
+              std::move(flowable),
+              std::move(subscriber)) {}
 
     void onNext(U value) override {
-      auto *subscriber =
+      auto* subscriber =
           ObservableOperator<U, U>::Subscription::subscriber_.get();
-      auto *flowable = ObservableOperator<U, U>::Subscription::flowable_.get();
-      auto *filter = static_cast<FilterOperator *>(flowable);
+      auto* flowable = ObservableOperator<U, U>::Subscription::flowable_.get();
+      auto* filter = static_cast<FilterOperator*>(flowable);
       if (filter->function_(value)) {
         subscriber->onNext(std::move(value));
       }
@@ -250,7 +253,6 @@ class SubscribeOnOperator : public ObservableOperator<T, T> {
     }
 
    private:
-
     // Trampoline to call superclass method; gcc bug 58972.
     void callSuperCancel() {
       ObservableOperator<T, T>::Subscription::cancel();

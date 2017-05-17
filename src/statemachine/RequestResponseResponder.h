@@ -15,11 +15,11 @@ class RequestResponseResponder : public StreamStateMachineBase,
                                  public yarpl::flowable::Subscriber<Payload> {
  public:
   explicit RequestResponseResponder(const Parameters& params)
-      : StreamStateMachineBase(params),
-        PublisherBase(1) {}
+      : StreamStateMachineBase(params), PublisherBase(1) {}
 
  private:
-  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept override;
+  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
+                       subscription) noexcept override;
   void onNext(Payload) noexcept override;
   void onComplete() noexcept override;
   void onError(const std::exception_ptr) noexcept override;

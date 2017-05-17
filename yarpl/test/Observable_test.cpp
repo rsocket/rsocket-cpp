@@ -5,9 +5,9 @@
 #include <atomic>
 
 #include "yarpl/Observable.h"
-#include "yarpl/schedulers/ThreadScheduler.h"
 #include "yarpl/flowable/Subscriber.h"
 #include "yarpl/flowable/Subscribers.h"
+#include "yarpl/schedulers/ThreadScheduler.h"
 
 #include "Tuple.h"
 
@@ -359,9 +359,9 @@ TEST(Observable, RangeWithMap) {
   ASSERT_EQ(0u, Refcounted::objects());
 
   auto observable = Observables::range(1, 4)
-                      ->map([](int64_t v) { return v * v; })
-                      ->map([](int64_t v) { return v * v; })
-                      ->map([](int64_t v) { return std::to_string(v); });
+                        ->map([](int64_t v) { return v * v; })
+                        ->map([](int64_t v) { return v * v; })
+                        ->map([](int64_t v) { return std::to_string(v); });
   EXPECT_EQ(
       run(std::move(observable)), std::vector<std::string>({"1", "16", "81"}));
 
@@ -370,10 +370,9 @@ TEST(Observable, RangeWithMap) {
 
 TEST(Observable, RangeWithFilter) {
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-  auto observable = Observables::range(0, 10)
-      ->filter([](int64_t v) { return v % 2 != 0; });
-  EXPECT_EQ(
-      run(std::move(observable)), std::vector<int64_t>({1, 3, 5, 7, 9}));
+  auto observable =
+      Observables::range(0, 10)->filter([](int64_t v) { return v % 2 != 0; });
+  EXPECT_EQ(run(std::move(observable)), std::vector<int64_t>({1, 3, 5, 7, 9}));
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
@@ -428,10 +427,9 @@ TEST(Observable, ObserversComplete) {
   bool completed = false;
 
   auto observer = Observers::create<int>(
-    [](int) { unreachable(); },
-    [](std::exception_ptr) { unreachable(); },
-    [&] { completed = true; }
-  );
+      [](int) { unreachable(); },
+      [](std::exception_ptr) { unreachable(); },
+      [&] { completed = true; });
 
   observable->subscribe(std::move(observer));
   observable.reset();
@@ -450,10 +448,9 @@ TEST(Observable, ObserversError) {
   bool errored = false;
 
   auto observer = Observers::create<int>(
-    [](int) { unreachable(); },
-    [&](std::exception_ptr) { errored = true; },
-    [] { unreachable(); }
-  );
+      [](int) { unreachable(); },
+      [&](std::exception_ptr) { errored = true; },
+      [] { unreachable(); });
 
   observable->subscribe(std::move(observer));
   observable.reset();
@@ -467,7 +464,7 @@ TEST(Observable, CancelReleasesObjects) {
   EXPECT_EQ(0u, Refcounted::objects());
 
   auto lambda = [](Reference<Observer<int>> observer) {
-      // we will send nothing
+    // we will send nothing
   };
   auto observable = Observable<int>::create(std::move(lambda));
 

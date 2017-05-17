@@ -8,9 +8,9 @@
 #include <folly/MoveWrapper.h>
 #include <folly/io/async/EventBase.h>
 
+#include "src/framing/FrameTransport.h"
 #include "src/internal/ClientResumeStatusCallback.h"
 #include "src/statemachine/RSocketStateMachine.h"
-#include "src/framing/FrameTransport.h"
 #include "src/temporary_home/RequestHandler.h"
 
 namespace rsocket {
@@ -40,8 +40,7 @@ ReactiveSocket::ReactiveSocket(
   connection_->stats().socketCreated();
 }
 
-std::unique_ptr<ReactiveSocket>
-ReactiveSocket::fromClientConnection(
+std::unique_ptr<ReactiveSocket> ReactiveSocket::fromClientConnection(
     folly::Executor& executor,
     std::unique_ptr<DuplexConnection> connection,
     std::unique_ptr<RequestHandler> handler,
@@ -60,8 +59,7 @@ ReactiveSocket::fromClientConnection(
   return socket;
 }
 
-std::unique_ptr<ReactiveSocket>
-ReactiveSocket::disconnectedClient(
+std::unique_ptr<ReactiveSocket> ReactiveSocket::disconnectedClient(
     folly::Executor& executor,
     std::unique_ptr<RequestHandler> handler,
     std::shared_ptr<RSocketStats> stats,
@@ -80,8 +78,7 @@ ReactiveSocket::disconnectedClient(
   return socket;
 }
 
-std::unique_ptr<ReactiveSocket>
-ReactiveSocket::fromServerConnection(
+std::unique_ptr<ReactiveSocket> ReactiveSocket::fromServerConnection(
     folly::Executor& executor,
     std::unique_ptr<DuplexConnection> connection,
     std::unique_ptr<RequestHandler> handler,
@@ -101,8 +98,7 @@ ReactiveSocket::fromServerConnection(
   return socket;
 }
 
-std::unique_ptr<ReactiveSocket>
-ReactiveSocket::disconnectedServer(
+std::unique_ptr<ReactiveSocket> ReactiveSocket::disconnectedServer(
     folly::Executor& executor,
     std::shared_ptr<RequestHandler> handler,
     std::shared_ptr<RSocketStats> stats,
@@ -120,7 +116,8 @@ ReactiveSocket::disconnectedServer(
   return socket;
 }
 
-yarpl::Reference<yarpl::flowable::Subscriber<Payload>> ReactiveSocket::requestChannel(
+yarpl::Reference<yarpl::flowable::Subscriber<Payload>>
+ReactiveSocket::requestChannel(
     yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
   debugCheckCorrectExecutor();
   checkNotClosed();
@@ -152,8 +149,7 @@ void ReactiveSocket::requestFireAndForget(Payload request) {
   connection_->requestFireAndForget(std::move(request));
 }
 
-void ReactiveSocket::metadataPush(
-    std::unique_ptr<folly::IOBuf> metadata) {
+void ReactiveSocket::metadataPush(std::unique_ptr<folly::IOBuf> metadata) {
   debugCheckCorrectExecutor();
   checkNotClosed();
   connection_->metadataPush(std::move(metadata));
