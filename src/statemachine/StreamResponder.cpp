@@ -3,14 +3,14 @@
 #include "src/statemachine/StreamResponder.h"
 #include <folly/ExceptionString.h>
 
-namespace reactivesocket {
+namespace rsocket {
 
 using namespace yarpl;
 using namespace yarpl::flowable;
 
 void StreamResponder::onSubscribe(
     Reference<yarpl::flowable::Subscription> subscription) noexcept {
-  if (StreamAutomatonBase::isTerminated()) {
+  if (StreamStateMachineBase::isTerminated()) {
     subscription->cancel();
     return;
   }
@@ -72,7 +72,7 @@ void StreamResponder::endStream(StreamCompletionSignal signal) {
       break;
   }
   terminatePublisher(signal);
-  StreamAutomatonBase::endStream(signal);
+  StreamStateMachineBase::endStream(signal);
 }
 
 void StreamResponder::handleCancel() {

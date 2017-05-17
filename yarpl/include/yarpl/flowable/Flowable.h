@@ -139,6 +139,10 @@ class Flowable : public virtual Refcounted {
         Reference<Flowable> flowable,
         Reference<Subscriber<T>> subscriber)
         : flowable_(std::move(flowable)), subscriber_(std::move(subscriber)) {
+      // We expect to be heap-allocated; until this subscription finishes
+      // (is canceled; completes; error's out), hold a reference so we are
+      // not deallocated (by the subscriber).
+      Refcounted::incRef(*this);
       subscriber_->onSubscribe(Reference<Subscription>(this));
     }
 
@@ -169,6 +173,10 @@ class Flowable : public virtual Refcounted {
     }
 
     void cancel() override {
+      // if this is the first terminating signal to receive, we need to
+      // make sure we break the reference cycle between subscription and
+      // subscriber
+      //
       requested_.exchange(CANCELED, std::memory_order_relaxed);
       process();
     }
@@ -251,6 +259,12 @@ class Flowable : public virtual Refcounted {
             break;
         }
       }
+    }
+
+    void release() {
+      flowable_.reset();
+      subscriber_.reset();
+      Refcounted::decRef(*this);
     }
 
     // The number of items that can be sent downstream.  Each request(n)

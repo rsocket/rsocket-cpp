@@ -16,7 +16,6 @@ namespace {
 
 template <class T>
 class MySubscriber : public Subscriber<T> {};
-
 }
 
 TEST(ReferenceTest, Upcast) {

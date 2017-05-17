@@ -1,27 +1,27 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include <folly/Baton.h>
+#include <folly/ExceptionString.h>
 #include <folly/Memory.h>
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <folly/portability/GFlags.h>
-#include <folly/ExceptionString.h>
 #include <gmock/gmock.h>
 #include <array>
 #include <chrono>
 #include <thread>
 #include "src/framing/FrameTransport.h"
-#include "src/temporary_home/NullRequestHandler.h"
-#include "src/temporary_home/ReactiveSocket.h"
 #include "src/internal/FollyKeepaliveTimer.h"
+#include "src/temporary_home/NullRequestHandler.h"
+#include "test/deprecated/ReactiveSocket.h"
+#include "test/streams/Mocks.h"
 #include "test/test_utils/InlineConnection.h"
 #include "test/test_utils/MockKeepaliveTimer.h"
 #include "test/test_utils/MockRequestHandler.h"
 #include "test/test_utils/MockStats.h"
-#include "test/streams/Mocks.h"
 
 using namespace ::testing;
-using namespace ::reactivesocket;
+using namespace ::rsocket;
 using namespace std::string_literals;
 using namespace yarpl;
 
@@ -50,12 +50,18 @@ TEST(ReactiveSocketTest, RequestChannel) {
   auto serverConn = std::make_unique<InlineConnection>();
   clientConn->connectTo(*serverConn);
 
-  auto clientInput = make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
-  auto serverInput = make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
-  auto clientOutputSub = make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
-  auto serverOutputSub = make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
-  yarpl::Reference<yarpl::flowable::Subscription> clientInputSub, serverInputSub;
-  yarpl::Reference<yarpl::flowable::Subscriber<Payload>> clientOutput, serverOutput;
+  auto clientInput =
+      make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
+  auto serverInput =
+      make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
+  auto clientOutputSub =
+      make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
+  auto serverOutputSub =
+      make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
+  yarpl::Reference<yarpl::flowable::Subscription> clientInputSub,
+      serverInputSub;
+  yarpl::Reference<yarpl::flowable::Subscriber<Payload>> clientOutput,
+      serverOutput;
 
   auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
   EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
@@ -66,14 +72,14 @@ TEST(ReactiveSocketTest, RequestChannel) {
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
       std::move(requestHandler),
-      ConnectionSetupPayload("", "", Payload()));
+      SetupParameters("", "", Payload()));
 
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
   EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
@@ -85,8 +91,10 @@ TEST(ReactiveSocketTest, RequestChannel) {
   // Client creates a channel.
   EXPECT_CALL(*clientInput, onSubscribe_(_))
       .InSequence(s)
-      .WillOnce(Invoke(
-          [&](yarpl::Reference<yarpl::flowable::Subscription> sub) { clientInputSub = sub; }));
+      .WillOnce(
+          Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
+            clientInputSub = sub;
+          }));
   // The initial payload is requested automatically.
   EXPECT_CALL(*clientOutputSub, request_(1))
       .InSequence(s)
@@ -108,11 +116,12 @@ TEST(ReactiveSocketTest, RequestChannel) {
           }));
   EXPECT_CALL(*serverInput, onSubscribe_(_))
       .InSequence(s)
-      .WillOnce(Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
-        serverInputSub = sub;
-        // Client requests two payloads.
-        clientInputSub->request(2);
-      }));
+      .WillOnce(
+          Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
+            serverInputSub = sub;
+            // Client requests two payloads.
+            clientInputSub->request(2);
+          }));
   EXPECT_CALL(*serverOutputSub, request_(2))
       .InSequence(s)
       // The server delivers them immediately.
@@ -177,8 +186,10 @@ TEST(ReactiveSocketTest, RequestStreamComplete) {
   auto serverConn = std::make_unique<InlineConnection>();
   clientConn->connectTo(*serverConn);
 
-  auto clientInput = make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
-  auto serverOutputSub = make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
+  auto clientInput =
+      make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
+  auto serverOutputSub =
+      make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
   yarpl::Reference<yarpl::flowable::Subscription> clientInputSub;
   yarpl::Reference<yarpl::flowable::Subscriber<Payload>> serverOutput;
 
@@ -191,14 +202,14 @@ TEST(ReactiveSocketTest, RequestStreamComplete) {
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
       std::move(requestHandler),
-      ConnectionSetupPayload("", "", Payload()));
+      SetupParameters("", "", Payload()));
 
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
   EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
@@ -210,11 +221,12 @@ TEST(ReactiveSocketTest, RequestStreamComplete) {
   // Client creates a stream
   EXPECT_CALL(*clientInput, onSubscribe_(_))
       .InSequence(s)
-      .WillOnce(Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
-        clientInputSub = sub;
-        // Request two payloads immediately.
-        clientInputSub->request(2);
-      }));
+      .WillOnce(
+          Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
+            clientInputSub = sub;
+            // Request two payloads immediately.
+            clientInputSub->request(2);
+          }));
   // The request reaches the other end and triggers new responder to be set up.
   EXPECT_CALL(
       serverHandlerRef, handleRequestStream_(Equals(&originalPayload), _, _))
@@ -272,8 +284,10 @@ TEST(ReactiveSocketTest, RequestStreamCancel) {
   auto serverConn = std::make_unique<InlineConnection>();
   clientConn->connectTo(*serverConn);
 
-  auto clientInput = make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
-  auto serverOutputSub = make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
+  auto clientInput =
+      make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
+  auto serverOutputSub =
+      make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
   yarpl::Reference<yarpl::flowable::Subscription> clientInputSub;
   yarpl::Reference<yarpl::flowable::Subscriber<Payload>> serverOutput;
 
@@ -286,14 +300,14 @@ TEST(ReactiveSocketTest, RequestStreamCancel) {
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
       std::move(requestHandler),
-      ConnectionSetupPayload("", "", Payload()));
+      SetupParameters("", "", Payload()));
 
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
   EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
@@ -305,11 +319,12 @@ TEST(ReactiveSocketTest, RequestStreamCancel) {
   // Client creates a stream
   EXPECT_CALL(*clientInput, onSubscribe_(_))
       .InSequence(s)
-      .WillOnce(Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
-        clientInputSub = sub;
-        // Request two payloads immediately.
-        clientInputSub->request(2);
-      }));
+      .WillOnce(
+          Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
+            clientInputSub = sub;
+            // Request two payloads immediately.
+            clientInputSub->request(2);
+          }));
   // The request reaches the other end and triggers new responder to be set up.
   EXPECT_CALL(
       serverHandlerRef, handleRequestStream_(Equals(&originalPayload), _, _))
@@ -364,8 +379,10 @@ TEST(ReactiveSocketTest, RequestStream) {
   auto serverConn = std::make_unique<InlineConnection>();
   clientConn->connectTo(*serverConn);
 
-  auto clientInput = make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
-  auto serverOutputSub = make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
+  auto clientInput =
+      make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
+  auto serverOutputSub =
+      make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
   yarpl::Reference<yarpl::flowable::Subscription> clientInputSub;
   yarpl::Reference<yarpl::flowable::Subscriber<Payload>> serverOutput;
 
@@ -373,19 +390,19 @@ TEST(ReactiveSocketTest, RequestStream) {
   EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
   EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
 
-auto clientSock = ReactiveSocket::fromClientConnection(
+  auto clientSock = ReactiveSocket::fromClientConnection(
       defaultExecutor(),
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
       std::move(requestHandler),
-      ConnectionSetupPayload("", "", Payload()));
+      SetupParameters("", "", Payload()));
 
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
   EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
@@ -397,11 +414,12 @@ auto clientSock = ReactiveSocket::fromClientConnection(
   // Client creates a subscription.
   EXPECT_CALL(*clientInput, onSubscribe_(_))
       .InSequence(s)
-      .WillOnce(Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
-        clientInputSub = sub;
-        // Request two payloads immediately.
-        clientInputSub->request(2);
-      }));
+      .WillOnce(
+          Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
+            clientInputSub = sub;
+            // Request two payloads immediately.
+            clientInputSub->request(2);
+          }));
   // The request reaches the other end and triggers new responder to be set up.
   EXPECT_CALL(
       serverHandlerRef, handleRequestStream_(Equals(&originalPayload), _, _))
@@ -476,17 +494,19 @@ TEST(ReactiveSocketTest, RequestStreamSendsOneRequest) {
       defaultExecutor(),
       std::move(clientConn),
       std::move(requestHandler),
-      ConnectionSetupPayload());
+      SetupParameters());
 
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
 
-  auto responseSubscriber = make_ref<yarpl::flowable::MockSubscriber<Payload>>();
+  auto responseSubscriber =
+      make_ref<yarpl::flowable::MockSubscriber<Payload>>();
   yarpl::Reference<yarpl::flowable::Subscription> clientInputSub;
   EXPECT_CALL(*responseSubscriber, onSubscribe_(_))
       .Times(1)
-      .WillOnce(Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> subscription) {
-        clientInputSub = subscription;
-      }));
+      .WillOnce(Invoke(
+          [&](yarpl::Reference<yarpl::flowable::Subscription> subscription) {
+            clientInputSub = subscription;
+          }));
   EXPECT_CALL(*testOutputSubscriber, onNext_(_)).Times(0);
 
   socket->requestStream(Payload(originalPayload->clone()), responseSubscriber);
@@ -520,8 +540,10 @@ TEST(ReactiveSocketTest, RequestStreamSurplusResponse) {
   auto serverConn = std::make_unique<InlineConnection>();
   clientConn->connectTo(*serverConn);
 
-  auto clientInput = make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
-  auto serverOutputSub = make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
+  auto clientInput =
+      make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
+  auto serverOutputSub =
+      make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
   yarpl::Reference<yarpl::flowable::Subscription> clientInputSub;
   yarpl::Reference<yarpl::flowable::Subscriber<Payload>> serverOutput;
 
@@ -534,14 +556,14 @@ TEST(ReactiveSocketTest, RequestStreamSurplusResponse) {
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
       std::move(requestHandler),
-      ConnectionSetupPayload("", "", Payload()));
+      SetupParameters("", "", Payload()));
 
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
   EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
@@ -553,11 +575,12 @@ TEST(ReactiveSocketTest, RequestStreamSurplusResponse) {
   // Client creates a subscription.
   EXPECT_CALL(*clientInput, onSubscribe_(_))
       .InSequence(s)
-      .WillOnce(Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
-        clientInputSub = sub;
-        // Request one payload immediately.
-        clientInputSub->request(1);
-      }));
+      .WillOnce(
+          Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
+            clientInputSub = sub;
+            // Request one payload immediately.
+            clientInputSub->request(1);
+          }));
   // The request reaches the other end and triggers new responder to be set up.
   EXPECT_CALL(
       serverHandlerRef, handleRequestStream_(Equals(&originalPayload), _, _))
@@ -565,7 +588,8 @@ TEST(ReactiveSocketTest, RequestStreamSurplusResponse) {
       .WillOnce(Invoke(
           [&](Payload& request,
               StreamId streamId,
-              const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) {
+              const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+                  response) {
             serverOutput = response;
             serverOutput->onSubscribe(serverOutputSub);
           }));
@@ -582,9 +606,9 @@ TEST(ReactiveSocketTest, RequestStreamSurplusResponse) {
   EXPECT_CALL(*clientInput, onError_(_)).Times(1).InSequence(s);
   EXPECT_CALL(*clientInput, onComplete_()).Times(0);
   //  // Client closes the subscription in response.
-  EXPECT_CALL(*serverOutputSub, cancel_()).InSequence(s).WillOnce(Invoke([&]() {
-    serverOutput->onComplete();
-  }));
+  EXPECT_CALL(*serverOutputSub, cancel_())
+      .InSequence(s)
+      .WillOnce(Invoke([&]() { serverOutput->onComplete(); }));
 
   // Kick off the magic.
   clientSock->requestStream(Payload(originalPayload->clone()), clientInput);
@@ -599,11 +623,12 @@ TEST(ReactiveSocketTest, RequestResponse) {
   auto serverConn = std::make_unique<InlineConnection>();
   clientConn->connectTo(*serverConn);
 
-  auto clientInput = make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
-  auto serverOutputSub = make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
+  auto clientInput =
+      make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
+  auto serverOutputSub =
+      make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
   yarpl::Reference<yarpl::flowable::Subscription> clientInputSub;
   yarpl::Reference<yarpl::flowable::Subscriber<Payload>> serverOutput;
-
 
   auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
   EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
@@ -620,7 +645,7 @@ TEST(ReactiveSocketTest, RequestResponse) {
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
@@ -632,11 +657,12 @@ TEST(ReactiveSocketTest, RequestResponse) {
   // Client creates a subscription.
   EXPECT_CALL(*clientInput, onSubscribe_(_))
       .InSequence(s)
-      .WillOnce(Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
-        clientInputSub = sub;
-        // Request payload immediately.
-        clientInputSub->request(1);
-      }));
+      .WillOnce(
+          Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
+            clientInputSub = sub;
+            // Request payload immediately.
+            clientInputSub->request(1);
+          }));
 
   // The request reaches the other end and triggers new responder to be set up.
   EXPECT_CALL(
@@ -665,9 +691,8 @@ TEST(ReactiveSocketTest, RequestResponse) {
   // had COMPELTE flag set
   EXPECT_CALL(*clientInput, onComplete_()).InSequence(s);
 
-  EXPECT_CALL(*serverOutputSub, cancel_()).WillOnce(Invoke([&]() {
-    serverOutput->onComplete();
-  }));
+  EXPECT_CALL(*serverOutputSub, cancel_())
+      .WillOnce(Invoke([&]() { serverOutput->onComplete(); }));
 
   // Kick off the magic.
   clientSock->requestResponse(Payload(originalPayload->clone()), clientInput);
@@ -702,17 +727,19 @@ TEST(ReactiveSocketTest, RequestResponseSendsOneRequest) {
       defaultExecutor(),
       std::move(clientConn),
       std::move(requestHandler),
-      ConnectionSetupPayload());
+      SetupParameters());
 
   const auto originalPayload = folly::IOBuf::copyBuffer("foo");
 
-  auto responseSubscriber = make_ref<yarpl::flowable::MockSubscriber<Payload>>();
+  auto responseSubscriber =
+      make_ref<yarpl::flowable::MockSubscriber<Payload>>();
   yarpl::Reference<yarpl::flowable::Subscription> clientInputSub;
   EXPECT_CALL(*responseSubscriber, onSubscribe_(_))
       .Times(1)
-      .WillOnce(Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> subscription) {
-        clientInputSub = subscription;
-      }));
+      .WillOnce(Invoke(
+          [&](yarpl::Reference<yarpl::flowable::Subscription> subscription) {
+            clientInputSub = subscription;
+          }));
   EXPECT_CALL(*testOutputSubscriber, onNext_(_)).Times(0);
 
   socket->requestResponse(
@@ -757,14 +784,14 @@ TEST(ReactiveSocketTest, RequestFireAndForget) {
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
       std::move(requestHandler),
-      ConnectionSetupPayload("", "", Payload()));
+      SetupParameters("", "", Payload()));
 
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
   EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
@@ -802,14 +829,14 @@ TEST(ReactiveSocketTest, RequestMetadataPush) {
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
       std::move(requestHandler),
-      ConnectionSetupPayload("", "", Payload()));
+      SetupParameters("", "", Payload()));
 
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
   EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
@@ -845,15 +872,14 @@ TEST(ReactiveSocketTest, SetupData) {
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
       std::move(requestHandler),
-      ConnectionSetupPayload(
-          "text/plain", "text/plain", Payload("meta", "data")));
+      SetupParameters("text/plain", "text/plain", Payload("meta", "data")));
 
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
   EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
@@ -885,7 +911,7 @@ TEST(ReactiveSocketTest, SetupWithKeepaliveAndStats) {
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
@@ -900,8 +926,7 @@ TEST(ReactiveSocketTest, SetupWithKeepaliveAndStats) {
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
       std::move(requestHandler),
-      ConnectionSetupPayload(
-          "text/plain", "text/plain", Payload("meta", "data")),
+      SetupParameters("text/plain", "text/plain", Payload("meta", "data")),
       clientStats,
       std::move(clientKeepalive));
 
@@ -930,7 +955,7 @@ TEST(ReactiveSocketTest, GoodKeepalive) {
 
     auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
     EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
-  EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+    EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
 
     clientSock = ReactiveSocket::fromClientConnection(
         *th->getEventBase(),
@@ -938,8 +963,7 @@ TEST(ReactiveSocketTest, GoodKeepalive) {
         // No interactions on this mock, the client will not accept any
         // requests.
         std::move(requestHandler),
-        ConnectionSetupPayload(
-            "text/plain", "text/plain", Payload("meta", "data")),
+        SetupParameters("text/plain", "text/plain", Payload("meta", "data")),
         clientStats,
         std::move(clientKeepalive));
 
@@ -968,17 +992,26 @@ TEST(ReactiveSocketTest, DISABLED_Destructor) {
   // instead?
   auto clientStats = std::make_shared<NiceMock<MockStats>>();
   auto serverStats = std::make_shared<NiceMock<MockStats>>();
-  std::array<yarpl::Reference<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>, 2>
+  std::array<
+      yarpl::Reference<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>,
+      2>
       clientInputs;
-  clientInputs[0] = make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
-  clientInputs[1] = make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
+  clientInputs[0] =
+      make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
+  clientInputs[1] =
+      make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>();
 
-  std::array<yarpl::Reference<StrictMock<yarpl::flowable::MockSubscription>>, 2> serverOutputSubs;
-  serverOutputSubs[0] = make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
-  serverOutputSubs[1] = make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
+  std::array<yarpl::Reference<StrictMock<yarpl::flowable::MockSubscription>>, 2>
+      serverOutputSubs;
+  serverOutputSubs[0] =
+      make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
+  serverOutputSubs[1] =
+      make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
 
-  std::array<yarpl::Reference<yarpl::flowable::Subscription>, 2> clientInputSubs;
-  std::array<yarpl::Reference<yarpl::flowable::Subscriber<Payload>>, 2> serverOutputs;
+  std::array<yarpl::Reference<yarpl::flowable::Subscription>, 2>
+      clientInputSubs;
+  std::array<yarpl::Reference<yarpl::flowable::Subscriber<Payload>>, 2>
+      serverOutputs;
 
   EXPECT_CALL(*clientStats, socketCreated()).Times(1);
   EXPECT_CALL(*serverStats, socketCreated()).Times(1);
@@ -994,7 +1027,7 @@ TEST(ReactiveSocketTest, DISABLED_Destructor) {
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
       std::move(requestHandler),
-      ConnectionSetupPayload("", "", Payload()),
+      SetupParameters("", "", Payload()),
       clientStats);
 
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
@@ -1002,7 +1035,7 @@ TEST(ReactiveSocketTest, DISABLED_Destructor) {
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .InSequence(s)
       .WillRepeatedly(Return(nullptr));
 
@@ -1019,12 +1052,12 @@ TEST(ReactiveSocketTest, DISABLED_Destructor) {
     // Client creates a subscription.
     EXPECT_CALL(*clientInputs[i], onSubscribe_(_))
         .InSequence(s)
-        .WillOnce(
-            Invoke([i, &clientInputSubs](yarpl::Reference<yarpl::flowable::Subscription> sub) {
-              clientInputSubs[i] = sub;
-              // Request two payloads immediately.
-              sub->request(2);
-            }));
+        .WillOnce(Invoke([i, &clientInputSubs](
+            yarpl::Reference<yarpl::flowable::Subscription> sub) {
+          clientInputSubs[i] = sub;
+          // Request two payloads immediately.
+          sub->request(2);
+        }));
     // The request reaches the other end and triggers new responder to be set
     // up.
     EXPECT_CALL(
@@ -1054,8 +1087,9 @@ TEST(ReactiveSocketTest, DISABLED_Destructor) {
             Invoke([i, &serverOutputs]() { serverOutputs[i]->onComplete(); }));
     EXPECT_CALL(*clientInputs[i], onError_(_))
         .InSequence(s1)
-        .WillOnce(Invoke([i, &clientInputSubs](
-            const std::exception_ptr& ex) { LOG(INFO) << folly::exceptionStr(ex); }));
+        .WillOnce(Invoke([i, &clientInputSubs](const std::exception_ptr& ex) {
+          LOG(INFO) << folly::exceptionStr(ex);
+        }));
   }
 
   // Kick off the magic.
@@ -1082,7 +1116,7 @@ TEST(ReactiveSocketTest, ReactiveSocketOverInlineConnection) {
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
       std::move(requestHandler),
-      ConnectionSetupPayload("", "", Payload()));
+      SetupParameters("", "", Payload()));
 
   // we don't expect any call other than setup payload
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
@@ -1090,7 +1124,7 @@ TEST(ReactiveSocketTest, ReactiveSocketOverInlineConnection) {
   EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
   auto& serverHandlerRef = *serverHandler;
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
       .WillRepeatedly(Return(nullptr));
 
   auto serverSock = ReactiveSocket::fromServerConnection(
@@ -1111,7 +1145,7 @@ TEST(ReactiveSocketTest, CloseWithError) {
       std::move(clientConn),
       // No interactions on this mock, the client will not accept any requests.
       std::move(requestHandler),
-      ConnectionSetupPayload("", "", Payload()));
+      SetupParameters("", "", Payload()));
 
   // We don't expect any call other than setup payload.
   auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
@@ -1121,9 +1155,15 @@ TEST(ReactiveSocketTest, CloseWithError) {
 
   const folly::StringPiece errString{"Hahaha"};
 
-  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
-      .WillRepeatedly(Invoke([&](auto& socket, auto&) {
-        socket.closeConnectionError(errString.str());
+  EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
+      .WillRepeatedly(Invoke([&](auto&) {
+        // TODO this has become somewhat odd ...
+        // it used to receive ReactiveSocket in the callback
+        // but no longer does as part of the refactor away from
+        // using ReactiveSocket.h
+        // so to make this test pass for now it uses the clientSock
+        // reference it creates outside of this callback
+        clientSock->closeConnectionError(errString.str());
         return nullptr;
       }));
 
@@ -1137,7 +1177,7 @@ TEST(ReactiveSocketTest, CloseWithError) {
 
   serverSock->serverConnect(
       std::make_shared<FrameTransport>(std::move(serverConn)),
-      SocketParameters(false, FrameSerializer::getCurrentProtocolVersion()));
+      RSocketParameters(false, FrameSerializer::getCurrentProtocolVersion()));
 }
 
 class ReactiveSocketIgnoreRequestTest : public testing::Test {
@@ -1149,7 +1189,7 @@ class ReactiveSocketIgnoreRequestTest : public testing::Test {
 
     auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
     EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
-  EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+    EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
 
     clientSock = ReactiveSocket::fromClientConnection(
         defaultExecutor(),
@@ -1157,7 +1197,7 @@ class ReactiveSocketIgnoreRequestTest : public testing::Test {
         // No interactions on this mock, the client will not accept any
         // requests.
         std::move(requestHandler),
-        ConnectionSetupPayload("", "", Payload()));
+        SetupParameters("", "", Payload()));
 
     serverSock = ReactiveSocket::fromServerConnection(
         defaultExecutor(),
@@ -1166,10 +1206,11 @@ class ReactiveSocketIgnoreRequestTest : public testing::Test {
 
     // Client request.
     EXPECT_CALL(*clientInput, onSubscribe_(_))
-        .WillOnce(Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
-          clientInputSub = sub;
-          sub->request(2);
-        }));
+        .WillOnce(
+            Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
+              clientInputSub = sub;
+              sub->request(2);
+            }));
 
     //
     // server RequestHandler is ignoring the request, we expect terminating
@@ -1186,36 +1227,37 @@ class ReactiveSocketIgnoreRequestTest : public testing::Test {
         }));
   }
 
+  static Payload testPayload() {
+    return Payload("foo");
+  }
+
   std::unique_ptr<ReactiveSocket> clientSock;
   std::unique_ptr<ReactiveSocket> serverSock;
 
-  yarpl::Reference<StrictMock<yarpl::flowable::MockSubscriber<Payload>>> clientInput{
-      make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>()};
+  yarpl::Reference<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>
+      clientInput{
+          make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>()};
   yarpl::Reference<yarpl::flowable::Subscription> clientInputSub;
-
-  const std::unique_ptr<folly::IOBuf> originalPayload{
-      folly::IOBuf::copyBuffer("foo")};
 };
 
 TEST_F(ReactiveSocketIgnoreRequestTest, IgnoreRequestResponse) {
-  clientSock->requestResponse(Payload(originalPayload->clone()), clientInput);
+  clientSock->requestResponse(testPayload(), clientInput);
 }
 
 TEST_F(ReactiveSocketIgnoreRequestTest, IgnoreRequestStream) {
-  clientSock->requestStream(Payload(originalPayload->clone()), clientInput);
+  clientSock->requestStream(testPayload(), clientInput);
 }
 
 TEST_F(ReactiveSocketIgnoreRequestTest, IgnoreRequestChannel) {
   auto clientOutput = clientSock->requestChannel(clientInput);
 
-  auto clientOutputSub = make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
-  EXPECT_CALL(*clientOutputSub, request_(1)).WillOnce(Invoke([&](size_t) {
-    clientOutput->onNext(Payload(originalPayload->clone()));
-  }));
-  EXPECT_CALL(*clientOutputSub, cancel_()).WillOnce(Invoke([&]() {
-    clientOutput->onComplete();
-    clientOutput = nullptr;
-  }));
+  auto clientOutputSub =
+      make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
+  EXPECT_CALL(*clientOutputSub, request_(1))
+      .WillOnce(Invoke(
+          [clientOutput](size_t) { clientOutput->onNext(testPayload()); }));
+  EXPECT_CALL(*clientOutputSub, cancel_())
+      .WillOnce(Invoke([clientOutput]() { clientOutput->onComplete(); }));
 
   clientOutput->onSubscribe(clientOutputSub);
 }
@@ -1237,24 +1279,25 @@ class ReactiveSocketOnErrorOnShutdownTest : public testing::Test {
         // No interactions on this mock, the client will not accept any
         // requests.
         std::move(requestHandler),
-        ConnectionSetupPayload("", "", Payload()));
+        SetupParameters("", "", Payload()));
 
     auto serverHandler = std::make_unique<StrictMock<MockRequestHandler>>();
     EXPECT_CALL(*serverHandler, socketOnConnected()).Times(1);
     EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
     auto& serverHandlerRef = *serverHandler;
 
-    EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+    EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
         .WillRepeatedly(Return(nullptr));
 
     serverSock = ReactiveSocket::fromServerConnection(
         defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 
     EXPECT_CALL(*clientInput, onSubscribe_(_))
-        .WillOnce(Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
-          clientInputSub = sub;
-          sub->request(2);
-        }));
+        .WillOnce(
+            Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
+              clientInputSub = sub;
+              sub->request(2);
+            }));
 
     EXPECT_CALL(serverHandlerRef, handleRequestResponse_(_, _, _))
         .Times(AtMost(1))
@@ -1286,10 +1329,11 @@ class ReactiveSocketOnErrorOnShutdownTest : public testing::Test {
             yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response) {
 
           EXPECT_CALL(*serverInput, onSubscribe_(_))
-              .WillOnce(Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
-                serverInputSub = sub;
-                sub->request(2);
-              }));
+              .WillOnce(Invoke(
+                  [&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
+                    serverInputSub = sub;
+                    sub->request(2);
+                  }));
           EXPECT_CALL(*serverInput, onComplete_()).Times(1);
 
           serverOutput = response;
@@ -1303,10 +1347,11 @@ class ReactiveSocketOnErrorOnShutdownTest : public testing::Test {
     EXPECT_CALL(*clientInput, onNext_(_)).Times(0);
     EXPECT_CALL(*clientInput, onComplete_()).Times(0);
 
-    EXPECT_CALL(*serverOutputSub, cancel_()).WillOnce(Invoke([&]() {
-      serverOutput->onComplete();
-      serverOutput = nullptr;
-    }));
+    EXPECT_CALL(*serverOutputSub, cancel_())
+        .WillOnce(Invoke([&]() {
+          serverOutput->onComplete();
+          serverOutput = nullptr;
+        }));
 
     EXPECT_CALL(*clientInput, onError_(_))
         .WillOnce(Invoke([&](const std::exception_ptr) {
@@ -1321,16 +1366,19 @@ class ReactiveSocketOnErrorOnShutdownTest : public testing::Test {
   const std::unique_ptr<folly::IOBuf> originalPayload{
       folly::IOBuf::copyBuffer("foo")};
 
-  yarpl::Reference<StrictMock<yarpl::flowable::MockSubscriber<Payload>>> clientInput{
-      make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>()};
+  yarpl::Reference<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>
+      clientInput{
+          make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>()};
   yarpl::Reference<yarpl::flowable::Subscription> clientInputSub;
 
   yarpl::Reference<yarpl::flowable::Subscriber<Payload>> serverOutput;
-  yarpl::Reference<StrictMock<yarpl::flowable::MockSubscription>> serverOutputSub{
-      make_ref<StrictMock<yarpl::flowable::MockSubscription>>()};
+  yarpl::Reference<StrictMock<yarpl::flowable::MockSubscription>>
+      serverOutputSub{
+          make_ref<StrictMock<yarpl::flowable::MockSubscription>>()};
 
-  yarpl::Reference<StrictMock<yarpl::flowable::MockSubscriber<Payload>>> serverInput{
-      make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>()};
+  yarpl::Reference<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>
+      serverInput{
+          make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>()};
   yarpl::Reference<yarpl::flowable::Subscription> serverInputSub;
 };
 
@@ -1345,15 +1393,18 @@ TEST_F(ReactiveSocketOnErrorOnShutdownTest, DISABLED_RequestStream) {
 TEST_F(ReactiveSocketOnErrorOnShutdownTest, DISABLED_RequestChannel) {
   auto clientOutput = clientSock->requestChannel(clientInput);
 
-  auto clientOutputSub = make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
-  EXPECT_CALL(*clientOutputSub, request_(1)).WillOnce(Invoke([&](size_t) {
-    // this will initiate the interaction
-    clientOutput->onNext(Payload(originalPayload->clone()));
-  }));
-  EXPECT_CALL(*clientOutputSub, cancel_()).WillOnce(Invoke([&]() {
-    clientOutput->onComplete();
-    clientOutput = nullptr;
-  }));
+  auto clientOutputSub =
+      make_ref<StrictMock<yarpl::flowable::MockSubscription>>();
+  EXPECT_CALL(*clientOutputSub, request_(1))
+      .WillOnce(Invoke([&](size_t) {
+        // this will initiate the interaction
+        clientOutput->onNext(Payload(originalPayload->clone()));
+      }));
+  EXPECT_CALL(*clientOutputSub, cancel_())
+      .WillOnce(Invoke([&]() {
+        clientOutput->onComplete();
+        clientOutput = nullptr;
+      }));
 
   clientOutput->onSubscribe(clientOutputSub);
 }
@@ -1380,7 +1431,7 @@ class ReactiveSocketRegressionTest : public Test {
     EXPECT_CALL(connection, getOutput())
         .WillOnce(Return(std::make_shared<MockSubscriber<IOBufPtr>>()));
 
-    EXPECT_CALL(requestHandler_, handleSetupPayload_(_, _))
+    EXPECT_CALL(requestHandler_, handleSetupPayload_(_))
         .WillRepeatedly(Return(nullptr));
 
     EXPECT_CALL(requestHandler_, socketOnConnected()).Times(1);
@@ -1390,8 +1441,8 @@ class ReactiveSocketRegressionTest : public Test {
         defaultExecutor(),
         std::move(connectionPtr),
         std::move(requestHandlerPtr_),
-        Stats::noop(),
-        SocketParameters(false, FrameSerializer::getCurrentProtocolVersion()));
+        RSocketStats::noop(),
+        RSocketParameters(false, FrameSerializer::getCurrentProtocolVersion()));
   }
 
   MockRequestHandler& requestHandler_;
@@ -1419,12 +1470,12 @@ class ReactiveSocketEmptyPayloadTest : public testing::Test {
     auto serverConn = std::make_unique<InlineConnection>();
     clientConn->connectTo(*serverConn);
 
-    auto connectionSetup = ConnectionSetupPayload("", "", Payload());
+    auto connectionSetup = SetupParameters("", "", Payload());
     connectionSetup.protocolVersion = ProtocolVersion(1, 0);
 
     auto requestHandler = std::make_unique<StrictMock<MockRequestHandler>>();
     EXPECT_CALL(*requestHandler, socketOnConnected()).Times(1);
-  EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
+    EXPECT_CALL(*requestHandler, socketOnClosed(_)).Times(1);
 
     clientSock = ReactiveSocket::fromClientConnection(
         defaultExecutor(),
@@ -1439,94 +1490,103 @@ class ReactiveSocketEmptyPayloadTest : public testing::Test {
     EXPECT_CALL(*serverHandler, socketOnClosed(_)).Times(1);
     auto& serverHandlerRef = *serverHandler;
 
-    EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_, _))
+    EXPECT_CALL(serverHandlerRef, handleSetupPayload_(_))
         .WillRepeatedly(Return(nullptr));
 
     serverSock = ReactiveSocket::fromServerConnection(
         defaultExecutor(), std::move(serverConn), std::move(serverHandler));
 
     EXPECT_CALL(*clientInput, onSubscribe_(_))
-        .WillOnce(Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
-          clientInputSub = sub;
-          sub->request(2);
-        }));
+        .WillOnce(
+            Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
+              clientInputSub = sub;
+              sub->request(2);
+            }));
 
     EXPECT_CALL(serverHandlerRef, handleRequestResponse_(_, _, _))
         .Times(AtMost(1))
-        .WillOnce(Invoke(
-            [&](Payload& request,
-                StreamId streamId,
-                yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response) {
-              CHECK(!request) << "incoming request is expected to be empty";
-              serverOutput = response;
-              serverOutput->onSubscribe(serverOutputSub);
-            }));
+        .WillOnce(Invoke([&](
+            Payload& request,
+            StreamId streamId,
+            yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response) {
+          CHECK(!request) << "incoming request is expected to be empty";
+          serverOutput = response;
+          serverOutput->onSubscribe(serverOutputSub);
+        }));
     EXPECT_CALL(serverHandlerRef, handleRequestStream_(_, _, _))
         .Times(AtMost(1))
-        .WillOnce(Invoke(
-            [&](Payload& request,
-                StreamId streamId,
-                yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response) {
-              CHECK(!request) << "incoming request is expected to be empty";
-              serverOutput = response;
-              serverOutput->onSubscribe(serverOutputSub);
-            }));
+        .WillOnce(Invoke([&](
+            Payload& request,
+            StreamId streamId,
+            yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response) {
+          CHECK(!request) << "incoming request is expected to be empty";
+          serverOutput = response;
+          serverOutput->onSubscribe(serverOutputSub);
+        }));
     EXPECT_CALL(serverHandlerRef, handleRequestChannel_(_, _, _))
         .Times(AtMost(1))
-        .WillOnce(Invoke(
-            [&](Payload& request,
-                StreamId streamId,
-                yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response) {
-              CHECK(!request) << "incoming request is expected to be empty";
+        .WillOnce(Invoke([&](
+            Payload& request,
+            StreamId streamId,
+            yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response) {
+          CHECK(!request) << "incoming request is expected to be empty";
 
-              EXPECT_CALL(*serverInput, onSubscribe_(_))
-                  .WillOnce(Invoke([&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
+          EXPECT_CALL(*serverInput, onSubscribe_(_))
+              .WillOnce(Invoke(
+                  [&](yarpl::Reference<yarpl::flowable::Subscription> sub) {
                     serverInputSub = sub;
                     sub->request(2);
                   }));
 
-              EXPECT_CALL(*serverInput, onComplete_()).Times(1);
-              EXPECT_CALL(*serverInput, onError_(_)).Times(1).WillOnce(Invoke([&](std::exception_ptr ex) {
-                  LOG(ERROR) << folly::exceptionStr(ex);
+          EXPECT_CALL(*serverInput, onComplete_()).Times(1);
+          EXPECT_CALL(*serverInput, onError_(_))
+              .Times(1)
+              .WillOnce(Invoke([&](std::exception_ptr ex) {
+                LOG(ERROR) << folly::exceptionStr(ex);
               }));
 
-              serverOutput = response;
-              serverOutput->onSubscribe(serverOutputSub);
+          serverOutput = response;
+          serverOutput->onSubscribe(serverOutputSub);
 
-              return serverInput;
-            }));
+          return serverInput;
+        }));
 
     EXPECT_CALL(*clientInput, onComplete_()).Times(1);
-    EXPECT_CALL(*clientInput, onError_(_)).Times(1).WillOnce(Invoke([&](std::exception_ptr ex) {
-        LOG(ERROR) << folly::exceptionStr(ex);
-    }));
+    EXPECT_CALL(*clientInput, onError_(_))
+        .Times(1)
+        .WillOnce(Invoke([&](std::exception_ptr ex) {
+          LOG(ERROR) << folly::exceptionStr(ex);
+        }));
 
-    EXPECT_CALL(*serverOutputSub, request_(_)).WillOnce(Invoke([&](size_t n) {
-      CHECK_GT(n, 0);
-      EXPECT_CALL(*clientInput, onNext_(_))
-          .Times(n)
-          .WillRepeatedly(Invoke([&](Payload& p) { CHECK(!p); }));
-      while (n--) {
-        serverOutput->onNext(Payload());
-      }
-      serverOutput->onComplete();
-      serverOutput = nullptr;
-    }));
+    EXPECT_CALL(*serverOutputSub, request_(_))
+        .WillOnce(Invoke([&](size_t n) {
+          CHECK_GT(n, 0);
+          EXPECT_CALL(*clientInput, onNext_(_))
+              .Times(n)
+              .WillRepeatedly(Invoke([&](Payload& p) { CHECK(!p); }));
+          while (n--) {
+            serverOutput->onNext(Payload());
+          }
+          serverOutput->onComplete();
+          serverOutput = nullptr;
+        }));
   }
 
   std::unique_ptr<ReactiveSocket> clientSock;
   std::unique_ptr<ReactiveSocket> serverSock;
 
-  yarpl::Reference<StrictMock<yarpl::flowable::MockSubscriber<Payload>>> clientInput{
-      make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>()};
+  yarpl::Reference<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>
+      clientInput{
+          make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>()};
   yarpl::Reference<yarpl::flowable::Subscription> clientInputSub;
 
   yarpl::Reference<yarpl::flowable::Subscriber<Payload>> serverOutput;
   yarpl::Reference<NiceMock<yarpl::flowable::MockSubscription>> serverOutputSub{
       make_ref<NiceMock<yarpl::flowable::MockSubscription>>()};
 
-  yarpl::Reference<StrictMock<yarpl::flowable::MockSubscriber<Payload>>> serverInput{
-      make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>()};
+  yarpl::Reference<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>
+      serverInput{
+          make_ref<StrictMock<yarpl::flowable::MockSubscriber<Payload>>>()};
   yarpl::Reference<yarpl::flowable::Subscription> serverInputSub;
 };
 
@@ -1540,7 +1600,8 @@ TEST_F(ReactiveSocketEmptyPayloadTest, DISABLED_RequestStream) {
 
 TEST_F(ReactiveSocketEmptyPayloadTest, DISABLED_RequestChannel) {
   auto clientOutput = clientSock->requestChannel(clientInput);
-  auto clientOutputSub = make_ref<NiceMock<yarpl::flowable::MockSubscription>>();
+  auto clientOutputSub =
+      make_ref<NiceMock<yarpl::flowable::MockSubscription>>();
 
   int send = 3;
   EXPECT_CALL(*clientOutputSub, request_(_))

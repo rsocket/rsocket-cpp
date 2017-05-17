@@ -1,20 +1,20 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include <array>
 #include <folly/Memory.h>
 #include <folly/io/Cursor.h>
 #include <gmock/gmock.h>
 #include <src/framing/FrameSerializer.h>
 #include <src/temporary_home/NullRequestHandler.h>
-#include "src/statemachine/RSocketStateMachine.h"
+#include <array>
 #include "src/framing/FrameTransport.h"
 #include "src/framing/FramedDuplexConnection.h"
 #include "src/framing/FramedWriter.h"
-#include "test/test_utils/InlineConnection.h"
+#include "src/statemachine/RSocketStateMachine.h"
 #include "test/streams/Mocks.h"
+#include "test/test_utils/InlineConnection.h"
 
 using namespace ::testing;
-using namespace ::reactivesocket;
+using namespace ::rsocket;
 
 static std::unique_ptr<folly::IOBuf> makeInvalidFrameHeader() {
   // Create a header without the stream id
@@ -73,9 +73,8 @@ TEST(ConnectionAutomatonTest, InvalidFrameHeader) {
   std::shared_ptr<RSocketStateMachine> connectionAutomaton;
   connectionAutomaton = std::make_shared<RSocketStateMachine>(
       defaultExecutor(),
-      nullptr,
       std::make_shared<NullRequestHandler>(),
-      Stats::noop(),
+      RSocketStats::noop(),
       nullptr,
       ReactiveSocketMode::CLIENT);
   connectionAutomaton->connect(
@@ -137,11 +136,12 @@ static void terminateTest(
           }
         }));
   }
-  EXPECT_CALL(*testOutputSubscriber, onComplete_()).WillOnce(Invoke([&]() {
-    if (inOnComplete) {
-      testOutputSubscriber->subscription()->cancel();
-    }
-  }));
+  EXPECT_CALL(*testOutputSubscriber, onComplete_())
+      .WillOnce(Invoke([&]() {
+        if (inOnComplete) {
+          testOutputSubscriber->subscription()->cancel();
+        }
+      }));
 
   testConnection->setInput(testOutputSubscriber);
   testConnectionOutput->onSubscribe(inputSubscription);
@@ -149,9 +149,8 @@ static void terminateTest(
   std::shared_ptr<RSocketStateMachine> connectionAutomaton;
   connectionAutomaton = std::make_shared<RSocketStateMachine>(
       defaultExecutor(),
-      nullptr,
       std::make_shared<NullRequestHandler>(),
-      Stats::noop(),
+      RSocketStats::noop(),
       nullptr,
       ReactiveSocketMode::CLIENT);
   connectionAutomaton->connect(
@@ -249,9 +248,8 @@ TEST(ConnectionAutomatonTest, RefuseFrame) {
   std::shared_ptr<RSocketStateMachine> connectionAutomaton;
   connectionAutomaton = std::make_shared<RSocketStateMachine>(
       defaultExecutor(),
-      nullptr,
       std::make_shared<NullRequestHandler>(),
-      Stats::noop(),
+      RSocketStats::noop(),
       nullptr,
       ReactiveSocketMode::CLIENT);
   connectionAutomaton->connect(

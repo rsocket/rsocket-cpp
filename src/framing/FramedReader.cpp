@@ -5,7 +5,7 @@
 #include "FrameSerializer_v0_1.h"
 #include "FrameSerializer_v1_0.h"
 
-namespace reactivesocket {
+namespace rsocket {
 namespace {
 constexpr auto kFrameLengthFieldLengthV0_1 = sizeof(int32_t);
 constexpr auto kFrameLengthFieldLengthV1_0 = 3; // bytes

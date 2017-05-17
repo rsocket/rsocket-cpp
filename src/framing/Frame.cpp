@@ -5,9 +5,9 @@
 #include <folly/Optional.h>
 #include <folly/io/Cursor.h>
 #include <bitset>
-#include "src/temporary_home/ConnectionSetupPayload.h"
+#include "src/RSocketParameters.h"
 
-namespace reactivesocket {
+namespace rsocket {
 
 const uint32_t Frame_LEASE::kMaxTtl;
 const uint32_t Frame_LEASE::kMaxNumRequests;
@@ -187,7 +187,7 @@ std::ostream& operator<<(std::ostream& os, const Frame_SETUP& frame) {
   return os << frame.header_ << ", (" << frame.payload_;
 }
 
-void Frame_SETUP::moveToSetupPayload(ConnectionSetupPayload& setupPayload) {
+void Frame_SETUP::moveToSetupPayload(SetupParameters& setupPayload) {
   setupPayload.metadataMimeType = std::move(metadataMimeType_);
   setupPayload.dataMimeType = std::move(dataMimeType_);
   setupPayload.payload = std::move(payload_);

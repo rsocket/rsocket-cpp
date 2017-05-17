@@ -3,18 +3,19 @@
 #pragma once
 
 #include <deque>
+#include <set>
 #include <unordered_map>
 
 #include <folly/Optional.h>
 
+#include "src/RSocketStats.h"
 #include "src/internal/Common.h"
-#include "Stats.h"
 
 namespace folly {
 class IOBuf;
 }
 
-namespace reactivesocket {
+namespace rsocket {
 
 class RSocketStateMachine;
 class FrameTransport;
@@ -29,7 +30,7 @@ class FrameTransport;
 class ResumeCache {
  public:
   explicit ResumeCache(
-      std::shared_ptr<Stats> stats,
+      std::shared_ptr<RSocketStats> stats,
       size_t capacity = DEFAULT_CAPACITY)
       : stats_(std::move(stats)), capacity_(capacity) {}
   ~ResumeCache();
@@ -37,7 +38,8 @@ class ResumeCache {
   // Tracks a received frame.
   void trackReceivedFrame(
       const folly::IOBuf& serializedFrame,
-      const FrameType frameType);
+      const FrameType frameType,
+      const StreamId streamId);
 
   // Tracks a sent frame.
   void trackSentFrame(
@@ -50,8 +52,6 @@ class ResumeCache {
   void resetUpToPosition(ResumePosition position);
 
   bool isPositionAvailable(ResumePosition position) const;
-
-  bool isPositionAvailable(ResumePosition position, StreamId streamId) const;
 
   void sendFramesFromPosition(
       ResumePosition position,
@@ -77,6 +77,10 @@ class ResumeCache {
     return size_;
   }
 
+  void onStreamOpen(StreamId streamId, FrameType frameType);
+
+  void onStreamClosed(StreamId streamId);
+
  private:
   void addFrame(const folly::IOBuf&, size_t);
   void evictFrame();
@@ -84,7 +88,7 @@ class ResumeCache {
   // Called before clearing cached frames to update stats.
   void clearFrames(ResumePosition position);
 
-  std::shared_ptr<Stats> stats_;
+  std::shared_ptr<RSocketStats> stats_;
 
   // End position of the send buffer queue
   ResumePosition position_{0};
@@ -93,7 +97,14 @@ class ResumeCache {
   // Inferred position of the rcvd frames
   ResumePosition impliedPosition_{0};
 
-  std::unordered_map<StreamId, ResumePosition> streamMap_;
+  // Active REQUEST_STREAMs are preserved here
+  std::set<StreamId> activeRequestStreams_;
+
+  // Active REQUEST_CHANNELs are preserved here
+  std::set<StreamId> activeRequestChannels_;
+
+  // Active REQUEST_RESPONSEs are preserved here
+  std::set<StreamId> activeRequestResponses_;
 
   std::deque<std::pair<ResumePosition, std::unique_ptr<folly::IOBuf>>> frames_;
 

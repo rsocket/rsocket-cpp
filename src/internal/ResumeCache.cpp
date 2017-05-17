@@ -4,13 +4,13 @@
 
 #include <algorithm>
 
-#include "src/statemachine/RSocketStateMachine.h"
 #include "src/framing/Frame.h"
 #include "src/framing/FrameTransport.h"
+#include "src/statemachine/RSocketStateMachine.h"
 
 namespace {
 
-using reactivesocket::FrameType;
+using rsocket::FrameType;
 
 bool shouldTrackFrame(const FrameType frameType) {
   switch (frameType) {
@@ -38,7 +38,7 @@ bool shouldTrackFrame(const FrameType frameType) {
 
 } // anonymous
 
-namespace reactivesocket {
+namespace rsocket {
 
 ResumeCache::~ResumeCache() {
   clearFrames(position_);
@@ -46,7 +46,9 @@ ResumeCache::~ResumeCache() {
 
 void ResumeCache::trackReceivedFrame(
     const folly::IOBuf& serializedFrame,
-    const FrameType frameType) {
+    const FrameType frameType,
+    const StreamId streamId) {
+  onStreamOpen(streamId, frameType);
   if (shouldTrackFrame(frameType)) {
     VLOG(6) << "received frame " << frameType;
     // TODO(tmont): this could be expensive, find a better way to get length
@@ -58,6 +60,11 @@ void ResumeCache::trackSentFrame(
     const folly::IOBuf& serializedFrame,
     const FrameType frameType,
     const folly::Optional<StreamId> streamIdPtr) {
+  if (streamIdPtr) {
+    const StreamId streamId = *streamIdPtr;
+    onStreamOpen(streamId, frameType);
+  }
+
   if (shouldTrackFrame(frameType)) {
     // TODO(tmont): this could be expensive, find a better way to get length
     auto frameDataLength = serializedFrame.computeChainDataLength();
@@ -72,11 +79,6 @@ void ResumeCache::trackSentFrame(
 
     addFrame(serializedFrame, frameDataLength);
     position_ += frameDataLength;
-
-    if (streamIdPtr) {
-      const StreamId streamId = *streamIdPtr;
-      streamMap_[streamId] = position_;
-    }
   }
 }
 
@@ -87,14 +89,6 @@ void ResumeCache::resetUpToPosition(ResumePosition position) {
 
   if (position > position_) {
     position = position_;
-  }
-
-  for (auto it = streamMap_.begin(); it != streamMap_.end();) {
-    if (it->second <= position) {
-      it = streamMap_.erase(it);
-    } else {
-      it++;
-    }
   }
 
   clearFrames(position);
@@ -113,23 +107,6 @@ bool ResumeCache::isPositionAvailable(ResumePosition position) const {
                 decltype(frames_.back()) pairB) {
                return pairA.first < pairB.first;
              });
-}
-
-bool ResumeCache::isPositionAvailable(
-    ResumePosition position,
-    StreamId streamId) const {
-  bool result = false;
-
-  auto it = streamMap_.find(streamId);
-  if (it != streamMap_.end()) {
-    const ResumePosition streamPosition = (*it).second;
-
-    result = (streamPosition <= position);
-  } else {
-    result = (resetPosition_ >= position);
-  }
-
-  return result;
 }
 
 void ResumeCache::addFrame(const folly::IOBuf& frame, size_t frameDataLength) {
@@ -197,6 +174,24 @@ void ResumeCache::sendFramesFromPosition(
   while (found != frames_.end()) {
     frameTransport.outputFrameOrEnqueue(found->second->clone());
     found++;
+  }
+}
+
+void ResumeCache::onStreamClosed(StreamId streamId) {
+  // This is crude. We could try to preserve the stream type in
+  // RSocketStateMachine and pass it down explicitly here.
+  activeRequestStreams_.erase(streamId);
+  activeRequestChannels_.erase(streamId);
+  activeRequestResponses_.erase(streamId);
+}
+
+void ResumeCache::onStreamOpen(StreamId streamId, FrameType frameType) {
+  if (frameType == FrameType::REQUEST_STREAM) {
+    activeRequestStreams_.insert(streamId);
+  } else if (frameType == FrameType::REQUEST_CHANNEL) {
+    activeRequestChannels_.insert(streamId);
+  } else if (frameType == FrameType::REQUEST_RESPONSE) {
+    activeRequestResponses_.insert(streamId);
   }
 }
 

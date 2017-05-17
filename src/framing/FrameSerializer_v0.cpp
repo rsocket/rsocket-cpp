@@ -3,7 +3,7 @@
 #include "FrameSerializer_v0.h"
 #include <folly/io/Cursor.h>
 
-namespace reactivesocket {
+namespace rsocket {
 
 constexpr const ProtocolVersion FrameSerializerV0::Version;
 constexpr const size_t FrameSerializerV0::kFrameHeaderSize; // bytes
@@ -58,7 +58,7 @@ constexpr inline bool operator!(FrameFlags_V0 a) {
 } // namespace
 
 static folly::IOBufQueue createBufferQueue(size_t bufferSize) {
-  auto buf = reactivesocket::FrameBufferAllocator::allocate(bufferSize);
+  auto buf = rsocket::FrameBufferAllocator::allocate(bufferSize);
   folly::IOBufQueue queue(folly::IOBufQueue::cacheChainLength());
   queue.append(std::move(buf));
   return queue;

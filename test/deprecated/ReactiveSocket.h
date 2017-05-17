@@ -3,10 +3,10 @@
 #pragma once
 
 #include <memory>
-#include "src/internal/Common.h"
-#include "src/temporary_home/ConnectionSetupPayload.h"
 #include "src/Payload.h"
-#include "Stats.h"
+#include "src/RSocketParameters.h"
+#include "src/RSocketStats.h"
+#include "src/internal/Common.h"
 #include "yarpl/flowable/Subscriber.h"
 #include "yarpl/flowable/Subscription.h"
 
@@ -14,7 +14,7 @@ namespace folly {
 class Executor;
 }
 
-namespace reactivesocket {
+namespace rsocket {
 
 class ClientResumeStatusCallback;
 class RSocketStateMachine;
@@ -24,15 +24,7 @@ class RequestHandler;
 
 folly::Executor& defaultExecutor();
 
-// TODO(stupaq): Here is some heavy problem with the recursion on shutdown.
-// Giving someone ownership over this object would probably lead to a deadlock
-// (or a crash) if one calls ::~ReactiveSocket from a terminal signal handler
-// of any of the connections. It seems natural to follow ReactiveStreams
-// specification and make this object "self owned", so that we don't need to
-// perform all of the cleanup from a d'tor. We could give out a "proxy" object
-// that (internally) holds a weak reference (conceptually, not std::weak_ptr)
-// and forbids any interactions with the socket after the shutdown procedure has
-// been initiated.
+// TODO eliminate this class and use RSocketStateMachine directly
 class ReactiveSocket {
  public:
   ReactiveSocket(ReactiveSocket&&) = delete;
@@ -46,15 +38,15 @@ class ReactiveSocket {
       folly::Executor& executor,
       std::unique_ptr<DuplexConnection> connection,
       std::unique_ptr<RequestHandler> handler,
-      ConnectionSetupPayload setupPayload = ConnectionSetupPayload(),
-      std::shared_ptr<Stats> stats = Stats::noop(),
+      SetupParameters setupPayload = SetupParameters(),
+      std::shared_ptr<RSocketStats> stats = RSocketStats::noop(),
       std::unique_ptr<KeepaliveTimer> keepaliveTimer =
           std::unique_ptr<KeepaliveTimer>(nullptr));
 
   static std::unique_ptr<ReactiveSocket> disconnectedClient(
       folly::Executor& executor,
       std::unique_ptr<RequestHandler> handler,
-      std::shared_ptr<Stats> stats = Stats::noop(),
+      std::shared_ptr<RSocketStats> stats = RSocketStats::noop(),
       std::unique_ptr<KeepaliveTimer> keepaliveTimer =
           std::unique_ptr<KeepaliveTimer>(nullptr),
       ProtocolVersion protocolVersion = ProtocolVersion::Unknown);
@@ -63,14 +55,14 @@ class ReactiveSocket {
       folly::Executor& executor,
       std::unique_ptr<DuplexConnection> connection,
       std::unique_ptr<RequestHandler> handler,
-      std::shared_ptr<Stats> stats = Stats::noop(),
-      const SocketParameters& socketParameters =
-          SocketParameters(/*resumable=*/false, ProtocolVersion::Unknown));
+      std::shared_ptr<RSocketStats> stats = RSocketStats::noop(),
+      const RSocketParameters& socketParameters =
+          RSocketParameters(/*resumable=*/false, ProtocolVersion::Unknown));
 
   static std::unique_ptr<ReactiveSocket> disconnectedServer(
       folly::Executor& executor,
       std::shared_ptr<RequestHandler> handler,
-      std::shared_ptr<Stats> stats = Stats::noop(),
+      std::shared_ptr<RSocketStats> stats = RSocketStats::noop(),
       ProtocolVersion protocolVersion = ProtocolVersion::Unknown);
 
   yarpl::Reference<yarpl::flowable::Subscriber<Payload>> requestChannel(
@@ -90,11 +82,11 @@ class ReactiveSocket {
 
   void clientConnect(
       std::shared_ptr<FrameTransport> frameTransport,
-      ConnectionSetupPayload setupPayload = ConnectionSetupPayload());
+      SetupParameters setupPayload = SetupParameters());
 
   void serverConnect(
       std::shared_ptr<FrameTransport> frameTransport,
-      const SocketParameters& socketParams);
+      const RSocketParameters& socketParams);
 
   void close();
   void disconnect();
@@ -127,7 +119,7 @@ class ReactiveSocket {
   ReactiveSocket(
       ReactiveSocketMode mode,
       std::shared_ptr<RequestHandler> handler,
-      std::shared_ptr<Stats> stats,
+      std::shared_ptr<RSocketStats> stats,
       std::unique_ptr<KeepaliveTimer> keepaliveTimer,
       folly::Executor& executor);
 

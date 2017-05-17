@@ -5,7 +5,7 @@
 #include <folly/String.h>
 #include <glog/logging.h>
 
-namespace reactivesocket {
+namespace rsocket {
 namespace tck {
 
 TestFileParser::TestFileParser(const std::string& fileName) : input_(fileName) {

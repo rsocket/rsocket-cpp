@@ -3,7 +3,7 @@
 #include "StatsPrinter.h"
 #include <glog/logging.h>
 
-namespace reactivesocket {
+namespace rsocket {
 void StatsPrinter::socketCreated() {
   LOG(INFO) << "socketCreated";
 }
@@ -18,13 +18,13 @@ void StatsPrinter::socketDisconnected() {
 
 void StatsPrinter::duplexConnectionCreated(
     const std::string& type,
-    reactivesocket::DuplexConnection* connection) {
+    rsocket::DuplexConnection* connection) {
   LOG(INFO) << "connectionCreated " << type;
 }
 
 void StatsPrinter::duplexConnectionClosed(
     const std::string& type,
-    reactivesocket::DuplexConnection* connection) {
+    rsocket::DuplexConnection* connection) {
   LOG(INFO) << "connectionClosed " << type;
 }
 

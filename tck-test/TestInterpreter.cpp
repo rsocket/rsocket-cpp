@@ -11,7 +11,7 @@
 using namespace folly;
 using namespace yarpl;
 
-namespace reactivesocket {
+namespace rsocket {
 namespace tck {
 
 TestInterpreter::TestInterpreter(

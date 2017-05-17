@@ -3,11 +3,11 @@
 #include "src/statemachine/RequestResponseRequester.h"
 #include <folly/ExceptionWrapper.h>
 #include <folly/MoveWrapper.h>
-#include "src/internal/Common.h"
 #include "RSocketStateMachine.h"
+#include "src/internal/Common.h"
 #include "src/temporary_home/RequestHandler.h"
 
-namespace reactivesocket {
+namespace rsocket {
 
 using namespace yarpl;
 using namespace yarpl::flowable;
@@ -69,10 +69,10 @@ void RequestResponseRequester::endStream(StreamCompletionSignal signal) {
         signal == StreamCompletionSignal::CANCEL) { // TODO: remove CANCEL
       subscriber->onComplete();
     } else {
-      subscriber->onError(std::make_exception_ptr(StreamInterruptedException(static_cast<int>(signal))));
+      subscriber->onError(std::make_exception_ptr(
+          StreamInterruptedException(static_cast<int>(signal))));
     }
   }
-  Subscription::release();
 }
 
 void RequestResponseRequester::handleError(
@@ -94,9 +94,10 @@ void RequestResponseRequester::handleError(
   }
 }
 
-void RequestResponseRequester:: handlePayload(Payload&& payload,
-                                              bool complete,
-                                              bool flagsNext) {
+void RequestResponseRequester::handlePayload(
+    Payload&& payload,
+    bool complete,
+    bool flagsNext) {
   switch (state_) {
     case State::NEW:
       // Cannot receive a frame before sending the initial request.

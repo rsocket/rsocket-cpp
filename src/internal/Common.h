@@ -23,7 +23,7 @@ class Range;
 typedef Range<const char*> StringPiece;
 }
 
-namespace reactivesocket {
+namespace rsocket {
 
 class ReactiveSocket;
 enum class FrameType : uint8_t;
@@ -41,7 +41,7 @@ constexpr const ResumePosition kUnspecifiedResumePosition = -1;
 
 std::string hexDump(folly::StringPiece s);
 
-/// Indicates the reason why the stream automaton received a terminal signal
+/// Indicates the reason why the stream stateMachine received a terminal signal
 /// from the connection.
 enum class StreamCompletionSignal {
   CANCEL,

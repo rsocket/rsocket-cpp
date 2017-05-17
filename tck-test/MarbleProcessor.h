@@ -6,7 +6,7 @@
 #include "src/Payload.h"
 #include "yarpl/flowable/Subscriber.h"
 
-namespace reactivesocket {
+namespace rsocket {
 namespace tck {
 
 class MarbleProcessor {

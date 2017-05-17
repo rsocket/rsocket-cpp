@@ -4,9 +4,8 @@
 
 #include <folly/io/async/EventBase.h>
 #include <src/statemachine/RSocketStateMachine.h>
-#include <src/temporary_home/ReactiveSocket.h>
 
-namespace reactivesocket {
+namespace rsocket {
 class FollyKeepaliveTimer : public KeepaliveTimer {
  public:
   FollyKeepaliveTimer(

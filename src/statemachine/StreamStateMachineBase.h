@@ -2,29 +2,29 @@
 
 #pragma once
 
+#include <folly/ExceptionWrapper.h>
+#include <yarpl/Refcounted.h>
 #include <functional>
 #include <iosfwd>
 #include <memory>
 #include "src/internal/Common.h"
-#include <folly/ExceptionWrapper.h>
-#include <yarpl/Refcounted.h>
 
 namespace folly {
 class IOBuf;
 }
 
-namespace reactivesocket {
+namespace rsocket {
 
 class StreamsWriter;
 class RequestHandler;
 struct Payload;
 
 ///
-/// A common base class of all automatons.
+/// A common base class of all state machines.
 ///
 /// The instances might be destroyed on a different thread than they were
 /// created.
-class StreamAutomatonBase : public virtual yarpl::Refcounted {
+class StreamStateMachineBase : public virtual yarpl::Refcounted {
  public:
   /// A dependent type which encapsulates all parameters needed to initialise
   /// any of the classes and the final automata. Must be the only argument to
@@ -38,9 +38,9 @@ class StreamAutomatonBase : public virtual yarpl::Refcounted {
     StreamId streamId{0};
   };
 
-  explicit StreamAutomatonBase(Parameters params)
+  explicit StreamStateMachineBase(Parameters params)
       : writer_(std::move(params.writer)), streamId_(params.streamId) {}
-  virtual ~StreamAutomatonBase() = default;
+  virtual ~StreamStateMachineBase() = default;
 
   virtual void handlePayload(Payload&& payload, bool complete, bool flagsNext);
   virtual void handleRequestN(uint32_t n);
@@ -54,8 +54,9 @@ class StreamAutomatonBase : public virtual yarpl::Refcounted {
   /// Per ReactiveStreams specification:
   /// 1. no other signal can be delivered during or after this one,
   /// 2. "unsubscribe handshake" guarantees that the signal will be delivered
-  ///   exactly once, even if the automaton initiated stream closure,
-  /// 3. per "unsubscribe handshake", the automaton must deliver corresponding
+  ///   exactly once, even if the state machine initiated stream closure,
+  /// 3. per "unsubscribe handshake", the state machine must deliver
+  /// corresponding
   ///   terminal signal to the connection.
   virtual void endStream(StreamCompletionSignal signal);
   /// @}

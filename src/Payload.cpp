@@ -5,7 +5,7 @@
 #include <folly/io/Cursor.h>
 #include "src/framing/Frame.h"
 
-namespace reactivesocket {
+namespace rsocket {
 
 Payload::Payload(
     std::unique_ptr<folly::IOBuf> _data,
@@ -44,10 +44,10 @@ std::string Payload::moveDataToString() {
 }
 
 std::string Payload::cloneDataToString() const {
-    if (!data) {
-        return "";
-    }
-    return data->cloneAsValue().moveToFbString().toStdString();
+  if (!data) {
+    return "";
+  }
+  return data->cloneAsValue().moveToFbString().toStdString();
 }
 
 void Payload::clear() {

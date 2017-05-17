@@ -7,15 +7,15 @@
 #include <folly/io/Cursor.h>
 #include <gmock/gmock.h>
 #include "src/framing/FrameSerializer.h"
-#include "src/temporary_home/ReactiveSocket.h"
 #include "src/framing/FramedDuplexConnection.h"
 #include "src/framing/FramedReader.h"
+#include "test/deprecated/ReactiveSocket.h"
+#include "test/streams/Mocks.h"
 #include "test/test_utils/InlineConnection.h"
 #include "test/test_utils/MockRequestHandler.h"
-#include "test/streams/Mocks.h"
 
 using namespace ::testing;
-using namespace ::reactivesocket;
+using namespace ::rsocket;
 
 TEST(FramedReaderTest, Read1Frame) {
   auto frameSubscriber =
@@ -194,17 +194,17 @@ TEST(FramedReaderTest, InvalidDataStream) {
   // Dump 1 invalid frame and expect an error
   auto inputSubscription = std::make_shared<MockSubscription>();
   auto sub = testConnection->getOutput();
-  EXPECT_CALL(*inputSubscription, request_(_)).WillOnce(Invoke([&](auto) {
-    auto invalidFrameSizePayload =
-        folly::IOBuf::createCombined(sizeof(int32_t));
-    folly::io::Appender appender(
-        invalidFrameSizePayload.get(), /* do not grow */ 0);
-    appender.writeBE<int32_t>(1);
-    sub->onNext(std::move(invalidFrameSizePayload));
-  }));
-  EXPECT_CALL(*inputSubscription, cancel_()).WillOnce(Invoke([&sub]() {
-    sub->onComplete();
-  }));
+  EXPECT_CALL(*inputSubscription, request_(_))
+      .WillOnce(Invoke([&](auto) {
+        auto invalidFrameSizePayload =
+            folly::IOBuf::createCombined(sizeof(int32_t));
+        folly::io::Appender appender(
+            invalidFrameSizePayload.get(), /* do not grow */ 0);
+        appender.writeBE<int32_t>(1);
+        sub->onNext(std::move(invalidFrameSizePayload));
+      }));
+  EXPECT_CALL(*inputSubscription, cancel_())
+      .WillOnce(Invoke([&sub]() { sub->onComplete(); }));
 
   auto testOutputSubscriber =
       std::make_shared<MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
@@ -234,7 +234,7 @@ TEST(FramedReaderTest, InvalidDataStream) {
       // No interactions on this mock, the client will not accept any
       // requests.
       std::move(requestHandler),
-      ConnectionSetupPayload("", "", Payload("test client payload")));
+      SetupParameters("", "", Payload("test client payload")));
 }
 
 // TODO(lehecka): verify FramedReader protocol autodetection mechanism

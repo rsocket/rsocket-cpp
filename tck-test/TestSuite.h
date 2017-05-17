@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-namespace reactivesocket {
+namespace rsocket {
 namespace tck {
 
 class TestCommand {

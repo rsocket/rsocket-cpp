@@ -3,7 +3,7 @@
 #include "FrameSerializer_v0_1.h"
 #include <folly/io/Cursor.h>
 
-namespace reactivesocket {
+namespace rsocket {
 
 constexpr const ProtocolVersion FrameSerializerV0_1::Version;
 constexpr const size_t FrameSerializerV0_1::kMinBytesNeededForAutodetection;

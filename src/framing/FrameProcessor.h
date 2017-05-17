@@ -9,7 +9,7 @@ class IOBuf;
 class exception_wrapper;
 }
 
-namespace reactivesocket {
+namespace rsocket {
 
 class FrameProcessor {
  public:

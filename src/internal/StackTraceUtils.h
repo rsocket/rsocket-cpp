@@ -4,7 +4,7 @@
 
 #include <string>
 
-namespace reactivesocket {
+namespace rsocket {
 
 std::string getStackTrace();
 

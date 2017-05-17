@@ -10,7 +10,6 @@
 #include "src/ConnectionAcceptor.h"
 #include "src/ConnectionSetupRequest.h"
 #include "src/RSocketResponder.h"
-#include "src/temporary_home/ReactiveSocket.h"
 #include "src/temporary_home/ServerConnectionAcceptor.h"
 
 namespace rsocket {
@@ -41,14 +40,20 @@ class RSocketServer {
   /**
    * Start the ConnectionAcceptor and begin handling connections.
    *
-   * This method is asynchronous.
+   * This method blocks until the server has started. It returns if successful
+   * or throws an exception if failure occurs.
+   *
+   * This method assumes it will be called only once.
    */
   void start(OnAccept);
 
   /**
    * Start the ConnectionAcceptor and begin handling connections.
    *
-   * This method will block the calling thread.
+   * This method will block the calling thread as long as the server is running.
+   * It will throw an exception if a failure occurs on startup.
+   *
+   * This method assumes it will be called only once.
    */
   void startAndPark(OnAccept);
 
@@ -66,24 +71,28 @@ class RSocketServer {
   //      std::function<std::shared_ptr<RequestHandler>(
   //          std::unique_ptr<ConnectionResumeRequest>)>);
 
-  // TODO version supporting Stats and other params
+  // TODO version supporting RSocketStats and other params
   // RSocketServer::start(OnAccept onAccept, ServerSetup setupParams)
 
   friend class RSocketServerConnectionHandler;
 
  private:
-  void addSocket(std::unique_ptr<reactivesocket::ReactiveSocket>);
-  void removeSocket(reactivesocket::ReactiveSocket*);
+  void addConnection(
+      std::shared_ptr<rsocket::RSocketStateMachine>,
+      folly::Executor&);
+  void removeConnection(std::shared_ptr<rsocket::RSocketStateMachine>);
 
   //////////////////////////////////////////////////////////////////////////////
 
   std::unique_ptr<ConnectionAcceptor> lazyAcceptor_;
-  reactivesocket::ServerConnectionAcceptor acceptor_;
-  std::shared_ptr<reactivesocket::ConnectionHandler> connectionHandler_;
+  rsocket::ServerConnectionAcceptor acceptor_;
+  bool started{false};
 
   /// Set of currently open ReactiveSockets.
   folly::Synchronized<
-      std::unordered_set<std::unique_ptr<reactivesocket::ReactiveSocket>>,
+      std::unordered_map<
+          std::shared_ptr<rsocket::RSocketStateMachine>,
+          folly::Executor&>,
       std::mutex>
       sockets_;
 

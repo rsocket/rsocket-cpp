@@ -3,10 +3,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/temporary_home/StreamState.h"
+#include "src/statemachine/StreamState.h"
 #include "test/test_utils/MockStats.h"
 
-using namespace reactivesocket;
+using namespace rsocket;
 using namespace testing;
 
 class StreamStateTest : public Test {

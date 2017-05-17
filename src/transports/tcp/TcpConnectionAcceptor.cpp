@@ -8,7 +8,7 @@
 #include "src/framing/FramedDuplexConnection.h"
 #include "src/transports/tcp/TcpDuplexConnection.h"
 
-using namespace reactivesocket;
+using namespace rsocket;
 
 namespace rsocket {
 
@@ -16,7 +16,7 @@ class TcpConnectionAcceptor::SocketCallback
     : public folly::AsyncServerSocket::AcceptCallback {
  public:
   explicit SocketCallback(std::function<void(
-                              std::unique_ptr<reactivesocket::DuplexConnection>,
+                              std::unique_ptr<rsocket::DuplexConnection>,
                               folly::EventBase&)>& onAccept)
       : onAccept_{onAccept} {}
 
@@ -50,7 +50,7 @@ class TcpConnectionAcceptor::SocketCallback
 
   /// Reference to the ConnectionAcceptor's callback.
   std::function<void(
-      std::unique_ptr<reactivesocket::DuplexConnection>,
+      std::unique_ptr<rsocket::DuplexConnection>,
       folly::EventBase&)>& onAccept_;
 };
 

@@ -5,7 +5,7 @@
 #include <folly/Executor.h>
 #include <memory>
 
-namespace reactivesocket {
+namespace rsocket {
 
 folly::Executor& defaultExecutor();
 folly::Executor& inlineExecutor();

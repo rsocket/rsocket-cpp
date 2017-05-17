@@ -6,16 +6,18 @@
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/EventBaseManager.h>
 
-#include "src/temporary_home/OldNewBridge.h"
 #include "RSocketErrors.h"
+#include "RSocketStats.h"
+#include "src/statemachine/RSocketStateMachine.h"
 #include "src/temporary_home/NullRequestHandler.h"
+#include "src/temporary_home/OldNewBridge.h"
 
 namespace rsocket {
 
-using namespace reactivesocket;
+using namespace rsocket;
 using namespace yarpl;
 
-class RSocketHandlerBridge : public reactivesocket::DefaultRequestHandler {
+class RSocketHandlerBridge : public rsocket::DefaultRequestHandler {
  public:
   RSocketHandlerBridge(std::shared_ptr<RSocketResponder> handler)
       : handler_(std::move(handler)){};
@@ -23,7 +25,8 @@ class RSocketHandlerBridge : public reactivesocket::DefaultRequestHandler {
   void handleRequestStream(
       Payload request,
       StreamId streamId,
-      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+          response) noexcept override {
     auto flowable =
         handler_->handleRequestStream(std::move(request), std::move(streamId));
     // bridge from the existing eager RequestHandler and old Subscriber type
@@ -34,7 +37,8 @@ class RSocketHandlerBridge : public reactivesocket::DefaultRequestHandler {
   yarpl::Reference<yarpl::flowable::Subscriber<Payload>> handleRequestChannel(
       Payload request,
       StreamId streamId,
-      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& response) noexcept override {
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+          response) noexcept override {
     auto eagerSubscriber = make_ref<EagerSubscriberBridge>();
     auto flowable = handler_->handleRequestChannel(
         std::move(request),
@@ -63,7 +67,8 @@ class RSocketHandlerBridge : public reactivesocket::DefaultRequestHandler {
      public:
       BridgeSubscriptionToSingle(
           yarpl::Reference<yarpl::single::Single<Payload>> single,
-          yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSubscriber)
+          yarpl::Reference<yarpl::flowable::Subscriber<Payload>>
+              responseSubscriber)
           : single_{std::move(single)},
             responseSubscriber_{std::move(responseSubscriber)} {}
 
@@ -89,13 +94,13 @@ class RSocketHandlerBridge : public reactivesocket::DefaultRequestHandler {
 
      private:
       yarpl::Reference<yarpl::single::Single<Payload>> single_;
-      yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSubscriber_;
+      yarpl::Reference<yarpl::flowable::Subscriber<Payload>>
+          responseSubscriber_;
       std::atomic_bool subscribed_{false};
     };
 
-    responseSubscriber->onSubscribe(
-        make_ref<BridgeSubscriptionToSingle>(
-            std::move(single), responseSubscriber));
+    responseSubscriber->onSubscribe(make_ref<BridgeSubscriptionToSingle>(
+        std::move(single), responseSubscriber));
   }
 
   void handleFireAndForgetRequest(
@@ -110,14 +115,14 @@ class RSocketHandlerBridge : public reactivesocket::DefaultRequestHandler {
 
 void RSocketConnectionHandler::setupNewSocket(
     std::shared_ptr<FrameTransport> frameTransport,
-    ConnectionSetupPayload setupPayload) {
+    SetupParameters setupPayload) {
   LOG(INFO) << "RSocketServer => received new setup payload";
 
   // FIXME(alexanderm): Handler should be tied to specific executor
   auto executor = folly::EventBaseManager::get()->getExistingEventBase();
 
   auto socketParams =
-      SocketParameters(setupPayload.resumable, setupPayload.protocolVersion);
+      RSocketParameters(setupPayload.resumable, setupPayload.protocolVersion);
   std::shared_ptr<ConnectionSetupRequest> setupRequest =
       std::make_shared<ConnectionSetupRequest>(std::move(setupPayload));
   std::shared_ptr<RSocketResponder> requestHandler;
@@ -133,18 +138,31 @@ void RSocketConnectionHandler::setupNewSocket(
 
   auto handlerBridge =
       std::make_shared<RSocketHandlerBridge>(std::move(requestHandler));
-  auto rs = ReactiveSocket::disconnectedServer(
-      // we know this callback is on a specific EventBase
+
+  auto rs = std::make_shared<RSocketStateMachine>(
       *executor,
       std::move(handlerBridge),
-      Stats::noop());
+      RSocketStats::noop(),
+      nullptr,
+      ReactiveSocketMode::SERVER);
 
-  auto rawRs = rs.get();
+  manageSocket(setupRequest, rs);
 
-  manageSocket(setupRequest, std::move(rs));
+  // TODO ---> this code needs to be moved inside RSocketStateMachine
 
   // Connect last, after all state has been set up.
-  rawRs->serverConnect(std::move(frameTransport), socketParams);
+  rs->setResumable(socketParams.resumable);
+
+  if (socketParams.protocolVersion != ProtocolVersion::Unknown) {
+    rs->setFrameSerializer(
+        FrameSerializer::createFrameSerializer(socketParams.protocolVersion));
+  }
+
+  rs->connect(std::move(frameTransport), true, socketParams.protocolVersion);
+
+  // TODO <---- up to here
+  // TODO and then a simple API such as:
+  // TODO rs->connectServer(frameTransport, params)
 }
 
 bool RSocketConnectionHandler::resumeSocket(

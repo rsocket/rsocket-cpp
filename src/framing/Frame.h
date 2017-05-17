@@ -21,7 +21,7 @@ class QueueAppender;
 }
 }
 
-namespace reactivesocket {
+namespace rsocket {
 
 /// A unique identifier of a stream.
 // TODO(stupaq): strong typedef and forward declarations all around
@@ -414,7 +414,7 @@ class Frame_KEEPALIVE {
 };
 std::ostream& operator<<(std::ostream&, const Frame_KEEPALIVE&);
 
-class ConnectionSetupPayload;
+class SetupParameters;
 
 class Frame_SETUP {
  public:
@@ -457,7 +457,7 @@ class Frame_SETUP {
     DCHECK(maxLifetime_ <= kMaxLifetime);
   }
 
-  void moveToSetupPayload(ConnectionSetupPayload& setupPayload);
+  void moveToSetupPayload(SetupParameters& setupPayload);
 
   FrameHeader header_;
   uint16_t versionMajor_{};

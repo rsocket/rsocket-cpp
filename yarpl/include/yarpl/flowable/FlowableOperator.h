@@ -34,32 +34,33 @@ class FlowableOperator : public Flowable<D> {
   /// against Operators.  Each operator subscription has two functions: as a
   /// subscriber for the previous stage; as a subscription for the next one,
   /// the user-supplied subscriber being the last of the pipeline stages.
-  class Subscription : public ::yarpl::flowable::Subscription, public Subscriber<U> {
+  class Subscription : public ::yarpl::flowable::Subscription,
+                       public Subscriber<U> {
    public:
     Subscription(
         Reference<Flowable<D>> flowable,
         Reference<Subscriber<D>> subscriber)
-        : flowable_(std::move(flowable)), subscriber_(std::move(subscriber)) {}
-
-    ~Subscription() {
-      subscriber_.reset();
+        : flowable_(std::move(flowable)), subscriber_(std::move(subscriber)) {
+      // We expect to be heap-allocated; until this subscription finishes
+      // (is canceled; completes; error's out), hold a reference so we are
+      // not deallocated (by the subscriber).
+      Refcounted::incRef(*this);
     }
 
     void onSubscribe(
         Reference<::yarpl::flowable::Subscription> subscription) override {
       upstream_ = std::move(subscription);
-      subscriber_->onSubscribe(Reference<::yarpl::flowable::Subscription>(this));
+      subscriber_->onSubscribe(
+          Reference<::yarpl::flowable::Subscription>(this));
     }
 
     void onComplete() override {
       subscriber_->onComplete();
-      upstream_.reset();
       release();
     }
 
     void onError(const std::exception_ptr error) override {
       subscriber_->onError(error);
-      upstream_.reset();
       release();
     }
 
@@ -69,8 +70,15 @@ class FlowableOperator : public Flowable<D> {
 
     void cancel() override {
       upstream_->cancel();
-      upstream_.reset();
       release();
+    }
+
+   private:
+    void release() {
+      flowable_.reset();
+      subscriber_.reset();
+      upstream_.reset();
+      Refcounted::decRef(*this);
     }
 
    protected:
@@ -122,8 +130,7 @@ class MapOperator : public FlowableOperator<U, D> {
               std::move(subscriber)) {}
 
     void onNext(U value) override {
-      auto subscriber =
-          FlowableOperator<U, D>::Subscription::subscriber_.get();
+      auto subscriber = FlowableOperator<U, D>::Subscription::subscriber_.get();
       auto* flowable = FlowableOperator<U, D>::Subscription::flowable_.get();
       auto* map = static_cast<MapOperator*>(flowable);
       subscriber->onNext(map->function_(std::move(value)));
@@ -136,9 +143,10 @@ class MapOperator : public FlowableOperator<U, D> {
 template <
     typename U,
     typename F,
-    typename = typename std::enable_if<std::is_callable<F(U), bool>::value>::type>
+    typename =
+        typename std::enable_if<std::is_callable<F(U), bool>::value>::type>
 class FilterOperator : public FlowableOperator<U, U> {
-public:
+ public:
   FilterOperator(Reference<Flowable<U>> upstream, F&& function)
       : FlowableOperator<U, U>(std::move(upstream)),
         function_(std::forward<F>(function)) {}
@@ -150,19 +158,18 @@ public:
             Reference<Flowable<U>>(this), std::move(subscriber))));
   }
 
-private:
+ private:
   class Subscription : public FlowableOperator<U, U>::Subscription {
-  public:
+   public:
     Subscription(
         Reference<Flowable<U>> flowable,
         Reference<Subscriber<U>> subscriber)
         : FlowableOperator<U, U>::Subscription(
-        std::move(flowable),
-        std::move(subscriber)) {}
+              std::move(flowable),
+              std::move(subscriber)) {}
 
     void onNext(U value) override {
-      auto subscriber =
-          FlowableOperator<U, U>::Subscription::subscriber_.get();
+      auto subscriber = FlowableOperator<U, U>::Subscription::subscriber_.get();
       auto* flowable = FlowableOperator<U, U>::Subscription::flowable_.get();
       auto* filter = static_cast<FilterOperator*>(flowable);
       if (filter->function_(value)) {
@@ -172,7 +179,7 @@ private:
       }
     }
 
-  private:
+   private:
     void callSuperRequest(int64_t delta) {
       FlowableOperator<U, U>::Subscription::request(delta);
     }

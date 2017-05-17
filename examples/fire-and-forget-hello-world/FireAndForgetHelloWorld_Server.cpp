@@ -10,7 +10,6 @@
 #include "src/transports/tcp/TcpConnectionAcceptor.h"
 #include "yarpl/Single.h"
 
-using namespace reactivesocket;
 using namespace rsocket;
 using namespace yarpl;
 using namespace yarpl::single;

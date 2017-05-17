@@ -8,7 +8,7 @@
 
 using namespace folly;
 
-namespace reactivesocket {
+namespace rsocket {
 namespace tck {
 
 TestSubscriber::TestSubscriber(int initialRequestN)

@@ -46,7 +46,7 @@ std::map<std::string, std::pair<std::string, std::string>> getArgMap(
 }
 }
 
-namespace reactivesocket {
+namespace rsocket {
 namespace tck {
 
 MarbleProcessor::MarbleProcessor(
@@ -79,7 +79,8 @@ void MarbleProcessor::run() {
         while (!canTerminate_)
           ;
         LOG(INFO) << "Sending onError";
-        subscriber_->onError(std::make_exception_ptr(std::runtime_error("Marble Triggered Error")));
+        subscriber_->onError(std::make_exception_ptr(
+            std::runtime_error("Marble Triggered Error")));
         return;
       case '|':
         while (!canTerminate_)

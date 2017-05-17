@@ -5,18 +5,18 @@
 #include <iosfwd>
 
 #include "src/Payload.h"
-#include "src/temporary_home/SubscriberBase.h"
 #include "src/statemachine/ConsumerBase.h"
 #include "src/statemachine/PublisherBase.h"
+#include "src/temporary_home/SubscriberBase.h"
 #include "yarpl/flowable/Subscriber.h"
 
 namespace folly {
 class exception_wrapper;
 }
 
-namespace reactivesocket {
+namespace rsocket {
 
-/// Implementation of stream automaton that represents a Channel requester.
+/// Implementation of stream stateMachine that represents a Channel requester.
 class ChannelRequester : public ConsumerBase,
                          public PublisherBase,
                          public yarpl::flowable::Subscriber<Payload> {
@@ -25,7 +25,8 @@ class ChannelRequester : public ConsumerBase,
       : ConsumerBase(params), PublisherBase(0) {}
 
  private:
-  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept override;
+  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
+                       subscription) noexcept override;
   void onNext(Payload) noexcept override;
   void onComplete() noexcept override;
   void onError(const std::exception_ptr) noexcept override;

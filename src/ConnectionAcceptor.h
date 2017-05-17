@@ -10,7 +10,7 @@
 namespace rsocket {
 
 using OnDuplexConnectionAccept = std::function<
-    void(std::unique_ptr<reactivesocket::DuplexConnection>, folly::EventBase&)>;
+    void(std::unique_ptr<rsocket::DuplexConnection>, folly::EventBase&)>;
 
 /**
  * Common interface for a server that accepts connections and turns them into

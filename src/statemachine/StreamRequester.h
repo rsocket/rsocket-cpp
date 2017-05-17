@@ -10,11 +10,11 @@ namespace folly {
 class exception_wrapper;
 }
 
-namespace reactivesocket {
+namespace rsocket {
 
 enum class StreamCompletionSignal;
 
-/// Implementation of stream automaton that represents a Stream requester
+/// Implementation of stream stateMachine that represents a Stream requester
 class StreamRequester : public ConsumerBase {
   using Base = ConsumerBase;
 
@@ -22,17 +22,14 @@ class StreamRequester : public ConsumerBase {
   // initialization of the ExecutorBase will be ignored for any of the
   // derived classes
   explicit StreamRequester(const Base::Parameters& params, Payload payload)
-      : Base(params),
-        initialPayload_(std::move(payload)) {}
+      : Base(params), initialPayload_(std::move(payload)) {}
 
  private:
   // implementation from ConsumerBase::SubscriptionBase
   void request(int64_t) noexcept override;
   void cancel() noexcept override;
 
-  void handlePayload(Payload&& payload,
-                     bool complete,
-                     bool flagsNext) override;
+  void handlePayload(Payload&& payload, bool complete, bool flagsNext) override;
   void handleError(folly::exception_wrapper errorPayload) override;
 
   void endStream(StreamCompletionSignal) override;

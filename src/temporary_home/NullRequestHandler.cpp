@@ -2,7 +2,7 @@
 
 #include "NullRequestHandler.h"
 
-namespace reactivesocket {
+namespace rsocket {
 
 using namespace yarpl;
 using namespace yarpl::flowable;
@@ -19,7 +19,8 @@ Reference<Subscriber<Payload>> NullRequestHandler::handleRequestChannel(
     const Reference<Subscriber<Payload>>& response) noexcept {
   // TODO(lehecka): get rid of onSubscribe call
   response->onSubscribe(make_ref<NullSubscription>());
-  response->onError(std::make_exception_ptr(std::runtime_error("NullRequestHandler")));
+  response->onError(
+      std::make_exception_ptr(std::runtime_error("NullRequestHandler")));
   return make_ref<NullSubscriber>();
 }
 
@@ -29,7 +30,8 @@ void NullRequestHandler::handleRequestStream(
     const Reference<Subscriber<Payload>>& response) noexcept {
   // TODO(lehecka): get rid of onSubscribe call
   response->onSubscribe(make_ref<NullSubscription>());
-  response->onError(std::make_exception_ptr(std::runtime_error("NullRequestHandler")));
+  response->onError(
+      std::make_exception_ptr(std::runtime_error("NullRequestHandler")));
 }
 
 void NullRequestHandler::handleRequestResponse(
@@ -37,7 +39,8 @@ void NullRequestHandler::handleRequestResponse(
     StreamId /*streamId*/,
     const Reference<Subscriber<Payload>>& response) noexcept {
   response->onSubscribe(make_ref<NullSubscription>());
-  response->onError(std::make_exception_ptr(std::runtime_error("NullRequestHandler")));
+  response->onError(
+      std::make_exception_ptr(std::runtime_error("NullRequestHandler")));
 }
 
 void NullRequestHandler::handleFireAndForgetRequest(
@@ -48,14 +51,11 @@ void NullRequestHandler::handleMetadataPush(
     std::unique_ptr<folly::IOBuf> /*request*/) noexcept {}
 
 std::shared_ptr<StreamState> NullRequestHandler::handleSetupPayload(
-    ReactiveSocket& socket,
-    ConnectionSetupPayload /*request*/) noexcept {
+    SetupParameters /*request*/) noexcept {
   return nullptr;
 }
 
-bool NullRequestHandler::handleResume(
-    ReactiveSocket& socket,
-    ResumeParameters) noexcept {
+bool NullRequestHandler::handleResume(ResumeParameters) noexcept {
   return false;
 }
 

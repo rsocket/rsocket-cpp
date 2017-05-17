@@ -13,9 +13,9 @@ if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
   "and run CMake from there. You may need to remove CMakeCache.txt.")
 endif()
 
-# default built type is Release
+# default built type is Debug
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build" FORCE)
+  set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build" FORCE)
 endif(NOT CMAKE_BUILD_TYPE)
 
 # default is to use ReactiveStreams location from github directly
@@ -55,13 +55,18 @@ ExternalProject_Add(
   ReactiveStreams
   GIT_REPOSITORY ${REACTIVE_STREAMS_GIT_URL}
   GIT_TAG d2fd61252b51a57a2916ee52fcd54b7f5d563591
-  CMAKE_ARGS "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/reactivestreams"
+  CMAKE_ARGS "-DCMAKE_BUILD_TYPE=Debug" "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/reactivestreams"
 )
 
 find_package(Threads)
 
+string(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_LOWER)
+
 if(APPLE)
   set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl")
+  if("${BUILD_TYPE_LOWER}" MATCHES "debug")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,integer -fno-sanitize=unsigned-integer-overflow")
+  endif()
 endif()
 
 if(NOT META_CXX_STD)
@@ -76,7 +81,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter -Woverloaded-virtu
 
 set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Werror)
 
-string(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_LOWER)
 if("${BUILD_TYPE_LOWER}" MATCHES "debug")
   message("debug mode was set")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unreachable-code")
@@ -130,6 +134,8 @@ add_library(
   src/RSocketRequester.h
   src/RSocketRequester.cpp
   src/RSocketErrors.h
+  src/RSocketParameters.cpp
+  src/RSocketParameters.h
   src/ConnectionAcceptor.h
   src/ConnectionFactory.h
   src/ConnectionSetupRequest.h
@@ -154,19 +160,22 @@ add_library(
   src/statemachine/RequestResponseRequester.h
   src/statemachine/RequestResponseResponder.cpp
   src/statemachine/RequestResponseResponder.h
-  src/statemachine/StreamAutomatonBase.cpp
-  src/statemachine/StreamAutomatonBase.h
+  src/statemachine/StreamStateMachineBase.cpp
+  src/statemachine/StreamStateMachineBase.h
   src/statemachine/StreamRequester.cpp
   src/statemachine/StreamRequester.h
   src/statemachine/StreamResponder.cpp
   src/statemachine/StreamResponder.h
+  src/statemachine/StreamsFactory.cpp
+  src/statemachine/StreamsFactory.h
+  src/statemachine/StreamsHandler.h
+  src/statemachine/StreamState.cpp
+  src/statemachine/StreamState.h
   src/internal/ClientResumeStatusCallback.h
   src/internal/Common.cpp
   src/internal/Common.h
   src/statemachine/RSocketStateMachine.cpp
   src/statemachine/RSocketStateMachine.h
-  src/temporary_home/ConnectionSetupPayload.cpp
-  src/temporary_home/ConnectionSetupPayload.h
   src/DuplexConnection.h
   src/internal/EnableSharedFromThis.h
   src/temporary_home/Executor.cpp
@@ -192,19 +201,12 @@ add_library(
   src/Payload.h
   src/internal/ReactiveStreamsCompat.h
   src/temporary_home/RequestHandler.h
-  src/temporary_home/ResumeCache.cpp
-  src/temporary_home/ResumeCache.h
+  src/internal/ResumeCache.cpp
+  src/internal/ResumeCache.h
   src/temporary_home/ServerConnectionAcceptor.cpp
   src/temporary_home/ServerConnectionAcceptor.h
-  src/temporary_home/ReactiveSocket.cpp
-  src/temporary_home/ReactiveSocket.h
-  src/temporary_home/Stats.cpp
-  src/temporary_home/Stats.h
-  src/temporary_home/StreamsFactory.cpp
-  src/temporary_home/StreamsFactory.h
-  src/temporary_home/StreamsHandler.h
-  src/temporary_home/StreamState.cpp
-  src/temporary_home/StreamState.h
+  src/RSocketStats.cpp
+  src/RSocketStats.h
   src/temporary_home/SubscriberBase.h
   src/temporary_home/SubscriptionBase.h
   src/transports/tcp/TcpDuplexConnection.cpp
@@ -269,7 +271,10 @@ add_executable(
   test/integration/ServerFixture.cpp
   test/integration/WarmResumptionTest.cpp
   test/streams/Mocks.h
-  test/framing/FrameTransportTest.cpp)
+  test/framing/FrameTransportTest.cpp
+  test/deprecated/ReactiveSocket.cpp
+  test/deprecated/ReactiveSocket.h
+)
 
 target_link_libraries(
   tests
@@ -300,7 +305,10 @@ add_executable(
   tck-test/TestSuite.h
   tck-test/TestInterpreter.cpp
   tck-test/TestInterpreter.h
-  tck-test/TypedCommands.h)
+  tck-test/TypedCommands.h
+  test/deprecated/ReactiveSocket.cpp
+  test/deprecated/ReactiveSocket.h
+)
 
 target_link_libraries(
   tckclient
@@ -317,7 +325,10 @@ add_executable(
   tck-test/MarbleProcessor.cpp
   tck-test/MarbleProcessor.h
   test/test_utils/StatsPrinter.cpp
-  test/test_utils/StatsPrinter.h)
+  test/test_utils/StatsPrinter.h
+  test/deprecated/ReactiveSocket.cpp
+  test/deprecated/ReactiveSocket.h
+)
 
 target_link_libraries(
   tckserver
@@ -335,10 +346,11 @@ add_executable(
   test/resumption/TcpResumeClient.cpp
   test/test_utils/PrintSubscriber.cpp
   test/test_utils/PrintSubscriber.h
-  src/temporary_home/ReactiveSocket.cpp
-  src/temporary_home/ReactiveSocket.h
   test/test_utils/StatsPrinter.cpp
-  test/test_utils/StatsPrinter.h)
+  test/test_utils/StatsPrinter.h
+  test/deprecated/ReactiveSocket.cpp
+  test/deprecated/ReactiveSocket.h
+)
 
 target_link_libraries(
   tcpresumeclient
@@ -358,7 +370,10 @@ add_executable(
   test/test_utils/PrintSubscriber.cpp
   test/test_utils/PrintSubscriber.h
   test/test_utils/StatsPrinter.cpp
-  test/test_utils/StatsPrinter.h)
+  test/test_utils/StatsPrinter.h
+  test/deprecated/ReactiveSocket.cpp
+  test/deprecated/ReactiveSocket.h
+)
 
 target_link_libraries(
   tcpresumeserver

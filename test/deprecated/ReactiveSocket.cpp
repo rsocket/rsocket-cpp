@@ -8,12 +8,12 @@
 #include <folly/MoveWrapper.h>
 #include <folly/io/async/EventBase.h>
 
+#include "src/framing/FrameTransport.h"
 #include "src/internal/ClientResumeStatusCallback.h"
 #include "src/statemachine/RSocketStateMachine.h"
-#include "src/framing/FrameTransport.h"
-#include "RequestHandler.h"
+#include "src/temporary_home/RequestHandler.h"
 
-namespace reactivesocket {
+namespace rsocket {
 
 ReactiveSocket::~ReactiveSocket() {
   debugCheckCorrectExecutor();
@@ -26,12 +26,11 @@ ReactiveSocket::~ReactiveSocket() {
 ReactiveSocket::ReactiveSocket(
     ReactiveSocketMode mode,
     std::shared_ptr<RequestHandler> handler,
-    std::shared_ptr<Stats> stats,
+    std::shared_ptr<RSocketStats> stats,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer,
     folly::Executor& executor)
     : connection_(std::make_shared<RSocketStateMachine>(
           executor,
-          this,
           std::move(handler),
           std::move(stats),
           std::move(keepaliveTimer),
@@ -41,13 +40,12 @@ ReactiveSocket::ReactiveSocket(
   connection_->stats().socketCreated();
 }
 
-std::unique_ptr<ReactiveSocket>
-ReactiveSocket::fromClientConnection(
+std::unique_ptr<ReactiveSocket> ReactiveSocket::fromClientConnection(
     folly::Executor& executor,
     std::unique_ptr<DuplexConnection> connection,
     std::unique_ptr<RequestHandler> handler,
-    ConnectionSetupPayload setupPayload,
-    std::shared_ptr<Stats> stats,
+    SetupParameters setupPayload,
+    std::shared_ptr<RSocketStats> stats,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer) {
   auto socket = disconnectedClient(
       executor,
@@ -61,11 +59,10 @@ ReactiveSocket::fromClientConnection(
   return socket;
 }
 
-std::unique_ptr<ReactiveSocket>
-ReactiveSocket::disconnectedClient(
+std::unique_ptr<ReactiveSocket> ReactiveSocket::disconnectedClient(
     folly::Executor& executor,
     std::unique_ptr<RequestHandler> handler,
-    std::shared_ptr<Stats> stats,
+    std::shared_ptr<RSocketStats> stats,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer,
     ProtocolVersion protocolVersion) {
   std::unique_ptr<ReactiveSocket> socket(new ReactiveSocket(
@@ -81,32 +78,30 @@ ReactiveSocket::disconnectedClient(
   return socket;
 }
 
-std::unique_ptr<ReactiveSocket>
-ReactiveSocket::fromServerConnection(
+std::unique_ptr<ReactiveSocket> ReactiveSocket::fromServerConnection(
     folly::Executor& executor,
     std::unique_ptr<DuplexConnection> connection,
     std::unique_ptr<RequestHandler> handler,
-    std::shared_ptr<Stats> stats,
-    const SocketParameters& socketParameters) {
+    std::shared_ptr<RSocketStats> stats,
+    const RSocketParameters& RSocketParameters) {
   // TODO: isResumable should come as a flag on Setup frame and it should be
   // exposed to the application code. We should then remove this parameter
   auto socket = disconnectedServer(
       executor,
       std::move(handler),
       std::move(stats),
-      socketParameters.protocolVersion);
+      RSocketParameters.protocolVersion);
 
   socket->serverConnect(
       std::make_shared<FrameTransport>(std::move(connection)),
-      socketParameters);
+      RSocketParameters);
   return socket;
 }
 
-std::unique_ptr<ReactiveSocket>
-ReactiveSocket::disconnectedServer(
+std::unique_ptr<ReactiveSocket> ReactiveSocket::disconnectedServer(
     folly::Executor& executor,
     std::shared_ptr<RequestHandler> handler,
-    std::shared_ptr<Stats> stats,
+    std::shared_ptr<RSocketStats> stats,
     ProtocolVersion protocolVersion) {
   std::unique_ptr<ReactiveSocket> socket(new ReactiveSocket(
       ReactiveSocketMode::SERVER,
@@ -121,7 +116,8 @@ ReactiveSocket::disconnectedServer(
   return socket;
 }
 
-yarpl::Reference<yarpl::flowable::Subscriber<Payload>> ReactiveSocket::requestChannel(
+yarpl::Reference<yarpl::flowable::Subscriber<Payload>>
+ReactiveSocket::requestChannel(
     yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
   debugCheckCorrectExecutor();
   checkNotClosed();
@@ -153,8 +149,7 @@ void ReactiveSocket::requestFireAndForget(Payload request) {
   connection_->requestFireAndForget(std::move(request));
 }
 
-void ReactiveSocket::metadataPush(
-    std::unique_ptr<folly::IOBuf> metadata) {
+void ReactiveSocket::metadataPush(std::unique_ptr<folly::IOBuf> metadata) {
   debugCheckCorrectExecutor();
   checkNotClosed();
   connection_->metadataPush(std::move(metadata));
@@ -162,7 +157,7 @@ void ReactiveSocket::metadataPush(
 
 void ReactiveSocket::clientConnect(
     std::shared_ptr<FrameTransport> frameTransport,
-    ConnectionSetupPayload setupPayload) {
+    SetupParameters setupPayload) {
   CHECK(frameTransport && !frameTransport->isClosed());
   debugCheckCorrectExecutor();
   checkNotClosed();
@@ -179,7 +174,7 @@ void ReactiveSocket::clientConnect(
 
 void ReactiveSocket::serverConnect(
     std::shared_ptr<FrameTransport> frameTransport,
-    const SocketParameters& socketParams) {
+    const RSocketParameters& socketParams) {
   debugCheckCorrectExecutor();
   connection_->setResumable(socketParams.resumable);
   connection_->connect(

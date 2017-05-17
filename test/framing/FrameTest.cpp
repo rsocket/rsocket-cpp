@@ -9,7 +9,7 @@
 #include "src/framing/FrameSerializer.h"
 
 using namespace ::testing;
-using namespace ::reactivesocket;
+using namespace ::rsocket;
 
 // TODO(stupaq): tests with malformed frames
 

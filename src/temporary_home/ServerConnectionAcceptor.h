@@ -4,8 +4,8 @@
 
 #include <memory>
 #include <unordered_set>
+#include "src/RSocketParameters.h"
 #include "src/internal/Common.h"
-#include "src/temporary_home/ConnectionSetupPayload.h"
 
 namespace folly {
 class EventBase;
@@ -14,12 +14,12 @@ class exception_wrapper;
 class IOBuf;
 }
 
-namespace reactivesocket {
+namespace rsocket {
 
 class DuplexConnection;
 class FrameSerializer;
 class FrameTransport;
-class Stats;
+class RSocketStats;
 class OneFrameProcessor;
 
 class ConnectionHandler {
@@ -33,7 +33,7 @@ class ConnectionHandler {
   /// connection fails)
   virtual void setupNewSocket(
       std::shared_ptr<FrameTransport> frameTransport,
-      ConnectionSetupPayload setupPayload) = 0;
+      SetupParameters setupPayload) = 0;
 
   /// Called when we've received a resume frame on the connection and are ready
   /// to resume an existing ReactiveSocket.

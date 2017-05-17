@@ -6,7 +6,7 @@
 #include <cstddef>
 #include <limits>
 
-namespace reactivesocket {
+namespace rsocket {
 
 class AllowanceSemaphore {
  public:

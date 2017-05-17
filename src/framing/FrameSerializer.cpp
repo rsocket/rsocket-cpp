@@ -13,7 +13,7 @@ DEFINE_string(
     "override for the ReactiveSocket protocol version to be used"
     " [MAJOR.MINOR].");
 
-namespace reactivesocket {
+namespace rsocket {
 
 // TODO: this should default to 1.0 when we deploy successfully
 constexpr const ProtocolVersion ProtocolVersion::Latest =

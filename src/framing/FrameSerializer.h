@@ -8,7 +8,7 @@
 #include <string>
 #include "src/framing/Frame.h"
 
-namespace reactivesocket {
+namespace rsocket {
 
 // interface separating serialization/deserialization of ReactiveSocket frames
 class FrameSerializer {

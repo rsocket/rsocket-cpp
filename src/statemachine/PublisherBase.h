@@ -5,14 +5,14 @@
 #include <glog/logging.h>
 #include <iostream>
 #include <type_traits>
-#include "src/internal/AllowanceSemaphore.h"
 #include "RSocketStateMachine.h"
-#include "src/temporary_home/Executor.h"
 #include "src/Payload.h"
+#include "src/internal/AllowanceSemaphore.h"
+#include "src/temporary_home/Executor.h"
 #include "src/temporary_home/RequestHandler.h"
 #include "yarpl/flowable/Subscription.h"
 
-namespace reactivesocket {
+namespace rsocket {
 
 enum class StreamCompletionSignal;
 
@@ -23,7 +23,8 @@ class PublisherBase {
       : initialRequestN_(initialRequestN) {}
 
   /// @{
-  void publisherSubscribe(yarpl::Reference<yarpl::flowable::Subscription> subscription) {
+  void publisherSubscribe(
+      yarpl::Reference<yarpl::flowable::Subscription> subscription) {
     debugCheckOnSubscribe();
     producingSubscription_ = std::move(subscription);
     if (initialRequestN_) {

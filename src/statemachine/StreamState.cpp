@@ -2,11 +2,11 @@
 
 #include "StreamState.h"
 
-#include "src/temporary_home/Stats.h"
+#include "src/RSocketStats.h"
 
-namespace reactivesocket {
+namespace rsocket {
 
-StreamState::StreamState(Stats& stats) : stats_(stats) {}
+StreamState::StreamState(RSocketStats& stats) : stats_(stats) {}
 
 StreamState::~StreamState() {
   onClearFrames();

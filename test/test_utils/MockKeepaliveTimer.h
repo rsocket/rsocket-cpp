@@ -8,9 +8,9 @@
 #include <gmock/gmock.h>
 
 #include "src/statemachine/RSocketStateMachine.h"
-#include "src/temporary_home/ReactiveSocket.h"
+#include "test/deprecated/ReactiveSocket.h"
 
-namespace reactivesocket {
+namespace rsocket {
 class MockKeepaliveTimer : public KeepaliveTimer {
  public:
   MOCK_METHOD1(start, void(const std::shared_ptr<FrameSink>&));

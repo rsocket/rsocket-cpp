@@ -10,7 +10,6 @@
 #include "src/transports/tcp/TcpConnectionAcceptor.h"
 #include "yarpl/Flowable.h"
 
-using namespace reactivesocket;
 using namespace rsocket;
 using namespace yarpl::flowable;
 
@@ -19,10 +18,10 @@ DEFINE_int32(port, 9898, "port to connect to");
 class HelloChannelRequestHandler : public rsocket::RSocketResponder {
  public:
   /// Handles a new inbound Stream requested by the other end.
-  yarpl::Reference<Flowable<reactivesocket::Payload>> handleRequestChannel(
-      reactivesocket::Payload initialPayload,
-      yarpl::Reference<Flowable<reactivesocket::Payload>> request,
-      reactivesocket::StreamId streamId) override {
+  yarpl::Reference<Flowable<rsocket::Payload>> handleRequestChannel(
+      rsocket::Payload initialPayload,
+      yarpl::Reference<Flowable<rsocket::Payload>> request,
+      rsocket::StreamId streamId) override {
     std::cout << "Initial request " << initialPayload.cloneDataToString()
               << std::endl;
 

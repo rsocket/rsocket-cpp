@@ -5,16 +5,16 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/RSocketStats.h"
 #include "src/framing/Frame.h"
-#include "src/framing/FrameTransport.h"
-#include "src/temporary_home/ResumeCache.h"
-#include "src/temporary_home/Stats.h"
 #include "src/framing/FrameSerializer_v0_1.h"
+#include "src/framing/FrameTransport.h"
+#include "src/internal/ResumeCache.h"
 #include "test/test_utils/InlineConnection.h"
 #include "test/test_utils/MockStats.h"
 
 using namespace ::testing;
-using namespace ::reactivesocket;
+using namespace ::rsocket;
 
 class FrameTransportMock : public FrameTransport {
  public:
@@ -34,7 +34,7 @@ class ResumeCacheTest : public Test {
 };
 
 TEST_F(ResumeCacheTest, EmptyCache) {
-  ResumeCache cache(Stats::noop());
+  ResumeCache cache(RSocketStats::noop());
   FrameTransportMock transport;
 
   EXPECT_CALL(transport, outputFrameOrEnqueue_(_)).Times(0);
@@ -55,7 +55,7 @@ TEST_F(ResumeCacheTest, EmptyCache) {
 }
 
 TEST_F(ResumeCacheTest, OneFrame) {
-  ResumeCache cache(Stats::noop());
+  ResumeCache cache(RSocketStats::noop());
   FrameTransportMock transport;
 
   auto frame1 = frameSerializer_->serializeOut(Frame_CANCEL(0));
@@ -97,7 +97,7 @@ TEST_F(ResumeCacheTest, OneFrame) {
 }
 
 TEST_F(ResumeCacheTest, TwoFrames) {
-  ResumeCache cache(Stats::noop());
+  ResumeCache cache(RSocketStats::noop());
   FrameTransportMock transport;
 
   auto frame1 = frameSerializer_->serializeOut(Frame_CANCEL(0));
@@ -171,7 +171,7 @@ TEST_F(ResumeCacheTest, EvictFIFO) {
   const auto frameSize = frame->computeChainDataLength();
 
   // construct cache with capacity of 2 frameSize
-  ResumeCache cache(Stats::noop(), frameSize * 2);
+  ResumeCache cache(RSocketStats::noop(), frameSize * 2);
 
   cache.trackSentFrame(*frame, FrameType::CANCEL, folly::Optional<StreamId>(0));
   cache.trackSentFrame(*frame, FrameType::CANCEL, folly::Optional<StreamId>(0));
@@ -246,7 +246,7 @@ TEST_F(ResumeCacheTest, PositionSmallFrame) {
   const auto frameSize = frame->computeChainDataLength();
 
   // Cache is larger than frame
-  ResumeCache cache(Stats::noop(), frameSize * 2);
+  ResumeCache cache(RSocketStats::noop(), frameSize * 2);
   cache.trackSentFrame(*frame, FrameType::CANCEL, folly::Optional<StreamId>(0));
   EXPECT_EQ(
       frame->computeChainDataLength(), static_cast<size_t>(cache.position()));
@@ -257,7 +257,7 @@ TEST_F(ResumeCacheTest, PositionLargeFrame) {
   const auto frameSize = frame->computeChainDataLength();
 
   // Cache is smaller than frame
-  ResumeCache cache(Stats::noop(), frameSize / 2);
+  ResumeCache cache(RSocketStats::noop(), frameSize / 2);
   cache.trackSentFrame(*frame, FrameType::CANCEL, folly::Optional<StreamId>(0));
   EXPECT_EQ(
       frame->computeChainDataLength(), static_cast<size_t>(cache.position()));

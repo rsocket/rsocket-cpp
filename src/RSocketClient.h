@@ -3,9 +3,8 @@
 #pragma once
 
 #include <folly/futures/Future.h>
-#include "src/ConnectionFactory.h"
 #include "RSocketRequester.h"
-#include "src/temporary_home/ReactiveSocket.h"
+#include "src/ConnectionFactory.h"
 
 namespace rsocket {
 
