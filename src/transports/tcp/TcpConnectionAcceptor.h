@@ -19,14 +19,18 @@ namespace rsocket {
 class TcpConnectionAcceptor : public ConnectionAcceptor {
  public:
   struct Options {
+    explicit Options(uint16_t port_ = 8080, size_t threads_ = 1,
+                     int backlog_ = 10) : port(port_), threads(threads_),
+                                          backlog(backlog_) {}
+
     /// Port to listen on for TCP requests.
-    uint16_t port{8080};
+    uint16_t port;
 
     /// Number of worker threads processing requests.
-    size_t threads{1};
+    size_t threads;
 
     /// Number of connections to buffer before accept handlers process them.
-    int backlog{10};
+    int backlog;
   };
 
   //////////////////////////////////////////////////////////////////////////////
