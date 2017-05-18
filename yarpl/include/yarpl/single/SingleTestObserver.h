@@ -83,6 +83,7 @@ class SingleTestObserver : public yarpl::single::SingleObserver<T> {
     } else {
       value_ = std::move(t);
     }
+    subscription_ = nullptr;
     terminated_ = true;
     terminalEventCV_.notify_all();
   }

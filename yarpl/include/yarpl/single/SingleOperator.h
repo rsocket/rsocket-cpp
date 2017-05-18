@@ -46,7 +46,7 @@ class SingleOperator : public Single<D> {
       observer_->onSuccess(std::move(value));
       upstreamSubscription_.reset(); // should break the cycle to this
     }
-    
+
     template<typename TOperator>
     TOperator* getObservableAs() {
       return static_cast<TOperator*>(single_.get());
