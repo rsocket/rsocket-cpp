@@ -119,7 +119,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
         std::make_unique<FramedDuplexConnection>(
             std::move(connection), inlineExecutor());
     std::unique_ptr<RequestHandler> requestHandler =
-        std::make_unique<ServerRequestHandler>(eventBase_);
+        std::make_unique<ServerRequestHandler>();
 
     auto rs = ReactiveSocket::fromServerConnection(
         eventBase_,
@@ -158,9 +158,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
  private:
   class ServerRequestHandler : public DefaultRequestHandler {
    public:
-    ServerRequestHandler(EventBase& eventBase)
-    : eventBase_(eventBase)
-    {
+    ServerRequestHandler() {
       marbles_ = parseMarbles(FLAGS_test_file);
     }
 
@@ -182,11 +180,8 @@ class Callback : public AsyncServerSocket::AcceptCallback {
         auto subscription =
             make_ref<ServerSubscription>(response, marbleProcessor, 0);
         response->onSubscribe(subscription);
-
-        eventBase_.runInEventBaseThread([marbleProcessor]{ marbleProcessor->run(); });
-
-//        std::thread mpThread([marbleProcessor] { marbleProcessor->run(); });
-//        mpThread.detach();
+        std::thread mpThread([marbleProcessor] { marbleProcessor->run(); });
+        mpThread.detach();
       }
     }
 
@@ -208,11 +203,8 @@ class Callback : public AsyncServerSocket::AcceptCallback {
         auto subscription =
             make_ref<ServerSubscription>(response, marbleProcessor, 0);
         response->onSubscribe(subscription);
-
-        eventBase_.runInEventBaseThread([marbleProcessor] { marbleProcessor->run(); });
-
-        //std::thread mpThread([marbleProcessor] { marbleProcessor->run(); });
-        //mpThread.detach();
+        std::thread mpThread([marbleProcessor] { marbleProcessor->run(); });
+        mpThread.detach();
       }
     }
 
@@ -235,7 +227,6 @@ class Callback : public AsyncServerSocket::AcceptCallback {
 
    private:
     MarbleStore marbles_;
-    EventBase& eventBase_;
   };
 
   std::vector<std::unique_ptr<ReactiveSocket>> reactiveSockets_;
