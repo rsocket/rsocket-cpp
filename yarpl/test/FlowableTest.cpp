@@ -29,7 +29,6 @@ class CollectingSubscriber : public Subscriber<T> {
   }
 
   void onNext(T next) override {
-    Subscriber<T>::onNext(next);
     values_.push_back(std::move(next));
   }
 
@@ -176,7 +175,7 @@ TEST(FlowableTest, SimpleTake) {
   EXPECT_EQ(
       run(Flowables::range(0, 100)->take(3)), std::vector<int64_t>({0, 1, 2}));
   EXPECT_EQ(
-      run(Flowables::range(10, 15)),
+      run(Flowables::range(10, 5)),
       std::vector<int64_t>({10, 11, 12, 13, 14}));
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }

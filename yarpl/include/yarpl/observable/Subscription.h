@@ -11,7 +11,7 @@ class Subscription : public virtual Refcounted {
   virtual void cancel() = 0;
 
  protected:
-  Subscription() {}
+  Subscription() = default;
 };
 
 } // observable

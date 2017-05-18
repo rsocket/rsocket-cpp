@@ -15,7 +15,9 @@ using yarpl::flowable::Subscriber;
 namespace {
 
 template <class T>
-class MySubscriber : public Subscriber<T> {};
+class MySubscriber : public Subscriber<T> {
+  void onNext(T) override {}
+};
 }
 
 TEST(ReferenceTest, Upcast) {
@@ -35,7 +37,7 @@ TEST(ReferenceTest, Upcast) {
 }
 
 TEST(RefcountedTest, CopyAssign) {
-  using Sub = Subscriber<int>;
+  using Sub = MySubscriber<int>;
   Reference<Sub> a(new Sub());
   Reference<Sub> b(a);
   EXPECT_EQ(2u, a->count());
@@ -47,7 +49,7 @@ TEST(RefcountedTest, CopyAssign) {
 }
 
 TEST(RefcountedTest, MoveAssign) {
-  using Sub = Subscriber<int>;
+  using Sub = MySubscriber<int>;
   Reference<Sub> a(new Sub());
   Reference<Sub> b(a);
   EXPECT_EQ(2u, a->count());
@@ -58,7 +60,7 @@ TEST(RefcountedTest, MoveAssign) {
 }
 
 TEST(RefcountedTest, CopyAssignTemplate) {
-  using Sub = Subscriber<int>;
+  using Sub = MySubscriber<int>;
   Reference<Sub> a(new Sub());
   Reference<Sub> b(a);
   EXPECT_EQ(2u, a->count());
@@ -71,7 +73,7 @@ TEST(RefcountedTest, CopyAssignTemplate) {
 }
 
 TEST(RefcountedTest, MoveAssignTemplate) {
-  using Sub = Subscriber<int>;
+  using Sub = MySubscriber<int>;
   Reference<Sub> a(new Sub());
   Reference<Sub> b(a);
   EXPECT_EQ(2u, a->count());
