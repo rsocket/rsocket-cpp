@@ -7,20 +7,21 @@
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <folly/portability/GFlags.h>
 #include <gmock/gmock.h>
+#include "test/deprecated/ReactiveSocket.h"
 
-#include "src/NullRequestHandler.h"
-#include "src/ReactiveSocket.h"
-#include "src/SubscriptionBase.h"
-#include "src/framed/FramedDuplexConnection.h"
-#include "src/tcp/TcpDuplexConnection.h"
+#include "src/framing/FramedDuplexConnection.h"
+#include "src/temporary_home/NullRequestHandler.h"
+#include "src/temporary_home/SubscriptionBase.h"
+#include "src/transports/tcp/TcpDuplexConnection.h"
 
-#include "test/simple/StatsPrinter.h"
+#include "test/test_utils/StatsPrinter.h"
 
 #include "tck-test/MarbleProcessor.h"
 
 using namespace ::testing;
-using namespace ::reactivesocket;
+using namespace ::rsocket;
 using namespace ::folly;
+using namespace yarpl;
 
 DEFINE_string(ip, "0.0.0.0", "IP to bind on");
 DEFINE_int32(port, 9898, "port to listen to");
@@ -67,26 +68,25 @@ MarbleStore parseMarbles(const std::string& fileName) {
   return ms;
 }
 
-class ServerSubscription : public SubscriptionBase {
+class ServerSubscription : public yarpl::flowable::Subscription {
  public:
   explicit ServerSubscription(
-      std::shared_ptr<Subscriber<Payload>> response,
+      yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response,
       std::shared_ptr<tck::MarbleProcessor> marbleProcessor,
       size_t /* numElems = 2 */)
-      : ExecutorBase(defaultExecutor()),
-        response_(std::move(response)),
+      : response_(std::move(response)),
         marbleProcessor_(std::move(marbleProcessor)) {}
 
  private:
-  void requestImpl(size_t n) noexcept override {
+  void request(int64_t n) noexcept override {
     marbleProcessor_->request(n);
   }
 
-  void cancelImpl() noexcept override {
+  void cancel() noexcept override {
     marbleProcessor_->cancel();
   }
 
-  std::shared_ptr<Subscriber<Payload>> response_;
+  yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response_;
   std::shared_ptr<tck::MarbleProcessor> marbleProcessor_;
 };
 
@@ -104,12 +104,12 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     auto socket =
         folly::AsyncSocket::UniquePtr(new AsyncSocket(&eventBase_, fd));
 
-    std::shared_ptr<Stats> stats;
+    std::shared_ptr<RSocketStats> stats;
 
     if (FLAGS_enable_stats_printer) {
-      stats.reset(new reactivesocket::StatsPrinter());
+      stats.reset(new rsocket::StatsPrinter());
     } else {
-      stats = Stats::noop();
+      stats = RSocketStats::noop();
     }
 
     std::unique_ptr<DuplexConnection> connection =
@@ -165,7 +165,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     void handleRequestStream(
         Payload request,
         StreamId streamId,
-        const std::shared_ptr<Subscriber<Payload>>&
+        const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
             response) noexcept override {
       LOG(INFO) << "handleRequestStream " << request;
       std::string data = request.data->moveToFbString().toStdString();
@@ -178,7 +178,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
         auto marbleProcessor =
             std::make_shared<tck::MarbleProcessor>(it->second, response);
         auto subscription =
-            std::make_shared<ServerSubscription>(response, marbleProcessor, 0);
+            make_ref<ServerSubscription>(response, marbleProcessor, 0);
         response->onSubscribe(subscription);
         std::thread mpThread([marbleProcessor] { marbleProcessor->run(); });
         mpThread.detach();
@@ -188,7 +188,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     void handleRequestResponse(
         Payload request,
         StreamId streamId,
-        const std::shared_ptr<Subscriber<Payload>>&
+        const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
             response) noexcept override {
       LOG(INFO) << "handleRequestResponse " << request;
       std::string data = request.data->moveToFbString().toStdString();
@@ -201,7 +201,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
         auto marbleProcessor =
             std::make_shared<tck::MarbleProcessor>(it->second, response);
         auto subscription =
-            std::make_shared<ServerSubscription>(response, marbleProcessor, 0);
+            make_ref<ServerSubscription>(response, marbleProcessor, 0);
         response->onSubscribe(subscription);
         std::thread mpThread([marbleProcessor] { marbleProcessor->run(); });
         mpThread.detach();
@@ -220,8 +220,7 @@ class Callback : public AsyncServerSocket::AcceptCallback {
     }
 
     std::shared_ptr<StreamState> handleSetupPayload(
-        ReactiveSocket&,
-        ConnectionSetupPayload request) noexcept override {
+        SetupParameters request) noexcept override {
       LOG(INFO) << "handleSetupPayload " << request;
       return nullptr;
     }

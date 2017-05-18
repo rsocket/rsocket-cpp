@@ -27,8 +27,8 @@ function(benchmark name file)
     add_executable(${name} ${file})
     target_link_libraries(
         ${name}
-        rsocket_experimental
         ReactiveSocket
+        yarpl
         ${GOOGLE_BENCHMARK_LIBS}
         ${FOLLY_LIBRARIES}
         ${GFLAGS_LIBRARY}

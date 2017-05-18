@@ -6,7 +6,7 @@
 
 #include "tck-test/TestSuite.h"
 
-namespace reactivesocket {
+namespace rsocket {
 namespace tck {
 
 class TestFileParser {

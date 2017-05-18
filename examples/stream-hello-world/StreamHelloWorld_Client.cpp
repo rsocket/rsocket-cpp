@@ -7,13 +7,11 @@
 #include <folly/portability/GFlags.h>
 
 #include "examples/util/ExampleSubscriber.h"
-#include "rsocket/RSocket.h"
-#include "rsocket/transports/TcpConnectionFactory.h"
+#include "src/RSocket.h"
+#include "src/transports/tcp/TcpConnectionFactory.h"
 
 #include "yarpl/Flowable.h"
-#include "yarpl/flowable/Subscriber.h"
 
-using namespace reactivesocket;
 using namespace rsocket_example;
 using namespace rsocket;
 
@@ -32,31 +30,16 @@ int main(int argc, char* argv[]) {
   auto rsf = RSocket::createClient(
       std::make_unique<TcpConnectionFactory>(std::move(address)));
 
-  {
-    // this example runs inside the Future.then lambda
-    LOG(INFO) << "------------------ Run in future.then";
-    auto s = yarpl::Reference<ExampleSubscriber>(new ExampleSubscriber(5, 6));
-    rsf->connect().then([s](std::shared_ptr<RSocketRequester> rs) {
-      rs->requestStream(Payload("Bob"))
-          ->subscribe(
-              yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(s.get()));
-    });
-    s->awaitTerminalEvent();
-  }
+  // connect and wait for connection
+  auto rs = rsf->connect().get();
 
-  {
-    // this example extracts from the Future.get and runs in the main thread
-    LOG(INFO) << "------------------ Run after future.get";
-    auto s = yarpl::Reference<ExampleSubscriber>(new ExampleSubscriber(5, 6));
-    auto rs = rsf->connect().get();
-    rs->requestStream(Payload("Jane"))
-        ->subscribe(
-            yarpl::Reference<yarpl::flowable::Subscriber<Payload>>(s.get()));
-    s->awaitTerminalEvent();
-  }
-  LOG(INFO) << "------------- main() terminating -----------------";
+  // perform request on connected RSocket
+  rs->requestStream(Payload("Jane"))->subscribe([](Payload p) {
+    std::cout << "Received: " << p.moveDataToString() << std::endl;
+  });
 
-  // TODO on shutdown the destruction of
-  // ScopedEventBaseThread spits out a stacktrace
+  // Wait for a newline on the console to terminate the server.
+  std::getchar();
+
   return 0;
 }
