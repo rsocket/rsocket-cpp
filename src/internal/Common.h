@@ -25,7 +25,6 @@ typedef Range<const char*> StringPiece;
 
 namespace rsocket {
 
-class ReactiveSocket;
 enum class FrameType : uint8_t;
 
 std::string to_string(FrameType);

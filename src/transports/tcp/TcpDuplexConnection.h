@@ -33,7 +33,7 @@ class TcpDuplexConnection : public DuplexConnection {
 
  private:
   std::shared_ptr<TcpReaderWriter> tcpReaderWriter_;
-  std::shared_ptr<Stats> stats_;
+  std::shared_ptr<RSocketStats> stats_;
   folly::Executor& executor_;
 };
 } // reactivesocket

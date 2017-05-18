@@ -135,7 +135,7 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
 
   std::shared_ptr<rsocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
       inputSubscriber_;
-  std::shared_ptr<reactivesocket::Subscription> outputSubscription_;
+  std::shared_ptr<Subscription> outputSubscription_;
 };
 
 class TcpOutputSubscriber
@@ -226,4 +226,4 @@ void TcpDuplexConnection::setInput(
   tcpReaderWriter_->setInput(std::move(inputSubscriber));
 }
 
-} // reactivesocket
+} // rsocket
