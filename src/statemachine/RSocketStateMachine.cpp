@@ -449,60 +449,10 @@ void RSocketStateMachine::handleConnectionFrame(
       }
       return;
     }
-    case FrameType::SETUP: {
-      Frame_SETUP frame;
-      if (!deserializeFrameOrError(frame, std::move(payload))) {
-        return;
-      }
-      if (!!(frame.header_.flags_ & FrameFlags::RESUME_ENABLE)) {
-        remoteResumeable_ = true;
-      } else {
-        remoteResumeable_ = false;
-      }
-      if (!!(frame.header_.flags_ & FrameFlags::LEASE)) {
-        // TODO(yschimke) We don't have the correct lease and wait logic above
-        // yet
-        LOG(ERROR) << "ignoring setup frame with lease";
-      }
-
-      SetupParameters setupPayload;
-      frame.moveToSetupPayload(setupPayload);
-
-      // this should be already set to the correct version
-      if (frameSerializer_->protocolVersion() != setupPayload.protocolVersion) {
-        closeWithError(Frame_ERROR::badSetupFrame("invalid protocol version"));
-        return;
-      }
-
-      requestHandler_->handleSetupPayload(std::move(setupPayload));
-      return;
-    }
     case FrameType::METADATA_PUSH: {
       Frame_METADATA_PUSH frame;
       if (deserializeFrameOrError(frame, std::move(payload))) {
         requestHandler_->handleMetadataPush(std::move(frame.metadata_));
-      }
-      return;
-    }
-    case FrameType::RESUME: {
-      if (mode_ == ReactiveSocketMode::SERVER && isResumable_) {
-        Frame_RESUME frame;
-        if (!deserializeFrameOrError(frame, std::move(payload))) {
-          return;
-        }
-
-        auto resumed = requestHandler_->handleResume(ResumeParameters(
-            frame.token_,
-            frame.lastReceivedServerPosition_,
-            frame.clientPosition_,
-            ProtocolVersion(frame.versionMajor_, frame.versionMinor_)));
-
-        if (!resumed) {
-          closeWithError(Frame_ERROR::connectionError("can not resume"));
-        }
-      } else {
-        closeWithError(
-            Frame_ERROR::connectionError("RS not resumable. Can not resume"));
       }
       return;
     }
@@ -547,6 +497,8 @@ void RSocketStateMachine::handleConnectionFrame(
           StreamCompletionSignal::ERROR);
       return;
     }
+    case FrameType::SETUP: // this should be processed in ServerConnectionAcceptor
+    case FrameType::RESUME: // this should be processed in ServerConnectionAcceptor
     case FrameType::RESERVED:
     case FrameType::LEASE:
     case FrameType::REQUEST_RESPONSE:

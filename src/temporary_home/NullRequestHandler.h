@@ -60,15 +60,6 @@ class NullRequestHandler : public RequestHandler {
   void handleMetadataPush(
       std::unique_ptr<folly::IOBuf> request) noexcept override;
 
-  std::shared_ptr<StreamState> handleSetupPayload(
-      SetupParameters request) noexcept override;
-
-  bool handleResume(ResumeParameters) noexcept override;
-
-  void handleCleanResume(yarpl::Reference<yarpl::flowable::Subscription>
-                             response) noexcept override;
-  void handleDirtyResume(yarpl::Reference<yarpl::flowable::Subscription>
-                             response) noexcept override;
 
   void onSubscriptionPaused(
       const yarpl::Reference<yarpl::flowable::Subscription>&
