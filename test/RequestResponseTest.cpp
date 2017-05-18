@@ -33,7 +33,7 @@ class TestHandler : public rsocket::RSocketResponder {
 };
 }
 
-TEST(RequestResponseTest, Hello) {
+TEST(RequestResponseTest, DISABLED_Hello) {
   auto port = randPort();
   auto server = makeServer(port, std::make_shared<TestHandler>());
   auto client = makeClient(port);

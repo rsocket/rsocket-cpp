@@ -31,7 +31,7 @@ class TestHandlerSync : public rsocket::RSocketResponder {
   }
 };
 
-TEST(RequestStreamTest, HelloSync) {
+TEST(RequestStreamTest, DISABLED_HelloSync) {
   auto port = randPort();
   auto server = makeServer(port, std::make_shared<TestHandlerSync>());
   auto client = makeClient(port);
@@ -76,7 +76,7 @@ class TestHandlerAsync : public rsocket::RSocketResponder {
 };
 }
 
-TEST(RequestStreamTest, HelloAsync) {
+TEST(RequestStreamTest, DISABLED_HelloAsync) {
   auto port = randPort();
   auto server = makeServer(port, std::make_shared<TestHandlerAsync>());
   auto client = makeClient(port);
