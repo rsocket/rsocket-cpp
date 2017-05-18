@@ -80,7 +80,7 @@ add_library(
         # Scheduler
         include/yarpl/schedulers/ThreadScheduler.h
         src/yarpl/schedulers/ThreadScheduler.cpp
-)
+        include/yarpl/flowable/TestSubscriber.h)
 
 target_include_directories(
         yarpl

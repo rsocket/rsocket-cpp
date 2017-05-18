@@ -11,11 +11,19 @@ namespace flowable {
 
 class Flowables {
  public:
-  static Reference<Flowable<int64_t>> range(int64_t start, int64_t end) {
-    auto lambda = [ start, end, i = start ](
+  /**
+   * Emit a sequence of numbers.
+   *
+   * @param start starting value
+   * @param count how many to emit
+   * @return
+   */
+  static Reference<Flowable<int64_t>> range(int64_t start, int64_t count) {
+    auto lambda = [ start, count, i = start ](
         Subscriber<int64_t> & subscriber, int64_t requested) mutable {
       int64_t emitted = 0;
       bool done = false;
+      int64_t end = start + count;
 
       while (i < end && emitted < requested) {
         subscriber.onNext(i++);

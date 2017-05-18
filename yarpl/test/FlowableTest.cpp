@@ -139,14 +139,14 @@ TEST(FlowableTest, JustIncomplete) {
 TEST(FlowableTest, Range) {
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
   EXPECT_EQ(
-      run(Flowables::range(10, 15)),
+      run(Flowables::range(10, 5)),
       std::vector<int64_t>({10, 11, 12, 13, 14}));
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
 TEST(FlowableTest, RangeWithMap) {
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-  auto flowable = Flowables::range(1, 4)
+  auto flowable = Flowables::range(1, 3)
                       ->map([](int64_t v) { return v * v; })
                       ->map([](int64_t v) { return v * v; })
                       ->map([](int64_t v) { return std::to_string(v); });

@@ -259,6 +259,7 @@ add_executable(
   test/internal/AllowanceSemaphoreTest.cpp
   test/RSocketTests.h
   test/RequestResponseTest.cpp
+  test/RequestStreamTest.cpp
 )
 
 target_link_libraries(
