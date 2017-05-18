@@ -46,13 +46,7 @@ class SingleOperator : public Single<D> {
       observer_->onSuccess(std::move(value));
       upstreamSubscription_.reset(); // should break the cycle to this
     }
-
-    // this method should be used to terminate the operators
-    void terminate() {
-      observer_->onComplete(); // should break the cycle to this
-      upstreamSubscription_->cancel(); // should break the cycle to this
-    }
-
+    
     template<typename TOperator>
     TOperator* getObservableAs() {
       return static_cast<TOperator*>(single_.get());
@@ -65,7 +59,7 @@ class SingleOperator : public Single<D> {
       observer_->onSubscribe(
           Reference<::yarpl::single::SingleSubscription>(this));
     }
-    
+
     void onError(const std::exception_ptr error) override {
       observer_->onError(error);
       upstreamSubscription_.reset(); // should break the cycle to this
