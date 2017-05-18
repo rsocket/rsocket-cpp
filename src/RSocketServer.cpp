@@ -1,11 +1,10 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "RSocketServer.h"
-
 #include <folly/ExceptionWrapper.h>
-
 #include "RSocketConnectionHandler.h"
 #include "src/statemachine/RSocketStateMachine.h"
+#include "src/internal/ScheduledRSocketResponder.h"
 
 using namespace rsocket;
 
@@ -16,12 +15,16 @@ class RSocketServerConnectionHandler : public virtual RSocketConnectionHandler {
   RSocketServerConnectionHandler(
       RSocketServer* server,
       OnAccept onAccept,
-      folly::Executor& executor)
-      : server_{server}, onAccept_{std::move(onAccept)}, executor_{executor} {}
+      folly::EventBase& eventBase)
+      : server_{server}, onAccept_{std::move(onAccept)}, eventBase_{eventBase} {}
 
   std::shared_ptr<RSocketResponder> getHandler(
       std::shared_ptr<ConnectionSetupRequest> request) override {
-    return onAccept_(std::move(request));
+    auto responder = onAccept_(std::move(request));
+    if(responder) {
+      return std::make_shared<ScheduledRSocketResponder>(std::move(responder), eventBase_);
+    }
+    return nullptr;
   }
 
   void manageSocket(
@@ -39,13 +42,13 @@ class RSocketServerConnectionHandler : public virtual RSocketConnectionHandler {
 
         });
 
-    server_->addConnection(std::move(stateMachine), executor_);
+    server_->addConnection(std::move(stateMachine), eventBase_);
   }
 
  private:
   RSocketServer* server_;
   OnAccept onAccept_;
-  folly::Executor& executor_;
+  folly::EventBase& eventBase_;
 };
 
 RSocketServer::RSocketServer(
@@ -99,12 +102,12 @@ void RSocketServer::start(OnAccept onAccept) {
 
   lazyAcceptor_
       ->start([ this, onAccept = std::move(onAccept) ](
-          std::unique_ptr<DuplexConnection> conn, folly::Executor & executor) {
+          std::unique_ptr<DuplexConnection> conn, folly::EventBase& eventBase) {
         LOG(INFO) << "Going to accept duplex connection";
 
         auto connectionHandler_ =
             std::make_shared<RSocketServerConnectionHandler>(
-                this, onAccept, executor);
+                this, onAccept, eventBase);
 
         // FIXME(alexanderm): This isn't thread safe
         acceptor_.accept(std::move(conn), std::move(connectionHandler_));

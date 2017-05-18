@@ -11,7 +11,7 @@ namespace single {
 /**
  * Base (helper) class for operators.  Operators are templated on two types:
  * D (downstream) and U (upstream).  Operators are created by method calls on
- * an upstream Single, and are Singles themselves.  Multi-stage
+ * an upstream Single, and are Observables themselves.  Multi-stage
  * pipelines
  * can be built: a Single heading a sequence of Operators.
  */
@@ -21,11 +21,6 @@ class SingleOperator : public Single<D> {
   explicit SingleOperator(Reference<Single<U>> upstream)
       : upstream_(std::move(upstream)) {}
 
-  void subscribe(Reference<SingleObserver<D>> subscriber) override {
-    upstream_->subscribe(Reference<Subscription>(
-        new Subscription(Reference<Single<D>>(this), std::move(subscriber))));
-  }
-
  protected:
   ///
   /// \brief An Operator's subscription.
@@ -33,56 +28,62 @@ class SingleOperator : public Single<D> {
   /// When a pipeline chain is active, each Single has a corresponding
   /// subscription.  Except for the first one, the subscriptions are created
   /// against Operators.  Each operator subscription has two functions: as a
-  /// subscriber for the previous stage; as a subscription for the next one,
-  /// the user-supplied subscriber being the last of the pipeline stages.
+  /// observer for the previous stage; as a subscription for the next one,
+  /// the user-supplied observer being the last of the pipeline stages.
   class Subscription : public ::yarpl::single::SingleSubscription,
                        public SingleObserver<U> {
-   public:
+   protected:
     Subscription(
-        Reference<Single<D>> flowable,
-        Reference<SingleObserver<D>> subscriber)
-        : flowable_(std::move(flowable)), subscriber_(std::move(subscriber)) {}
+        Reference<Single<D>> single,
+        Reference<SingleObserver<D>> observer)
+        : single_(std::move(single)), observer_(std::move(observer)) {}
 
     ~Subscription() {
-      subscriber_.reset();
+      observer_.reset();
     }
 
+    void observerOnSuccess(D value) {
+      observer_->onSuccess(std::move(value));
+      upstreamSubscription_.reset(); // should break the cycle to this
+    }
+
+    template<typename TOperator>
+    TOperator* getObservableAs() {
+      return static_cast<TOperator*>(single_.get());
+    }
+
+   private:
     void onSubscribe(
         Reference<::yarpl::single::SingleSubscription> subscription) override {
-      upstream_ = std::move(subscription);
-      subscriber_->onSubscribe(
+      upstreamSubscription_ = std::move(subscription);
+      observer_->onSubscribe(
           Reference<::yarpl::single::SingleSubscription>(this));
     }
 
-    void onComplete() override {
-      subscriber_->onComplete();
-      upstream_.reset();
-    }
-
     void onError(const std::exception_ptr error) override {
-      subscriber_->onError(error);
-      upstream_.reset();
+      observer_->onError(error);
+      upstreamSubscription_.reset(); // should break the cycle to this
     }
 
     void cancel() override {
-      upstream_->cancel();
+      upstreamSubscription_->cancel();
+      observer_.reset(); // breaking the cycle
     }
 
-   protected:
     /// The Single has the lambda, and other creation parameters.
-    Reference<Single<D>> flowable_;
+    Reference<Single<D>> single_;
 
-    /// This subscription controls the life-cycle of the subscriber.  The
-    /// subscriber is retained as long as calls on it can be made.  (Note:
-    /// the subscriber in turn maintains a reference on this subscription
+    /// This subscription controls the life-cycle of the observer.  The
+    /// observer is retained as long as calls on it can be made.  (Note:
+    /// the observer in turn maintains a reference on this subscription
     /// object until cancellation and/or completion.)
-    Reference<SingleObserver<D>> subscriber_;
+    Reference<SingleObserver<D>> observer_;
 
     /// In an active pipeline, cancel and (possibly modified) request(n)
     /// calls should be forwarded upstream.  Note that `this` is also a
-    /// subscriber for the upstream stage: thus, there are cycles; all of
+    /// observer for the upstream stage: thus, there are cycles; all of
     /// the objects drop their references at cancel/complete.
-    Reference<::yarpl::single::SingleSubscription> upstream_;
+    Reference<::yarpl::single::SingleSubscription> upstreamSubscription_;
   };
 
   Reference<Single<U>> upstream_;
@@ -99,28 +100,27 @@ class MapOperator : public SingleOperator<U, D> {
       : SingleOperator<U, D>(std::move(upstream)),
         function_(std::forward<F>(function)) {}
 
-  void subscribe(Reference<SingleObserver<D>> subscriber) override {
+  void subscribe(Reference<SingleObserver<D>> observer) override {
     SingleOperator<U, D>::upstream_->subscribe(
-        // Note: implicit cast to a reference to a subscriber.
+        // Note: implicit cast to a reference to a observer.
         Reference<Subscription>(new Subscription(
-            Reference<Single<D>>(this), std::move(subscriber))));
+            Reference<Single<D>>(this), std::move(observer))));
   }
 
  private:
   class Subscription : public SingleOperator<U, D>::Subscription {
+    using Super = typename SingleOperator<U, D>::Subscription;
    public:
     Subscription(
         Reference<Single<D>> single,
-        Reference<SingleObserver<D>> subscriber)
+        Reference<SingleObserver<D>> observer)
         : SingleOperator<U, D>::Subscription(
               std::move(single),
-              std::move(subscriber)) {}
+              std::move(observer)) {}
 
-    void onNext(U value) override {
-      auto* subscriber = SingleOperator<U, D>::Subscription::subscriber_.get();
-      auto* single = SingleOperator<U, D>::Subscription::flowable_.get();
-      auto* map = static_cast<MapOperator*>(single);
-      subscriber->onNext(map->function_(std::move(value)));
+    void onSuccess(U value) override {
+      auto* map = Super::template getObservableAs<MapOperator>();
+      Super::observerOnSuccess(map->function_(std::move(value)));
     }
   };
 
@@ -133,13 +133,13 @@ class FromPublisherOperator : public Single<T> {
   explicit FromPublisherOperator(OnSubscribe&& function)
       : function_(std::move(function)) {}
 
-  void subscribe(Reference<SingleObserver<T>> subscriber) override {
-    function_(std::move(subscriber));
+  void subscribe(Reference<SingleObserver<T>> observer) override {
+    function_(std::move(observer));
   }
 
  private:
   OnSubscribe function_;
 };
 
-} // single
+} // observable
 } // yarpl

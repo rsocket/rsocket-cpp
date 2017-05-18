@@ -29,7 +29,6 @@ class CollectingObserver : public Observer<T> {
       "CollectingSubscriber needs to copy the value in order to collect it");
 
   void onNext(T next) override {
-    Observer<T>::onNext(next);
     values_.push_back(std::move(next));
   }
 

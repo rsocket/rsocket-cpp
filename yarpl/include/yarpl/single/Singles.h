@@ -12,9 +12,7 @@ class Singles {
   template <typename T>
   static Reference<Single<T>> just(const T& value) {
     auto lambda = [value](Reference<SingleObserver<T>> observer) {
-      // # requested should be > 0.  Ignoring the actual parameter.
-      observer->onNext(value);
-      observer->onComplete();
+      observer->onSuccess(value);
     };
 
     return Single<T>::create(std::move(lambda));
@@ -29,14 +27,6 @@ class Singles {
   static Reference<Single<T>> create(OnSubscribe&& function) {
     return Reference<Single<T>>(new FromPublisherOperator<T, OnSubscribe>(
         std::forward<OnSubscribe>(function)));
-  }
-
-  template <typename T>
-  static Reference<Single<T>> empty() {
-    auto lambda = [](Reference<SingleObserver<T>> observer) {
-      observer->onComplete();
-    };
-    return Single<T>::create(std::move(lambda));
   }
 
   template <typename T>

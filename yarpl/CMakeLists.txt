@@ -22,7 +22,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -momit-leaf-frame-pointer")
 # The yarpl-tests binary constantly fails with an ASAN error in gtest internal
 # code on macOS.
 if(APPLE)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-sanitize=address")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-sanitize=address,undefined")
 endif()
 
 # Configuration for Debug build mode.
@@ -69,6 +69,7 @@ add_library(
         include/yarpl/single/SingleObservers.h
         include/yarpl/single/SingleSubscription.h
         include/yarpl/single/SingleSubscriptions.h
+        include/yarpl/single/SingleTestObserver.h
         src/yarpl/single/SingleSubscriptions.cpp
         # Flowable private
         src/yarpl/Refcounted.cpp
@@ -80,7 +81,7 @@ add_library(
         # Scheduler
         include/yarpl/schedulers/ThreadScheduler.h
         src/yarpl/schedulers/ThreadScheduler.cpp
-)
+        include/yarpl/flowable/TestSubscriber.h)
 
 target_include_directories(
         yarpl
