@@ -29,7 +29,6 @@ class CollectingSubscriber : public Subscriber<T> {
   }
 
   void onNext(T next) override {
-    Subscriber<T>::onNext(next);
     values_.push_back(std::move(next));
   }
 
@@ -139,14 +138,14 @@ TEST(FlowableTest, JustIncomplete) {
 TEST(FlowableTest, Range) {
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
   EXPECT_EQ(
-      run(Flowables::range(10, 15)),
+      run(Flowables::range(10, 5)),
       std::vector<int64_t>({10, 11, 12, 13, 14}));
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
 TEST(FlowableTest, RangeWithMap) {
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-  auto flowable = Flowables::range(1, 4)
+  auto flowable = Flowables::range(1, 3)
                       ->map([](int64_t v) { return v * v; })
                       ->map([](int64_t v) { return v * v; })
                       ->map([](int64_t v) { return std::to_string(v); });
@@ -174,7 +173,7 @@ TEST(FlowableTest, RangeWithReduceByMultiplication) {
   flowable = Flowables::range(1, 10)
       ->reduce([](int64_t acc, int64_t v) { return acc * v; });
   EXPECT_EQ(
-      run(std::move(flowable)), std::vector<int64_t>({2*3*4*5*6*7*8*9}));
+      run(std::move(flowable)), std::vector<int64_t>({2*3*4*5*6*7*8*9*10}));
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
@@ -190,7 +189,7 @@ TEST(FlowableTest, RangeWithReduceLessItems) {
 
 TEST(FlowableTest, RangeWithReduceOneItem) {
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-  auto flowable = Flowables::range(5, 6)
+  auto flowable = Flowables::range(5, 1)
       ->reduce([](int64_t acc, int64_t v) { return acc + v; });
   EXPECT_EQ(
       run(std::move(flowable)), std::vector<int64_t>({5}));
@@ -211,13 +210,23 @@ TEST(FlowableTest, RangeWithReduceNoItem) {
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
+TEST(FlowableTest, RangeWithFilterAndReduce) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto flowable = Flowables::range(0, 10)
+      ->filter([](int64_t v) { return v % 2 != 0; })
+      ->reduce([](int64_t acc, int64_t v) { return acc + v; });
+  EXPECT_EQ(
+      run(std::move(flowable)), std::vector<int64_t>({1+3+5+7+9}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
 TEST(FlowableTest, RangeWithReduceToBiggerType) {
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-  auto flowable = Flowables::range(5, 6)
-      ->map([](int64_t v){ return (int32_t)v; })
-      ->reduce([](int64_t acc, int32_t v) { return acc + v; });
+  auto flowable = Flowables::range(5, 1)
+      ->map([](int64_t v){ return (char)(v + 10); })
+      ->reduce([](int64_t acc, char v) { return acc + v; });
   EXPECT_EQ(
-      run(std::move(flowable)), std::vector<int64_t>({5}));
+      run(std::move(flowable)), std::vector<int64_t>({15}));
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
@@ -249,12 +258,30 @@ TEST(FlowableTest, RangeWithFilterRequestLessItems) {
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
+TEST(FlowableTest, RangeWithFilterAndMap) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto flowable = Flowables::range(0, 10)
+      ->filter([](int64_t v) { return v % 2 != 0; })
+      ->map([](int64_t v){ return v + 10; });
+  EXPECT_EQ(run(std::move(flowable)), std::vector<int64_t>({11, 13, 15, 17, 19}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(FlowableTest, RangeWithMapAndFilter) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto flowable = Flowables::range(0, 10)
+      ->map([](int64_t v){ return (char)(v + 10); })
+      ->filter([](char v) { return v % 2 != 0; });
+  EXPECT_EQ(run(std::move(flowable)), std::vector<char>({11, 13, 15, 17, 19}));
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
 TEST(FlowableTest, SimpleTake) {
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
   EXPECT_EQ(
       run(Flowables::range(0, 100)->take(3)), std::vector<int64_t>({0, 1, 2}));
   EXPECT_EQ(
-      run(Flowables::range(10, 15)),
+      run(Flowables::range(10, 5)),
       std::vector<int64_t>({10, 11, 12, 13, 14}));
   EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }

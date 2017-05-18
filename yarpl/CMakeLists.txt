@@ -19,6 +19,12 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-weak-vtables -Wno-padded")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -momit-leaf-frame-pointer")
 
+# The yarpl-tests binary constantly fails with an ASAN error in gtest internal
+# code on macOS.
+if(APPLE)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-sanitize=address,undefined")
+endif()
+
 # Configuration for Debug build mode.
 #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
@@ -63,6 +69,7 @@ add_library(
         include/yarpl/single/SingleObservers.h
         include/yarpl/single/SingleSubscription.h
         include/yarpl/single/SingleSubscriptions.h
+        include/yarpl/single/SingleTestObserver.h
         src/yarpl/single/SingleSubscriptions.cpp
         # Flowable private
         src/yarpl/Refcounted.cpp
@@ -74,13 +81,19 @@ add_library(
         # Scheduler
         include/yarpl/schedulers/ThreadScheduler.h
         src/yarpl/schedulers/ThreadScheduler.cpp
-)
+        include/yarpl/flowable/TestSubscriber.h)
 
 target_include_directories(
         yarpl
         PUBLIC "${PROJECT_SOURCE_DIR}/include" # allow include paths such as "yarpl/observable.h"
         PUBLIC "${PROJECT_SOURCE_DIR}/src" # allow include paths such as "yarpl/flowable/FlowableRange.h"
+        )
+
+target_link_libraries(
+        yarpl
+        ${CMAKE_THREAD_LIBS_INIT}
 )
+
 
 # Executable for Experimenting
 add_executable(

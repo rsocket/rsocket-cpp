@@ -48,24 +48,6 @@ class RequestHandler {
   virtual void handleMetadataPush(
       std::unique_ptr<folly::IOBuf> request) noexcept = 0;
 
-  /// Temporary home - this should eventually be an input to asking for a
-  /// RequestHandler so negotiation is possible
-  virtual std::shared_ptr<StreamState> handleSetupPayload(
-      SetupParameters request) noexcept = 0;
-
-  /// Temporary home - this should accompany handleSetupPayload
-  /// Return stream state for the given token. Return nullptr to disable resume
-  virtual bool handleResume(ResumeParameters resumeParams) noexcept = 0;
-
-  // Handle a stream that can resume in a "clean" state. Client and Server are
-  // up-to-date.
-  virtual void handleCleanResume(
-      yarpl::Reference<yarpl::flowable::Subscription> response) noexcept = 0;
-
-  // Handle a stream that can resume in a "dirty" state. Client is "behind"
-  // Server.
-  virtual void handleDirtyResume(
-      yarpl::Reference<yarpl::flowable::Subscription> response) noexcept = 0;
 
   // TODO: cleanup the methods above
   virtual void onSubscriptionPaused(

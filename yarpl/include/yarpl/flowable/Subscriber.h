@@ -27,7 +27,7 @@ class Subscriber : public virtual Refcounted {
     subscription_.reset();
   }
 
-  virtual void onNext(T) {}
+  virtual void onNext(T) = 0;
 
  protected:
   Subscription* subscription() {

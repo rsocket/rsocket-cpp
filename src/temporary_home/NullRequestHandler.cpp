@@ -50,20 +50,6 @@ void NullRequestHandler::handleFireAndForgetRequest(
 void NullRequestHandler::handleMetadataPush(
     std::unique_ptr<folly::IOBuf> /*request*/) noexcept {}
 
-std::shared_ptr<StreamState> NullRequestHandler::handleSetupPayload(
-    SetupParameters /*request*/) noexcept {
-  return nullptr;
-}
-
-bool NullRequestHandler::handleResume(ResumeParameters) noexcept {
-  return false;
-}
-
-void NullRequestHandler::handleCleanResume(
-    Reference<Subscription> /* response */) noexcept {}
-
-void NullRequestHandler::handleDirtyResume(
-    Reference<Subscription> /* response */) noexcept {}
 
 void NullRequestHandler::onSubscriptionPaused(
     const Reference<Subscription>&) noexcept {}
