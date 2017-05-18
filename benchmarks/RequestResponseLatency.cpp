@@ -9,6 +9,8 @@
 #include <condition_variable>
 #include <iostream>
 #include <thread>
+#include <gflags/gflags.h>
+
 #include "src/RSocket.h"
 #include "src/transports/tcp/TcpConnectionFactory.h"
 #include "yarpl/Flowable.h"
