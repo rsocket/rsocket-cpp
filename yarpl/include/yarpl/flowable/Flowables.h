@@ -126,10 +126,13 @@ class Flowables {
           subscriber.onNext(generator());
           ++generated;
         }
-        return std::make_tuple(static_cast<int64_t>(generated), false);
+        return std::make_tuple(generated, false);
       } catch(const std::exception&) {
         subscriber.onError(std::current_exception());
-        return std::make_tuple(static_cast<int64_t>(generated), true);
+        return std::make_tuple(generated, true);
+      } catch(...) {
+        subscriber.onError(std::make_exception_ptr(std::runtime_error("unknown error")));
+        return std::make_tuple(generated, true);
       }
     };
     return Flowable<T>::create(std::move(lambda));
