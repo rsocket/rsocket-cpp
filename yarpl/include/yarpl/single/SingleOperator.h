@@ -11,7 +11,7 @@ namespace single {
 /**
  * Base (helper) class for operators.  Operators are templated on two types:
  * D (downstream) and U (upstream).  Operators are created by method calls on
- * an upstream Single, and are Singles themselves.  Multi-stage
+ * an upstream Single, and are Observables themselves.  Multi-stage
  * pipelines
  * can be built: a Single heading a sequence of Operators.
  */
@@ -22,8 +22,8 @@ class SingleOperator : public Single<D> {
       : upstream_(std::move(upstream)) {}
 
   void subscribe(Reference<SingleObserver<D>> subscriber) override {
-    upstream_->subscribe(Reference<Subscription>(
-        new Subscription(Reference<Single<D>>(this), std::move(subscriber))));
+    upstream_->subscribe(Reference<SingleSubscription>(new SingleSubscription(
+        Reference<Single<D>>(this), std::move(subscriber))));
   }
 
  protected:
@@ -35,37 +35,32 @@ class SingleOperator : public Single<D> {
   /// against Operators.  Each operator subscription has two functions: as a
   /// subscriber for the previous stage; as a subscription for the next one,
   /// the user-supplied subscriber being the last of the pipeline stages.
-  class Subscription : public ::yarpl::single::SingleSubscription,
-                       public SingleObserver<U> {
+  class SingleSubscription : public ::yarpl::single::SingleSubscription,
+                             public SingleObserver<U> {
    public:
-    Subscription(
+    SingleSubscription(
         Reference<Single<D>> flowable,
         Reference<SingleObserver<D>> subscriber)
         : flowable_(std::move(flowable)), subscriber_(std::move(subscriber)) {}
 
-    ~Subscription() {
+    ~SingleSubscription() {
       subscriber_.reset();
     }
 
     void onSubscribe(
         Reference<::yarpl::single::SingleSubscription> subscription) override {
-      upstream_ = std::move(subscription);
+      upstreamSubscription_ = std::move(subscription);
       subscriber_->onSubscribe(
           Reference<::yarpl::single::SingleSubscription>(this));
     }
 
-    void onComplete() override {
-      subscriber_->onComplete();
-      upstream_.reset();
-    }
-
     void onError(const std::exception_ptr error) override {
       subscriber_->onError(error);
-      upstream_.reset();
+      upstreamSubscription_.reset();
     }
 
     void cancel() override {
-      upstream_->cancel();
+      upstreamSubscription_->cancel();
     }
 
    protected:
@@ -82,7 +77,7 @@ class SingleOperator : public Single<D> {
     /// calls should be forwarded upstream.  Note that `this` is also a
     /// subscriber for the upstream stage: thus, there are cycles; all of
     /// the objects drop their references at cancel/complete.
-    Reference<::yarpl::single::SingleSubscription> upstream_;
+    Reference<::yarpl::single::SingleSubscription> upstreamSubscription_;
   };
 
   Reference<Single<U>> upstream_;
@@ -102,25 +97,29 @@ class MapOperator : public SingleOperator<U, D> {
   void subscribe(Reference<SingleObserver<D>> subscriber) override {
     SingleOperator<U, D>::upstream_->subscribe(
         // Note: implicit cast to a reference to a subscriber.
-        Reference<Subscription>(new Subscription(
+        Reference<SingleSubscription>(new SingleSubscription(
             Reference<Single<D>>(this), std::move(subscriber))));
   }
 
  private:
-  class Subscription : public SingleOperator<U, D>::Subscription {
+  class SingleSubscription : public SingleOperator<U, D>::SingleSubscription {
    public:
-    Subscription(
-        Reference<Single<D>> single,
+    SingleSubscription(
+        Reference<Single<D>> flowable,
         Reference<SingleObserver<D>> subscriber)
-        : SingleOperator<U, D>::Subscription(
-              std::move(single),
+        : SingleOperator<U, D>::SingleSubscription(
+              std::move(flowable),
               std::move(subscriber)) {}
 
-    void onNext(U value) override {
-      auto* subscriber = SingleOperator<U, D>::Subscription::subscriber_.get();
-      auto* single = SingleOperator<U, D>::Subscription::flowable_.get();
-      auto* map = static_cast<MapOperator*>(single);
-      subscriber->onNext(map->function_(std::move(value)));
+    void onSuccess(U value) override {
+      auto* subscriber =
+          SingleOperator<U, D>::SingleSubscription::subscriber_.get();
+      auto* flowable =
+          SingleOperator<U, D>::SingleSubscription::flowable_.get();
+      auto* map = static_cast<MapOperator*>(flowable);
+      subscriber->onSuccess(map->function_(std::move(value)));
+
+      SingleOperator<U, D>::SingleSubscription::upstreamSubscription_.reset();
     }
   };
 
@@ -141,5 +140,5 @@ class FromPublisherOperator : public Single<T> {
   OnSubscribe function_;
 };
 
-} // single
+} // observable
 } // yarpl

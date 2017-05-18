@@ -2,9 +2,11 @@
 
 #include <folly/Baton.h>
 #include <gtest/gtest.h>
+#include <yarpl/include/yarpl/single/SingleTestObserver.h>
 #include <atomic>
 
 #include "yarpl/Single.h"
+#include "yarpl/single/SingleTestObserver.h"
 
 #include "Tuple.h"
 
@@ -22,12 +24,10 @@ TEST(Single, SingleOnNext) {
 
     ASSERT_EQ(std::size_t{1}, Refcounted::objects());
 
-    std::vector<int> v;
-    a->subscribe(SingleObservers::create<int>(
-        [&v](const int& value) { v.push_back(value); }));
-
-    ASSERT_EQ(std::size_t{1}, Refcounted::objects());
-    EXPECT_EQ(v.at(0), 1);
+    auto to = SingleTestObserver<int>::create();
+    a->subscribe(to);
+    to->awaitTerminalEvent();
+    to->assertOnSuccessValue(1);
   }
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
 }
@@ -44,17 +44,55 @@ TEST(Single, OnError) {
       }
     });
 
-    a->subscribe(SingleObservers::create<int>(
-        [](int value) { /* do nothing */ },
-        [&errorMessage](const std::exception_ptr e) {
-          try {
-            std::rethrow_exception(e);
-          } catch (const std::runtime_error& ex) {
-            errorMessage = std::string(ex.what());
-          }
-        }));
+    auto to = SingleTestObserver<int>::create();
+    a->subscribe(to);
+    to->awaitTerminalEvent();
+    to->assertOnErrorMessage("something broke!");
+  }
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+}
 
-    EXPECT_EQ("something broke!", errorMessage);
+TEST(Single, Just) {
+  {
+    ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+    auto a = Singles::just<int>(1);
+
+    auto to = SingleTestObserver<int>::create();
+    a->subscribe(to);
+    to->awaitTerminalEvent();
+    to->assertOnSuccessValue(1);
+  }
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(Single, Error) {
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  {
+    std::string errorMessage("DEFAULT->No Error Message");
+    auto a = Singles::error<int>(std::runtime_error("something broke!"));
+
+    auto to = SingleTestObserver<int>::create();
+    a->subscribe(to);
+    to->awaitTerminalEvent();
+    to->assertOnErrorMessage("something broke!");
+  }
+  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(Single, SingleMap) {
+  {
+    ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+    auto a = Single<int>::create([](Reference<SingleObserver<int>> obs) {
+      obs->onSubscribe(SingleSubscriptions::empty());
+      obs->onSuccess(1);
+    });
+
+    ASSERT_EQ(std::size_t{1}, Refcounted::objects());
+
+    auto to = SingleTestObserver<const char*>::create();
+    a->map([](int v) { return "hello"; })->subscribe(to);
+    to->awaitTerminalEvent();
+    to->assertOnSuccessValue("hello");
   }
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
 }
