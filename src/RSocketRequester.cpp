@@ -14,22 +14,22 @@ namespace rsocket {
 
 std::shared_ptr<RSocketRequester> RSocketRequester::create(
     std::shared_ptr<RSocketStateMachine> srs,
-    EventBase &eventBase) {
-  auto customDeleter = [&eventBase](RSocketRequester *pRequester) {
-      eventBase.runImmediatelyOrRunInEventBaseThreadAndWait([&pRequester] {
-          LOG(INFO) << "RSocketRequester => destroy on EventBase";
-          delete pRequester;
-      });
+    EventBase& eventBase) {
+  auto customDeleter = [&eventBase](RSocketRequester* pRequester) {
+    eventBase.runImmediatelyOrRunInEventBaseThreadAndWait([&pRequester] {
+      LOG(INFO) << "RSocketRequester => destroy on EventBase";
+      delete pRequester;
+    });
   };
 
-  auto *rsr = new RSocketRequester(std::move(srs), eventBase);
+  auto* rsr = new RSocketRequester(std::move(srs), eventBase);
   std::shared_ptr<RSocketRequester> sR(rsr, customDeleter);
   return sR;
 }
 
 RSocketRequester::RSocketRequester(
     std::shared_ptr<RSocketStateMachine> srs,
-    EventBase &eventBase)
+    EventBase& eventBase)
     : stateMachine_(std::move(srs)), eventBase_(eventBase) {}
 
 RSocketRequester::~RSocketRequester() {
@@ -175,7 +175,7 @@ yarpl::Reference<yarpl::single::Single<void>> RSocketRequester::fireAndForget(
 void RSocketRequester::metadataPush(std::unique_ptr<folly::IOBuf> metadata) {
   eventBase_.runInEventBaseThread(
       [this, metadata = std::move(metadata)]() mutable {
-          stateMachine_->metadataPush(std::move(metadata));
+        stateMachine_->metadataPush(std::move(metadata));
       });
 }
 }

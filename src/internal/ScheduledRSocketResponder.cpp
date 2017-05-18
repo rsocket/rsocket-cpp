@@ -9,7 +9,7 @@ namespace rsocket {
 
 ScheduledRSocketResponder::ScheduledRSocketResponder(
     std::shared_ptr<RSocketResponder> inner,
-    folly::EventBase &eventBase) : inner_(std::move(inner)),
+    folly::EventBase& eventBase) : inner_(std::move(inner)),
                                    eventBase_(eventBase) {}
 
 yarpl::Reference<yarpl::single::Single<Payload>>

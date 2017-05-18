@@ -18,7 +18,7 @@ class ScheduledRSocketResponder : public RSocketResponder {
  public:
   ScheduledRSocketResponder(
       std::shared_ptr<RSocketResponder> inner,
-      folly::EventBase &eventBase);
+      folly::EventBase& eventBase);
 
   yarpl::Reference<yarpl::single::Single<Payload>>
   handleRequestResponse(
@@ -43,7 +43,7 @@ class ScheduledRSocketResponder : public RSocketResponder {
 
  private:
   std::shared_ptr<RSocketResponder> inner_;
-  folly::EventBase &eventBase_;
+  folly::EventBase& eventBase_;
 };
 
 } // rsocket

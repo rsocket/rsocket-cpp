@@ -18,7 +18,7 @@ class ScheduledSingleObserver : public yarpl::single::SingleObserver<T> {
  public:
   ScheduledSingleObserver(
       yarpl::Reference<yarpl::single::SingleObserver<T>> observer,
-      folly::EventBase &eventBase) :
+      folly::EventBase& eventBase) :
       inner_(std::move(observer)), eventBase_(eventBase) {}
 
   void onSubscribe(
@@ -60,6 +60,6 @@ class ScheduledSingleObserver : public yarpl::single::SingleObserver<T> {
 
  private:
   yarpl::Reference<yarpl::single::SingleObserver<T>> inner_;
-  folly::EventBase &eventBase_;
+  folly::EventBase& eventBase_;
 };
 } // rsocket

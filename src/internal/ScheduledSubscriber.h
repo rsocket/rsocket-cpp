@@ -17,7 +17,7 @@ class ScheduledSubscriber : public yarpl::flowable::Subscriber<T> {
  public:
   ScheduledSubscriber(
       yarpl::Reference<yarpl::flowable::Subscriber<T>> inner,
-      folly::EventBase &eventBase) : inner_(std::move(inner)),
+      folly::EventBase& eventBase) : inner_(std::move(inner)),
                                      eventBase_(eventBase) {}
 
   void onSubscribe(
@@ -70,7 +70,7 @@ class ScheduledSubscriber : public yarpl::flowable::Subscriber<T> {
 
  private:
   yarpl::Reference<yarpl::flowable::Subscriber<T>> inner_;
-  folly::EventBase &eventBase_;
+  folly::EventBase& eventBase_;
 };
 
 //
@@ -82,7 +82,7 @@ class ScheduledSubscriptionSubscriber : public yarpl::flowable::Subscriber<T> {
  public:
   ScheduledSubscriptionSubscriber(
       yarpl::Reference<yarpl::flowable::Subscriber<T>> inner,
-      folly::EventBase &eventBase) : inner_(std::move(inner)),
+      folly::EventBase& eventBase) : inner_(std::move(inner)),
                                      eventBase_(eventBase) {}
 
   void onSubscribe(
@@ -106,7 +106,7 @@ class ScheduledSubscriptionSubscriber : public yarpl::flowable::Subscriber<T> {
 
  private:
   yarpl::Reference<yarpl::flowable::Subscriber<T>> inner_;
-  folly::EventBase &eventBase_;
+  folly::EventBase& eventBase_;
 };
 
 } // rsocket
