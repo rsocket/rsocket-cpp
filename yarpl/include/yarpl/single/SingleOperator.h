@@ -11,7 +11,7 @@ namespace single {
 /**
  * Base (helper) class for operators.  Operators are templated on two types:
  * D (downstream) and U (upstream).  Operators are created by method calls on
- * an upstream Single, and are Singles themselves.  Multi-stage
+ * an upstream Single, and are Observables themselves.  Multi-stage
  * pipelines
  * can be built: a Single heading a sequence of Operators.
  */
@@ -93,7 +93,7 @@ class SingleOperator : public Single<D> {
     /// calls should be forwarded upstream.  Note that `this` is also a
     /// observer for the upstream stage: thus, there are cycles; all of
     /// the objects drop their references at cancel/complete.
-    Reference<::yarpl::single::SingleSubscription> upstream_;
+    Reference<::yarpl::single::SingleSubscription> upstreamSubscription_;
   };
 
   Reference<Single<U>> upstream_;
@@ -151,5 +151,5 @@ class FromPublisherOperator : public Single<T> {
   OnSubscribe function_;
 };
 
-} // single
+} // observable
 } // yarpl

@@ -5,6 +5,7 @@
 
 #include "RSocketTests.h"
 #include "yarpl/Single.h"
+#include "yarpl/single/SingleTestObserver.h"
 
 using namespace yarpl;
 using namespace yarpl::single;
@@ -19,12 +20,7 @@ class TestHandler : public rsocket::RSocketResponder {
   Reference<Single<Payload>> handleRequestResponse(
       Payload request,
       StreamId streamId) override {
-    std::cout << "HelloRequestResponseRequestHandler.handleRequestResponse "
-              << request << std::endl;
-
-    // string from payload data
     auto requestString = request.moveDataToString();
-
     return Single<Payload>::create([name = std::move(requestString)](
         auto subscriber) {
 
@@ -37,12 +33,16 @@ class TestHandler : public rsocket::RSocketResponder {
 };
 }
 
-TEST(RequestResponseTest, StartAndShutdown) {
+TEST(RequestResponseTest, Hello) {
   auto port = randPort();
   auto server = makeServer(port, std::make_shared<TestHandler>());
   auto client = makeClient(port);
   auto requester = client->connect().get();
-  requester->requestResponse(Payload("Jane"))->subscribeBlocking([](Payload p) {
-    std::cout << "Received >> " << p.moveDataToString() << std::endl;
-  });
+
+  auto to = SingleTestObserver<std::string>::create();
+  requester->requestResponse(Payload("Jane"))
+      ->map([](auto p) { return p.moveDataToString(); })
+      ->subscribe(to);
+  to->awaitTerminalEvent();
+  to->assertOnSuccessValue("Hello Jane!");
 }
