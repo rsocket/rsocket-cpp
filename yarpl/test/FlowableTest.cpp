@@ -29,7 +29,6 @@ class CollectingSubscriber : public Subscriber<T> {
   }
 
   void onNext(T next) override {
-    Subscriber<T>::onNext(next);
     values_.push_back(std::move(next));
   }
 
