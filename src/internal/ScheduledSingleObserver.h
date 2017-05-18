@@ -12,6 +12,9 @@ namespace rsocket {
 //
 // A decorated RSocketResponder object which schedules the calls from
 // application code to RSocket on the provided EventBase
+// This class should be used to wrap a SingleObserver returned to the
+// application code so that calls to on{Subscribe,Success,Error} are
+// scheduled on the right EventBase.
 //
 template<typename T>
 class ScheduledSingleObserver : public yarpl::single::SingleObserver<T> {

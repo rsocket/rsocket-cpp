@@ -10,8 +10,12 @@ namespace rsocket {
 
 //
 // A decorator of the Subscriber object which schedules the method calls on the
-// provided EventBase
+// provided EventBase.
+// This class should be used to wrap a Subscriber returned to the application
+// code so that calls to on{Subscribe,Next,Complete,Error} are scheduled on the
+// right EventBase.
 //
+
 template<typename T>
 class ScheduledSubscriber : public yarpl::flowable::Subscriber<T> {
  public:
@@ -75,7 +79,11 @@ class ScheduledSubscriber : public yarpl::flowable::Subscriber<T> {
 
 //
 // A decorator of a Subscriber object which schedules the method calls on the
-// provided EventBase
+// provided EventBase.
+// This class is to wrap the Subscriber provided from the application code to
+// the library. The Subscription passed to onSubscribe method needs to be
+// wrapped in the ScheduledSubscription since the application code calls
+// request and cancel from any thread.
 //
 template<typename T>
 class ScheduledSubscriptionSubscriber : public yarpl::flowable::Subscriber<T> {

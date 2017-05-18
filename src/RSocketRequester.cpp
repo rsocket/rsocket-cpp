@@ -97,9 +97,7 @@ RSocketRequester::requestResponse(Payload request) {
         : singleSubscriber_{std::move(singleSubscriber)} {}
 
     void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
-                     subscription) noexcept
-
-    override {
+                     subscription) override {
       // register cancellation callback with SingleSubscriber
       auto singleSubscription = yarpl::single::SingleSubscriptions::create(
           [subscription] { subscription->cancel(); });
@@ -111,21 +109,15 @@ RSocketRequester::requestResponse(Payload request) {
       subscription->request(1);
     }
 
-    void onNext(Payload payload) noexcept
-
-    override {
+    void onNext(Payload payload) override {
       singleSubscriber_->onSuccess(std::move(payload));
     }
 
-    void onComplete() noexcept
-
-    override {
+    void onComplete() override {
       // ignore as we're done once we get a single value back
     }
 
-    void onError(std::exception_ptr ex) noexcept
-
-    override {
+    void onError(std::exception_ptr ex) override {
       DLOG(ERROR) << folly::exceptionStr(ex);
       singleSubscriber_->onError(std::move(ex));
     }
