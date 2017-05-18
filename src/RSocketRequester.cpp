@@ -35,6 +35,7 @@ RSocketRequester::RSocketRequester(
 
 RSocketRequester::~RSocketRequester() {
   LOG(INFO) << "RSocketRequester => destroy";
+  stateMachine_->close(folly::exception_wrapper(), StreamCompletionSignal::CONNECTION_END);
 }
 
 yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
