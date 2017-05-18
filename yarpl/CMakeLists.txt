@@ -86,7 +86,13 @@ target_include_directories(
         yarpl
         PUBLIC "${PROJECT_SOURCE_DIR}/include" # allow include paths such as "yarpl/observable.h"
         PUBLIC "${PROJECT_SOURCE_DIR}/src" # allow include paths such as "yarpl/flowable/FlowableRange.h"
+        )
+
+target_link_libraries(
+        yarpl
+        ${CMAKE_THREAD_LIBS_INIT}
 )
+
 
 # Executable for Experimenting
 add_executable(
