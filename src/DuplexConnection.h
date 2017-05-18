@@ -3,13 +3,13 @@
 #pragma once
 
 #include <memory>
-#include "src/ReactiveStreamsCompat.h"
+#include "src/internal/ReactiveStreamsCompat.h"
 
 namespace folly {
 class IOBuf;
 }
 
-namespace reactivesocket {
+namespace rsocket {
 
 /// Represents a connection of the underlying protocol, on top of which
 /// the ReactiveSocket is layered. The underlying protocol MUST provide an

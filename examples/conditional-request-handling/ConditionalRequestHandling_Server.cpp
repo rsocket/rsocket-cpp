@@ -4,13 +4,12 @@
 #include <folly/portability/GFlags.h>
 #include <iostream>
 
-#include "rsocket/RSocket.h"
-#include "rsocket/RSocketErrors.h"
-#include "rsocket/transports/TcpConnectionAcceptor.h"
 #include "JsonRequestHandler.h"
 #include "TextRequestHandler.h"
+#include "src/RSocket.h"
+#include "src/RSocketErrors.h"
+#include "src/transports/tcp/TcpConnectionAcceptor.h"
 
-using namespace ::reactivesocket;
 using namespace ::folly;
 using namespace ::rsocket;
 
@@ -36,7 +35,7 @@ int main(int argc, char* argv[]) {
   // start accepting connections
   rs->startAndPark(
       [textHandler, jsonHandler](std::shared_ptr<ConnectionSetupRequest> r)
-          -> std::shared_ptr<RSocketRequestHandler> {
+          -> std::shared_ptr<RSocketResponder> {
             if (r->getDataMimeType() == "text/plain") {
               LOG(INFO) << "Connection Request => text/plain MimeType";
               return textHandler;

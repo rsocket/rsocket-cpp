@@ -6,25 +6,23 @@
 #include <folly/init/Init.h>
 #include <folly/portability/GFlags.h>
 
-#include "rsocket/RSocket.h"
-#include "rsocket/transports/TcpConnectionAcceptor.h"
+#include "src/RSocket.h"
+#include "src/transports/tcp/TcpConnectionAcceptor.h"
 #include "yarpl/Flowable.h"
-#include "yarpl/Flowables.h"
 
-using namespace reactivesocket;
 using namespace rsocket;
 using namespace yarpl::flowable;
 
 DEFINE_int32(port, 9898, "port to connect to");
 
-class HelloStreamRequestHandler : public rsocket::RSocketRequestHandler {
+class HelloStreamRequestHandler : public rsocket::RSocketResponder {
  public:
   /// Handles a new inbound Stream requested by the other end.
-  yarpl::Reference<Flowable<reactivesocket::Payload>>
-  handleRequestStream(
-      reactivesocket::Payload request,
-      reactivesocket::StreamId streamId) override {
-    LOG(INFO) << "HelloStreamRequestHandler.handleRequestStream " << request;
+  yarpl::Reference<Flowable<rsocket::Payload>> handleRequestStream(
+      rsocket::Payload request,
+      rsocket::StreamId streamId) override {
+    std::cout << "HelloStreamRequestHandler.handleRequestStream " << request
+              << std::endl;
 
     // string from payload data
     auto requestString = request.moveDataToString();

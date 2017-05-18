@@ -3,13 +3,12 @@
 #pragma once
 
 #include "src/Payload.h"
-#include "rsocket/RSocket.h"
+#include "src/RSocket.h"
 
-class TextRequestHandler : public rsocket::RSocketRequestHandler {
-public:
-    /// Handles a new inbound Stream requested by the other end.
-    yarpl::Reference<yarpl::flowable::Flowable<reactivesocket::Payload>>
-    handleRequestStream(
-            reactivesocket::Payload request,
-            reactivesocket::StreamId streamId) override;
+class TextRequestHandler : public rsocket::RSocketResponder {
+ public:
+  /// Handles a new inbound Stream requested by the other end.
+  yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
+  handleRequestStream(rsocket::Payload request, rsocket::StreamId streamId)
+      override;
 };
