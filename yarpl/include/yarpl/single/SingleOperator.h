@@ -44,12 +44,13 @@ class SingleOperator : public Single<D> {
 
     void observerOnSuccess(D value) {
       observer_->onSuccess(std::move(value));
+      upstreamSubscription_.reset(); // should break the cycle to this
     }
 
     // this method should be used to terminate the operators
     void terminate() {
       observer_->onComplete(); // should break the cycle to this
-      upstream_->cancel(); // should break the cycle to this
+      upstreamSubscription_->cancel(); // should break the cycle to this
     }
 
     template<typename TOperator>
@@ -60,23 +61,18 @@ class SingleOperator : public Single<D> {
    private:
     void onSubscribe(
         Reference<::yarpl::single::SingleSubscription> subscription) override {
-      upstream_ = std::move(subscription);
+      upstreamSubscription_ = std::move(subscription);
       observer_->onSubscribe(
           Reference<::yarpl::single::SingleSubscription>(this));
     }
-
-    void onSuccess(U value) override {
-      observer_->onSuccess(std::move(value));
-      upstream_.reset(); // should break the cycle to this
-    }
-
+    
     void onError(const std::exception_ptr error) override {
       observer_->onError(error);
-      upstream_.reset(); // should break the cycle to this
+      upstreamSubscription_.reset(); // should break the cycle to this
     }
 
     void cancel() override {
-      upstream_->cancel();
+      upstreamSubscription_->cancel();
       observer_.reset(); // breaking the cycle
     }
 
@@ -128,7 +124,7 @@ class MapOperator : public SingleOperator<U, D> {
               std::move(single),
               std::move(observer)) {}
 
-    void onNext(U value) override {
+    void onSuccess(U value) override {
       auto* map = Super::template getObservableAs<MapOperator>();
       Super::observerOnSuccess(map->function_(std::move(value)));
     }
