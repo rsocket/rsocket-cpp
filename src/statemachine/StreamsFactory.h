@@ -30,7 +30,7 @@ class StreamsFactory {
 
   void createRequestResponseRequester(
       Payload payload,
-      yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSink);
+      yarpl::Reference<yarpl::single::SingleObserver<Payload>> responseSink);
 
   // TODO: the return type should not be the stateMachine type, but something
   // generic

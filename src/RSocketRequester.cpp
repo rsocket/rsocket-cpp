@@ -4,6 +4,7 @@
 #include "yarpl/Flowable.h"
 #include <folly/ExceptionWrapper.h>
 #include "internal/ScheduledSubscriber.h"
+#include "internal/ScheduledSingleObserver.h"
 
 using namespace rsocket;
 using namespace folly;
@@ -88,56 +89,20 @@ RSocketRequester::requestStream(Payload request) {
 
 yarpl::Reference<yarpl::single::Single<rsocket::Payload>>
 RSocketRequester::requestResponse(Payload request) {
-  // TODO bridge in use until SingleSubscriber is used internally
-  class SingleToSubscriberBridge : public yarpl::flowable::Subscriber<Payload> {
-   public:
-    SingleToSubscriberBridge(
-        yarpl::Reference<yarpl::single::SingleObserver<Payload>>
-        singleSubscriber)
-        : singleSubscriber_{std::move(singleSubscriber)} {}
-
-    void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
-                     subscription) override {
-      // register cancellation callback with SingleSubscriber
-      auto singleSubscription = yarpl::single::SingleSubscriptions::create(
-          [subscription] { subscription->cancel(); });
-
-      singleSubscriber_->onSubscribe(std::move(singleSubscription));
-
-      // kick off request (TODO this is not needed once we use the proper type)
-      // this is executed on the correct subscription's eventBase
-      subscription->request(1);
-    }
-
-    void onNext(Payload payload) override {
-      singleSubscriber_->onSuccess(std::move(payload));
-    }
-
-    void onComplete() override {
-      // ignore as we're done once we get a single value back
-    }
-
-    void onError(std::exception_ptr ex) override {
-      DLOG(ERROR) << folly::exceptionStr(ex);
-      singleSubscriber_->onError(std::move(ex));
-    }
-
-   private:
-    yarpl::Reference<yarpl::single::SingleObserver<Payload>> singleSubscriber_;
-  };
-
   return yarpl::single::Single<Payload>::create(
   [eb = &eventBase_, request = std::move(request), srs = stateMachine_](
       yarpl::Reference<yarpl::single::SingleObserver<Payload>>
-  subscriber) mutable {
+  observer) mutable {
     eb->runInEventBaseThread([
         request = std::move(request),
-        subscriber = std::move(subscriber),
+        observer = std::move(observer),
+        eb,
         srs = std::move(srs)
     ]() mutable {
       srs->streamsFactory().createRequestResponseRequester(
           std::move(request),
-          make_ref<SingleToSubscriberBridge>(std::move(subscriber)));
+          yarpl::make_ref<ScheduledSubscriptionSingleObserver<Payload>>(
+              std::move(observer), *eb));
     });
   });
 }

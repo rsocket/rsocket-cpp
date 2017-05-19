@@ -12,17 +12,11 @@ using namespace yarpl;
 using namespace yarpl::flowable;
 
 void RequestResponseRequester::subscribe(
-    yarpl::Reference<yarpl::flowable::Subscriber<Payload>> subscriber) {
+    yarpl::Reference<yarpl::single::SingleObserver<Payload>> subscriber) {
   DCHECK(!isTerminated());
   DCHECK(!consumingSubscriber_);
   consumingSubscriber_ = std::move(subscriber);
-  consumingSubscriber_->onSubscribe(Reference<Subscription>(this));
-}
-
-void RequestResponseRequester::request(int64_t n) noexcept {
-  if (n == 0) {
-    return;
-  }
+  consumingSubscriber_->onSubscribe(Reference<SingleSubscription>(this));
 
   if (state_ == State::NEW) {
     state_ = State::REQUESTED;
@@ -49,6 +43,7 @@ void RequestResponseRequester::cancel() noexcept {
     case State::CLOSED:
       break;
   }
+  consumingSubscriber_ = nullptr;
 }
 
 void RequestResponseRequester::endStream(StreamCompletionSignal signal) {
@@ -64,13 +59,10 @@ void RequestResponseRequester::endStream(StreamCompletionSignal signal) {
       break;
   }
   if (auto subscriber = std::move(consumingSubscriber_)) {
-    if (signal == StreamCompletionSignal::COMPLETE ||
-        signal == StreamCompletionSignal::CANCEL) { // TODO: remove CANCEL
-      subscriber->onComplete();
-    } else {
-      subscriber->onError(std::make_exception_ptr(
-          StreamInterruptedException(static_cast<int>(signal))));
-    }
+    DCHECK(signal != StreamCompletionSignal::COMPLETE);
+    DCHECK(signal != StreamCompletionSignal::CANCEL);
+    subscriber->onError(std::make_exception_ptr(
+        StreamInterruptedException(static_cast<int>(signal))));
   }
 }
 
@@ -113,7 +105,8 @@ void RequestResponseRequester::handlePayload(
   }
 
   if (payload || flagsNext) {
-    consumingSubscriber_->onNext(std::move(payload));
+    consumingSubscriber_->onSuccess(std::move(payload));
+    consumingSubscriber_ = nullptr;
   } else if (!complete) {
     errorStream("payload, NEXT or COMPLETE flag expected");
     return;
