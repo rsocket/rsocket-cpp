@@ -5,6 +5,7 @@
 #include "src/internal/Common.h"
 #include "yarpl/flowable/Subscriber.h"
 #include "yarpl/flowable/Subscription.h"
+#include "yarpl/single/SingleObserver.h"
 
 namespace folly {
 class Executor;
@@ -41,7 +42,7 @@ class StreamsFactory {
       uint32_t initialRequestN,
       StreamId streamId);
 
-  yarpl::Reference<yarpl::flowable::Subscriber<Payload>>
+  yarpl::Reference<yarpl::single::SingleObserver<Payload>>
   createRequestResponseResponder(StreamId streamId);
 
   bool registerNewPeerStreamId(StreamId streamId);

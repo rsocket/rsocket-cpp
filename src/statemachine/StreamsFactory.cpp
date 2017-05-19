@@ -101,7 +101,7 @@ StreamsFactory::createStreamResponder(
   return stateMachine;
 }
 
-Reference<yarpl::flowable::Subscriber<Payload>>
+Reference<yarpl::single::SingleObserver<Payload>>
 StreamsFactory::createRequestResponseResponder(StreamId streamId) {
   RequestResponseResponder::Parameters params(
       connection_.shared_from_this(), streamId);

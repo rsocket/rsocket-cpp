@@ -115,7 +115,7 @@ class RSocketResponder {
   virtual void handleRequestResponseCore(
       Payload request,
       StreamId streamId,
-      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+      const yarpl::Reference<yarpl::single::SingleObserver<Payload>>&
       response) noexcept;
 };
 }

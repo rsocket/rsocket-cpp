@@ -2,30 +2,28 @@
 
 #pragma once
 
-#include "src/statemachine/PublisherBase.h"
 #include "src/statemachine/StreamStateMachineBase.h"
 #include "yarpl/flowable/Subscriber.h"
+#include "yarpl/single/SingleObserver.h"
+#include "yarpl/single/SingleSubscription.h"
 
 namespace rsocket {
 
 /// Implementation of stream stateMachine that represents a RequestResponse
 /// responder
 class RequestResponseResponder : public StreamStateMachineBase,
-                                 public PublisherBase,
-                                 public yarpl::flowable::Subscriber<Payload> {
+                                 public yarpl::single::SingleObserver<Payload> {
  public:
   explicit RequestResponseResponder(const Parameters& params)
-      : StreamStateMachineBase(params), PublisherBase(1) {}
+      : StreamStateMachineBase(params) {}
 
  private:
-  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
+  void onSubscribe(yarpl::Reference<yarpl::single::SingleSubscription>
                        subscription) noexcept override;
-  void onNext(Payload) noexcept override;
-  void onComplete() noexcept override;
+  void onSuccess(Payload) noexcept override;
   void onError(const std::exception_ptr) noexcept override;
 
   void handleCancel() override;
-  void handleRequestN(uint32_t n) override;
 
 //  void pauseStream(RequestHandler&) override;
 //  void resumeStream(RequestHandler&) override;
@@ -36,6 +34,8 @@ class RequestResponseResponder : public StreamStateMachineBase,
     RESPONDING,
     CLOSED,
   } state_{State::RESPONDING};
+
+  yarpl::Reference<yarpl::single::SingleSubscription> producingSubscription_;
 };
 
 } // reactivesocket

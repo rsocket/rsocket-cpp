@@ -2,6 +2,8 @@
 
 #include "src/statemachine/RequestResponseResponder.h"
 #include <folly/ExceptionString.h>
+#include <glog/logging.h>
+#include "src/Payload.h"
 
 namespace rsocket {
 
@@ -9,20 +11,22 @@ using namespace yarpl;
 using namespace yarpl::flowable;
 
 void RequestResponseResponder::onSubscribe(
-    Reference<yarpl::flowable::Subscription> subscription) noexcept {
+    Reference<yarpl::single::SingleSubscription> subscription) noexcept {
   if (StreamStateMachineBase::isTerminated()) {
     subscription->cancel();
     return;
   }
-  publisherSubscribe(std::move(subscription));
+  DCHECK(!producingSubscription_);
+  producingSubscription_ = std::move(subscription);
 }
 
-void RequestResponseResponder::onNext(Payload response) noexcept {
-  debugCheckOnNextOnError();
+void RequestResponseResponder::onSuccess(Payload response) noexcept {
+  DCHECK(producingSubscription_);
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
       writePayload(std::move(response), true);
+      producingSubscription_ = nullptr;
       closeStream(StreamCompletionSignal::COMPLETE);
       break;
     }
@@ -31,19 +35,9 @@ void RequestResponseResponder::onNext(Payload response) noexcept {
   }
 }
 
-void RequestResponseResponder::onComplete() noexcept {
-  switch (state_) {
-    case State::RESPONDING: {
-      state_ = State::CLOSED;
-      completeStream();
-    } break;
-    case State::CLOSED:
-      break;
-  }
-}
-
 void RequestResponseResponder::onError(const std::exception_ptr ex) noexcept {
-  debugCheckOnNextOnError();
+  DCHECK(producingSubscription_);
+  producingSubscription_ = nullptr;
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
@@ -73,7 +67,9 @@ void RequestResponseResponder::endStream(StreamCompletionSignal signal) {
     case State::CLOSED:
       break;
   }
-  terminatePublisher(signal);
+  if (auto subscription = std::move(producingSubscription_)) {
+    subscription->cancel();
+  }
   StreamStateMachineBase::endStream(signal);
 }
 
@@ -86,10 +82,6 @@ void RequestResponseResponder::handleCancel() {
     case State::CLOSED:
       break;
   }
-}
-
-void RequestResponseResponder::handleRequestN(uint32_t n) {
-  PublisherBase::processRequestN(n);
 }
 
 } // reactivesocket

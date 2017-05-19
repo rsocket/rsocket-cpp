@@ -120,49 +120,9 @@ void RSocketResponder::handleRequestStreamCore(
 void RSocketResponder::handleRequestResponseCore(
     Payload request,
     StreamId streamId,
-    const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
-    responseSubscriber) noexcept {
+    const yarpl::Reference<yarpl::single::SingleObserver<Payload>>&
+    responseObserver) noexcept {
   auto single = handleRequestResponse(std::move(request), streamId);
-  // bridge from the existing eager RequestHandler and old Subscriber type
-  // to the lazy Single and new SingleObserver type
-
-  class BridgeSubscriptionToSingle : public yarpl::flowable::Subscription {
-   public:
-    BridgeSubscriptionToSingle(
-        yarpl::Reference<yarpl::single::Single<Payload>> single,
-        yarpl::Reference<yarpl::flowable::Subscriber<Payload>>
-        responseSubscriber)
-        : single_{std::move(single)},
-          responseSubscriber_{std::move(responseSubscriber)} {}
-
-    void request(int64_t n) noexcept override {
-      // when we get a request we subscribe to Single
-      bool expected = false;
-      if (n > 0 && subscribed_.compare_exchange_strong(expected, true)) {
-        single_->subscribe(yarpl::single::SingleObservers::create<Payload>(
-            [this](Payload p) {
-              // onNext
-              responseSubscriber_->onNext(std::move(p));
-            },
-            [this](std::exception_ptr eptr) {
-              responseSubscriber_->onError(std::move(eptr));
-            }));
-      }
-    }
-
-    void cancel() noexcept override{
-      // TODO this code will be deleted shortly, so not bothering to make
-      // work
-    };
-
-   private:
-    yarpl::Reference<yarpl::single::Single<Payload>> single_;
-    yarpl::Reference<yarpl::flowable::Subscriber<Payload>>
-        responseSubscriber_;
-    std::atomic_bool subscribed_{false};
-  };
-
-  responseSubscriber->onSubscribe(yarpl::make_ref<BridgeSubscriptionToSingle>(
-      std::move(single), responseSubscriber));
+  single->subscribe(std::move(responseObserver));
 }
 }
