@@ -2,9 +2,10 @@
 
 #include "RSocketClient.h"
 #include "RSocketRequester.h"
+#include "RSocketResponder.h"
 #include "RSocketStats.h"
 #include "src/internal/FollyKeepaliveTimer.h"
-#include "src/temporary_home/NullRequestHandler.h"
+#include "src/framing/FrameTransport.h"
 
 using namespace rsocket;
 using namespace folly;
@@ -29,7 +30,7 @@ Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect() {
     auto rs = std::make_shared<RSocketStateMachine>(
         eventBase,
         // need to allow Responder being passed in optionally
-        std::make_unique<NullRequestHandler>(),
+        std::make_shared<RSocketResponder>(),
         // need to allow stats being passed in
         RSocketStats::noop(),
         // TODO need to optionally allow defining the keepalive timer

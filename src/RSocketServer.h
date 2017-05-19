@@ -14,6 +14,8 @@
 
 namespace rsocket {
 
+class RSocketStateMachine;
+
 using OnAccept = std::function<std::shared_ptr<RSocketResponder>(
     std::shared_ptr<ConnectionSetupRequest>)>;
 /**

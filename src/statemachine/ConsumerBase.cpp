@@ -5,6 +5,7 @@
 #include <glog/logging.h>
 #include <algorithm>
 #include "src/Payload.h"
+#include "../../yarpl/include/yarpl/flowable/Subscription.h"
 
 namespace rsocket {
 
@@ -14,7 +15,7 @@ using namespace yarpl::flowable;
 void ConsumerBase::subscribe(
     Reference<yarpl::flowable::Subscriber<Payload>> subscriber) {
   if (Base::isTerminated()) {
-    subscriber->onSubscribe(make_ref<NullSubscription>());
+    subscriber->onSubscribe(yarpl::flowable::Subscription::null());
     subscriber->onComplete();
     return;
   }
@@ -43,17 +44,17 @@ void ConsumerBase::endStream(StreamCompletionSignal signal) {
   Base::endStream(signal);
 }
 
-void ConsumerBase::pauseStream(RequestHandler& requestHandler) {
-  if (consumingSubscriber_) {
-    requestHandler.onSubscriberPaused(consumingSubscriber_);
-  }
-}
-
-void ConsumerBase::resumeStream(RequestHandler& requestHandler) {
-  if (consumingSubscriber_) {
-    requestHandler.onSubscriberResumed(consumingSubscriber_);
-  }
-}
+//void ConsumerBase::pauseStream(RequestHandler& requestHandler) {
+//  if (consumingSubscriber_) {
+//    requestHandler.onSubscriberPaused(consumingSubscriber_);
+//  }
+//}
+//
+//void ConsumerBase::resumeStream(RequestHandler& requestHandler) {
+//  if (consumingSubscriber_) {
+//    requestHandler.onSubscriberResumed(consumingSubscriber_);
+//  }
+//}
 
 void ConsumerBase::processPayload(Payload&& payload, bool onNext) {
   if (payload || onNext) {

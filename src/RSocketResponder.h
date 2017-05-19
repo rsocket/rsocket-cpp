@@ -2,13 +2,9 @@
 
 #pragma once
 
-#include <folly/io/async/EventBase.h>
-
 #include "yarpl/Flowable.h"
 #include "yarpl/Single.h"
-
 #include "src/Payload.h"
-#include "src/statemachine/StreamState.h"
 
 namespace rsocket {
 
@@ -33,7 +29,7 @@ namespace rsocket {
  */
 class RSocketResponder {
  public:
-  virtual ~RSocketResponder() {}
+  virtual ~RSocketResponder() = default;
 
   /**
    * Called when a new `requestResponse` occurs from an RSocketRequester.
@@ -45,10 +41,7 @@ class RSocketResponder {
    * @return
    */
   virtual yarpl::Reference<yarpl::single::Single<rsocket::Payload>>
-  handleRequestResponse(rsocket::Payload request, rsocket::StreamId streamId) {
-    return yarpl::single::Singles::error<rsocket::Payload>(
-        std::logic_error("handleRequestResponse not implemented"));
-  }
+  handleRequestResponse(rsocket::Payload request, rsocket::StreamId streamId);
 
   /**
    * Called when a new `requestStream` occurs from an RSocketRequester.
@@ -60,10 +53,7 @@ class RSocketResponder {
    * @return
    */
   virtual yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
-  handleRequestStream(rsocket::Payload request, rsocket::StreamId streamId) {
-    return yarpl::flowable::Flowables::error<rsocket::Payload>(
-        std::logic_error("handleRequestStream not implemented"));
-  }
+  handleRequestStream(rsocket::Payload request, rsocket::StreamId streamId);
 
   /**
      * Called when a new `requestChannel` occurs from an RSocketRequester.
@@ -79,10 +69,7 @@ class RSocketResponder {
       rsocket::Payload request,
       yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
           requestStream,
-      rsocket::StreamId streamId) {
-    return yarpl::flowable::Flowables::error<rsocket::Payload>(
-        std::logic_error("handleRequestChannel not implemented"));
-  }
+      rsocket::StreamId streamId);
 
   /**
    * Called when a new `fireAndForget` occurs from an RSocketRequester.
@@ -95,8 +82,40 @@ class RSocketResponder {
    */
   virtual void handleFireAndForget(
       rsocket::Payload request,
-      rsocket::StreamId streamId) {
-    // no default implementation, no error response to provide
-  }
+      rsocket::StreamId streamId);
+
+  /**
+   * Called when a new `metadataPush` occurs from an RSocketRequester.
+   *
+   * No response.
+   *
+   * @param metadata
+   */
+  virtual void handleMetadataPush(std::unique_ptr<folly::IOBuf> metadata);
+
+  /// internal method for handling channel requests, not intended to be used
+  /// by the application code
+  virtual yarpl::Reference<yarpl::flowable::Subscriber<Payload>>
+  handleRequestChannelCore(
+      Payload request,
+      StreamId streamId,
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+      response) noexcept;
+
+  /// internal method for handling stream requests, not intended to be used
+  /// by the application code
+  virtual void handleRequestStreamCore(
+      Payload request,
+      StreamId streamId,
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+      response) noexcept;
+
+  /// internal method for handling request-response requests, not intended to be used
+  /// by the application code
+  virtual void handleRequestResponseCore(
+      Payload request,
+      StreamId streamId,
+      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
+      response) noexcept;
 };
 }

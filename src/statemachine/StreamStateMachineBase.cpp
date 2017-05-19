@@ -3,7 +3,7 @@
 #include "src/statemachine/StreamStateMachineBase.h"
 #include <folly/io/IOBuf.h>
 #include "RSocketStateMachine.h"
-#include "StreamsHandler.h"
+#include "StreamsWriter.h"
 
 namespace rsocket {
 

@@ -10,6 +10,8 @@
 
 namespace rsocket {
 
+class RSocketStateMachine;
+
 /**
  * Handles the setup/creation/error steps of an RSocket. This is an abstract
  * class that is responsible for basic RSocket creation and setup; the virtual
@@ -46,7 +48,7 @@ class RSocketConnectionHandler : public rsocket::ConnectionHandler {
    * into action. This function provides the appropriate request handler for
    * an RSocket given the setup of the socket.
    */
-  virtual std::shared_ptr<RSocketResponder> getHandler(
+  virtual std::shared_ptr<RSocketResponder> getRequestResponder(
       std::shared_ptr<ConnectionSetupRequest> request) = 0;
 
   /**

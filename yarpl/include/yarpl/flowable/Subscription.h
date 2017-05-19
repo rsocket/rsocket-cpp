@@ -1,3 +1,5 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
 #pragma once
 
 #include "../Refcounted.h"
@@ -11,6 +13,8 @@ class Subscription : public virtual Refcounted {
 
   virtual void request(int64_t n) = 0;
   virtual void cancel() = 0;
+
+  static yarpl::Reference<Subscription> null();
 };
 
 } // flowable

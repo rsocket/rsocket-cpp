@@ -27,8 +27,8 @@ class RequestResponseResponder : public StreamStateMachineBase,
   void handleCancel() override;
   void handleRequestN(uint32_t n) override;
 
-  void pauseStream(RequestHandler&) override;
-  void resumeStream(RequestHandler&) override;
+//  void pauseStream(RequestHandler&) override;
+//  void resumeStream(RequestHandler&) override;
   void endStream(StreamCompletionSignal) override;
 
   /// State of the Subscription responder.

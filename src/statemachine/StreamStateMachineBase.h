@@ -16,7 +16,6 @@ class IOBuf;
 namespace rsocket {
 
 class StreamsWriter;
-class RequestHandler;
 struct Payload;
 
 ///
@@ -61,8 +60,8 @@ class StreamStateMachineBase : public virtual yarpl::Refcounted {
   virtual void endStream(StreamCompletionSignal signal);
   /// @}
 
-  virtual void pauseStream(RequestHandler& requestHandler) = 0;
-  virtual void resumeStream(RequestHandler& requestHandler) = 0;
+//  virtual void pauseStream(RequestHandler& requestHandler) = 0;
+//  virtual void resumeStream(RequestHandler& requestHandler) = 0;
 
  protected:
   bool isTerminated() const {

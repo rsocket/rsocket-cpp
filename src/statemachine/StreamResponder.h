@@ -30,8 +30,8 @@ class StreamResponder : public StreamStateMachineBase,
   void onComplete() noexcept override;
   void onError(const std::exception_ptr) noexcept override;
 
-  void pauseStream(RequestHandler&) override;
-  void resumeStream(RequestHandler&) override;
+//  void pauseStream(RequestHandler&) override;
+//  void resumeStream(RequestHandler&) override;
   void endStream(StreamCompletionSignal) override;
 
   /// State of the Subscription responder.

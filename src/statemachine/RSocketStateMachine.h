@@ -5,16 +5,13 @@
 #include <list>
 #include <memory>
 #include "StreamsFactory.h"
-#include "StreamsHandler.h"
+#include "StreamsWriter.h"
 #include "src/DuplexConnection.h"
 #include "src/Payload.h"
-#include "src/framing/Frame.h"
 #include "src/framing/FrameProcessor.h"
-#include "src/framing/FrameSerializer.h"
-#include "src/framing/FrameTransport.h"
-#include "src/internal/AllowanceSemaphore.h"
 #include "src/internal/Common.h"
 #include "src/temporary_home/Executor.h"
+#include "src/RSocketParameters.h"
 
 namespace rsocket {
 
@@ -24,11 +21,13 @@ class RSocketStateMachine;
 class DuplexConnection;
 class Frame_ERROR;
 class KeepaliveTimer;
-class RequestHandler;
+class RSocketResponder;
 class ResumeCache;
 class RSocketStats;
 class StreamState;
 class RSocketParameters;
+class FrameSerializer;
+class FrameTransport;
 
 class FrameSink {
  public:
@@ -61,7 +60,7 @@ class RSocketStateMachine final
  public:
   RSocketStateMachine(
       folly::Executor& executor,
-      std::shared_ptr<RequestHandler> requestHandler,
+      std::shared_ptr<RSocketResponder> requestResponder,
       std::shared_ptr<RSocketStats> stats,
       std::unique_ptr<KeepaliveTimer> keepaliveTimer_,
       ReactiveSocketMode mode);
@@ -136,7 +135,6 @@ class RSocketStateMachine final
   void sendKeepalive(std::unique_ptr<folly::IOBuf> data) override;
 
   void setResumable(bool resumable);
-  Frame_RESUME createResumeFrame(const ResumeIdentificationToken& token) const;
 
   bool isPositionAvailable(ResumePosition position);
 
@@ -276,7 +274,7 @@ class RSocketStateMachine final
 
   std::shared_ptr<ResumeCache> resumeCache_;
   std::shared_ptr<StreamState> streamState_;
-  std::shared_ptr<RequestHandler> requestHandler_;
+  std::shared_ptr<RSocketResponder> requestResponder_;
   std::shared_ptr<FrameTransport> frameTransport_;
   std::unique_ptr<FrameSerializer> frameSerializer_;
 

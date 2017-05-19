@@ -6,11 +6,10 @@
 #include <cstddef>
 #include <iostream>
 #include "RSocketStateMachine.h"
+#include "StreamStateMachineBase.h"
 #include "src/Payload.h"
 #include "src/internal/AllowanceSemaphore.h"
 #include "src/internal/Common.h"
-#include "src/statemachine/StreamStateMachineBase.h"
-#include "src/temporary_home/NullRequestHandler.h"
 #include "yarpl/flowable/Subscription.h"
 
 namespace rsocket {
@@ -44,9 +43,8 @@ class ConsumerBase : public StreamStateMachineBase,
   /// @{
   void endStream(StreamCompletionSignal signal) override;
 
-  void pauseStream(RequestHandler& requestHandler) override;
-
-  void resumeStream(RequestHandler& requestHandler) override;
+//  void pauseStream(RequestHandler& requestHandler) override;
+//  void resumeStream(RequestHandler& requestHandler) override;
 
   void processPayload(Payload&&, bool onNext);
 

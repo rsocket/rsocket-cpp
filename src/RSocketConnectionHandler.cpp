@@ -9,109 +9,11 @@
 #include "RSocketErrors.h"
 #include "RSocketStats.h"
 #include "src/statemachine/RSocketStateMachine.h"
-#include "src/temporary_home/NullRequestHandler.h"
-#include "src/temporary_home/OldNewBridge.h"
 
 namespace rsocket {
 
 using namespace rsocket;
 using namespace yarpl;
-
-class RSocketHandlerBridge : public rsocket::DefaultRequestHandler {
- public:
-  RSocketHandlerBridge(std::shared_ptr<RSocketResponder> handler)
-      : handler_(std::move(handler)){};
-
-  void handleRequestStream(
-      Payload request,
-      StreamId streamId,
-      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
-          response) noexcept override {
-    auto flowable =
-        handler_->handleRequestStream(std::move(request), std::move(streamId));
-    // bridge from the existing eager RequestHandler and old Subscriber type
-    // to the lazy Flowable and new Subscriber type
-    flowable->subscribe(std::move(response));
-  }
-
-  yarpl::Reference<yarpl::flowable::Subscriber<Payload>> handleRequestChannel(
-      Payload request,
-      StreamId streamId,
-      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
-          response) noexcept override {
-    auto eagerSubscriber = make_ref<EagerSubscriberBridge>();
-    auto flowable = handler_->handleRequestChannel(
-        std::move(request),
-        yarpl::flowable::Flowables::fromPublisher<Payload>([eagerSubscriber](
-            yarpl::Reference<yarpl::flowable::Subscriber<Payload>> subscriber) {
-          eagerSubscriber->subscribe(subscriber);
-        }),
-        std::move(streamId));
-    // bridge from the existing eager RequestHandler and old Subscriber type
-    // to the lazy Flowable and new Subscriber type
-    flowable->subscribe(std::move(response));
-
-    return eagerSubscriber;
-  }
-
-  void handleRequestResponse(
-      Payload request,
-      StreamId streamId,
-      const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
-          responseSubscriber) noexcept override {
-    auto single = handler_->handleRequestResponse(std::move(request), streamId);
-    // bridge from the existing eager RequestHandler and old Subscriber type
-    // to the lazy Single and new SingleObserver type
-
-    class BridgeSubscriptionToSingle : public yarpl::flowable::Subscription {
-     public:
-      BridgeSubscriptionToSingle(
-          yarpl::Reference<yarpl::single::Single<Payload>> single,
-          yarpl::Reference<yarpl::flowable::Subscriber<Payload>>
-              responseSubscriber)
-          : single_{std::move(single)},
-            responseSubscriber_{std::move(responseSubscriber)} {}
-
-      void request(int64_t n) noexcept override {
-        // when we get a request we subscribe to Single
-        bool expected = false;
-        if (n > 0 && subscribed_.compare_exchange_strong(expected, true)) {
-          single_->subscribe(yarpl::single::SingleObservers::create<Payload>(
-              [this](Payload p) {
-                // onNext
-                responseSubscriber_->onNext(std::move(p));
-              },
-              [this](std::exception_ptr eptr) {
-                responseSubscriber_->onError(std::move(eptr));
-              }));
-        }
-      }
-
-      void cancel() noexcept override{
-          // TODO this code will be deleted shortly, so not bothering to make
-          // work
-      };
-
-     private:
-      yarpl::Reference<yarpl::single::Single<Payload>> single_;
-      yarpl::Reference<yarpl::flowable::Subscriber<Payload>>
-          responseSubscriber_;
-      std::atomic_bool subscribed_{false};
-    };
-
-    responseSubscriber->onSubscribe(make_ref<BridgeSubscriptionToSingle>(
-        std::move(single), responseSubscriber));
-  }
-
-  void handleFireAndForgetRequest(
-      Payload request,
-      StreamId streamId) noexcept override {
-    handler_->handleFireAndForget(std::move(request), std::move(streamId));
-  }
-
- private:
-  std::shared_ptr<RSocketResponder> handler_;
-};
 
 void RSocketConnectionHandler::setupNewSocket(
     std::shared_ptr<FrameTransport> frameTransport,
@@ -125,9 +27,9 @@ void RSocketConnectionHandler::setupNewSocket(
       RSocketParameters(setupPayload.resumable, setupPayload.protocolVersion);
   std::shared_ptr<ConnectionSetupRequest> setupRequest =
       std::make_shared<ConnectionSetupRequest>(std::move(setupPayload));
-  std::shared_ptr<RSocketResponder> requestHandler;
+  std::shared_ptr<RSocketResponder> requestResponder;
   try {
-    requestHandler = getHandler(setupRequest);
+    requestResponder = getRequestResponder(setupRequest);
   } catch (const RSocketError& e) {
     // TODO emit ERROR ... but how do I do that here?
     frameTransport->close(
@@ -136,12 +38,14 @@ void RSocketConnectionHandler::setupNewSocket(
   }
   LOG(INFO) << "RSocketServer => received request handler";
 
-  auto handlerBridge =
-      std::make_shared<RSocketHandlerBridge>(std::move(requestHandler));
+  if (!requestResponder) {
+    // if the responder was not provided, we will create a default one
+    requestResponder = std::make_shared<RSocketResponder>();
+  }
 
   auto rs = std::make_shared<RSocketStateMachine>(
       *executor,
-      std::move(handlerBridge),
+      std::move(requestResponder),
       RSocketStats::noop(),
       nullptr,
       ReactiveSocketMode::SERVER);

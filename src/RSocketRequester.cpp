@@ -1,7 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "RSocketRequester.h"
-#include "src/temporary_home/OldNewBridge.h"
 #include "yarpl/Flowable.h"
 #include <folly/ExceptionWrapper.h>
 #include "internal/ScheduledSubscriber.h"

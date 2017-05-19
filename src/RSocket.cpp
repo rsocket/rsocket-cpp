@@ -1,8 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "RSocket.h"
-#include <src/temporary_home/NullRequestHandler.h>
-#include "src/internal/FollyKeepaliveTimer.h"
 
 namespace rsocket {
 

@@ -16,13 +16,16 @@
 #include "src/internal/ResumeCache.h"
 #include "src/statemachine/ChannelResponder.h"
 #include "src/statemachine/StreamStateMachineBase.h"
-#include "src/temporary_home/RequestHandler.h"
+#include "src/RSocketResponder.h"
+#include "src/framing/FrameSerializer.h"
+#include "src/framing/FrameTransport.h"
+#include "src/framing/Frame.h"
 
 namespace rsocket {
 
 RSocketStateMachine::RSocketStateMachine(
     folly::Executor& executor,
-    std::shared_ptr<RequestHandler> requestHandler,
+    std::shared_ptr<RSocketResponder> requestResponder,
     std::shared_ptr<RSocketStats> stats,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer,
     ReactiveSocketMode mode)
@@ -31,13 +34,14 @@ RSocketStateMachine::RSocketStateMachine(
       mode_(mode),
       resumeCache_(std::make_shared<ResumeCache>(stats)),
       streamState_(std::make_shared<StreamState>(*stats)),
-      requestHandler_(std::move(requestHandler)),
+      requestResponder_(std::move(requestResponder)),
       keepaliveTimer_(std::move(keepaliveTimer)),
       streamsFactory_(*this, mode) {
   // We deliberately do not "open" input or output to avoid having c'tor on the
   // stack when processing any signals from the connection. See ::connect and
   // ::onSubscribe.
   CHECK(streamState_);
+  CHECK(requestResponder_);
 
   stats_->socketCreated();
 }
@@ -94,7 +98,7 @@ bool RSocketStateMachine::connect(
     callback();
   }
 
-  requestHandler_->socketOnConnected();
+  //requestResponder_->socketOnConnected();
 
   // We need to create a hard reference to frameTransport_ to make sure the
   // instance survives until the setFrameProcessor returns.  There can be
@@ -147,7 +151,7 @@ void RSocketStateMachine::disconnect(folly::exception_wrapper ex) {
     callback(ex);
   }
 
-  requestHandler_->socketOnDisconnected(ex);
+//  requestHandler_->socketOnDisconnected(ex);
 
   closeFrameTransport(std::move(ex), StreamCompletionSignal::CONNECTION_END);
   pauseStreams();
@@ -180,7 +184,7 @@ void RSocketStateMachine::close(
     callback(ex);
   }
 
-  requestHandler_->socketOnClosed(ex);
+//  requestHandler_->socketOnClosed(ex);
 
   closeStreams(signal);
   closeFrameTransport(std::move(ex), signal);
@@ -342,15 +346,15 @@ void RSocketStateMachine::closeStreams(StreamCompletionSignal signal) {
 }
 
 void RSocketStateMachine::pauseStreams() {
-  for (auto& streamKV : streamState_->streams_) {
-    streamKV.second->pauseStream(*requestHandler_);
-  }
+//  for (auto& streamKV : streamState_->streams_) {
+//    streamKV.second->pauseStream(*requestHandler_);
+//  }
 }
 
 void RSocketStateMachine::resumeStreams() {
-  for (auto& streamKV : streamState_->streams_) {
-    streamKV.second->resumeStream(*requestHandler_);
-  }
+//  for (auto& streamKV : streamState_->streams_) {
+//    streamKV.second->resumeStream(*requestHandler_);
+//  }
 }
 
 void RSocketStateMachine::processFrame(std::unique_ptr<folly::IOBuf> frame) {
@@ -452,7 +456,7 @@ void RSocketStateMachine::handleConnectionFrame(
     case FrameType::METADATA_PUSH: {
       Frame_METADATA_PUSH frame;
       if (deserializeFrameOrError(frame, std::move(payload))) {
-        requestHandler_->handleMetadataPush(std::move(frame.metadata_));
+        requestResponder_->handleMetadataPush(std::move(frame.metadata_));
       }
       return;
     }
@@ -601,7 +605,7 @@ void RSocketStateMachine::handleUnknownStream(
       }
       auto stateMachine =
           streamsFactory_.createChannelResponder(frame.requestN_, streamId);
-      auto requestSink = requestHandler_->handleRequestChannel(
+      auto requestSink = requestResponder_->handleRequestChannelCore(
           std::move(frame.payload_), streamId, stateMachine);
       stateMachine->subscribe(requestSink);
       break;
@@ -613,7 +617,7 @@ void RSocketStateMachine::handleUnknownStream(
       }
       auto stateMachine =
           streamsFactory_.createStreamResponder(frame.requestN_, streamId);
-      requestHandler_->handleRequestStream(
+      requestResponder_->handleRequestStreamCore(
           std::move(frame.payload_), streamId, stateMachine);
       break;
     }
@@ -624,7 +628,7 @@ void RSocketStateMachine::handleUnknownStream(
       }
       auto stateMachine =
           streamsFactory_.createRequestResponseResponder(streamId);
-      requestHandler_->handleRequestResponse(
+      requestResponder_->handleRequestResponseCore(
           std::move(frame.payload_), streamId, stateMachine);
       break;
     }
@@ -634,7 +638,7 @@ void RSocketStateMachine::handleUnknownStream(
         return;
       }
       // no stream tracking is necessary
-      requestHandler_->handleFireAndForgetRequest(
+      requestResponder_->handleFireAndForget(
           std::move(frame.payload_), streamId);
       break;
     }
@@ -678,22 +682,17 @@ void RSocketStateMachine::tryClientResume(
     std::shared_ptr<FrameTransport> frameTransport,
     std::unique_ptr<ClientResumeStatusCallback> resumeCallback) {
   frameTransport->outputFrameOrEnqueue(
-      frameSerializer_->serializeOut(createResumeFrame(token)));
+      frameSerializer_->serializeOut(Frame_RESUME(
+          token,
+          resumeCache_->impliedPosition(),
+          resumeCache_->lastResetPosition(),
+          frameSerializer_->protocolVersion())));
 
   // if the client was still connected we will disconnected the old connection
   // with a clear error message
   disconnect(std::runtime_error("resuming client on a different connection"));
   setResumable(true);
   reconnect(std::move(frameTransport), std::move(resumeCallback));
-}
-
-Frame_RESUME RSocketStateMachine::createResumeFrame(
-    const ResumeIdentificationToken& token) const {
-  return Frame_RESUME(
-      token,
-      resumeCache_->impliedPosition(),
-      resumeCache_->lastResetPosition(),
-      frameSerializer_->protocolVersion());
 }
 
 bool RSocketStateMachine::isPositionAvailable(ResumePosition position) {

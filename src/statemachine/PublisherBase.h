@@ -9,7 +9,6 @@
 #include "src/Payload.h"
 #include "src/internal/AllowanceSemaphore.h"
 #include "src/temporary_home/Executor.h"
-#include "src/temporary_home/RequestHandler.h"
 #include "yarpl/flowable/Subscription.h"
 
 namespace rsocket {
@@ -68,13 +67,13 @@ class PublisherBase {
     }
   }
 
-  void pausePublisherStream(RequestHandler& requestHandler) {
-    requestHandler.onSubscriptionPaused(producingSubscription_);
-  }
-
-  void resumePublisherStream(RequestHandler& requestHandler) {
-    requestHandler.onSubscriptionResumed(producingSubscription_);
-  }
+//  void pausePublisherStream(RequestHandler& requestHandler) {
+//    requestHandler.onSubscriptionPaused(producingSubscription_);
+//  }
+//
+//  void resumePublisherStream(RequestHandler& requestHandler) {
+//    requestHandler.onSubscriptionResumed(producingSubscription_);
+//  }
 
  private:
   /// A Subscription that constrols production of payloads.

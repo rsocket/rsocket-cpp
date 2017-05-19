@@ -5,7 +5,6 @@
 #include <folly/MoveWrapper.h>
 #include "RSocketStateMachine.h"
 #include "src/internal/Common.h"
-#include "src/temporary_home/RequestHandler.h"
 
 namespace rsocket {
 
@@ -122,15 +121,15 @@ void RequestResponseRequester::handlePayload(
   closeStream(StreamCompletionSignal::COMPLETE);
 }
 
-void RequestResponseRequester::pauseStream(RequestHandler& requestHandler) {
-  if (consumingSubscriber_) {
-    requestHandler.onSubscriberPaused(consumingSubscriber_);
-  }
-}
-
-void RequestResponseRequester::resumeStream(RequestHandler& requestHandler) {
-  if (consumingSubscriber_) {
-    requestHandler.onSubscriberResumed(consumingSubscriber_);
-  }
-}
+//void RequestResponseRequester::pauseStream(RequestHandler& requestHandler) {
+//  if (consumingSubscriber_) {
+//    requestHandler.onSubscriberPaused(consumingSubscriber_);
+//  }
+//}
+//
+//void RequestResponseRequester::resumeStream(RequestHandler& requestHandler) {
+//  if (consumingSubscriber_) {
+//    requestHandler.onSubscriberResumed(consumingSubscriber_);
+//  }
+//}
 }

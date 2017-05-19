@@ -146,6 +146,7 @@ add_library(
   src/transports/tcp/TcpConnectionAcceptor.cpp
   src/transports/tcp/TcpConnectionFactory.h
   src/transports/tcp/TcpConnectionFactory.cpp
+  src/RSocketResponder.cpp
   src/RSocketResponder.h
   src/RSocketConnectionHandler.h
   src/RSocketConnectionHandler.cpp
@@ -168,7 +169,7 @@ add_library(
   src/statemachine/StreamResponder.h
   src/statemachine/StreamsFactory.cpp
   src/statemachine/StreamsFactory.h
-  src/statemachine/StreamsHandler.h
+  src/statemachine/StreamsWriter.h
   src/statemachine/StreamState.cpp
   src/statemachine/StreamState.h
   src/internal/ClientResumeStatusCallback.h
@@ -195,12 +196,9 @@ add_library(
   src/framing/FrameSerializer.h
   src/framing/FrameTransport.cpp
   src/framing/FrameTransport.h
-  src/temporary_home/NullRequestHandler.cpp
-  src/temporary_home/NullRequestHandler.h
   src/Payload.cpp
   src/Payload.h
   src/internal/ReactiveStreamsCompat.h
-  src/temporary_home/RequestHandler.h
   src/internal/ResumeCache.cpp
   src/internal/ResumeCache.h
   src/temporary_home/ServerConnectionAcceptor.cpp

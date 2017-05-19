@@ -54,13 +54,13 @@ void RequestResponseResponder::onError(const std::exception_ptr ex) noexcept {
   }
 }
 
-void RequestResponseResponder::pauseStream(RequestHandler& requestHandler) {
-  pausePublisherStream(requestHandler);
-}
-
-void RequestResponseResponder::resumeStream(RequestHandler& requestHandler) {
-  resumePublisherStream(requestHandler);
-}
+//void RequestResponseResponder::pauseStream(RequestHandler& requestHandler) {
+//  pausePublisherStream(requestHandler);
+//}
+//
+//void RequestResponseResponder::resumeStream(RequestHandler& requestHandler) {
+//  resumePublisherStream(requestHandler);
+//}
 
 void RequestResponseResponder::endStream(StreamCompletionSignal signal) {
   switch (state_) {

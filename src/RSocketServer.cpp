@@ -18,7 +18,7 @@ class RSocketServerConnectionHandler : public virtual RSocketConnectionHandler {
       folly::EventBase& eventBase)
       : server_{server}, onAccept_{std::move(onAccept)}, eventBase_{eventBase} {}
 
-  std::shared_ptr<RSocketResponder> getHandler(
+  std::shared_ptr<RSocketResponder> getRequestResponder(
       std::shared_ptr<ConnectionSetupRequest> request) override {
     auto responder = onAccept_(std::move(request));
     if(responder) {
