@@ -48,7 +48,7 @@ void StreamsFactory::createStreamRequester(
 
 void StreamsFactory::createRequestResponseRequester(
     Payload payload,
-    Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
+    Reference<yarpl::single::SingleObserver<Payload>> responseSink) {
   RequestResponseRequester::Parameters params(
       connection_.shared_from_this(), getNextStreamId());
   auto stateMachine =

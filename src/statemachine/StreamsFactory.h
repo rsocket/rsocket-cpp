@@ -5,6 +5,7 @@
 #include "src/internal/Common.h"
 #include "yarpl/flowable/Subscriber.h"
 #include "yarpl/flowable/Subscription.h"
+#include "yarpl/single/SingleObserver.h"
 
 namespace folly {
 class Executor;
@@ -29,7 +30,7 @@ class StreamsFactory {
 
   void createRequestResponseRequester(
       Payload payload,
-      yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSink);
+      yarpl::Reference<yarpl::single::SingleObserver<Payload>> responseSink);
 
   // TODO: the return type should not be the stateMachine type, but something
   // generic
