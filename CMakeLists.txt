@@ -123,10 +123,8 @@ add_subdirectory(yarpl)
 
 add_library(
   ReactiveSocket
-  src/RSocket.h
-  # TODO remove when ReactiveStreams all synced
-  src/temporary_home/OldNewBridge.h
   src/RSocket.cpp
+  src/RSocket.h
   src/RSocketServer.h
   src/RSocketServer.cpp
   src/RSocketClient.h
