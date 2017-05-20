@@ -256,6 +256,7 @@ add_executable(
   test/RSocketTests.h
   test/RequestResponseTest.cpp
   test/RequestStreamTest.cpp
+  test/RequestChannelTest.cpp
 )
 
 target_link_libraries(
