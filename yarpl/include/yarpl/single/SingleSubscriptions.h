@@ -4,6 +4,7 @@
 
 #include <atomic>
 #include <functional>
+#include <mutex>
 
 #include "../Refcounted.h"
 #include "SingleSubscription.h"
@@ -14,10 +15,14 @@ namespace single {
 /**
 * Implementation that allows checking if a Subscription is cancelled.
 */
-class AtomicBoolSubscription : public SingleSubscription {
+class AtomicBoolSingleSubscription : public SingleSubscription {
  public:
-  void cancel() override;
-  bool isCancelled() const;
+  void cancel() override {
+    cancelled_ = true;
+  }
+  bool isCancelled() const {
+    return cancelled_;
+  }
 
  private:
   std::atomic_bool cancelled_{false};
@@ -26,23 +31,82 @@ class AtomicBoolSubscription : public SingleSubscription {
 /**
 * Implementation that gets a callback when cancellation occurs.
 */
-class CallbackSubscription : public SingleSubscription {
+class CallbackSingleSubscription : public SingleSubscription {
  public:
-  explicit CallbackSubscription(std::function<void()>&& onCancel);
-  void cancel() override;
-  bool isCancelled() const;
+  explicit CallbackSingleSubscription(std::function<void()>&& onCancel)
+      : onCancel_(std::move(onCancel)) {}
+  void cancel() override {
+    bool expected = false;
+    // mark cancelled 'true' and only if successful invoke 'onCancel()'
+    if (cancelled_.compare_exchange_strong(expected, true)) {
+      onCancel_();
+    }
+  }
+  bool isCancelled() const {
+    return cancelled_;
+  }
 
  private:
   std::atomic_bool cancelled_{false};
   std::function<void()> onCancel_;
 };
 
+/**
+* Implementation that can be cancelled with or without
+ * a delegate, and when the delegate exists (before or after cancel)
+ * it will be cancelled in a thread-safe manner.
+*/
+class DelegateSingleSubscription : public SingleSubscription {
+ public:
+  explicit DelegateSingleSubscription() {}
+  void cancel() override {
+    std::lock_guard<std::mutex> g(m_);
+    cancelled_ = true;
+    if (delegate_) {
+      delegate_->cancel();
+    }
+  }
+  bool isCancelled() const {
+    std::lock_guard<std::mutex> g(m_);
+    return cancelled_;
+  }
+  /**
+   * This can be called once.
+   */
+  void setDelegate(Reference<SingleSubscription> d) {
+    std::lock_guard<std::mutex> g(m_);
+    if (delegate_) {
+      throw std::runtime_error("Delegate already set. Only one permitted.");
+    }
+    delegate_ = std::move(d);
+    if (cancelled_) {
+      delegate_->cancel();
+    }
+  }
+
+ private:
+  // all must be protected by a mutex
+  mutable std::mutex m_;
+  bool cancelled_;
+  Reference<SingleSubscription> delegate_;
+};
+
 class SingleSubscriptions {
  public:
-  static Reference<SingleSubscription> create(std::function<void()> onCancel);
-  static Reference<SingleSubscription> create(std::atomic_bool& cancelled);
-  static Reference<SingleSubscription> empty();
-  static Reference<AtomicBoolSubscription> atomicBoolSubscription();
+  static Reference<CallbackSingleSubscription> create(
+      std::function<void()> onCancel) {
+    return make_ref<CallbackSingleSubscription>(std::move(onCancel));
+  }
+  static Reference<CallbackSingleSubscription> create(
+      std::atomic_bool& cancelled) {
+    return create([&cancelled]() { cancelled = true; });
+  }
+  static Reference<SingleSubscription> empty() {
+    return Reference<SingleSubscription>(new AtomicBoolSingleSubscription());
+  }
+  static Reference<AtomicBoolSingleSubscription> atomicBoolSubscription() {
+    return make_ref<AtomicBoolSingleSubscription>();
+  }
 };
 
 } // single namespace
