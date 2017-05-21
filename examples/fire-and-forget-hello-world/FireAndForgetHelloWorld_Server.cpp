@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
   auto rawRs = rs.get();
   auto serverThread = std::thread([=] {
     // start accepting connections
-    rawRs->startAndPark([handler](auto r) { return handler; });
+    rawRs->startAndPark([handler](auto& setupParams) { return handler; });
   });
 
   // Wait for a newline on the console to terminate the server.

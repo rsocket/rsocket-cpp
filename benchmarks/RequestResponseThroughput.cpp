@@ -167,7 +167,7 @@ class BM_RsFixture : public benchmark::Fixture {
         handler_(std::make_shared<BM_RequestHandler>()) {
     FLAGS_v = 0;
     FLAGS_minloglevel = 6;
-    serverRs_->start([this](auto r) { return handler_; });
+    serverRs_->start([this](auto& setupParams) { return handler_; });
   }
 
   virtual ~BM_RsFixture() {}

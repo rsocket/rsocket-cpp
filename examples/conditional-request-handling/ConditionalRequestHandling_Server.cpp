@@ -34,17 +34,17 @@ int main(int argc, char* argv[]) {
   auto jsonHandler = std::make_shared<JsonRequestHandler>();
   // start accepting connections
   rs->startAndPark(
-      [textHandler, jsonHandler](std::shared_ptr<ConnectionSetupRequest> r)
+      [textHandler, jsonHandler](auto& setupParams)
           -> std::shared_ptr<RSocketResponder> {
-            if (r->getDataMimeType() == "text/plain") {
+            if (setupParams.dataMimeType == "text/plain") {
               LOG(INFO) << "Connection Request => text/plain MimeType";
               return textHandler;
-            } else if (r->getDataMimeType() == "application/json") {
+            } else if (setupParams.dataMimeType == "application/json") {
               LOG(INFO) << "Connection Request => application/json MimeType";
               return jsonHandler;
             } else {
               LOG(INFO) << "Connection Request => Unsupported MimeType"
-                        << r->getDataMimeType();
+                        << setupParams.dataMimeType;
               throw UnsupportedSetupError("Unknown MimeType");
             }
           });

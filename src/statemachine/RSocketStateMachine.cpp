@@ -501,8 +501,8 @@ void RSocketStateMachine::handleConnectionFrame(
           StreamCompletionSignal::ERROR);
       return;
     }
-    case FrameType::SETUP: // this should be processed in ServerConnectionAcceptor
-    case FrameType::RESUME: // this should be processed in ServerConnectionAcceptor
+    case FrameType::SETUP: // this should be processed in SetupResumeAcceptor
+    case FrameType::RESUME: // this should be processed in SetupResumeAcceptor
     case FrameType::RESERVED:
     case FrameType::LEASE:
     case FrameType::REQUEST_RESPONSE:

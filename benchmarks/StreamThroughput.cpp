@@ -162,7 +162,7 @@ class BM_RsFixture : public benchmark::Fixture {
             TcpConnectionAcceptor::Options(port_)))),
         handler_(std::make_shared<BM_RequestHandler>()) {
     FLAGS_minloglevel = 100;
-    serverRs_->start([this](auto r) { return handler_; });
+    serverRs_->start([this](auto& setupParams) { return handler_; });
   }
 
   virtual ~BM_RsFixture() {}

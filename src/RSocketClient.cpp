@@ -12,8 +12,8 @@ using namespace folly;
 
 namespace rsocket {
 
-RSocketClient::RSocketClient(std::unique_ptr<ConnectionFactory> connection)
-    : lazyConnection_(std::move(connection)) {
+RSocketClient::RSocketClient(std::unique_ptr<ConnectionFactory> connectionFactory)
+    : connectionFactory_(std::move(connectionFactory)) {
   LOG(INFO) << "RSocketClient => created";
 }
 
@@ -21,8 +21,9 @@ Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect() {
   LOG(INFO) << "RSocketClient => start connection with Future";
 
   auto promise = std::make_shared<Promise<std::shared_ptr<RSocketRequester>>>();
+  auto future = promise->getFuture();
 
-  lazyConnection_->connect([this, promise](
+  connectionFactory_->connect([this, promise = std::move(promise)](
       std::unique_ptr<DuplexConnection> framedConnection,
       EventBase& eventBase) {
     LOG(INFO) << "RSocketClient => onConnect received DuplexConnection";
@@ -71,7 +72,7 @@ Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect() {
     promise->setValue(rsocket);
   });
 
-  return promise->getFuture();
+  return future;
 }
 
 RSocketClient::~RSocketClient() {

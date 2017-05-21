@@ -36,10 +36,10 @@ class RSocketRequester {
  public:
   static std::shared_ptr<RSocketRequester> create(
       std::shared_ptr<rsocket::RSocketStateMachine> srs,
-      folly::EventBase& executor);
-  // TODO figure out how to use folly::Executor instead of EventBase
+      folly::EventBase& eventBase);
 
   ~RSocketRequester(); // implementing for logging right now
+
   RSocketRequester(const RSocketRequester&) = delete; // copy
   RSocketRequester(RSocketRequester&&) = delete; // move
   RSocketRequester& operator=(const RSocketRequester&) = delete; // copy
@@ -106,6 +106,7 @@ class RSocketRequester {
   RSocketRequester(
       std::shared_ptr<rsocket::RSocketStateMachine> srs,
       folly::EventBase& eventBase);
+
   std::shared_ptr<rsocket::RSocketStateMachine> stateMachine_;
   folly::EventBase& eventBase_;
 };

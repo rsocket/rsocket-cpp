@@ -136,18 +136,12 @@ add_library(
   src/RSocketParameters.h
   src/ConnectionAcceptor.h
   src/ConnectionFactory.h
-  src/ConnectionSetupRequest.h
-  src/ConnectionSetupRequest.cpp
-  src/ConnectionResumeRequest.h
-  src/ConnectionResumeRequest.cpp
   src/transports/tcp/TcpConnectionAcceptor.h
   src/transports/tcp/TcpConnectionAcceptor.cpp
   src/transports/tcp/TcpConnectionFactory.h
   src/transports/tcp/TcpConnectionFactory.cpp
   src/RSocketResponder.cpp
   src/RSocketResponder.h
-  src/RSocketConnectionHandler.h
-  src/RSocketConnectionHandler.cpp
   src/statemachine/ChannelRequester.cpp
   src/statemachine/ChannelRequester.h
   src/statemachine/ChannelResponder.cpp
@@ -199,8 +193,8 @@ add_library(
   src/internal/ReactiveStreamsCompat.h
   src/internal/ResumeCache.cpp
   src/internal/ResumeCache.h
-  src/temporary_home/ServerConnectionAcceptor.cpp
-  src/temporary_home/ServerConnectionAcceptor.h
+  src/internal/SetupResumeAcceptor.cpp
+  src/internal/SetupResumeAcceptor.h
   src/RSocketStats.cpp
   src/RSocketStats.h
   src/temporary_home/SubscriberBase.h

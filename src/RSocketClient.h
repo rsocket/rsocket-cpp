@@ -17,6 +17,7 @@ class RSocketClient {
  public:
   explicit RSocketClient(std::unique_ptr<ConnectionFactory>);
   ~RSocketClient(); // implementing for logging right now
+
   RSocketClient(const RSocketClient&) = delete; // copy
   RSocketClient(RSocketClient&&) = delete; // move
   RSocketClient& operator=(const RSocketClient&) = delete; // copy
@@ -46,7 +47,7 @@ class RSocketClient {
   //  std::shared_ptr<RSocketRequester> fastConnect();
 
  private:
-  std::unique_ptr<ConnectionFactory> lazyConnection_;
+  std::unique_ptr<ConnectionFactory> connectionFactory_;
   std::vector<std::shared_ptr<RSocketRequester>> rsockets_;
 };
 }

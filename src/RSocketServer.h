@@ -8,16 +8,17 @@
 #include <folly/Synchronized.h>
 
 #include "src/ConnectionAcceptor.h"
-#include "src/ConnectionSetupRequest.h"
+#include "src/RSocketParameters.h"
 #include "src/RSocketResponder.h"
-#include "src/temporary_home/ServerConnectionAcceptor.h"
+#include "src/internal/SetupResumeAcceptor.h"
 
 namespace rsocket {
 
 class RSocketStateMachine;
 
-using OnAccept = std::function<std::shared_ptr<RSocketResponder>(
-    std::shared_ptr<ConnectionSetupRequest>)>;
+using OnSetupConnection = std::function<std::shared_ptr<RSocketResponder>(SetupParameters&)>;
+using OnResumeConnection = std::function<void(ResumeParameters&)>;
+
 /**
  * API for starting an RSocket server. Returned from RSocket::createServer.
  *
@@ -47,7 +48,7 @@ class RSocketServer {
    *
    * This method assumes it will be called only once.
    */
-  void start(OnAccept);
+  void start(OnSetupConnection);
 
   /**
    * Start the ConnectionAcceptor and begin handling connections.
@@ -57,7 +58,7 @@ class RSocketServer {
    *
    * This method assumes it will be called only once.
    */
-  void startAndPark(OnAccept);
+  void startAndPark(OnSetupConnection);
 
   /**
    * Unblock the server if it has called startAndPark().  Can only be called
@@ -74,20 +75,30 @@ class RSocketServer {
   //          std::unique_ptr<ConnectionResumeRequest>)>);
 
   // TODO version supporting RSocketStats and other params
-  // RSocketServer::start(OnAccept onAccept, ServerSetup setupParams)
+  // RSocketServer::start(OnSetupConnection onSetupConnection, ServerSetup setupParams)
 
   friend class RSocketServerConnectionHandler;
 
  private:
-  void addConnection(
+
+  void onSetupConnection(
+      OnSetupConnection onSetupConnection,
+      std::shared_ptr<rsocket::FrameTransport> frameTransport,
+      rsocket::SetupParameters setupPayload);
+  void onResumeConnection(
+      OnResumeConnection onResumeConnection,
+      std::shared_ptr<rsocket::FrameTransport> frameTransport,
+      rsocket::ResumeParameters setupPayload);
+
+    void addConnection(
       std::shared_ptr<rsocket::RSocketStateMachine>,
       folly::Executor&);
   void removeConnection(std::shared_ptr<rsocket::RSocketStateMachine>);
 
   //////////////////////////////////////////////////////////////////////////////
 
-  std::unique_ptr<ConnectionAcceptor> lazyAcceptor_;
-  rsocket::ServerConnectionAcceptor acceptor_;
+  std::unique_ptr<ConnectionAcceptor> duplexConnectionAcceptor_;
+  rsocket::SetupResumeAcceptor setupResumeAcceptor_;
   bool started{false};
 
   /// Set of currently open ReactiveSockets.
