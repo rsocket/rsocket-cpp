@@ -2,11 +2,13 @@
 
 #pragma once
 
+#include <atomic>
 #include <condition_variable>
 #include <mutex>
 #include <sstream>
 #include <vector>
 #include "Single.h"
+#include "SingleSubscriptions.h"
 #include "SingleObserver.h"
 
 namespace yarpl {
@@ -64,36 +66,57 @@ class SingleTestObserver : public yarpl::single::SingleObserver<T> {
 
   SingleTestObserver() : delegate_(nullptr) {}
 
+  // Note on thread safety =>
+  // Generally an observer assumes single threaded emission
+  // but this class is intended for use in unit tests
+  // when it will generally receive events on one thread
+  // and then access them for verification/assertion
+  // on the unit test main thread.
+
   explicit SingleTestObserver(Reference<SingleObserver<T>> delegate)
       : delegate_(std::move(delegate)) {}
 
   void onSubscribe(Reference<SingleSubscription> subscription) override {
     if (delegate_) {
-      subscription_ = subscription; // copy
+      delegateSubscription_->setDelegate(subscription); // copy
       delegate_->onSubscribe(std::move(subscription));
     } else {
-      subscription_ = std::move(subscription);
+      delegateSubscription_->setDelegate(std::move(subscription));
     }
   }
 
   void onSuccess(T t) override {
-    if (delegate_) {
-      value_ = t; // take copy
-      delegate_->onSuccess(std::move(t));
-    } else {
-      value_ = std::move(t);
+    {
+      // take lock with local scope so we can emit without holding the lock
+      std::lock_guard<std::mutex> g(m_);
+      if (delegate_) {
+        value_ = t; // take copy
+        // do not emit here, but later without lock
+      } else {
+        value_ = std::move(t);
+      }
+      delegateSubscription_ = nullptr;
+      terminated_ = true;
     }
-    subscription_ = nullptr;
-    terminated_ = true;
+    // after lock is released we emit
+    if (delegate_) {
+      // Do NOT hold the mutex while emitting
+      delegate_->onSuccess(std::move(t));
+    }
+    // then we notify that we're completed
     terminalEventCV_.notify_all();
   }
 
   void onError(const std::exception_ptr ex) override {
     if (delegate_) {
+      // Do NOT hold the mutex while emitting
       delegate_->onError(ex);
     }
-    e_ = ex;
-    terminated_ = true;
+    {
+      std::lock_guard<std::mutex> g(m_);
+      e_ = ex;
+      terminated_ = true;
+    }
     terminalEventCV_.notify_all();
   }
 
@@ -108,9 +131,19 @@ class SingleTestObserver : public yarpl::single::SingleObserver<T> {
   }
 
   /**
+   * Assert no onSuccess or onError events were received
+   */
+  void assertNoTerminalEvent() {
+    std::lock_guard<std::mutex> g(m_);
+    if (terminated_) {
+      throw std::runtime_error("An unexpected terminal event was received.");
+    }
+  }
+  /**
    * If an onSuccess call was not received throw a runtime_error
    */
   void assertSuccess() {
+    std::lock_guard<std::mutex> g(m_);
     if (!terminated_) {
       throw std::runtime_error("Did not receive terminal event.");
     }
@@ -121,6 +154,7 @@ class SingleTestObserver : public yarpl::single::SingleObserver<T> {
 
   void assertOnSuccessValue(T t) {
     assertSuccess();
+    std::lock_guard<std::mutex> g(m_);
     if (value_ != t) {
       std::stringstream ss;
       ss << "value == " << value_ << ", but expected " << t;
@@ -134,6 +168,7 @@ class SingleTestObserver : public yarpl::single::SingleObserver<T> {
    * @return
    */
   T& getOnSuccessValue() {
+    std::lock_guard<std::mutex> g(m_);
     return value_;
   }
 
@@ -142,6 +177,7 @@ class SingleTestObserver : public yarpl::single::SingleObserver<T> {
    * the given msg, complete successfully, otherwise throw a runtime_error
    */
   void assertOnErrorMessage(std::string msg) {
+    std::lock_guard<std::mutex> g(m_);
     if (e_ == nullptr) {
       std::stringstream ss;
       ss << "exception_ptr == nullptr, but expected " << msg;
@@ -164,17 +200,22 @@ class SingleTestObserver : public yarpl::single::SingleObserver<T> {
    * Submit SingleSubscription->cancel();
    */
   void cancel() {
-    subscription_->cancel();
+    // do NOT hold a lock while invoking the normal signals
+    delegateSubscription_->cancel();
   }
 
  private:
+  std::mutex m_;
+  std::condition_variable terminalEventCV_;
   Reference<SingleObserver<T>> delegate_;
+  // The following variables must be protected by mutex m_
   T value_;
   std::exception_ptr e_;
   bool terminated_{false};
-  std::mutex m_;
-  std::condition_variable terminalEventCV_;
-  Reference<SingleSubscription> subscription_;
+  // allows thread-safe cancellation against a delegate
+  // regardless of when it is received
+  Reference<DelegateSingleSubscription> delegateSubscription_{
+      make_ref<DelegateSingleSubscription>()};
 };
 }
 }

@@ -49,6 +49,8 @@ add_library(
         include/yarpl/flowable/Subscriber.h
         include/yarpl/flowable/Subscribers.h
         include/yarpl/flowable/Subscription.h
+        src/yarpl/flowable/sources/Subscription.cpp
+        include/yarpl/flowable/TestSubscriber.h
         # Observable public API
         include/yarpl/Observable.h
         include/yarpl/observable/Observable.h
@@ -70,7 +72,6 @@ add_library(
         include/yarpl/single/SingleSubscription.h
         include/yarpl/single/SingleSubscriptions.h
         include/yarpl/single/SingleTestObserver.h
-        src/yarpl/single/SingleSubscriptions.cpp
         # Flowable private
         src/yarpl/Refcounted.cpp
         src/yarpl/flowable/sources/Flowable_FromObservable.h
@@ -81,7 +82,7 @@ add_library(
         # Scheduler
         include/yarpl/schedulers/ThreadScheduler.h
         src/yarpl/schedulers/ThreadScheduler.cpp
-        include/yarpl/flowable/TestSubscriber.h src/yarpl/flowable/sources/Subscription.cpp)
+)
 
 target_include_directories(
         yarpl
