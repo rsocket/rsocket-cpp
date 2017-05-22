@@ -470,6 +470,22 @@ TEST(Observable, OverflowSkip) {
   ASSERT_EQ(0u, Refcounted::objects());
 }
 
+TEST(Observable, IgnoreElements) {
+  ASSERT_EQ(0u, Refcounted::objects());
+
+  auto collector = make_ref<CollectingObserver<int64_t>>();
+  auto observable = Observables::range(0, 105)
+      ->ignoreElements()
+      ->map([](int64_t v) { return v + 1; });
+  observable->subscribe(collector);
+
+  EXPECT_EQ(collector->values(), std::vector<int64_t>({}));
+  EXPECT_EQ(collector->complete(), true);
+  EXPECT_EQ(collector->error(), false);
+
+  EXPECT_EQ(4u, Refcounted::objects());
+}
+
 TEST(Observable, Error) {
   auto observable =
       Observables::error<int>(std::runtime_error("something broke!"));

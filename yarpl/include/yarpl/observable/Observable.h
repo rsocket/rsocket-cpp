@@ -100,6 +100,8 @@ class Observable : public virtual Refcounted {
 
   auto skip(int64_t);
 
+  auto ignoreElements();
+
   auto subscribeOn(Scheduler&);
 
   /**
@@ -164,6 +166,12 @@ template <typename T>
 auto Observable<T>::skip(int64_t offset) {
   return Reference<Observable<T>>(
       new SkipOperator<T>(Reference<Observable<T>>(this), offset));
+}
+
+template <typename T>
+auto Observable<T>::ignoreElements() {
+  return Reference<Observable<T>>(
+      new IgnoreElementsOperator<T>(Reference<Observable<T>>(this)));
 }
 
 template <typename T>

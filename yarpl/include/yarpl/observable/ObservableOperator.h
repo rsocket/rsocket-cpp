@@ -325,6 +325,33 @@ class SkipOperator : public ObservableOperator<T, T> {
 };
 
 template <typename T>
+class IgnoreElementsOperator : public ObservableOperator<T, T> {
+ public:
+  explicit IgnoreElementsOperator(Reference<Observable<T>> upstream)
+      : ObservableOperator<T, T>(std::move(upstream)) {}
+
+  void subscribe(Reference<Observer<T>> observer) override {
+    ObservableOperator<T, T>::upstream_->subscribe(
+        Reference<Subscription>(new Subscription(
+            Reference<Observable<T>>(this), std::move(observer))));
+  }
+
+ private:
+  class Subscription : public ObservableOperator<T, T>::Subscription {
+    using Super = typename ObservableOperator<T,T>::Subscription;
+   public:
+    Subscription(
+        Reference<Observable<T>> observable,
+        Reference<Observer<T>> observer)
+        : ObservableOperator<T, T>::Subscription(
+              std::move(observable),
+              std::move(observer)) {}
+
+    void onNext(T value) override {}
+  };
+};
+
+template <typename T>
 class SubscribeOnOperator : public ObservableOperator<T, T> {
  public:
   SubscribeOnOperator(Reference<Observable<T>> upstream, Scheduler& scheduler)

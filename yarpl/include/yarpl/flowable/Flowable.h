@@ -97,6 +97,8 @@ class Flowable : public virtual Refcounted {
 
   auto skip(int64_t);
 
+  auto ignoreElements();
+
   auto subscribeOn(Scheduler&);
 
   /**
@@ -379,6 +381,12 @@ template <typename T>
 auto Flowable<T>::skip(int64_t offset) {
   return Reference<Flowable<T>>(
     new SkipOperator<T>(Reference<Flowable<T>>(this), offset));
+}
+
+template <typename T>
+auto Flowable<T>::ignoreElements() {
+  return Reference<Flowable<T>>(
+      new IgnoreElementsOperator<T>(Reference<Flowable<T>>(this)));
 }
 
 template <typename T>

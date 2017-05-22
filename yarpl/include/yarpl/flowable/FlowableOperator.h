@@ -360,6 +360,32 @@ class SkipOperator : public FlowableOperator<T, T> {
 };
 
 template <typename T>
+class IgnoreElementsOperator : public FlowableOperator<T, T> {
+ public:
+  explicit IgnoreElementsOperator(Reference<Flowable<T>> upstream)
+      : FlowableOperator<T, T>(std::move(upstream)) {}
+
+  void subscribe(Reference<Subscriber<T>> subscriber) override {
+    FlowableOperator<T, T>::upstream_->subscribe(
+        Reference<Subscription>(new Subscription(
+            Reference<Flowable<T>>(this), std::move(subscriber))));
+  }
+
+ private:
+  class Subscription : public FlowableOperator<T, T>::Subscription {
+   public:
+    Subscription(
+        Reference<Flowable<T>> flowable,
+        Reference<Subscriber<T>> subscriber)
+        : FlowableOperator<T, T>::Subscription(
+              std::move(flowable),
+              std::move(subscriber)) {}
+
+    void onNext(T value) override {}
+  };
+};
+
+template <typename T>
 class SubscribeOnOperator : public FlowableOperator<T, T> {
  public:
   SubscribeOnOperator(Reference<Flowable<T>> upstream, Scheduler& scheduler)

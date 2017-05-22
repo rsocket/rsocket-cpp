@@ -313,6 +313,41 @@ TEST(FlowableTest, SkipPartial) {
   ASSERT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
+TEST(FlowableTest, IgnoreElements) {
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+  auto flowable = Flowables::range(0, 100)
+      ->ignoreElements()
+      ->map([](int64_t v) { return v * v; });
+  EXPECT_EQ(run(flowable), std::vector<int64_t>({}));
+  flowable.reset();
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(FlowableTest, IgnoreElementsPartial) {
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+  auto collector = make_ref<CollectingSubscriber<int64_t>>(5);
+  auto flowable = Flowables::range(0, 10)->ignoreElements();
+  flowable->subscribe(collector);
+
+  EXPECT_EQ(
+      collector->values(),
+      std::vector<int64_t>({}));
+  EXPECT_EQ(collector->complete(), false);
+  collector->cancelSubscription();
+
+  flowable.reset();
+  collector.reset();
+  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+}
+
+TEST(FlowableTest, IgnoreElementsError) {
+  auto collector = make_ref<CollectingSubscriber<int>>();
+  auto flowable = Flowables::error<int>(std::runtime_error("Failure"));
+  flowable->subscribe(collector);
+  EXPECT_EQ(collector->error(), true);
+  EXPECT_EQ(collector->errorMsg(), "Failure");
+}
+
 TEST(FlowableTest, FlowableError) {
   auto flowable = Flowables::error<int>(std::runtime_error("something broke!"));
   auto collector = make_ref<CollectingSubscriber<int>>();
