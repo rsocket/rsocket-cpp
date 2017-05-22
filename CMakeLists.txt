@@ -151,6 +151,7 @@ add_library(
   src/statemachine/ChannelResponder.h
   src/statemachine/ConsumerBase.cpp
   src/statemachine/ConsumerBase.h
+  src/statemachine/PublisherBase.cpp
   src/statemachine/PublisherBase.h
   src/statemachine/RequestResponseRequester.cpp
   src/statemachine/RequestResponseRequester.h

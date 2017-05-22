@@ -2,13 +2,8 @@
 
 #pragma once
 
-#include <glog/logging.h>
-#include <iostream>
-#include <type_traits>
-#include "RSocketStateMachine.h"
 #include "src/Payload.h"
 #include "src/internal/AllowanceSemaphore.h"
-#include "src/temporary_home/Executor.h"
 #include "yarpl/flowable/Subscription.h"
 
 namespace rsocket {
@@ -18,64 +13,19 @@ enum class StreamCompletionSignal;
 /// A class that represents a flow-control-aware producer of data.
 class PublisherBase {
  public:
-  explicit PublisherBase(uint32_t initialRequestN)
-      : initialRequestN_(initialRequestN) {}
+  explicit PublisherBase(uint32_t initialRequestN);
 
   void publisherSubscribe(
-      yarpl::Reference<yarpl::flowable::Subscription> subscription) {
-    if (state_ == State::CLOSED) {
-      subscription->cancel();
-      return;
-    }
-    DCHECK(!producingSubscription_);
-    producingSubscription_ = std::move(subscription);
-    if (initialRequestN_) {
-      producingSubscription_->request(initialRequestN_.drain());
-    }
-  }
+      yarpl::Reference<yarpl::flowable::Subscription> subscription);
 
-  void checkPublisherOnNext() {
-    DCHECK(producingSubscription_);
-    CHECK(state_ == State::RESPONDING);
-  }
+  void checkPublisherOnNext();
 
-  void publisherComplete() {
-    state_ = State::CLOSED;
-    producingSubscription_ = nullptr;
-  }
+  void publisherComplete();
+  bool publisherClosed() const;
 
-  bool publisherClosed() const {
-    return state_ == State::CLOSED;
-  }
+  void processRequestN(uint32_t requestN);
 
-  void processRequestN(uint32_t requestN) {
-    if (!requestN || state_ == State::CLOSED) {
-      return;
-    }
-
-    // we might not have the subscription set yet as there can be REQUEST_N
-    // frames scheduled on the executor before onSubscribe method
-    if (producingSubscription_) {
-      producingSubscription_->request(requestN);
-    } else {
-      initialRequestN_.release(requestN);
-    }
-  }
-
-  void terminatePublisher() {
-    state_ = State::CLOSED;
-    if (auto subscription = std::move(producingSubscription_)) {
-      subscription->cancel();
-    }
-  }
-
-//  void pausePublisherStream(RequestHandler& requestHandler) {
-//    requestHandler.onSubscriptionPaused(producingSubscription_);
-//  }
-//
-//  void resumePublisherStream(RequestHandler& requestHandler) {
-//    requestHandler.onSubscriptionResumed(producingSubscription_);
-//  }
+  void terminatePublisher();
 
  private:
   /// A Subscription that constrols production of payloads.
