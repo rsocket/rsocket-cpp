@@ -5,7 +5,7 @@
 namespace yarpl {
 namespace flowable {
 
-yarpl::Reference<Subscription> Subscription::null() {
+yarpl::Reference<Subscription> Subscription::empty() {
   class NullSubscription : public Subscription {
     void request(int64_t) override {}
     void cancel() override {}

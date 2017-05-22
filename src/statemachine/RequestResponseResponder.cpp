@@ -21,7 +21,7 @@ void RequestResponseResponder::onSubscribe(
 }
 
 void RequestResponseResponder::onSuccess(Payload response) noexcept {
-  DCHECK(producingSubscription_);
+  DCHECK(producingSubscription_) << "didnt call onSubscribe";
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;

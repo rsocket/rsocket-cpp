@@ -33,6 +33,7 @@ class HelloRequestResponseRequestHandler : public rsocket::RSocketResponder {
       std::stringstream ss;
       ss << "Hello " << name << "!";
       std::string s = ss.str();
+      subscriber->onSubscribe(SingleSubscriptions::empty());
       subscriber->onSuccess(Payload(s, "metadata"));
     });
   }

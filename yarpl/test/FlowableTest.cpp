@@ -2,9 +2,7 @@
 
 #include <type_traits>
 #include <vector>
-
 #include <gtest/gtest.h>
-
 #include "yarpl/Flowable.h"
 
 namespace yarpl {
@@ -403,6 +401,29 @@ TEST(FlowableTest, SubscribersError) {
   EXPECT_EQ(0u, Refcounted::objects());
 
   EXPECT_TRUE(errored);
+}
+
+TEST(FlowableTest, FlowableCompleteInTheMiddle) {
+  EXPECT_EQ(0u, Refcounted::objects());
+
+  auto flowable = Flowable<int>::create(
+      [](Subscriber<int> & subscriber, int64_t requested) {
+        EXPECT_GT(requested, 1);
+        subscriber.onNext(123);
+        subscriber.onComplete();
+        return std::make_tuple(int64_t(1), true);
+      })->map([](int v) { return std::to_string(v); });
+
+  auto collector = make_ref<CollectingSubscriber<std::string>>(10);
+  flowable->subscribe(collector);
+
+  EXPECT_EQ(collector->complete(), true);
+  EXPECT_EQ(collector->error(), false);
+  EXPECT_EQ(std::size_t{1}, collector->values().size());
+
+  flowable.reset();
+  collector.reset();
+  EXPECT_EQ(0u, Refcounted::objects());
 }
 
 } // flowable

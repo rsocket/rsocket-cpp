@@ -48,6 +48,7 @@ void StreamRequester::request(int64_t n) noexcept {
 }
 
 void StreamRequester::cancel() noexcept {
+  releaseConsumer();
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;

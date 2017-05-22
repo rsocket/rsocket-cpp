@@ -15,7 +15,7 @@ using namespace yarpl::flowable;
 void ConsumerBase::subscribe(
     Reference<yarpl::flowable::Subscriber<Payload>> subscriber) {
   if (Base::isTerminated()) {
-    subscriber->onSubscribe(yarpl::flowable::Subscription::null());
+    subscriber->onSubscribe(yarpl::flowable::Subscription::empty());
     subscriber->onComplete();
     return;
   }
@@ -92,5 +92,9 @@ void ConsumerBase::handleFlowControlError() {
         std::make_exception_ptr(std::runtime_error("surplus response")));
   }
   errorStream("flow control error");
+}
+
+void ConsumerBase::releaseConsumer() {
+  consumingSubscriber_ = nullptr;
 }
 }

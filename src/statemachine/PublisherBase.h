@@ -60,7 +60,10 @@ class PublisherBase {
     DCHECK(producingSubscription_);
   }
 
-  /// @{
+  void releasePublisher() {
+    producingSubscription_ = nullptr;
+  }
+
   void terminatePublisher(StreamCompletionSignal signal) {
     if (auto subscription = std::move(producingSubscription_)) {
       subscription->cancel();

@@ -68,15 +68,17 @@ class FlowableOperator : public Flowable<D> {
     }
 
     void cancel() override {
-      upstream_->cancel();
+      assert(upstream_ && "subscription was already terminated");
+      (decltype(upstream_)(std::move(upstream_)))->cancel();
       subscriber_.reset(); // breaking the cycle
       Refcounted::decRef(*this);
     }
 
    protected:
     void onComplete() override {
-      subscriber_->onComplete();
+      assert(upstream_ && "subscription was already terminated");
       upstream_.reset(); // breaking the cycle
+      subscriber_->onComplete();
       Refcounted::decRef(*this);
     }
 
@@ -89,8 +91,9 @@ class FlowableOperator : public Flowable<D> {
     }
 
     void onError(const std::exception_ptr error) override {
-      subscriber_->onError(error);
+      assert(upstream_ && "subscription was already terminated");
       upstream_.reset(); // breaking the cycle
+      subscriber_->onError(error);
       Refcounted::decRef(*this);
     }
 

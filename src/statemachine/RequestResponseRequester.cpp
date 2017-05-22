@@ -31,6 +31,7 @@ void RequestResponseRequester::subscribe(
 }
 
 void RequestResponseRequester::cancel() noexcept {
+  consumingSubscriber_ = nullptr;
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;

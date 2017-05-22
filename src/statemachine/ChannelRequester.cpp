@@ -58,6 +58,7 @@ void ChannelRequester::onNext(Payload request) noexcept {
 
 // TODO: consolidate code in onCompleteImpl, onErrorImpl, cancelImpl
 void ChannelRequester::onComplete() noexcept {
+  releasePublisher();
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;
@@ -73,6 +74,7 @@ void ChannelRequester::onComplete() noexcept {
 }
 
 void ChannelRequester::onError(const std::exception_ptr ex) noexcept {
+  releasePublisher();
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;
@@ -104,6 +106,7 @@ void ChannelRequester::request(int64_t n) noexcept {
 }
 
 void ChannelRequester::cancel() noexcept {
+  releaseConsumer();
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;

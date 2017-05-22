@@ -2,16 +2,15 @@
 
 #pragma once
 
+#include <cassert>
 #include <memory>
 #include <mutex>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <utility>
-
 #include "yarpl/Scheduler.h"
 #include "yarpl/utils/type_traits.h"
-
 #include "../Refcounted.h"
 #include "Subscriber.h"
 #include "Subscribers.h"
@@ -135,7 +134,7 @@ class Flowable : public virtual Refcounted {
    * This is synchronous: the emit calls are triggered within the context
    * of a request(n) call.
    */
-  class SynchronousSubscription : public Subscription, public Subscriber<T> {
+  class SynchronousSubscription : private Subscription, private Subscriber<T> {
    public:
     SynchronousSubscription(
         Reference<Flowable> flowable,
@@ -161,6 +160,14 @@ class Flowable : public virtual Refcounted {
       while (true) {
         auto current = requested_.load(std::memory_order_relaxed);
 
+        if(current == CANCELED) {
+          // this can happen because there could be an async barrier between
+          // the subscriber and the subscription
+          // for instance while onComplete is being delivered
+          // (on effectively cancelled subscription) the subscriber can call call request(n)
+          return;
+        }
+
         // Turn flow control off for overflow.
         auto const total =
             (current > std::numeric_limits<int64_t>::max() - delta)
@@ -179,13 +186,20 @@ class Flowable : public virtual Refcounted {
       // make sure we break the reference cycle between subscription and
       // subscriber
       //
-      requested_.exchange(CANCELED, std::memory_order_relaxed);
-      process();
+      auto previous = requested_.exchange(CANCELED, std::memory_order_relaxed);
+      if(previous != CANCELED) {
+        // this can happen because there could be an async barrier between
+        // the subscriber and the subscription
+        // for instance while onComplete is being delivered
+        // (on effectively cancelled subscription) the subscriber can call call request(n)
+        process();
+      }
     }
 
     // Subscriber methods.
     void onSubscribe(Reference<Subscription>) override {
       // Not actually expected to be called.
+      assert(false && "do not call this method!");
     }
 
     void onNext(T value) override {
@@ -193,8 +207,13 @@ class Flowable : public virtual Refcounted {
     }
 
     void onComplete() override {
+      // we will set the flag first to save a potential call to lock.try_lock()
+      // in the process method via cancel or request methods
+      auto old = requested_.exchange(CANCELED, std::memory_order_relaxed);
+      assert(old != CANCELED && "calling onComplete or onError twice or on "
+          "canceled subscription");
+
       subscriber_->onComplete();
-      requested_.store(CANCELED, std::memory_order_relaxed);
       // We should already be in process(); nothing more to do.
       //
       // Note: we're not invoking the Subscriber superclass' method:
@@ -202,8 +221,13 @@ class Flowable : public virtual Refcounted {
     }
 
     void onError(const std::exception_ptr error) override {
+      // we will set the flag first to save a potential call to lock.try_lock()
+      // in the process method via cancel or request methods
+      auto old = requested_.exchange(CANCELED, std::memory_order_relaxed);
+      assert(old != CANCELED && "calling onComplete or onError twice or on "
+          "canceled subscription");
+
       subscriber_->onError(error);
-      requested_.store(CANCELED, std::memory_order_relaxed);
       // We should already be in process(); nothing more to do.
       //
       // Note: we're not invoking the Subscriber superclass' method:

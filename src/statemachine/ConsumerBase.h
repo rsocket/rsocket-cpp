@@ -40,7 +40,8 @@ class ConsumerBase : public StreamStateMachineBase,
   /// @}
 
  protected:
-  /// @{
+  void releaseConsumer();
+
   void endStream(StreamCompletionSignal signal) override;
 
 //  void pauseStream(RequestHandler& requestHandler) override;
@@ -49,7 +50,6 @@ class ConsumerBase : public StreamStateMachineBase,
   void processPayload(Payload&&, bool onNext);
 
   void onError(folly::exception_wrapper ex);
-  /// @}
 
  private:
   // we don't want derived classes to call these methods.

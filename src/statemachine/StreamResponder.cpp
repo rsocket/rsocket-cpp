@@ -33,6 +33,7 @@ void StreamResponder::onComplete() noexcept {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
+      releasePublisher();
       completeStream();
     } break;
     case State::CLOSED:
@@ -45,6 +46,7 @@ void StreamResponder::onError(const std::exception_ptr ex) noexcept {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
+      releasePublisher();
       applicationError(folly::exceptionStr(ex).toStdString());
     } break;
     case State::CLOSED:

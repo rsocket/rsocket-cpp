@@ -3,6 +3,7 @@
 #pragma once
 
 #include <atomic>
+#include <cassert>
 #include <cstddef>
 #include <type_traits>
 #include <utility>
@@ -49,7 +50,9 @@ class Refcounted {
   }
 
   void decRef() {
-    if (refcount_.fetch_sub(1, std::memory_order_relaxed) == 1) {
+    auto previous = refcount_.fetch_sub(1, std::memory_order_relaxed);
+    assert(previous >= 1 && "decRef on a destroyed object!");
+    if (previous == 1) {
       std::atomic_thread_fence(std::memory_order_acquire);
       delete this;
     }
