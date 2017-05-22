@@ -87,7 +87,7 @@ class DelegateSingleSubscription : public SingleSubscription {
  private:
   // all must be protected by a mutex
   mutable std::mutex m_;
-  bool cancelled_;
+  bool cancelled_{false};
   Reference<SingleSubscription> delegate_;
 };
 
