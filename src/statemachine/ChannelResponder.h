@@ -37,6 +37,7 @@ class ChannelResponder : public ConsumerBase,
   void handlePayload(Payload&& payload, bool complete, bool flagsNext) override;
   void handleRequestN(uint32_t n) override;
   void handleCancel() override;
+  void handleError(folly::exception_wrapper ex) override;
 
   void onNextPayloadFrame(
       uint32_t requestN,
@@ -46,10 +47,6 @@ class ChannelResponder : public ConsumerBase,
 
   void endStream(StreamCompletionSignal) override;
 
-  /// State of the Channel responder.
-  enum class State : uint8_t {
-    RESPONDING,
-    CLOSED,
-  } state_{State::RESPONDING};
+  void tryCompleteChannel();
 };
 } // reactivesocket

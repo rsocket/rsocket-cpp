@@ -40,6 +40,7 @@ void RequestResponseRequester::cancel() noexcept {
     case State::REQUESTED: {
       state_ = State::CLOSED;
       cancelStream();
+      closeStream(StreamCompletionSignal::CANCEL);
     } break;
     case State::CLOSED:
       break;

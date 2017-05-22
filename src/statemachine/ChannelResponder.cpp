@@ -10,83 +10,45 @@ using namespace yarpl::flowable;
 
 void ChannelResponder::onSubscribe(
     Reference<Subscription> subscription) noexcept {
-  if (ConsumerBase::isTerminated()) {
-    subscription->cancel();
-    return;
-  }
   publisherSubscribe(std::move(subscription));
 }
 
 void ChannelResponder::onNext(Payload response) noexcept {
-  debugCheckOnNextOnError();
-  switch (state_) {
-    case State::RESPONDING: {
-      writePayload(std::move(response), false);
-      break;
-    }
-    case State::CLOSED:
-      break;
-  }
+  checkPublisherOnNext();
+  writePayload(std::move(response), false);
 }
 
 void ChannelResponder::onComplete() noexcept {
-  switch (state_) {
-    case State::RESPONDING: {
-      state_ = State::CLOSED;
-      releasePublisher();
-      completeStream();
-    } break;
-    case State::CLOSED:
-      break;
-  }
+  publisherComplete();
+  completeStream();
+  tryCompleteChannel();
 }
 
 void ChannelResponder::onError(const std::exception_ptr ex) noexcept {
-  switch (state_) {
-    case State::RESPONDING: {
-      state_ = State::CLOSED;
-      releasePublisher();
-      applicationError(folly::exceptionStr(ex).toStdString());
-    } break;
-    case State::CLOSED:
-      break;
+  publisherComplete();
+  applicationError(folly::exceptionStr(ex).toStdString());
+  tryCompleteChannel();
+}
+
+void ChannelResponder::tryCompleteChannel() {
+  if (publisherClosed() && consumerClosed()) {
+    closeStream(StreamCompletionSignal::COMPLETE);
   }
 }
 
 void ChannelResponder::request(int64_t n) noexcept {
-  switch (state_) {
-    case State::RESPONDING:
-      ConsumerBase::generateRequest(n);
-      break;
-    case State::CLOSED:
-      break;
-  }
+  checkConsumerRequest();
+  ConsumerBase::generateRequest(n);
 }
 
 void ChannelResponder::cancel() noexcept {
-  switch (state_) {
-    case State::RESPONDING: {
-      state_ = State::CLOSED;
-      releaseConsumer();
-      completeStream();
-    } break;
-    case State::CLOSED:
-      break;
-  }
+  cancelConsumer();
+  cancelStream();
+  tryCompleteChannel();
 }
 
 void ChannelResponder::endStream(StreamCompletionSignal signal) {
-  switch (state_) {
-    case State::RESPONDING:
-      // Spontaneous ::endStream signal means an error.
-      DCHECK(StreamCompletionSignal::COMPLETE != signal);
-      DCHECK(StreamCompletionSignal::CANCEL != signal);
-      state_ = State::CLOSED;
-      break;
-    case State::CLOSED:
-      break;
-  }
-  terminatePublisher(signal);
+  terminatePublisher();
   ConsumerBase::endStream(signal);
 }
 
@@ -111,38 +73,27 @@ void ChannelResponder::onNextPayloadFrame(
     Payload&& payload,
     bool complete,
     bool next) {
-  bool end = false;
-  switch (state_) {
-    case State::RESPONDING:
-      if (complete) {
-        state_ = State::CLOSED;
-        end = true;
-      }
-      break;
-    case State::CLOSED:
-      break;
-  }
-
   processRequestN(requestN);
   processPayload(std::move(payload), next);
 
-  if (end) {
-    closeStream(StreamCompletionSignal::COMPLETE);
+  if (complete) {
+    completeConsumer();
+    tryCompleteChannel();
   }
 }
 
 void ChannelResponder::handleCancel() {
-  switch (state_) {
-    case State::RESPONDING:
-      state_ = State::CLOSED;
-      closeStream(StreamCompletionSignal::CANCEL);
-      break;
-    case State::CLOSED:
-      break;
-  }
+  publisherComplete();
+  tryCompleteChannel();
 }
 
 void ChannelResponder::handleRequestN(uint32_t n) {
-  PublisherBase::processRequestN(n);
+  processRequestN(n);
+}
+
+void ChannelResponder::handleError(
+    folly::exception_wrapper ex) {
+  errorConsumer(std::move(ex));
+  tryCompleteChannel();
 }
 }

@@ -25,6 +25,17 @@ void ConsumerBase::subscribe(
   consumingSubscriber_->onSubscribe(Reference<Subscription>(this));
 }
 
+void ConsumerBase::checkConsumerRequest() {
+  DCHECK(consumingSubscriber_);
+  CHECK(state_ == State::RESPONDING);
+}
+
+void ConsumerBase::cancelConsumer() {
+  state_ = State::CLOSED;
+  consumingSubscriber_ = nullptr;
+}
+
+
 void ConsumerBase::generateRequest(size_t n) {
   allowance_.release(n);
   pendingAllowance_.release(n);
@@ -70,7 +81,15 @@ void ConsumerBase::processPayload(Payload&& payload, bool onNext) {
   }
 }
 
-void ConsumerBase::onError(folly::exception_wrapper ex) {
+void ConsumerBase::completeConsumer() {
+  state_ = State::CLOSED;
+  if (auto subscriber = std::move(consumingSubscriber_)) {
+    subscriber->onComplete();
+  }
+}
+
+void ConsumerBase::errorConsumer(folly::exception_wrapper ex) {
+  state_ = State::CLOSED;
   if (auto subscriber = std::move(consumingSubscriber_)) {
     subscriber->onError(ex.to_exception_ptr());
   }
@@ -94,7 +113,4 @@ void ConsumerBase::handleFlowControlError() {
   errorStream("flow control error");
 }
 
-void ConsumerBase::releaseConsumer() {
-  consumingSubscriber_ = nullptr;
-}
 }

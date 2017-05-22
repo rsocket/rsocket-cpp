@@ -34,18 +34,12 @@ class StreamRequester : public ConsumerBase {
 
   void endStream(StreamCompletionSignal) override;
 
-  /// State of the Subscription requester.
-  enum class State : uint8_t {
-    NEW,
-    REQUESTED,
-    CLOSED,
-  } state_{State::NEW};
-
   /// An allowance accumulated before the stream is initialised.
   /// Remaining part of the allowance is forwarded to the ConsumerBase.
   AllowanceSemaphore initialResponseAllowance_;
 
   /// Initial payload which has to be sent with 1st request.
   Payload initialPayload_;
+  bool requested_{false};
 };
 } // reactivesocket

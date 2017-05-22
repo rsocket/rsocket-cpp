@@ -317,12 +317,14 @@ bool RSocketStateMachine::endStreamInternal(
     StreamId streamId,
     StreamCompletionSignal signal) {
   VLOG(6) << "endStreamInternal";
-  resumeCache_->onStreamClosed(streamId);
   auto it = streamState_->streams_.find(streamId);
   if (it == streamState_->streams_.end()) {
     // Unsubscribe handshake initiated by the connection, we're done.
     return false;
   }
+
+  resumeCache_->onStreamClosed(streamId);
+
   // Remove from the map before notifying the stateMachine.
   auto stateMachine = std::move(it->second);
   streamState_->streams_.erase(it);
@@ -528,7 +530,11 @@ void RSocketStateMachine::handleStreamFrame(
     handleUnknownStream(streamId, frameType, std::move(serializedFrame));
     return;
   }
-  auto& stateMachine = it->second;
+
+  // we are purposely making a copy of the reference here to avoid problems with
+  // lifetime of the stateMachine when a terminating signal is delivered which
+  // will cause the stateMachine to be destroyed while in one of its methods
+  auto stateMachine = it->second;
 
   switch (frameType) {
     case FrameType::REQUEST_N: {

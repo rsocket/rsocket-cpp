@@ -33,11 +33,5 @@ class StreamResponder : public StreamStateMachineBase,
 //  void pauseStream(RequestHandler&) override;
 //  void resumeStream(RequestHandler&) override;
   void endStream(StreamCompletionSignal) override;
-
-  /// State of the Subscription responder.
-  enum class State : uint8_t {
-    RESPONDING,
-    CLOSED,
-  } state_{State::RESPONDING};
 };
 } // reactivesocket

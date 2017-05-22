@@ -10,48 +10,24 @@ using namespace yarpl::flowable;
 
 void StreamResponder::onSubscribe(
     Reference<yarpl::flowable::Subscription> subscription) noexcept {
-  if (StreamStateMachineBase::isTerminated()) {
-    subscription->cancel();
-    return;
-  }
   publisherSubscribe(std::move(subscription));
 }
 
 void StreamResponder::onNext(Payload response) noexcept {
-  debugCheckOnNextOnError();
-  switch (state_) {
-    case State::RESPONDING: {
-      writePayload(std::move(response), false);
-      break;
-    }
-    case State::CLOSED:
-      break;
-  }
+  checkPublisherOnNext();
+  writePayload(std::move(response), false);
 }
 
 void StreamResponder::onComplete() noexcept {
-  switch (state_) {
-    case State::RESPONDING: {
-      state_ = State::CLOSED;
-      releasePublisher();
-      completeStream();
-    } break;
-    case State::CLOSED:
-      break;
-  }
+  publisherComplete();
+  completeStream();
+  closeStream(StreamCompletionSignal::COMPLETE);
 }
 
 void StreamResponder::onError(const std::exception_ptr ex) noexcept {
-  debugCheckOnNextOnError();
-  switch (state_) {
-    case State::RESPONDING: {
-      state_ = State::CLOSED;
-      releasePublisher();
-      applicationError(folly::exceptionStr(ex).toStdString());
-    } break;
-    case State::CLOSED:
-      break;
-  }
+  publisherComplete();
+  applicationError(folly::exceptionStr(ex).toStdString());
+  closeStream(StreamCompletionSignal::COMPLETE);
 }
 
 //void StreamResponder::pauseStream(RequestHandler& requestHandler) {
@@ -63,32 +39,16 @@ void StreamResponder::onError(const std::exception_ptr ex) noexcept {
 //}
 
 void StreamResponder::endStream(StreamCompletionSignal signal) {
-  switch (state_) {
-    case State::RESPONDING:
-      // Spontaneous ::endStream signal means an error.
-      DCHECK(StreamCompletionSignal::COMPLETE != signal);
-      DCHECK(StreamCompletionSignal::CANCEL != signal);
-      state_ = State::CLOSED;
-      break;
-    case State::CLOSED:
-      break;
-  }
-  terminatePublisher(signal);
+  terminatePublisher();
   StreamStateMachineBase::endStream(signal);
 }
 
 void StreamResponder::handleCancel() {
-  switch (state_) {
-    case State::RESPONDING:
-      state_ = State::CLOSED;
-      closeStream(StreamCompletionSignal::CANCEL);
-      break;
-    case State::CLOSED:
-      break;
-  }
+  publisherComplete();
+  closeStream(StreamCompletionSignal::CANCEL);
 }
 
 void StreamResponder::handleRequestN(uint32_t n) {
-  PublisherBase::processRequestN(n);
+  processRequestN(n);
 }
 }

@@ -55,7 +55,6 @@ void StreamStateMachineBase::applicationError(std::string errorPayload) {
       streamId_,
       StreamCompletionSignal::APPLICATION_ERROR,
       Payload(std::move(errorPayload)));
-  closeStream(StreamCompletionSignal::APPLICATION_ERROR);
 }
 
 void StreamStateMachineBase::errorStream(std::string errorPayload) {
@@ -69,13 +68,11 @@ void StreamStateMachineBase::errorStream(std::string errorPayload) {
 void StreamStateMachineBase::cancelStream() {
   writer_->writeCloseStream(
       streamId_, StreamCompletionSignal::CANCEL, Payload());
-  closeStream(StreamCompletionSignal::CANCEL);
 }
 
 void StreamStateMachineBase::completeStream() {
   writer_->writeCloseStream(
       streamId_, StreamCompletionSignal::COMPLETE, Payload());
-  closeStream(StreamCompletionSignal::COMPLETE);
 }
 
 void StreamStateMachineBase::closeStream(StreamCompletionSignal signal) {

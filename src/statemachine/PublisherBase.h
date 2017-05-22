@@ -21,24 +21,35 @@ class PublisherBase {
   explicit PublisherBase(uint32_t initialRequestN)
       : initialRequestN_(initialRequestN) {}
 
-  /// @{
   void publisherSubscribe(
       yarpl::Reference<yarpl::flowable::Subscription> subscription) {
-    debugCheckOnSubscribe();
+    if (state_ == State::CLOSED) {
+      subscription->cancel();
+      return;
+    }
+    DCHECK(!producingSubscription_);
     producingSubscription_ = std::move(subscription);
     if (initialRequestN_) {
       producingSubscription_->request(initialRequestN_.drain());
     }
   }
 
-  /// @}
+  void checkPublisherOnNext() {
+    DCHECK(producingSubscription_);
+    CHECK(state_ == State::RESPONDING);
+  }
 
-  const yarpl::Reference<yarpl::flowable::Subscription>& subscription() const {
-    return producingSubscription_;
+  void publisherComplete() {
+    state_ = State::CLOSED;
+    producingSubscription_ = nullptr;
+  }
+
+  bool publisherClosed() const {
+    return state_ == State::CLOSED;
   }
 
   void processRequestN(uint32_t requestN) {
-    if (!requestN) {
+    if (!requestN || state_ == State::CLOSED) {
       return;
     }
 
@@ -51,20 +62,8 @@ class PublisherBase {
     }
   }
 
- protected:
-  void debugCheckOnSubscribe() {
-    DCHECK(!producingSubscription_);
-  }
-
-  void debugCheckOnNextOnError() {
-    DCHECK(producingSubscription_);
-  }
-
-  void releasePublisher() {
-    producingSubscription_ = nullptr;
-  }
-
-  void terminatePublisher(StreamCompletionSignal signal) {
+  void terminatePublisher() {
+    state_ = State::CLOSED;
     if (auto subscription = std::move(producingSubscription_)) {
       subscription->cancel();
     }
@@ -84,5 +83,10 @@ class PublisherBase {
   /// Subscription once the stream ends.
   yarpl::Reference<yarpl::flowable::Subscription> producingSubscription_;
   AllowanceSemaphore initialRequestN_;
+
+  enum class State : uint8_t {
+    RESPONDING,
+    CLOSED,
+  } state_{State::RESPONDING};
 };
 }

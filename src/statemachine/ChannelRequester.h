@@ -21,8 +21,7 @@ class ChannelRequester : public ConsumerBase,
                          public PublisherBase,
                          public yarpl::flowable::Subscriber<Payload> {
  public:
-  explicit ChannelRequester(const ConsumerBase::Parameters& params)
-      : ConsumerBase(params), PublisherBase(0) {}
+  explicit ChannelRequester(const ConsumerBase::Parameters& params);
 
  private:
   void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
@@ -38,18 +37,15 @@ class ChannelRequester : public ConsumerBase,
   void handlePayload(Payload&& payload, bool complete, bool flagsNext) override;
   void handleRequestN(uint32_t n) override;
   void handleError(folly::exception_wrapper errorPayload) override;
+  void handleCancel() override;
 
   void endStream(StreamCompletionSignal) override;
+  void tryCompleteChannel();
 
-  /// State of the Channel requester.
-  enum class State : uint8_t {
-    NEW,
-    REQUESTED,
-    CLOSED,
-  } state_{State::NEW};
   /// An allowance accumulated before the stream is initialised.
   /// Remaining part of the allowance is forwarded to the ConsumerBase.
   AllowanceSemaphore initialResponseAllowance_;
+  bool requested_{false};
 };
 
 } // reactivesocket

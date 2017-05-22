@@ -42,6 +42,7 @@ void RequestResponseResponder::onError(const std::exception_ptr ex) noexcept {
     case State::RESPONDING: {
       state_ = State::CLOSED;
       applicationError(folly::exceptionStr(ex).toStdString());
+      closeStream(StreamCompletionSignal::APPLICATION_ERROR);
     } break;
     case State::CLOSED:
       break;
