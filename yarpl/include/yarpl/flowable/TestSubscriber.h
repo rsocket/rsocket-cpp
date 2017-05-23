@@ -78,6 +78,7 @@ class TestSubscriber : public Subscriber<T> {
     if (delegate_) {
       delegate_->onComplete();
     }
+    subscription_.reset();
     terminated_ = true;
     terminalEventCV_.notify_all();
   }
@@ -87,6 +88,7 @@ class TestSubscriber : public Subscriber<T> {
       delegate_->onError(ex);
     }
     e_ = ex;
+    subscription_.reset();
     terminated_ = true;
     terminalEventCV_.notify_all();
   }
