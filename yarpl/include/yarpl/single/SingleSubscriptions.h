@@ -60,9 +60,16 @@ class DelegateSingleSubscription : public SingleSubscription {
  public:
   explicit DelegateSingleSubscription() {}
   void cancel() override {
-    std::lock_guard<std::mutex> g(m_);
-    cancelled_ = true;
-    if (delegate_) {
+    bool shouldCancelDelegate = false;
+    {
+      std::lock_guard<std::mutex> g(m_);
+      cancelled_ = true;
+      if (delegate_) {
+        shouldCancelDelegate = true;
+      }
+    }
+    // cancel without holding lock
+    if (shouldCancelDelegate) {
       delegate_->cancel();
     }
   }
@@ -74,12 +81,19 @@ class DelegateSingleSubscription : public SingleSubscription {
    * This can be called once.
    */
   void setDelegate(Reference<SingleSubscription> d) {
-    std::lock_guard<std::mutex> g(m_);
-    if (delegate_) {
-      throw std::runtime_error("Delegate already set. Only one permitted.");
+    bool shouldCancelDelegate = false;
+    {
+      std::lock_guard<std::mutex> g(m_);
+      if (delegate_) {
+        throw std::runtime_error("Delegate already set. Only one permitted.");
+      }
+      delegate_ = std::move(d);
+      if (cancelled_) {
+        shouldCancelDelegate = true;
+      }
     }
-    delegate_ = std::move(d);
-    if (cancelled_) {
+    // cancel without holding lock
+    if (shouldCancelDelegate) {
       delegate_->cancel();
     }
   }
