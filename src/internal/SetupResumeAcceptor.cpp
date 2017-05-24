@@ -1,7 +1,9 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "SetupResumeAcceptor.h"
+
 #include <folly/ExceptionWrapper.h>
+
 #include "src/DuplexConnection.h"
 #include "src/RSocketStats.h"
 #include "src/framing/Frame.h"
@@ -9,13 +11,9 @@
 #include "src/framing/FrameSerializer.h"
 #include "src/framing/FrameTransport.h"
 
-#include <iostream>
-
 namespace rsocket {
 
-class OneFrameProcessor
-    : public FrameProcessor,
-      public std::enable_shared_from_this<OneFrameProcessor> {
+class OneFrameProcessor : public FrameProcessor {
  public:
   OneFrameProcessor(
       SetupResumeAcceptor& acceptor,
