@@ -319,8 +319,8 @@ class SkipOperator : public FlowableOperator<T, T> {
 
   void subscribe(Reference<Subscriber<T>> subscriber) override {
     FlowableOperator<T, T>::upstream_->subscribe(
-        Reference<Subscription>(new Subscription(
-            Reference<Flowable<T>>(this), offset_, std::move(subscriber))));
+      make_ref<Subscription>(
+          Reference<Flowable<T>>(this), offset_, std::move(subscriber)));
   }
 
  private:
@@ -331,33 +331,29 @@ class SkipOperator : public FlowableOperator<T, T> {
         Reference<Flowable<T>> flowable,
         int64_t offset,
         Reference<Subscriber<T>> subscriber)
-        : FlowableOperator<T, T>::Subscription(
-             std::move(flowable),
-             std::move(subscriber)),
+        : Super(std::move(flowable), std::move(subscriber)),
          offset_(offset) {}
 
-    void onNext(T value) override {
-      if (offset_ <= 0) {
-        if (pending_ > 0) {
-          --pending_;
-          Super::subscriberOnNext(
-              std::move(value));
-        }
-      } else {
-        --offset_;
-      }
-    }
+     void onNext(T value) override {
+       if (offset_ > 0) {
+         --offset_;
+       } else {
+         Super::subscriberOnNext(
+             std::move(value));
+       }
+     }
 
-    void request(int64_t delta) override {
-      if (delta > 0) {
-        pending_ += delta;
-        Super::request(delta);
-      }
-    }
+     void request(int64_t delta) override {
+       if (firstRequest_) {
+         firstRequest_ = false;
+         delta = delta + offset_;
+       }
+       Super::request(delta);
+     }
 
    private:
-    int64_t pending_{0};
     int64_t offset_;
+    bool firstRequest_{true};
   };
 
   const int64_t offset_;

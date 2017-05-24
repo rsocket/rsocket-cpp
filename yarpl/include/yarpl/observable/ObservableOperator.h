@@ -293,8 +293,8 @@ class SkipOperator : public ObservableOperator<T, T> {
 
   void subscribe(Reference<Observer<T>> observer) override {
     ObservableOperator<T, T>::upstream_->subscribe(
-        Reference<Subscription>(new Subscription(
-            Reference<Observable<T>>(this), offset_, std::move(observer))));
+      make_ref<Subscription>(
+          Reference<Observable<T>>(this), offset_, std::move(observer)));
   }
 
  private:
@@ -305,9 +305,7 @@ class SkipOperator : public ObservableOperator<T, T> {
        Reference<Observable<T>> observable,
        int64_t offset,
        Reference<Observer<T>> observer)
-       : ObservableOperator<T, T>::Subscription(
-             std::move(observable),
-             std::move(observer)),
+       : Super(std::move(observable), std::move(observer)),
        offset_(offset) {}
 
     void onNext(T value) override {
