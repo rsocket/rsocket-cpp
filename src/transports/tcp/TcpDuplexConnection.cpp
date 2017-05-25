@@ -10,7 +10,8 @@ namespace rsocket {
 using namespace ::folly;
 
 class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
-                        public ::folly::AsyncTransportWrapper::ReadCallback {
+                        public ::folly::AsyncTransportWrapper::ReadCallback,
+                        public std::enable_shared_from_this<TcpReaderWriter> {
  public:
   explicit TcpReaderWriter(
       folly::AsyncSocket::UniquePtr&& socket,
@@ -33,6 +34,7 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
     CHECK(!inputSubscriber_);
     inputSubscriber_ = std::move(inputSubscriber);
 
+    selfRef_ = shared_from_this();
     // safe to call repeatedly
     socket_->setReadCB(this);
   }
@@ -66,6 +68,13 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
 
   void closeFromReader() {
     closeFromWriter();
+  }
+
+  void closeIfUnused() {
+    if(isClosed() || selfRef_) {
+      return;
+    }
+    socket_->close();
   }
 
  private:
@@ -127,6 +136,7 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
     if (auto outputSubscription = std::move(outputSubscription_)) {
       outputSubscription->cancel();
     }
+    selfRef_ = nullptr;
   }
 
   folly::IOBufQueue readBuffer_{folly::IOBufQueue::cacheChainLength()};
@@ -136,6 +146,10 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
   std::shared_ptr<rsocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
       inputSubscriber_;
   std::shared_ptr<Subscription> outputSubscription_;
+
+  // self reference is used to keep the instance alive for the AsyncSocket
+  // callbacks even after DuplexConnection releases references to this
+  std::shared_ptr<TcpReaderWriter> selfRef_;
 };
 
 class TcpOutputSubscriber
@@ -211,6 +225,7 @@ TcpDuplexConnection::TcpDuplexConnection(
 
 TcpDuplexConnection::~TcpDuplexConnection() {
   stats_->duplexConnectionClosed("tcp", this);
+  tcpReaderWriter_->closeIfUnused();
 }
 
 std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>>

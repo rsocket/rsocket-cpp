@@ -16,14 +16,23 @@ namespace rsocket {
 RSocketServer::RSocketServer(
     std::unique_ptr<ConnectionAcceptor> connectionAcceptor)
     : duplexConnectionAcceptor_(std::move(connectionAcceptor)),
-      setupResumeAcceptor_(ProtocolVersion::Unknown) {}
+      setupResumeAcceptors_([]{return new rsocket::SetupResumeAcceptor(ProtocolVersion::Unknown); }) {}
 
 RSocketServer::~RSocketServer() {
+  // Will stop forwarding connections from duplexConnectionAcceptor_ to
+  // setupResumeAcceptors_
+  isShutdown_ = true;
+
   // Stop accepting new connections.
   duplexConnectionAcceptor_->stop();
 
-  // FIXME(alexanderm): This is where we /should/ close the FrameTransports
-  // sitting around in the SetupResumeAcceptor, but we can't yet...
+  std::vector<folly::Future<folly::Unit>> closingFutures;
+  for (auto& acceptor : setupResumeAcceptors_.accessAllThreads()) {
+    // this call will queue up the cleanup on the eventBase
+    closingFutures.push_back(acceptor.close());
+  }
+
+  folly::collectAll(closingFutures).get();
 
   // Asynchronously close all existing ReactiveSockets.  If there are none, then
   // we can do an early exit.
@@ -45,11 +54,9 @@ RSocketServer::~RSocketServer() {
     }
   }
 
-    // TODO => Ben commented out to get unit tests working
-
   // Wait for all ReactiveSockets to close.
-  //  shutdown_->wait();
-  //  DCHECK(sockets_.lock()->empty());
+  shutdown_->wait();
+  DCHECK(sockets_.lock()->empty());
 
   // All requests are fully finished, worker threads can be safely killed off.
 }
@@ -65,10 +72,18 @@ void RSocketServer::start(OnSetupConnection onSetupConnection) {
   duplexConnectionAcceptor_
       ->start([ this, onSetupConnection = std::move(onSetupConnection) ](
           std::unique_ptr<DuplexConnection> connection, folly::EventBase& eventBase) {
+
+        auto* acceptor = setupResumeAcceptors_.get();
+
+        if (isShutdown_) {
+          // connection is getting out of scope and terminated
+          //
+          // if we created a new acceptor its ok, we aren't queuing anything new
+          return;
+        }
         VLOG(2) << "Going to accept duplex connection";
 
-        // FIXME(alexanderm): This isn't thread safe
-        setupResumeAcceptor_.accept(
+        acceptor->accept(
             std::move(connection),
             std::bind(&RSocketServer::onSetupConnection, this,
                       std::move(onSetupConnection), std::placeholders::_1,
@@ -84,9 +99,11 @@ void RSocketServer::onSetupConnection(
     OnSetupConnection onSetupConnection,
     std::shared_ptr<rsocket::FrameTransport> frameTransport,
     rsocket::SetupParameters setupParams) {
+  // we don't need to check for isShutdown_ here since all callbacks are
+  // processed by this time
+
   LOG(INFO) << "RSocketServer => received new setup payload";
 
-  // FIXME(alexanderm): Handler should be tied to specific executor
   auto* eventBase = folly::EventBaseManager::get()->getExistingEventBase();
 
   std::shared_ptr<RSocketResponder> requestResponder;
@@ -114,18 +131,16 @@ void RSocketServer::onSetupConnection(
       nullptr,
       ReactiveSocketMode::SERVER);
 
-  //TODO: fix the shut down part
-//  rs->addClosedListener(
-//      [this, stateMachine](const folly::exception_wrapper&) {
-//        // Enqueue another event to remove and delete it.  We cannot delete
-//        // the RSocketStateMachine now as it still needs to finish processing
-//        // the onClosed handlers in the stack frame above us.
-//        // TODO => Ben commented out to get unit tests working
-//        //          executor_.add([this, stateMachine] {
-//        //            server_->removeConnection(stateMachine);
-//        //          });
-//
-//      });
+  rs->addClosedListener(
+      [this, rs, eventBase](const folly::exception_wrapper&) {
+        // Enqueue another event to remove and delete it.  We cannot delete
+        // the RSocketStateMachine now as it still needs to finish processing
+        // the onClosed handlers in the stack frame above us.
+        eventBase->add([this, rs] {
+          removeConnection(rs);
+        });
+
+      });
 
   addConnection(rs, *eventBase);
 
@@ -150,6 +165,9 @@ void RSocketServer::onResumeConnection(
     OnResumeConnection onResumeConnection,
     std::shared_ptr<rsocket::FrameTransport> frameTransport,
     rsocket::ResumeParameters setupPayload) {
+  // we don't need to check for isShutdown_ here since all callbacks are
+  // processed by this time
+
   CHECK(false) << "not implemented";
 }
 
@@ -169,7 +187,7 @@ void RSocketServer::addConnection(
 }
 
 void RSocketServer::removeConnection(
-    std::shared_ptr<rsocket::RSocketStateMachine> socket) {
+    const std::shared_ptr<rsocket::RSocketStateMachine>& socket) {
   auto locked = sockets_.lock();
   locked->erase(socket);
 

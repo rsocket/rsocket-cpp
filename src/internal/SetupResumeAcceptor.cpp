@@ -2,6 +2,7 @@
 
 #include "SetupResumeAcceptor.h"
 #include <folly/ExceptionWrapper.h>
+#include <folly/io/async/EventBaseManager.h>
 #include "src/DuplexConnection.h"
 #include "src/RSocketStats.h"
 #include "src/framing/Frame.h"
@@ -61,12 +62,12 @@ SetupResumeAcceptor::SetupResumeAcceptor(
     defaultFrameSerializer_ =
         FrameSerializer::createFrameSerializer(protocolVersion);
   }
+  eventBase_ = folly::EventBaseManager::get()->getExistingEventBase();
+  CHECK(eventBase_);
 }
 
 SetupResumeAcceptor::~SetupResumeAcceptor() {
-  for (auto& connection : connections_) {
-    connection->close(std::runtime_error("SetupResumeAcceptor closed"));
-  }
+  close().get();
 }
 
 void SetupResumeAcceptor::processFrame(
@@ -74,6 +75,13 @@ void SetupResumeAcceptor::processFrame(
     std::unique_ptr<folly::IOBuf> frame,
     SetupResumeAcceptor::OnSetup onSetup,
     SetupResumeAcceptor::OnResume onResume) {
+  DCHECK(eventBase_ == folly::EventBaseManager::get()->getExistingEventBase());
+
+  if(!connections_) {
+    transport->close(std::runtime_error("shut down"));
+    return;
+  }
+
   auto frameSerializer = getOrAutodetectFrameSerializer(*frame);
   if (!frameSerializer) {
     closeAndRemoveConnection(
@@ -174,7 +182,7 @@ void SetupResumeAcceptor::accept(
   auto transport = std::make_shared<FrameTransport>(std::move(connection));
   auto processor = std::make_shared<OneFrameProcessor>(
       *this, transport, std::move(onSetup), std::move(onResume));
-  connections_.insert(transport);
+  connections_->insert(transport);
   // transport can receive frames right away
   transport->setFrameProcessor(std::move(processor));
 }
@@ -200,13 +208,42 @@ void SetupResumeAcceptor::closeAndRemoveConnection(
     const std::shared_ptr<FrameTransport>& transport,
     folly::exception_wrapper ex) {
   transport->close(ex);
-  connections_.erase(transport);
+  connections_->erase(transport);
 }
 
 void SetupResumeAcceptor::removeConnection(
     const std::shared_ptr<FrameTransport>& transport) {
   transport->setFrameProcessor(nullptr);
-  connections_.erase(transport);
+  connections_->erase(transport);
+}
+
+folly::Future<folly::Unit> SetupResumeAcceptor::close() {
+  folly::Promise<folly::Unit> closingPromise;
+  auto closingFuture = closingPromise.getFuture();
+
+  if(eventBase_->isInEventBaseThread()) {
+    closeAllConnections();
+    closingPromise.setValue();
+  } else {
+    auto queued = eventBase_->runInEventBaseThread([this, closingPromise = std::move(closingPromise)]() mutable {
+      closeAllConnections();
+      closingPromise.setValue();
+    });
+    CHECK(queued);
+  }
+  return closingFuture;
+}
+
+void SetupResumeAcceptor::closeAllConnections() {
+  if(!connections_) {
+    return;
+  }
+
+  folly::exception_wrapper closingEx = std::runtime_error("shutting down");
+  for(auto& connection : *connections_) {
+    connection->close(closingEx);
+  }
+  connections_ = nullptr;
 }
 
 } // reactivesocket

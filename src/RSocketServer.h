@@ -6,7 +6,7 @@
 
 #include <folly/Baton.h>
 #include <folly/Synchronized.h>
-
+#include <folly/ThreadLocal.h>
 #include "src/ConnectionAcceptor.h"
 #include "src/RSocketParameters.h"
 #include "src/RSocketResponder.h"
@@ -93,12 +93,9 @@ class RSocketServer {
     void addConnection(
       std::shared_ptr<rsocket::RSocketStateMachine>,
       folly::Executor&);
-  void removeConnection(std::shared_ptr<rsocket::RSocketStateMachine>);
-
-  //////////////////////////////////////////////////////////////////////////////
+  void removeConnection(const std::shared_ptr<rsocket::RSocketStateMachine>&);
 
   std::unique_ptr<ConnectionAcceptor> duplexConnectionAcceptor_;
-  rsocket::SetupResumeAcceptor setupResumeAcceptor_;
   bool started{false};
 
   /// Set of currently open ReactiveSockets.
@@ -109,7 +106,11 @@ class RSocketServer {
       std::mutex>
       sockets_;
 
+  class SetupResumeAcceptorTag{};
+  folly::ThreadLocal<rsocket::SetupResumeAcceptor, SetupResumeAcceptorTag> setupResumeAcceptors_;
+
   folly::Baton<> waiting_;
   folly::Optional<folly::Baton<>> shutdown_;
+  std::atomic<bool> isShutdown_{false};
 };
 } // namespace rsocket

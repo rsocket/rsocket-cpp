@@ -19,7 +19,7 @@ namespace rsocket {
 class TcpConnectionAcceptor : public ConnectionAcceptor {
  public:
   struct Options {
-    explicit Options(uint16_t port_ = 8080, size_t threads_ = 1,
+    explicit Options(uint16_t port_ = 8080, size_t threads_ = 2,
                      int backlog_ = 10) : port(port_), threads(threads_),
                                           backlog(backlog_) {}
 

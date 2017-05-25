@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <unordered_set>
+#include <folly/futures/Future.h>
 #include "src/RSocketParameters.h"
 #include "src/internal/Common.h"
 
@@ -38,6 +39,8 @@ class SetupResumeAcceptor final {
       OnSetup onSetup,
       OnResume onResume);
 
+  folly::Future<folly::Unit> close();
+
  protected:
   friend OneFrameProcessor;
 
@@ -53,11 +56,16 @@ class SetupResumeAcceptor final {
   void removeConnection(const std::shared_ptr<FrameTransport>& transport);
 
  private:
+  void closeAllConnections();
+
   std::shared_ptr<FrameSerializer> getOrAutodetectFrameSerializer(
       const folly::IOBuf& firstFrame);
 
-  std::unordered_set<std::shared_ptr<FrameTransport>> connections_;
+  std::shared_ptr<std::unordered_set<std::shared_ptr<FrameTransport>>> connections_{
+      std::make_shared<std::unordered_set<std::shared_ptr<FrameTransport>>>()};
+
   std::shared_ptr<FrameSerializer> defaultFrameSerializer_;
+  folly::EventBase* eventBase_;
 };
 
 } // reactivesocket
