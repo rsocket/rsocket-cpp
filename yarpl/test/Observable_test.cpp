@@ -454,6 +454,22 @@ TEST(Observable, DISABLED_SimpleTake) {
   EXPECT_EQ(0u, Refcounted::objects());
 }
 
+TEST(Observable, SimpleSkip) {
+  ASSERT_EQ(0u, Refcounted::objects());
+  EXPECT_EQ(
+      run(Observables::range(0, 10)->skip(8)),
+      std::vector<int64_t>({8, 9}));
+  ASSERT_EQ(0u, Refcounted::objects());
+}
+
+TEST(Observable, OverflowSkip) {
+  ASSERT_EQ(0u, Refcounted::objects());
+  EXPECT_EQ(
+      run(Observables::range(0, 10)->skip(12)),
+      std::vector<int64_t>({}));
+  ASSERT_EQ(0u, Refcounted::objects());
+}
+
 TEST(Observable, Error) {
   auto observable =
       Observables::error<int>(std::runtime_error("something broke!"));

@@ -98,6 +98,8 @@ class Observable : public virtual Refcounted {
 
   auto take(int64_t);
 
+  auto skip(int64_t);
+
   auto subscribeOn(Scheduler&);
 
   /**
@@ -156,6 +158,12 @@ template <typename T>
 auto Observable<T>::take(int64_t limit) {
   return Reference<Observable<T>>(
       new TakeOperator<T>(Reference<Observable<T>>(this), limit));
+}
+
+template <typename T>
+auto Observable<T>::skip(int64_t offset) {
+  return Reference<Observable<T>>(
+      new SkipOperator<T>(Reference<Observable<T>>(this), offset));
 }
 
 template <typename T>

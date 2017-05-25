@@ -95,6 +95,8 @@ class Flowable : public virtual Refcounted {
 
   auto take(int64_t);
 
+  auto skip(int64_t);
+
   auto subscribeOn(Scheduler&);
 
   /**
@@ -371,6 +373,12 @@ template <typename T>
 auto Flowable<T>::take(int64_t limit) {
   return Reference<Flowable<T>>(
       new TakeOperator<T>(Reference<Flowable<T>>(this), limit));
+}
+
+template <typename T>
+auto Flowable<T>::skip(int64_t offset) {
+  return Reference<Flowable<T>>(
+    new SkipOperator<T>(Reference<Flowable<T>>(this), offset));
 }
 
 template <typename T>

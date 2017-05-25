@@ -286,6 +286,45 @@ class TakeOperator : public ObservableOperator<T, T> {
 };
 
 template <typename T>
+class SkipOperator : public ObservableOperator<T, T> {
+ public:
+  SkipOperator(Reference<Observable<T>> upstream, int64_t offset)
+      : ObservableOperator<T, T>(std::move(upstream)), offset_(offset) {}
+
+  void subscribe(Reference<Observer<T>> observer) override {
+    ObservableOperator<T, T>::upstream_->subscribe(
+      make_ref<Subscription>(
+          Reference<Observable<T>>(this), offset_, std::move(observer)));
+  }
+
+ private:
+  class Subscription : public ObservableOperator<T, T>::Subscription {
+    using Super = typename ObservableOperator<T,T>::Subscription;
+   public:
+    Subscription(
+       Reference<Observable<T>> observable,
+       int64_t offset,
+       Reference<Observer<T>> observer)
+       : Super(std::move(observable), std::move(observer)),
+       offset_(offset) {}
+
+    void onNext(T value) override {
+      if (offset_ <= 0) {
+        Super::observerOnNext(
+            std::move(value));
+      } else {
+        --offset_;
+      }
+    }
+
+   private:
+    int64_t offset_;
+  };
+
+  const int64_t offset_;
+};
+
+template <typename T>
 class SubscribeOnOperator : public ObservableOperator<T, T> {
  public:
   SubscribeOnOperator(Reference<Observable<T>> upstream, Scheduler& scheduler)
