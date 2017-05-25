@@ -31,7 +31,10 @@ class SetupResumeAcceptor final {
   using OnResume =
       std::function<void(std::shared_ptr<FrameTransport>, ResumeParameters)>;
 
-  explicit SetupResumeAcceptor(ProtocolVersion defaultProtocolVersion);
+  explicit SetupResumeAcceptor(
+      ProtocolVersion defaultProtocolVersion,
+      folly::EventBase* eventBase);
+
   ~SetupResumeAcceptor();
 
   void accept(
@@ -60,8 +63,8 @@ private:
   std::shared_ptr<FrameSerializer> getOrAutodetectFrameSerializer(
       const folly::IOBuf& firstFrame);
 
-  std::shared_ptr<std::unordered_set<std::shared_ptr<FrameTransport>>> connections_{
-      std::make_shared<std::unordered_set<std::shared_ptr<FrameTransport>>>()};
+  std::unordered_set<std::shared_ptr<FrameTransport>> connections_;
+  bool closed_{false};
 
   std::shared_ptr<FrameSerializer> defaultFrameSerializer_;
   folly::EventBase* eventBase_;

@@ -14,7 +14,11 @@ namespace rsocket {
 RSocketServer::RSocketServer(
     std::unique_ptr<ConnectionAcceptor> connectionAcceptor)
     : duplexConnectionAcceptor_(std::move(connectionAcceptor)),
-      setupResumeAcceptors_([]{return new rsocket::SetupResumeAcceptor(ProtocolVersion::Unknown); }) {}
+      setupResumeAcceptors_([]{
+        return new rsocket::SetupResumeAcceptor(
+            ProtocolVersion::Unknown,
+            folly::EventBaseManager::get()->getExistingEventBase());
+      }) {}
 
 RSocketServer::~RSocketServer() {
   // Will stop forwarding connections from duplexConnectionAcceptor_ to
@@ -71,14 +75,12 @@ void RSocketServer::start(OnSetupConnection onSetupConnection) {
       ->start([ this, onSetupConnection = std::move(onSetupConnection) ](
           std::unique_ptr<DuplexConnection> connection,
           folly::EventBase & eventBase) {
-        auto* acceptor = setupResumeAcceptors_.get();
-
         if (isShutdown_) {
           // connection is getting out of scope and terminated
-          //
-          // if we created a new acceptor its ok, we aren't queuing anything new
           return;
         }
+
+        auto* acceptor = setupResumeAcceptors_.get();
 
         VLOG(2) << "Going to accept duplex connection";
 
@@ -191,7 +193,7 @@ void RSocketServer::addConnection(
 }
 
 void RSocketServer::removeConnection(
-    const std::shared_ptr<rsocket::RSocketStateMachine>& socket) {
+    const std::shared_ptr<RSocketStateMachine>& socket) {
   auto locked = sockets_.lock();
   locked->erase(socket);
 
