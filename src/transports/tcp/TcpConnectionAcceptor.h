@@ -3,6 +3,7 @@
 #pragma once
 
 #include <folly/io/async/AsyncServerSocket.h>
+
 #include "src/ConnectionAcceptor.h"
 
 namespace folly {
@@ -45,10 +46,7 @@ class TcpConnectionAcceptor : public ConnectionAcceptor {
   /**
    * Bind an AsyncServerSocket and start accepting TCP connections.
    */
-  folly::Future<folly::Unit> start(
-      std::function<
-          void(std::unique_ptr<rsocket::DuplexConnection>, folly::EventBase&)>)
-      override;
+  folly::Future<folly::Unit> start(OnDuplexConnectionAccept) override;
 
   /**
    * Shutdown the AsyncServerSocket and associated listener thread.
@@ -65,9 +63,7 @@ class TcpConnectionAcceptor : public ConnectionAcceptor {
   /// thread.
   std::vector<std::unique_ptr<SocketCallback>> callbacks_;
 
-  std::function<
-      void(std::unique_ptr<rsocket::DuplexConnection>, folly::EventBase&)>
-      onAccept_;
+  OnDuplexConnectionAccept onAccept_;
 
   /// The socket listening for new connections.
   folly::AsyncServerSocket::UniquePtr serverSocket_;

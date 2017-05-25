@@ -7,26 +7,27 @@
 #include "src/internal/FollyKeepaliveTimer.h"
 #include "src/framing/FrameTransport.h"
 
-using namespace rsocket;
 using namespace folly;
 
 namespace rsocket {
 
-RSocketClient::RSocketClient(std::unique_ptr<ConnectionFactory> connectionFactory)
+RSocketClient::RSocketClient(
+    std::unique_ptr<ConnectionFactory> connectionFactory)
     : connectionFactory_(std::move(connectionFactory)) {
-  LOG(INFO) << "RSocketClient => created";
+  VLOG(1) << "Constructing RSocketClient";
 }
 
-Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect() {
-  LOG(INFO) << "RSocketClient => start connection with Future";
+folly::Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect() {
+  VLOG(2) << "Starting connection";
 
-  auto promise = std::make_shared<Promise<std::shared_ptr<RSocketRequester>>>();
+  auto promise =
+      std::make_shared<folly::Promise<std::shared_ptr<RSocketRequester>>>();
   auto future = promise->getFuture();
 
   connectionFactory_->connect([this, promise = std::move(promise)](
       std::unique_ptr<DuplexConnection> framedConnection,
-      EventBase& eventBase) {
-    LOG(INFO) << "RSocketClient => onConnect received DuplexConnection";
+      folly::EventBase& eventBase) mutable {
+    VLOG(3) << "onConnect received DuplexConnection";
 
     auto rs = std::make_shared<RSocketStateMachine>(
         eventBase,
@@ -76,6 +77,6 @@ Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect() {
 }
 
 RSocketClient::~RSocketClient() {
-  LOG(INFO) << "RSocketClient => destroy";
+  VLOG(1) << "Destroying RSocketClient";
 }
 }

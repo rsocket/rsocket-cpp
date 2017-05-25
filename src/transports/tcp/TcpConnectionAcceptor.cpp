@@ -8,22 +8,18 @@
 #include "src/framing/FramedDuplexConnection.h"
 #include "src/transports/tcp/TcpDuplexConnection.h"
 
-using namespace rsocket;
-
 namespace rsocket {
 
 class TcpConnectionAcceptor::SocketCallback
     : public folly::AsyncServerSocket::AcceptCallback {
  public:
-  explicit SocketCallback(std::function<void(
-                              std::unique_ptr<rsocket::DuplexConnection>,
-                              folly::EventBase&)>& onAccept)
+  explicit SocketCallback(OnDuplexConnectionAccept& onAccept)
       : onAccept_{onAccept} {}
 
   void connectionAccepted(
       int fd,
-      const folly::SocketAddress&) noexcept override {
-    LOG(INFO) << "Accepting TCP connection on FD " << fd;
+      const folly::SocketAddress& address) noexcept override {
+    VLOG(1) << "Accepting TCP connection from " << address << " on FD " << fd;
 
     folly::AsyncSocket::UniquePtr socket(
         new folly::AsyncSocket(eventBase(), fd));
@@ -37,7 +33,7 @@ class TcpConnectionAcceptor::SocketCallback
   }
 
   void acceptError(const std::exception& ex) noexcept override {
-    LOG(INFO) << "TCP error: " << ex.what();
+    VLOG(1) << "TCP error: " << ex.what();
   }
 
   folly::EventBase* eventBase() const {
@@ -49,9 +45,7 @@ class TcpConnectionAcceptor::SocketCallback
   folly::ScopedEventBaseThread thread_;
 
   /// Reference to the ConnectionAcceptor's callback.
-  std::function<void(
-      std::unique_ptr<rsocket::DuplexConnection>,
-      folly::EventBase&)>& onAccept_;
+  OnDuplexConnectionAccept& onAccept_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -68,14 +62,13 @@ TcpConnectionAcceptor::~TcpConnectionAcceptor() {
 ////////////////////////////////////////////////////////////////////////////////
 
 folly::Future<folly::Unit> TcpConnectionAcceptor::start(
-    std::function<void(std::unique_ptr<DuplexConnection>, folly::EventBase&)>
-        acceptor) {
+    OnDuplexConnectionAccept onAccept) {
   if (onAccept_ != nullptr) {
     return folly::makeFuture<folly::Unit>(
         std::runtime_error("TcpConnectionAcceptor::start() already called"));
   }
 
-  onAccept_ = std::move(acceptor);
+  onAccept_ = std::move(onAccept);
   serverThread_ = std::make_unique<folly::ScopedEventBaseThread>();
   serverThread_->getEventBase()->runInEventBaseThread(
       [] { folly::setThreadName("TcpConnectionAcceptor.Listener"); });
@@ -111,7 +104,6 @@ folly::Future<folly::Unit> TcpConnectionAcceptor::start(
     }
   });
 
-  LOG(INFO) << "ConnectionAcceptor => leave start";
   return folly::unit;
 }
 

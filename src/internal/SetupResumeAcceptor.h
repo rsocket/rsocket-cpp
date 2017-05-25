@@ -5,14 +5,15 @@
 #include <memory>
 #include <unordered_set>
 #include <folly/futures/Future.h>
+
 #include "src/RSocketParameters.h"
 #include "src/internal/Common.h"
 
 namespace folly {
 class EventBase;
 class Executor;
-class exception_wrapper;
 class IOBuf;
+class exception_wrapper;
 }
 
 namespace rsocket {
@@ -20,16 +21,15 @@ namespace rsocket {
 class DuplexConnection;
 class FrameSerializer;
 class FrameTransport;
-class OneFrameProcessor;
 
 // This class allows to store duplex connection and wait until the first frame
-// is received. Then either onNewSocket or onResumeSocket is invoked.
+// is received. Then either onSetup or onResume is invoked.
 class SetupResumeAcceptor final {
  public:
-  using OnSetup = std::function<void(
-      std::shared_ptr<FrameTransport> frameTransport, SetupParameters setupParams)>;
-  using OnResume = std::function<void(
-      std::shared_ptr<FrameTransport> frameTransport, ResumeParameters resumeParams)>;
+  using OnSetup =
+      std::function<void(std::shared_ptr<FrameTransport>, SetupParameters)>;
+  using OnResume =
+      std::function<void(std::shared_ptr<FrameTransport>, ResumeParameters)>;
 
   explicit SetupResumeAcceptor(ProtocolVersion defaultProtocolVersion);
   ~SetupResumeAcceptor();
@@ -41,8 +41,8 @@ class SetupResumeAcceptor final {
 
   folly::Future<folly::Unit> close();
 
- protected:
-  friend OneFrameProcessor;
+private:
+  friend class OneFrameProcessor;
 
   void processFrame(
       std::shared_ptr<FrameTransport> transport,
@@ -55,7 +55,6 @@ class SetupResumeAcceptor final {
       folly::exception_wrapper ex);
   void removeConnection(const std::shared_ptr<FrameTransport>& transport);
 
- private:
   void closeAllConnections();
 
   std::shared_ptr<FrameSerializer> getOrAutodetectFrameSerializer(
