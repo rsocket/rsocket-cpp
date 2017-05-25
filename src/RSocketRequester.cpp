@@ -6,7 +6,6 @@
 #include "internal/ScheduledSubscriber.h"
 #include "internal/ScheduledSingleObserver.h"
 
-using namespace rsocket;
 using namespace folly;
 using namespace yarpl;
 
@@ -17,7 +16,7 @@ std::shared_ptr<RSocketRequester> RSocketRequester::create(
     EventBase& eventBase) {
   auto customDeleter = [&eventBase](RSocketRequester* pRequester) {
     eventBase.runImmediatelyOrRunInEventBaseThreadAndWait([&pRequester] {
-      LOG(INFO) << "RSocketRequester => destroy on EventBase";
+      VLOG(2) << "Destroying RSocketRequester on EventBase";
       delete pRequester;
     });
   };
@@ -33,8 +32,9 @@ RSocketRequester::RSocketRequester(
     : stateMachine_(std::move(srs)), eventBase_(eventBase) {}
 
 RSocketRequester::~RSocketRequester() {
-  LOG(INFO) << "RSocketRequester => destroy";
-  stateMachine_->close(folly::exception_wrapper(), StreamCompletionSignal::CONNECTION_END);
+  VLOG(1) << "Destroying RSocketRequester";
+  stateMachine_->close(
+      folly::exception_wrapper(), StreamCompletionSignal::CONNECTION_END);
 }
 
 yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>

@@ -9,8 +9,6 @@
 #include "framing/FrameTransport.h"
 #include "RSocketStats.h"
 
-using namespace rsocket;
-
 namespace rsocket {
 
 RSocketServer::RSocketServer(
@@ -60,31 +58,38 @@ void RSocketServer::start(OnSetupConnection onSetupConnection) {
   }
   started = true;
 
-  LOG(INFO) << "Initializing connection acceptor on start";
+  LOG(INFO) << "Starting RSocketServer";
 
   duplexConnectionAcceptor_
       ->start([ this, onSetupConnection = std::move(onSetupConnection) ](
-          std::unique_ptr<DuplexConnection> connection, folly::EventBase& eventBase) {
+          std::unique_ptr<DuplexConnection> connection,
+          folly::EventBase & eventBase) {
         VLOG(2) << "Going to accept duplex connection";
 
         // FIXME(alexanderm): This isn't thread safe
         setupResumeAcceptor_.accept(
             std::move(connection),
-            std::bind(&RSocketServer::onSetupConnection, this,
-                      std::move(onSetupConnection), std::placeholders::_1,
-                      std::placeholders::_2),
-            std::bind(&RSocketServer::onResumeConnection, this,
-                      OnResumeConnection(), std::placeholders::_1,
-                      std::placeholders::_2));
+            std::bind(
+                &RSocketServer::onSetupConnection,
+                this,
+                std::move(onSetupConnection),
+                std::placeholders::_1,
+                std::placeholders::_2),
+            std::bind(
+                &RSocketServer::onResumeConnection,
+                this,
+                OnResumeConnection(),
+                std::placeholders::_1,
+                std::placeholders::_2));
       })
       .get(); // block until finished and return or throw
 }
 
 void RSocketServer::onSetupConnection(
     OnSetupConnection onSetupConnection,
-    std::shared_ptr<rsocket::FrameTransport> frameTransport,
-    rsocket::SetupParameters setupParams) {
-  LOG(INFO) << "RSocketServer => received new setup payload";
+    std::shared_ptr<FrameTransport> frameTransport,
+    SetupParameters setupParams) {
+  VLOG(1) << "Received new setup payload";
 
   // FIXME(alexanderm): Handler should be tied to specific executor
   auto* eventBase = folly::EventBaseManager::get()->getExistingEventBase();
@@ -148,8 +153,8 @@ void RSocketServer::onSetupConnection(
 
 void RSocketServer::onResumeConnection(
     OnResumeConnection onResumeConnection,
-    std::shared_ptr<rsocket::FrameTransport> frameTransport,
-    rsocket::ResumeParameters setupPayload) {
+    std::shared_ptr<FrameTransport> frameTransport,
+    ResumeParameters setupPayload) {
   CHECK(false) << "not implemented";
 }
 
@@ -163,17 +168,17 @@ void RSocketServer::unpark() {
 }
 
 void RSocketServer::addConnection(
-    std::shared_ptr<rsocket::RSocketStateMachine> socket,
+    std::shared_ptr<RSocketStateMachine> socket,
     folly::Executor& executor) {
   sockets_.lock()->insert({std::move(socket), executor});
 }
 
 void RSocketServer::removeConnection(
-    std::shared_ptr<rsocket::RSocketStateMachine> socket) {
+    std::shared_ptr<RSocketStateMachine> socket) {
   auto locked = sockets_.lock();
   locked->erase(socket);
 
-  LOG(INFO) << "Removed ReactiveSocket";
+  VLOG(2) << "Removed ReactiveSocket";
 
   if (shutdown_ && locked->empty()) {
     shutdown_->post();
