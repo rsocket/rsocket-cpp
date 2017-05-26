@@ -346,7 +346,13 @@ class SkipOperator : public FlowableOperator<T, T> {
      void request(int64_t delta) override {
        if (firstRequest_) {
          firstRequest_ = false;
-         delta = delta + offset_;
+
+         // TODO: This should be helper like `clampAdd` or something.
+         if (delta <= std::numeric_limits<int64_t>::max() - offset_) {
+           delta = delta + offset_;
+         } else {
+           delta = std::numeric_limits<int64_t>::max();
+         }
        }
        Super::request(delta);
      }

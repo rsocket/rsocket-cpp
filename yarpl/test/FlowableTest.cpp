@@ -16,7 +16,8 @@ void unreachable() {
 template <typename T>
 class CollectingSubscriber : public Subscriber<T> {
  public:
-  explicit CollectingSubscriber(int64_t requestCount = 100)
+  explicit CollectingSubscriber(
+      int64_t requestCount = Flowable<T>::NO_FLOW_CONTROL)
       : requestCount_(requestCount) {}
 
   void onSubscribe(Reference<Subscription> subscription) override {
@@ -78,7 +79,7 @@ class CollectingSubscriber : public Subscriber<T> {
 template <typename T>
 std::vector<T> run(
     Reference<Flowable<T>> flowable,
-    uint64_t requestCount = 100) {
+    int64_t requestCount = Flowable<T>::NO_FLOW_CONTROL) {
   auto collector = make_ref<CollectingSubscriber<T>>(requestCount);
   flowable->subscribe(collector);
   return collector->values();
