@@ -214,7 +214,7 @@ bool FramedReader::ensureOrAutodetectProtocolVersion() {
 }
 
 void FramedReader::setFrame(
-    std::shared_ptr<reactivesocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
+    std::shared_ptr<rsocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
       frame) {
   frames_->onComplete();
   frames_ = frame;
