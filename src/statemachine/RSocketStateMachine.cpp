@@ -66,6 +66,12 @@ void RSocketStateMachine::setResumable(bool resumable) {
   remoteResumeable_ = isResumable_ = resumable;
 }
 
+bool RSocketStateMachine::connectServer(
+    std::shared_ptr<FrameTransport> frameTransport,
+    const SetupParameters& setupParams) {
+  return connect(std::move(frameTransport), true, setupParams.protocolVersion);
+}
+
 bool RSocketStateMachine::connect(
     std::shared_ptr<FrameTransport> frameTransport,
     bool sendingPendingFrames,
@@ -838,21 +844,32 @@ void RSocketStateMachine::setFrameSerializer(
   frameSerializer_ = std::move(frameSerializer);
 }
 
-void RSocketStateMachine::setUpFrame(
-    std::shared_ptr<FrameTransport> frameTransport,
-    SetupParameters setupPayload) {
-  auto protocolVersion = getSerializerProtocolVersion();
+void RSocketStateMachine::connectClientSendSetup(
+    std::unique_ptr<DuplexConnection> connection,
+    SetupParameters setupParams) {
+  setFrameSerializer(
+      setupParams.protocolVersion == ProtocolVersion::Unknown
+      ? FrameSerializer::createCurrentVersion()
+      : FrameSerializer::createFrameSerializer(
+          setupParams.protocolVersion));
+
+  setResumable(setupParams.resumable);
+
+  auto frameTransport =
+      std::make_shared<FrameTransport>(std::move(connection));
+
+  auto protocolVersion = frameSerializer_->protocolVersion();
 
   Frame_SETUP frame(
-      setupPayload.resumable ? FrameFlags::RESUME_ENABLE : FrameFlags::EMPTY,
+      setupParams.resumable ? FrameFlags::RESUME_ENABLE : FrameFlags::EMPTY,
       protocolVersion.major,
       protocolVersion.minor,
       getKeepaliveTime(),
       Frame_SETUP::kMaxLifetime,
-      setupPayload.token,
-      std::move(setupPayload.metadataMimeType),
-      std::move(setupPayload.dataMimeType),
-      std::move(setupPayload.payload));
+      std::move(setupParams.token),
+      std::move(setupParams.metadataMimeType),
+      std::move(setupParams.dataMimeType),
+      std::move(setupParams.payload));
 
   // TODO: when the server returns back that it doesn't support resumability, we
   // should retry without resumability
@@ -862,10 +879,6 @@ void RSocketStateMachine::setUpFrame(
       frameSerializer_->serializeOut(std::move(frame)));
   // then the rest of the cached frames will be sent
   connect(std::move(frameTransport), true, ProtocolVersion::Unknown);
-}
-
-ProtocolVersion RSocketStateMachine::getSerializerProtocolVersion() {
-  return frameSerializer_->protocolVersion();
 }
 
 void RSocketStateMachine::writeNewStream(

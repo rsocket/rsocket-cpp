@@ -25,7 +25,7 @@ folly::Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect() {
   auto future = promise->getFuture();
 
   connectionFactory_->connect([this, promise = std::move(promise)](
-      std::unique_ptr<DuplexConnection> framedConnection,
+      std::unique_ptr<DuplexConnection> connection,
       folly::EventBase& eventBase) mutable {
     VLOG(3) << "onConnect received DuplexConnection";
 
@@ -41,31 +41,9 @@ folly::Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect() {
         ReactiveSocketMode::CLIENT);
 
     // TODO need to allow this being passed in
-    auto setupPayload =
+    auto setupParameters =
         SetupParameters("text/plain", "text/plain", Payload("meta", "data"));
-
-    // TODO ---> this code needs to be moved inside RSocketStateMachine
-
-    rs->setFrameSerializer(
-        setupPayload.protocolVersion == ProtocolVersion::Unknown
-            ? FrameSerializer::createCurrentVersion()
-            : FrameSerializer::createFrameSerializer(
-                  setupPayload.protocolVersion));
-
-    rs->setResumable(setupPayload.resumable);
-
-    if (setupPayload.protocolVersion != ProtocolVersion::Unknown) {
-      CHECK_EQ(
-          setupPayload.protocolVersion, rs->getSerializerProtocolVersion());
-    }
-
-    auto frameTransport =
-        std::make_shared<FrameTransport>(std::move(framedConnection));
-    rs->setUpFrame(std::move(frameTransport), std::move(setupPayload));
-
-    // TODO <---- up to here
-    // TODO and then a simple API such as:
-    // TODO rs->connectAndSendSetup(frameTransport, params, setupPayload)
+    rs->connectClientSendSetup(std::move(connection), std::move(setupParameters));
 
     auto rsocket = RSocketRequester::create(std::move(rs), eventBase);
     // store it so it lives as long as the RSocketClient

@@ -72,10 +72,9 @@ class RSocketStateMachine final
   ///
   /// May result, depending on the implementation of the DuplexConnection, in
   /// processing of one or more frames.
-  bool connect(
+  bool connectServer(
       std::shared_ptr<FrameTransport>,
-      bool sendingPendingFrames,
-      ProtocolVersion protocolVersion);
+      const SetupParameters& setupParams);
 
   /// Disconnects DuplexConnection from the stateMachine.
   /// Existing streams will stay intact.
@@ -185,10 +184,9 @@ class RSocketStateMachine final
     return streamsFactory_;
   }
 
-  ProtocolVersion getSerializerProtocolVersion();
-  void setUpFrame(
-      std::shared_ptr<FrameTransport> frameTransport,
-      SetupParameters setupPayload);
+  void connectClientSendSetup(
+      std::unique_ptr<DuplexConnection> connection,
+      SetupParameters setupParams);
 
   void metadataPush(std::unique_ptr<folly::IOBuf> metadata);
 
@@ -204,6 +202,12 @@ class RSocketStateMachine final
   }
 
  private:
+
+  bool connect(
+      std::shared_ptr<FrameTransport>,
+      bool sendingPendingFrames,
+      ProtocolVersion protocolVersion);
+
   /// Performs the same actions as ::endStream without propagating closure
   /// signal to the underlying connection.
   ///
