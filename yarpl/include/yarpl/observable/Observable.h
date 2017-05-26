@@ -31,9 +31,6 @@ enum class BackpressureStrategy { DROP };
 template <typename T>
 class Observable : public virtual Refcounted {
  public:
-  static const auto CANCELED = std::numeric_limits<int64_t>::min();
-  static const auto NO_FLOW_CONTROL = std::numeric_limits<int64_t>::max();
-
   virtual void subscribe(Reference<Observer<T>>) = 0;
 
   /**

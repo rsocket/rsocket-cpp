@@ -77,8 +77,8 @@ add_library(
         src/yarpl/flowable/sources/Flowable_FromObservable.h
         # utils
         include/yarpl/utils/type_traits.h
-        src/yarpl/flowable/utils/SubscriptionHelper.h
-        src/yarpl/flowable/utils/SubscriptionHelper.cpp
+        include/yarpl/utils/credits.h
+        src/yarpl/utils/credits.cpp
         # Scheduler
         include/yarpl/schedulers/ThreadScheduler.h
         src/yarpl/schedulers/ThreadScheduler.cpp
@@ -129,9 +129,9 @@ add_executable(
         test/RefcountedTest.cpp
         test/ReferenceTest.cpp
         test/Scheduler_test.cpp
-        test/SubscriptionHelper_test.cpp
         test/Tuple.cpp
         test/Tuple.h
+        test/credits-test.cpp
 )
 
 target_link_libraries(

@@ -4,9 +4,11 @@
 
 #include <cassert>
 #include <utility>
-#include "../Flowable.h"
+
+#include "Flowable.h"
 #include "Subscriber.h"
 #include "Subscription.h"
+#include "yarpl/utils/credits.h"
 
 namespace yarpl {
 namespace flowable {
@@ -230,7 +232,7 @@ private:
 
     void request(int64_t /* delta */) override {
       // Request all of the items
-      Super::request(FlowableOperator<U, D>::NO_FLOW_CONTROL);
+      Super::request(credits::kNoFlowControl);
     }
 
     void onNext(U value) override {
@@ -346,7 +348,7 @@ class SkipOperator : public FlowableOperator<T, T> {
      void request(int64_t delta) override {
        if (firstRequest_) {
          firstRequest_ = false;
-         delta = delta + offset_;
+         delta = credits::add(delta, offset_);
        }
        Super::request(delta);
      }
