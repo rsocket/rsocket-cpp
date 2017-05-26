@@ -10,12 +10,10 @@ using namespace ::rsocket;
 TEST(AllowanceSemaphoreTest, Finite) {
   AllowanceSemaphore sem;
 
-  ASSERT_FALSE(sem.isInfinite());
   ASSERT_FALSE(sem.canAcquire());
   ASSERT_FALSE(sem.tryAcquire());
 
   ASSERT_EQ(0U, sem.release(1));
-  ASSERT_FALSE(sem.isInfinite());
   ASSERT_FALSE(sem.canAcquire(2));
   ASSERT_TRUE(sem.canAcquire());
   ASSERT_TRUE(sem.tryAcquire());
@@ -26,31 +24,11 @@ TEST(AllowanceSemaphoreTest, Finite) {
   ASSERT_EQ(0U, sem.drain());
 
   ASSERT_EQ(0U, sem.release(2));
-  ASSERT_FALSE(sem.isInfinite());
   ASSERT_FALSE(sem.canAcquire(3));
   ASSERT_FALSE(sem.tryAcquire(3));
   ASSERT_TRUE(sem.canAcquire(2));
   ASSERT_TRUE(sem.tryAcquire(2));
   ASSERT_FALSE(sem.canAcquire());
-}
-
-TEST(AllowanceSemaphoreTest, Infinite) {
-  AllowanceSemaphore sem;
-
-  auto infty = decltype(sem)::max();
-  auto overHalfOfInfty = infty / 2 + 1;
-  ASSERT_EQ(0U, sem.release(overHalfOfInfty));
-  ASSERT_FALSE(sem.isInfinite());
-  ASSERT_EQ(overHalfOfInfty, sem.release(overHalfOfInfty));
-  ASSERT_TRUE(sem.isInfinite());
-  ASSERT_TRUE(sem.tryAcquire());
-  ASSERT_TRUE(sem.isInfinite());
-  ASSERT_TRUE(sem.tryAcquire(overHalfOfInfty));
-  ASSERT_TRUE(sem.tryAcquire(overHalfOfInfty));
-  ASSERT_TRUE(sem.tryAcquire(overHalfOfInfty));
-  ASSERT_TRUE(sem.isInfinite());
-  ASSERT_EQ(infty, sem.drain());
-  ASSERT_TRUE(sem.isInfinite());
 }
 
 TEST(AllowanceSemaphoreTest, DrainWithLimit) {
