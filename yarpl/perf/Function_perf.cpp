@@ -84,3 +84,5 @@ static void function_nested_unique_ptr(benchmark::State& state) {
   }
 }
 BENCHMARK(function_nested_unique_ptr);
+
+BENCHMARK_MAIN()
