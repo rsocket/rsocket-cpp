@@ -277,52 +277,55 @@ add_dependencies(tests gmock ReactiveSocket)
 
 add_test(NAME ReactiveSocketTests COMMAND tests)
 
-#add_executable(
-#  tckclient
-#  tck-test/client.cpp
-#  tck-test/TestFileParser.cpp
-#  tck-test/TestFileParser.h
-#  tck-test/TestSubscriber.cpp
-#  tck-test/TestSubscriber.h
-#  tck-test/TestSuite.cpp
-#  tck-test/TestSuite.h
-#  tck-test/TestInterpreter.cpp
-#  tck-test/TestInterpreter.h
-#  tck-test/TypedCommands.h
-#  test/deprecated/ReactiveSocket.cpp
-#  test/deprecated/ReactiveSocket.h
-#)
-#
-#target_link_libraries(
-#  tckclient
-#  ReactiveSocket
-#  yarpl
-#  ${FOLLY_LIBRARIES}
-#  ${GFLAGS_LIBRARY}
-#  ${GLOG_LIBRARY}
-#  ${CMAKE_THREAD_LIBS_INIT})
-#
-#add_executable(
-#  tckserver
-#  tck-test/server.cpp
-#  tck-test/MarbleProcessor.cpp
-#  tck-test/MarbleProcessor.h
-#  test/test_utils/StatsPrinter.cpp
-#  test/test_utils/StatsPrinter.h
-#  test/deprecated/ReactiveSocket.cpp
-#  test/deprecated/ReactiveSocket.h
-#)
-#
-#target_link_libraries(
-#  tckserver
-#  ReactiveSocket
-#  yarpl
-#  ${FOLLY_LIBRARIES}
-#  ${GFLAGS_LIBRARY}
-#  ${GMOCK_LIBS}
-#  ${GLOG_LIBRARY}
-#  ${DOUBLE-CONVERSION}
-#  ${CMAKE_THREAD_LIBS_INIT})
+########################################
+# TCK Drivers
+########################################
+
+add_executable(
+  tckclient
+  tck-test/client.cpp
+  tck-test/TestFileParser.cpp
+  tck-test/TestFileParser.h
+  tck-test/FlowableSubscriber.cpp
+  tck-test/FlowableSubscriber.h
+  tck-test/SingleSubscriber.cpp
+  tck-test/SingleSubscriber.h
+  tck-test/TestSuite.cpp
+  tck-test/TestSuite.h
+  tck-test/TestInterpreter.cpp
+  tck-test/TestInterpreter.h
+  tck-test/TypedCommands.h
+  tck-test/BaseSubscriber.cpp
+  tck-test/BaseSubscriber.h)
+
+target_link_libraries(
+  tckclient
+  ReactiveSocket
+  yarpl
+  ${FOLLY_LIBRARIES}
+  ${GFLAGS_LIBRARY}
+  ${GLOG_LIBRARY}
+  ${CMAKE_THREAD_LIBS_INIT})
+
+add_executable(
+  tckserver
+  tck-test/server.cpp
+  tck-test/MarbleProcessor.cpp
+  tck-test/MarbleProcessor.h
+  test/test_utils/StatsPrinter.cpp
+  test/test_utils/StatsPrinter.h
+)
+
+target_link_libraries(
+  tckserver
+  ReactiveSocket
+  yarpl
+  ${FOLLY_LIBRARIES}
+  ${GFLAGS_LIBRARY}
+  ${GMOCK_LIBS}
+  ${GLOG_LIBRARY}
+  ${DOUBLE-CONVERSION}
+  ${CMAKE_THREAD_LIBS_INIT})
 
 ########################################
 # Examples
