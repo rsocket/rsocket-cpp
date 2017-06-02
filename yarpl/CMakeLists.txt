@@ -73,7 +73,6 @@ add_library(
         include/yarpl/single/SingleSubscriptions.h
         include/yarpl/single/SingleTestObserver.h
         # Flowable private
-        src/yarpl/Refcounted.cpp
         src/yarpl/flowable/sources/Flowable_FromObservable.h
         # utils
         include/yarpl/utils/type_traits.h
