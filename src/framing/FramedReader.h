@@ -25,7 +25,9 @@ class FramedReader : public SubscriberBaseT<std::unique_ptr<folly::IOBuf>>,
       : ExecutorBase(executor),
         frames_(std::move(frames)),
         payloadQueue_(folly::IOBufQueue::cacheChainLength()),
-        protocolVersion_(std::move(protocolVersion)) {}
+        protocolVersion_(std::move(protocolVersion)) {
+    VLOG(5) << "FramedReader()";
+  }
 
  private:
   // Subscriber methods

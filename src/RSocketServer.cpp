@@ -65,6 +65,7 @@ RSocketServer::~RSocketServer() {
 
 void RSocketServer::start(OnSetupConnection onSetupConnection) {
   if (started) {
+    LOG(ERROR) << "RSocketServer::start() already called.";
     throw std::runtime_error("RSocketServer::start() already called.");
   }
   started = true;
@@ -174,6 +175,8 @@ void RSocketServer::unpark() {
 void RSocketServer::addConnection(
     std::shared_ptr<RSocketStateMachine> socket,
     folly::Executor& executor) {
+  VLOG(2) << "Added ReactiveSocket";
+
   sockets_.lock()->insert({std::move(socket), executor});
 }
 

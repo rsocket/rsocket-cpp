@@ -61,6 +61,10 @@ void RequestResponseResponder::endStream(StreamCompletionSignal signal) {
   switch (state_) {
     case State::RESPONDING:
       // Spontaneous ::endStream signal means an error.
+      LOG_IF(ERROR,
+             StreamCompletionSignal::COMPLETE == signal ||
+                 StreamCompletionSignal::CANCEL == signal)
+             << "Spontaneous ::endStream signal means an error.";
       DCHECK(StreamCompletionSignal::COMPLETE != signal);
       DCHECK(StreamCompletionSignal::CANCEL != signal);
       state_ = State::CLOSED;

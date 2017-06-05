@@ -44,6 +44,8 @@ RSocketStateMachine::RSocketStateMachine(
   CHECK(requestResponder_);
 
   stats_->socketCreated();
+
+  VLOG(5) << "RSocketStateMachine()";
 }
 
 RSocketStateMachine::~RSocketStateMachine() {
@@ -51,7 +53,7 @@ RSocketStateMachine::~RSocketStateMachine() {
   // automatons destroyed on different threads can be the last ones referencing
   // this.
 
-  VLOG(6) << "RSocketStateMachine";
+  VLOG(5) << "~RSocketStateMachine()";
   // We rely on SubscriptionPtr and SubscriberPtr to dispatch appropriate
   // terminal signals.
   DCHECK(!resumeCallback_);
@@ -76,6 +78,8 @@ bool RSocketStateMachine::connect(
     std::shared_ptr<FrameTransport> frameTransport,
     bool sendingPendingFrames,
     ProtocolVersion protocolVersion) {
+  VLOG_EVERY_N(4, 100) << "RSocketStateMachine::connect().";
+
   debugCheckCorrectExecutor();
   CHECK(isDisconnectedOrClosed());
   CHECK(frameTransport);
@@ -83,6 +87,10 @@ bool RSocketStateMachine::connect(
   if (protocolVersion != ProtocolVersion::Unknown) {
     if (frameSerializer_) {
       if (frameSerializer_->protocolVersion() != protocolVersion) {
+        LOG(ERROR) << "Protocol version mismatch (expected: "
+                   << frameSerializer_->protocolVersion()
+                   <<", actual: " << protocolVersion <<").";
+
         DCHECK(false);
         frameTransport->close(std::runtime_error("protocol version mismatch"));
         return false;
@@ -91,6 +99,7 @@ bool RSocketStateMachine::connect(
       frameSerializer_ =
           FrameSerializer::createFrameSerializer(protocolVersion);
       if (!frameSerializer_) {
+        LOG(ERROR) << "Invalid protocol version.";
         DCHECK(false);
         frameTransport->close(std::runtime_error("invaid protocol version"));
         return false;
@@ -148,10 +157,11 @@ std::shared_ptr<FrameTransport> RSocketStateMachine::detachFrameTransport() {
 
 void RSocketStateMachine::disconnect(folly::exception_wrapper ex) {
   debugCheckCorrectExecutor();
-  VLOG(6) << "disconnect";
   if (isDisconnectedOrClosed()) {
     return;
   }
+
+  VLOG_EVERY_N(4, 100) << "disconnect";
 
   for (auto& callback : onDisconnectListeners_) {
     callback(ex);
@@ -175,7 +185,7 @@ void RSocketStateMachine::close(
   isClosed_ = true;
   stats_->socketClosed(signal);
 
-  VLOG(6) << "close";
+  VLOG_EVERY_N(4, 100) << "close";
 
   if (resumeCallback_) {
     resumeCallback_->onResumeError(
@@ -239,7 +249,7 @@ void RSocketStateMachine::disconnectOrCloseWithError(Frame_ERROR&& errorFrame) {
 
 void RSocketStateMachine::closeWithError(Frame_ERROR&& error) {
   debugCheckCorrectExecutor();
-  VLOG(3) << "closeWithError "
+  VLOG(4) << "closeWithError "
           << error.payload_.data->cloneAsValue().moveToFbString();
 
   StreamCompletionSignal signal;
@@ -307,7 +317,7 @@ void RSocketStateMachine::endStream(
     StreamId streamId,
     StreamCompletionSignal signal) {
   debugCheckCorrectExecutor();
-  VLOG(6) << "endStream";
+  VLOG_EVERY_N(4, 1000) << "endStream";
   // The signal must be idempotent.
   if (!endStreamInternal(streamId, signal)) {
     return;
@@ -322,7 +332,7 @@ void RSocketStateMachine::endStream(
 bool RSocketStateMachine::endStreamInternal(
     StreamId streamId,
     StreamCompletionSignal signal) {
-  VLOG(6) << "endStreamInternal";
+  VLOG_EVERY_N(4, 1000) << "endStreamInternal";
   auto it = streamState_->streams_.find(streamId);
   if (it == streamState_->streams_.end()) {
     // Unsubscribe handshake initiated by the connection, we're done.
@@ -354,18 +364,23 @@ void RSocketStateMachine::closeStreams(StreamCompletionSignal signal) {
 }
 
 void RSocketStateMachine::pauseStreams() {
+  VLOG(4) << "Pausing streams.";
 //  for (auto& streamKV : streamState_->streams_) {
 //    streamKV.second->pauseStream(*requestHandler_);
 //  }
 }
 
 void RSocketStateMachine::resumeStreams() {
+  VLOG(4) << "Resuming streams.";
 //  for (auto& streamKV : streamState_->streams_) {
 //    streamKV.second->resumeStream(*requestHandler_);
 //  }
 }
 
 void RSocketStateMachine::processFrame(std::unique_ptr<folly::IOBuf> frame) {
+  VLOG_EVERY_N(2, 10000) << "processFrame - frame length=" << frame->length() << std::endl
+          << hexDump(frame->clone()->moveToFbString());
+
   auto thisPtr = this->shared_from_this();
   runInExecutor([ thisPtr, frame = std::move(frame) ]() mutable {
     thisPtr->processFrameImpl(std::move(frame));
@@ -995,7 +1010,7 @@ bool RSocketStateMachine::ensureOrAutodetectFrameSerializer(
     return false;
   }
 
-  VLOG(2) << "detected protocol version" << serializer->protocolVersion();
+  VLOG(4) << "detected protocol version" << serializer->protocolVersion();
   frameSerializer_ = std::move(serializer);
   return true;
 }

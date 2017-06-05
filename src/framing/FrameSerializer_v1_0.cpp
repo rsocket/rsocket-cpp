@@ -47,6 +47,7 @@ static void serializeHeaderInto(
 static void deserializeHeaderFrom(folly::io::Cursor& cur, FrameHeader& header) {
   auto streamId = cur.readBE<int32_t>();
   if (streamId < 0) {
+    LOG(ERROR) << "Invalid stream id.";
     throw std::runtime_error("invalid stream id");
   }
   header.streamId_ = static_cast<StreamId>(streamId);
@@ -65,6 +66,7 @@ static void serializeMetadataInto(
 
   // Use signed int because the first bit in metadata length is reserved.
   if (metadata->length() > kMaxMetadataLength) {
+    LOG(ERROR) << "Metadata is too big to serialize.";
     CHECK(false) << "Metadata is too big to serialize";
   }
 
@@ -91,6 +93,7 @@ std::unique_ptr<folly::IOBuf> FrameSerializerV1_0::deserializeMetadataFrom(
   metadataLength |= cur.read<uint8_t>();
 
   if (metadataLength > kMaxMetadataLength) {
+    LOG(ERROR) << "Metadata is too big to deserialize.";
     throw std::runtime_error("Metadata is too big to deserialize");
   }
 
@@ -155,6 +158,7 @@ static bool deserializeFromInternal(
     auto requestN = cur.readBE<int32_t>();
     // TODO(lehecka): requestN <= 0
     if (requestN < 0) {
+      LOG(ERROR) << "Invalid request N";
       throw std::runtime_error("invalid request N");
     }
     frame.requestN_ = static_cast<uint32_t>(requestN);
@@ -424,6 +428,7 @@ bool FrameSerializerV1_0::deserializeFrom(
     deserializeHeaderFrom(cur, frame.header_);
     auto requestN = cur.readBE<int32_t>();
     if (requestN <= 0) {
+      LOG(ERROR) << "Invalid request n.";
       throw std::runtime_error("invalid request n");
     }
     frame.requestN_ = static_cast<uint32_t>(requestN);
@@ -496,6 +501,7 @@ bool FrameSerializerV1_0::deserializeFrom(
     deserializeHeaderFrom(cur, frame.header_);
     auto position = cur.readBE<int64_t>();
     if (position < 0) {
+      LOG(ERROR) << "Invalid value for position.";
       throw std::runtime_error("invalid value for position");
     }
     frame.position_ = static_cast<ResumePosition>(position);
@@ -518,12 +524,14 @@ bool FrameSerializerV1_0::deserializeFrom(
 
     auto keepaliveTime = cur.readBE<int32_t>();
     if (keepaliveTime <= 0) {
+      LOG(ERROR) << "Invalid keepalive time.";
       throw std::runtime_error("invalid keepalive time");
     }
     frame.keepaliveTime_ = static_cast<uint32_t>(keepaliveTime);
 
     auto maxLifetime = cur.readBE<int32_t>();
     if (maxLifetime <= 0) {
+      LOG(ERROR) << "Invalid maxLife time.";
       throw std::runtime_error("invalid maxLife time");
     }
     frame.maxLifetime_ = static_cast<uint32_t>(maxLifetime);
@@ -558,12 +566,14 @@ bool FrameSerializerV1_0::deserializeFrom(
 
     auto ttl = cur.readBE<int32_t>();
     if (ttl <= 0) {
+      LOG(ERROR) << "invalid ttl value.";
       throw std::runtime_error("invalid ttl value");
     }
     frame.ttl_ = static_cast<uint32_t>(ttl);
 
     auto numberOfRequests = cur.readBE<int32_t>();
     if (numberOfRequests <= 0) {
+      LOG(ERROR) << "invalid numberOfRequests value";
       throw std::runtime_error("invalid numberOfRequests value");
     }
     frame.numberOfRequests_ = static_cast<uint32_t>(numberOfRequests);
@@ -590,6 +600,7 @@ bool FrameSerializerV1_0::deserializeFrom(
 
     auto lastReceivedServerPosition = cur.readBE<int64_t>();
     if (lastReceivedServerPosition < 0) {
+      LOG(ERROR) << "Invalid value for lastReceivedServerPosition.";
       throw std::runtime_error("invalid value for lastReceivedServerPosition");
     }
     frame.lastReceivedServerPosition_ =
@@ -597,6 +608,7 @@ bool FrameSerializerV1_0::deserializeFrom(
 
     auto clientPosition = cur.readBE<int64_t>();
     if (clientPosition < 0) {
+      LOG(ERROR) << "Invalid value for clientPosition";
       throw std::runtime_error("invalid value for clientPosition");
     }
     frame.clientPosition_ = static_cast<ResumePosition>(clientPosition);
@@ -615,6 +627,7 @@ bool FrameSerializerV1_0::deserializeFrom(
 
     auto position = cur.readBE<int64_t>();
     if (position < 0) {
+      LOG(ERROR) << "Invalid value for position";
       throw std::runtime_error("invalid value for position");
     }
     frame.position_ = static_cast<ResumePosition>(position);

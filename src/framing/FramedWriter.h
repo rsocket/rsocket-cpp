@@ -27,7 +27,9 @@ class FramedWriter : public SubscriberBaseT<std::unique_ptr<folly::IOBuf>>,
       std::shared_ptr<ProtocolVersion> protocolVersion)
       : ExecutorBase(executor),
         stream_(std::move(stream)),
-        protocolVersion_(std::move(protocolVersion)) {}
+        protocolVersion_(std::move(protocolVersion)) {
+    VLOG(5) << "FramedWriter()";
+  }
 
   void onNextMultiple(std::vector<std::unique_ptr<folly::IOBuf>> element);
 

@@ -207,10 +207,12 @@ std::unique_ptr<folly::IOBuf> FrameSerializerV0::deserializeMetadataFrom(
   const auto length = cur.readBE<uint32_t>();
 
   if (length >= kMaxMetadataLength) {
+    LOG(ERROR) << "Metadata is too big to deserialize";
     throw std::runtime_error("Metadata is too big to deserialize");
   }
 
   if (length <= sizeof(uint32_t)) {
+    LOG(ERROR) << "Metadata is too small to encode its size";
     throw std::runtime_error("Metadata is too small to encode its size");
   }
 

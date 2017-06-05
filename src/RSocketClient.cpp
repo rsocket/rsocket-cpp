@@ -14,11 +14,11 @@ namespace rsocket {
 RSocketClient::RSocketClient(
     std::unique_ptr<ConnectionFactory> connectionFactory)
     : connectionFactory_(std::move(connectionFactory)) {
-  VLOG(1) << "Constructing RSocketClient";
+  VLOG(5) << "RSocketClient()";
 }
 
 folly::Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect() {
-  VLOG(2) << "Starting connection";
+  VLOG(1) << "Starting connection";
 
   auto promise =
       std::make_shared<folly::Promise<std::shared_ptr<RSocketRequester>>>();
@@ -27,7 +27,7 @@ folly::Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect() {
   connectionFactory_->connect([this, promise = std::move(promise)](
       std::unique_ptr<DuplexConnection> connection,
       folly::EventBase& eventBase) mutable {
-    VLOG(3) << "onConnect received DuplexConnection";
+    VLOG(1) << "onConnect received DuplexConnection";
 
     auto rs = std::make_shared<RSocketStateMachine>(
         eventBase,

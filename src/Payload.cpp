@@ -10,13 +10,16 @@ namespace rsocket {
 Payload::Payload(
     std::unique_ptr<folly::IOBuf> _data,
     std::unique_ptr<folly::IOBuf> _metadata)
-    : data(std::move(_data)), metadata(std::move(_metadata)) {}
+    : data(std::move(_data)), metadata(std::move(_metadata)) {
+  VLOG(5) << "Created Payload.";
+}
 
 Payload::Payload(const std::string& _data, const std::string& _metadata)
     : data(folly::IOBuf::copyBuffer(_data)) {
   if (!_metadata.empty()) {
     metadata = folly::IOBuf::copyBuffer(_metadata);
   }
+  VLOG(5) << "Created PayLoad.";
 }
 
 void Payload::checkFlags(FrameFlags flags) const {

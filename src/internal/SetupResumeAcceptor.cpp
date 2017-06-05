@@ -76,12 +76,14 @@ void SetupResumeAcceptor::processFrame(
   DCHECK(eventBase_->isInEventBaseThread());
 
   if (closed_) {
+    LOG(ERROR) << "Connections are already closed.";
     transport->close(std::runtime_error("shut down"));
     return;
   }
 
   auto frameSerializer = getOrAutodetectFrameSerializer(*frame);
   if (!frameSerializer) {
+    LOG(ERROR) << "Unable to detect protocol version.";
     closeAndRemoveConnection(
         std::move(transport),
         std::runtime_error("Unable to detect protocol version"));
@@ -92,6 +94,7 @@ void SetupResumeAcceptor::processFrame(
     case FrameType::SETUP: {
       Frame_SETUP setupFrame;
       if (!frameSerializer->deserializeFrom(setupFrame, std::move(frame))) {
+        LOG(ERROR) << "Invalid Setup Frame.";
         transport->outputFrameOrEnqueue(
             frameSerializer->serializeOut(Frame_ERROR::invalidFrame()));
         closeAndRemoveConnection(
@@ -104,6 +107,9 @@ void SetupResumeAcceptor::processFrame(
       setupFrame.moveToSetupPayload(setupPayload);
 
       if (frameSerializer->protocolVersion() != setupPayload.protocolVersion) {
+        LOG(ERROR) << "Invalid Setup Frame protocol version (expected: "
+                   << frameSerializer->protocolVersion()
+                   <<", actual: " << setupPayload.protocolVersion << ").";
         transport->outputFrameOrEnqueue(frameSerializer->serializeOut(
             Frame_ERROR::badSetupFrame("invalid protocol version")));
         closeAndRemoveConnection(
@@ -120,6 +126,7 @@ void SetupResumeAcceptor::processFrame(
     case FrameType::RESUME: {
       Frame_RESUME resumeFrame;
       if (!frameSerializer->deserializeFrom(resumeFrame, std::move(frame))) {
+        LOG(ERROR) << "Invalid Resume Frame.";
         transport->outputFrameOrEnqueue(
             frameSerializer->serializeOut(Frame_ERROR::invalidFrame()));
         closeAndRemoveConnection(
@@ -135,6 +142,9 @@ void SetupResumeAcceptor::processFrame(
               resumeFrame.versionMajor_, resumeFrame.versionMinor_));
 
       if (frameSerializer->protocolVersion() != resumeParams.protocolVersion) {
+        LOG(ERROR) << "Invalid Resume Frame protocol version (expected: "
+                   << frameSerializer->protocolVersion()
+                   <<", actual: " << resumeParams.protocolVersion << ").";
         transport->outputFrameOrEnqueue(frameSerializer->serializeOut(
             Frame_ERROR::badSetupFrame("invalid protocol version")));
         closeAndRemoveConnection(
@@ -163,6 +173,7 @@ void SetupResumeAcceptor::processFrame(
     case FrameType::RESUME_OK:
     case FrameType::EXT:
     default: {
+      LOG(ERROR) << "Unexpected FrameType";
       transport->outputFrameOrEnqueue(
           frameSerializer->serializeOut(Frame_ERROR::unexpectedFrame()));
       closeAndRemoveConnection(

@@ -7,12 +7,14 @@ namespace rsocket {
 
 yarpl::Reference<yarpl::single::Single<rsocket::Payload>>
 RSocketResponder::handleRequestResponse(rsocket::Payload request, rsocket::StreamId streamId) {
+  VLOG(4) << "handleRequestResponse not implemented.";
   return yarpl::single::Singles::error<rsocket::Payload>(
       std::logic_error("handleRequestResponse not implemented"));
 }
 
 yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
 RSocketResponder::handleRequestStream(rsocket::Payload request, rsocket::StreamId streamId) {
+  VLOG(4) << "handleRequestStream not implemented.";
   return yarpl::flowable::Flowables::error<rsocket::Payload>(
       std::logic_error("handleRequestStream not implemented"));
 }
@@ -23,6 +25,7 @@ RSocketResponder::handleRequestChannel(
     yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
         requestStream,
     rsocket::StreamId streamId) {
+  VLOG(4) << "handleRequestChannel not implemented.";
   return yarpl::flowable::Flowables::error<rsocket::Payload>(
       std::logic_error("handleRequestChannel not implemented"));
 }

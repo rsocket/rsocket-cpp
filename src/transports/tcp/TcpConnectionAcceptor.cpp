@@ -33,7 +33,7 @@ class TcpConnectionAcceptor::SocketCallback
   }
 
   void acceptError(const std::exception& ex) noexcept override {
-    VLOG(1) << "TCP error: " << ex.what();
+    LOG(ERROR) << "TCP error: " << ex.what();
   }
 
   folly::EventBase* eventBase() const {
@@ -64,6 +64,7 @@ TcpConnectionAcceptor::~TcpConnectionAcceptor() {
 folly::Future<folly::Unit> TcpConnectionAcceptor::start(
     OnDuplexConnectionAccept onAccept) {
   if (onAccept_ != nullptr) {
+    LOG(ERROR) << "TcpConnectionAcceptor::start() already called.";
     return folly::makeFuture<folly::Unit>(
         std::runtime_error("TcpConnectionAcceptor::start() already called"));
   }

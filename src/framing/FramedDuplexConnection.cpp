@@ -13,7 +13,9 @@ FramedDuplexConnection::FramedDuplexConnection(
     : FramedDuplexConnection(
           std::move(connection),
           FrameSerializer::getCurrentProtocolVersion(),
-          executor) {}
+          executor) {
+  VLOG(5) << "FrameDuplexConnection()";
+}
 
 FramedDuplexConnection::FramedDuplexConnection(
     std::unique_ptr<DuplexConnection> connection,
@@ -21,7 +23,9 @@ FramedDuplexConnection::FramedDuplexConnection(
     folly::Executor& executor)
     : connection_(std::move(connection)),
       protocolVersion_(std::make_shared<ProtocolVersion>(protocolVersion)),
-      executor_(executor) {}
+      executor_(executor) {
+  VLOG(5) << "~FrameDuplexConnection()";
+}
 
 FramedDuplexConnection::~FramedDuplexConnection() {
   // to make sure we close the parties when the connection dies
