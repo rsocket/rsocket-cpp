@@ -1,5 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
+#include <thread>
 #include "RSocketServer.h"
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/EventBaseManager.h>
@@ -59,6 +60,9 @@ RSocketServer::~RSocketServer() {
   // Wait for all ReactiveSockets to close.
   shutdown_->wait();
   DCHECK(sockets_.lock()->empty());
+
+    using namespace std::chrono_literals;
+    std::this_thread::sleep_for(1s);
 
   // All requests are fully finished, worker threads can be safely killed off.
 }
