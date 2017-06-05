@@ -72,7 +72,7 @@ void RSocketServer::start(OnRSocketSetup onRSocketSetup) {
           framedConnection = std::move(connection);
         } else {
           framedConnection = std::make_unique<FramedDuplexConnection>(
-              std::move(connection), ProtocolVersion::Unknown, eventBase);
+              std::move(connection), ProtocolVersion::Unknown);
         }
         acceptConnection(std::move(framedConnection), eventBase, onRSocketSetup);
       })
@@ -110,7 +110,7 @@ void RSocketServer::acceptConnection(
 
 void RSocketServer::onRSocketSetup(
     OnRSocketSetup onRSocketSetup,
-    std::shared_ptr<FrameTransport> frameTransport,
+    yarpl::Reference<FrameTransport> frameTransport,
     SetupParameters setupParams) {
   // we don't need to check for isShutdown_ here since all callbacks are
   // processed by this time
@@ -129,7 +129,7 @@ void RSocketServer::onRSocketSetup(
 
 bool RSocketServer::onRSocketResume(
     OnRSocketResume,
-    std::shared_ptr<FrameTransport>,
+    yarpl::Reference<FrameTransport>,
     ResumeParameters) {
   return false;
 }

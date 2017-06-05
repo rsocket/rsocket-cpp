@@ -95,11 +95,11 @@ class RSocketServer {
 
   void onRSocketSetup(
       OnRSocketSetup onRSocketSetup,
-      std::shared_ptr<rsocket::FrameTransport> frameTransport,
+      yarpl::Reference<rsocket::FrameTransport> frameTransport,
       rsocket::SetupParameters setupPayload);
   bool onRSocketResume(
       OnRSocketResume onRSocketResume,
-      std::shared_ptr<rsocket::FrameTransport> frameTransport,
+      yarpl::Reference<rsocket::FrameTransport> frameTransport,
       rsocket::ResumeParameters setupPayload);
 
   std::unique_ptr<ConnectionAcceptor> duplexConnectionAcceptor_;

@@ -40,13 +40,12 @@ class ConnectCallback : public folly::AsyncSocket::ConnectCallback {
   void connectSuccess() noexcept override {
     std::unique_ptr<ConnectCallback> deleter(this);
 
-    auto evb = folly::EventBaseManager::get()->getExistingEventBase();
-
     VLOG(4) << "connectSuccess() on " << address_;
 
-    auto connection = std::make_unique<TcpDuplexConnection>(
-        std::move(socket_), *evb, RSocketStats::noop());
-
+    auto connection = TcpConnectionFactory::createDuplexConnectionFromSocket(
+        std::move(socket_), RSocketStats::noop());
+    auto evb = folly::EventBaseManager::get()->getExistingEventBase();
+    CHECK(evb);
     onConnect_(std::move(connection), false, *evb);
   }
 
@@ -83,9 +82,8 @@ void TcpConnectionFactory::connect(OnDuplexConnectionConnect cb) {
 std::unique_ptr<DuplexConnection>
 TcpConnectionFactory::createDuplexConnectionFromSocket(
     folly::AsyncSocket::UniquePtr socket,
-    folly::EventBase& eventBase,
     std::shared_ptr<RSocketStats> stats) {
-  return std::make_unique<TcpDuplexConnection>(std::move(socket), eventBase, std::move(stats));
+  return std::make_unique<TcpDuplexConnection>(std::move(socket), std::move(stats));
 }
 
 } // namespace rsocket

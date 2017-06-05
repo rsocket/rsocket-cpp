@@ -72,9 +72,16 @@ class RSocketStateMachine final
   ///
   /// May result, depending on the implementation of the DuplexConnection, in
   /// processing of one or more frames.
+<<<<<<< HEAD
   bool connectServer(
-      yarpl::Reference<FrameTransport>,
+      std::shared_ptr<FrameTransport>,
       const SetupParameters& setupParams);
+=======
+  bool connect(
+      yarpl::Reference<FrameTransport>,
+      bool sendingPendingFrames,
+      ProtocolVersion protocolVersion);
+>>>>>>> rewriting DuplexConnection to use yarpl Subscriber/Subscription interfaces
 
   /// Disconnects DuplexConnection from the stateMachine.
   /// Existing streams will stay intact.
@@ -184,9 +191,16 @@ class RSocketStateMachine final
     return streamsFactory_;
   }
 
+<<<<<<< HEAD
   void connectClientSendSetup(
       std::unique_ptr<DuplexConnection> connection,
       SetupParameters setupParams);
+=======
+  ProtocolVersion getSerializerProtocolVersion();
+  void setUpFrame(
+      yarpl::Reference<FrameTransport> frameTransport,
+      SetupParameters setupPayload);
+>>>>>>> rewriting DuplexConnection to use yarpl Subscriber/Subscription interfaces
 
   void metadataPush(std::unique_ptr<folly::IOBuf> metadata);
 
@@ -208,7 +222,7 @@ class RSocketStateMachine final
  private:
 
   bool connect(
-      yarpl::Reference<FrameTransport>,
+      std::shared_ptr<FrameTransport>,
       bool sendingPendingFrames,
       ProtocolVersion protocolVersion);
 
@@ -290,9 +304,12 @@ class RSocketStateMachine final
   std::unique_ptr<ClientResumeStatusCallback> resumeCallback_;
 
   StreamsFactory streamsFactory_;
+<<<<<<< HEAD
 
   const std::shared_ptr<RSocketStats> stats_;
   std::shared_ptr<RSocketNetworkStats> networkStats_;
+=======
   folly::Executor& executor_;
+>>>>>>> rewriting DuplexConnection to use yarpl Subscriber/Subscription interfaces
 };
 }

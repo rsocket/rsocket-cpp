@@ -18,7 +18,7 @@ class OneFrameProcessor : public FrameProcessor {
  public:
   OneFrameProcessor(
       SetupResumeAcceptor& acceptor,
-      std::shared_ptr<FrameTransport> transport,
+      yarpl::Reference<FrameTransport> transport,
       SetupResumeAcceptor::OnSetup onSetup,
       SetupResumeAcceptor::OnResume onResume)
       : acceptor_(acceptor),
@@ -47,7 +47,7 @@ class OneFrameProcessor : public FrameProcessor {
 
  private:
   SetupResumeAcceptor& acceptor_;
-  std::shared_ptr<FrameTransport> transport_;
+  yarpl::Reference<FrameTransport> transport_;
   SetupResumeAcceptor::OnSetup onSetup_;
   SetupResumeAcceptor::OnResume onResume_;
 };
@@ -69,7 +69,7 @@ SetupResumeAcceptor::~SetupResumeAcceptor() {
 }
 
 void SetupResumeAcceptor::processFrame(
-    std::shared_ptr<FrameTransport> transport,
+    yarpl::Reference<FrameTransport> transport,
     std::unique_ptr<folly::IOBuf> frame,
     SetupResumeAcceptor::OnSetup onSetup,
     SetupResumeAcceptor::OnResume onResume) {
@@ -193,7 +193,7 @@ void SetupResumeAcceptor::accept(
     std::unique_ptr<DuplexConnection> connection,
     OnSetup onSetup,
     OnResume onResume) {
-  auto transport = std::make_shared<FrameTransport>(std::move(connection));
+  auto transport = yarpl::make_ref<FrameTransport>(std::move(connection));
   auto processor = std::make_shared<OneFrameProcessor>(
       *this, transport, std::move(onSetup), std::move(onResume));
   connections_.insert(transport);
@@ -219,14 +219,14 @@ SetupResumeAcceptor::getOrAutodetectFrameSerializer(
 }
 
 void SetupResumeAcceptor::closeAndRemoveConnection(
-    const std::shared_ptr<FrameTransport>& transport,
+    const yarpl::Reference<FrameTransport>& transport,
     folly::exception_wrapper ex) {
   transport->close(ex);
   connections_.erase(transport);
 }
 
 void SetupResumeAcceptor::removeConnection(
-    const std::shared_ptr<FrameTransport>& transport) {
+    const yarpl::Reference<FrameTransport>& transport) {
   transport->setFrameProcessor(nullptr);
   connections_.erase(transport);
 }

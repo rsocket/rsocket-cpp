@@ -2,7 +2,6 @@
 
 #include <benchmark/benchmark.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
-#include <src/temporary_home/SubscriptionBase.h>
 #include <src/transports/tcp/TcpConnectionAcceptor.h>
 #include <condition_variable>
 #include <iostream>

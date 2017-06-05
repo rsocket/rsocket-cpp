@@ -5,7 +5,12 @@
 #include <map>
 
 #include "src/Payload.h"
+<<<<<<< HEAD
 #include "src/RSocketRequester.h"
+#include "src/internal/ReactiveStreamsCompat.h"
+=======
+#include "test/deprecated/ReactiveSocket.h"
+>>>>>>> rewriting DuplexConnection to use yarpl Subscriber/Subscription interfaces
 
 #include "tck-test/BaseSubscriber.h"
 #include "tck-test/TestSuite.h"

@@ -9,6 +9,8 @@
 #include <folly/init/Init.h>
 #include <folly/portability/GFlags.h>
 
+#include "src/framing/FramedDuplexConnection.h"
+#include "src/transports/tcp/TcpDuplexConnection.h"
 #include "src/RSocket.h"
 
 #include "src/transports/tcp/TcpConnectionAcceptor.h"

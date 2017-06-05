@@ -289,9 +289,6 @@ add_library(
   src/statemachine/RSocketStateMachine.cpp
   src/statemachine/RSocketStateMachine.h
   src/DuplexConnection.h
-  src/internal/EnableSharedFromThis.h
-  src/temporary_home/Executor.cpp
-  src/temporary_home/Executor.h
   src/internal/FollyKeepaliveTimer.cpp
   src/internal/FollyKeepaliveTimer.h
   src/framing/Frame.cpp
@@ -309,15 +306,12 @@ add_library(
   src/framing/FrameTransport.h
   src/Payload.cpp
   src/Payload.h
-  src/internal/ReactiveStreamsCompat.h
   src/internal/ResumeCache.cpp
   src/internal/ResumeCache.h
   src/internal/SetupResumeAcceptor.cpp
   src/internal/SetupResumeAcceptor.h
   src/RSocketStats.cpp
   src/RSocketStats.h
-  src/temporary_home/SubscriberBase.h
-  src/temporary_home/SubscriptionBase.h
   src/transports/tcp/TcpDuplexConnection.cpp
   src/transports/tcp/TcpDuplexConnection.h
   src/framing/FrameSerializer_v0.cpp

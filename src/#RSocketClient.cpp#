@@ -4,10 +4,10 @@
 #include "src/RSocketRequester.h"
 #include "src/RSocketResponder.h"
 #include "src/RSocketStats.h"
-#include "src/framing/FrameTransport.h"
-#include "src/framing/FramedDuplexConnection.h"
 #include "src/internal/FollyKeepaliveTimer.h"
 #include "src/internal/RSocketConnectionManager.h"
+#include "src/framing/FrameTransport.h"
+#include "src/framing/FramedDuplexConnection.h"
 
 using namespace folly;
 
@@ -32,6 +32,7 @@ folly::Future<std::unique_ptr<RSocketRequester>> RSocketClient::connect(
     std::shared_ptr<RSocketNetworkStats> networkStats) {
   VLOG(2) << "Starting connection";
 
+<<<<<<< HEAD
   folly::Promise<std::unique_ptr<RSocketRequester>> promise;
   auto future = promise.getFuture();
 
@@ -44,20 +45,75 @@ folly::Future<std::unique_ptr<RSocketRequester>> RSocketClient::connect(
     networkStats = std::move(networkStats),
     promise = std::move(promise)](
       std::unique_ptr<DuplexConnection> connection,
+=======
+  connectionFactory_->connect([this, promise = std::move(promise)](
+      std::unique_ptr<DuplexConnection> connection,
       bool isFramedConnection,
+>>>>>>> rewriting DuplexConnection to use yarpl Subscriber/Subscription interfaces
       folly::EventBase& eventBase) mutable {
     VLOG(3) << "onConnect received DuplexConnection";
 
     auto rsocket = fromConnection(
         std::move(connection),
-        isFramedConnection,
         eventBase,
+<<<<<<< HEAD
         std::move(setupParameters),
         std::move(responder),
         std::move(keepaliveTimer),
         std::move(stats),
         std::move(networkStats));
     promise.setValue(std::move(rsocket));
+=======
+        // need to allow Responder being passed in optionally
+        std::make_shared<RSocketResponder>(),
+        // need to allow stats being passed in
+        RSocketStats::noop(),
+        // TODO need to optionally allow defining the keepalive timer
+        std::make_unique<FollyKeepaliveTimer>(
+            eventBase, std::chrono::milliseconds(5000)),
+        ReactiveSocketMode::CLIENT);
+
+    // TODO need to allow this being passed in
+    auto setupPayload =
+        SetupParameters("text/plain", "text/plain", Payload("meta", "data"));
+
+    // TODO ---> this code needs to be moved inside RSocketStateMachine
+
+    rs->setFrameSerializer(
+        setupPayload.protocolVersion == ProtocolVersion::Unknown
+            ? FrameSerializer::createCurrentVersion()
+            : FrameSerializer::createFrameSerializer(
+                  setupPayload.protocolVersion));
+
+    rs->setResumable(setupPayload.resumable);
+
+    if (setupPayload.protocolVersion != ProtocolVersion::Unknown) {
+      CHECK_EQ(
+          setupPayload.protocolVersion, rs->getSerializerProtocolVersion());
+    }
+
+    std::unique_ptr<DuplexConnection> framedConnection;
+    if(isFramedConnection) {
+      framedConnection = std::move(connection);
+    } else {
+      framedConnection = std::make_unique<FramedDuplexConnection>(
+          std::move(connection),
+          setupPayload.protocolVersion);
+    }
+
+    auto frameTransport =
+        yarpl::make_ref<FrameTransport>(std::move(framedConnection));
+    rs->setUpFrame(std::move(frameTransport), std::move(setupPayload));
+
+    // TODO <---- up to here
+    // TODO and then a simple API such as:
+    // TODO rs->connectAndSendSetup(frameTransport, params, setupPayload)
+
+    auto rsocket = RSocketRequester::create(std::move(rs), eventBase);
+    // store it so it lives as long as the RSocketClient
+    rsockets_.push_back(rsocket);
+    promise->setValue(rsocket);
+>>>>>>> rewriting DuplexConnection to use yarpl Subscriber/Subscription interfaces
   });
 
   return future;
@@ -65,7 +121,6 @@ folly::Future<std::unique_ptr<RSocketRequester>> RSocketClient::connect(
 
 std::unique_ptr<RSocketRequester> RSocketClient::fromConnection(
     std::unique_ptr<DuplexConnection> connection,
-    bool isFramedConnection,
     folly::EventBase& eventBase,
     SetupParameters setupParameters,
     std::shared_ptr<RSocketResponder> responder,
@@ -97,16 +152,8 @@ std::unique_ptr<RSocketRequester> RSocketClient::fromConnection(
 
   connectionManager_->manageConnection(rs, eventBase);
 
-  std::unique_ptr<DuplexConnection> framedConnection;
-  if (isFramedConnection) {
-    framedConnection = std::move(connection);
-  } else {
-    framedConnection = std::make_unique<FramedDuplexConnection>(
-        std::move(connection), setupParameters.protocolVersion);
-  }
-
-  rs->connectClientSendSetup(std::move(framedConnection), std::move(setupParameters));
+  rs->connectClientSendSetup(std::move(connection), std::move(setupParameters));
   return std::make_unique<RSocketRequester>(std::move(rs), eventBase);
 }
 
-} // namespace rsocket
+}
