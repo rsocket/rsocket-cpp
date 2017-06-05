@@ -139,6 +139,12 @@ class RSocketStateMachine final
 
   void outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf> frame);
 
+  template<typename T>
+  void outputFrameOrEnqueue(T&& frame) {
+    VLOG(3) << "Out: " << frame;
+    outputFrameOrEnqueue(frameSerializer_->serializeOut(std::forward<T>(frame)));
+  }
+
   void requestFireAndForget(Payload request);
 
   template <typename TFrame>
