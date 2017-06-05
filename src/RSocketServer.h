@@ -83,11 +83,11 @@ class RSocketServer {
 
   void onSetupConnection(
       OnSetupConnection onSetupConnection,
-      std::shared_ptr<rsocket::FrameTransport> frameTransport,
+      yarpl::Reference<rsocket::FrameTransport> frameTransport,
       rsocket::SetupParameters setupPayload);
   void onResumeConnection(
       OnResumeConnection onResumeConnection,
-      std::shared_ptr<rsocket::FrameTransport> frameTransport,
+      yarpl::Reference<rsocket::FrameTransport> frameTransport,
       rsocket::ResumeParameters setupPayload);
 
     void addConnection(

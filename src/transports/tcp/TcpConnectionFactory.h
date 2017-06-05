@@ -26,7 +26,7 @@ class TcpConnectionFactory : public ConnectionFactory {
    *
    * Each call to connect() creates a new AsyncSocket.
    */
-  void connect(OnConnect) override;
+  void connect(OnDuplexConnectionConnect) override;
 
  private:
   folly::SocketAddress address_;

@@ -10,8 +10,9 @@ class EventBase;
 
 namespace rsocket {
 
-using OnConnect = std::function<
-    void(std::unique_ptr<rsocket::DuplexConnection>, folly::EventBase&)>;
+using OnDuplexConnectionConnect = std::function<
+    void(std::unique_ptr<rsocket::DuplexConnection>, bool framedConnection,
+         folly::EventBase&)>;
 
 /**
  * Common interface for a client to create connections and turn them into
@@ -42,6 +43,6 @@ class ConnectionFactory {
    *
    * @param onConnect
    */
-  virtual void connect(OnConnect onConnect) = 0;
+  virtual void connect(OnDuplexConnectionConnect onConnect) = 0;
 };
 }

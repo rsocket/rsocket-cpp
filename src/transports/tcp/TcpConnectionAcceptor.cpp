@@ -25,9 +25,9 @@ class TcpConnectionAcceptor::SocketCallback
         new folly::AsyncSocket(eventBase(), fd));
 
     auto connection = std::make_unique<TcpDuplexConnection>(
-        std::move(socket), inlineExecutor());
+        std::move(socket));
     auto framedConnection = std::make_unique<FramedDuplexConnection>(
-        std::move(connection), inlineExecutor());
+        std::move(connection), ProtocolVersion::Unknown);
 
     onAccept_(std::move(framedConnection), *eventBase());
   }

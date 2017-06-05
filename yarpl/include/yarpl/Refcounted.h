@@ -5,6 +5,7 @@
 #include <atomic>
 #include <cassert>
 #include <cstddef>
+#include <functional>
 #include <type_traits>
 #include <utility>
 
@@ -71,15 +72,11 @@ class Refcounted {
 template <typename T>
 class Reference {
  public:
-  static_assert(
-      std::is_base_of<Refcounted, T>::value,
-      "Reference must be used with types that virtually derive Refcounted");
-
   template <typename U>
   friend class Reference;
 
-  Reference() {}
-  explicit Reference(std::nullptr_t) {}
+  Reference() = default;
+  /* implicit */ Reference(std::nullptr_t) {}
 
   explicit Reference(T* pointer) : pointer_(pointer) {
     inc();
@@ -158,12 +155,20 @@ class Reference {
 
  private:
   void inc() {
+    static_assert(
+        std::is_base_of<Refcounted, T>::value,
+        "Reference must be used with types that virtually derive Refcounted");
+
     if (pointer_) {
       Refcounted::incRef(*pointer_);
     }
   }
 
   void dec() {
+    static_assert(
+        std::is_base_of<Refcounted, T>::value,
+        "Reference must be used with types that virtually derive Refcounted");
+
     if (pointer_) {
       Refcounted::decRef(*pointer_);
     }
@@ -188,14 +193,19 @@ bool operator==(const Reference<T>& lhs, const Reference<U>& rhs) noexcept {
   return lhs.get() == rhs.get();
 }
 
-template <typename T, typename U>
-bool operator!=(const Reference<T>& lhs, const Reference<U>& rhs) noexcept {
-  return lhs.get() != rhs.get();
-}
-
 template <typename T>
 bool operator==(const Reference<T>& lhs, std::nullptr_t) noexcept {
   return lhs.get() == nullptr;
+}
+
+template <typename T>
+bool operator==(std::nullptr_t, const Reference<T>& rhs) noexcept {
+  return rhs.get() == nullptr;
+}
+
+template <typename T, typename U>
+bool operator!=(const Reference<T>& lhs, const Reference<U>& rhs) noexcept {
+  return lhs.get() != rhs.get();
 }
 
 template <typename T>
@@ -204,14 +214,70 @@ bool operator!=(const Reference<T>& lhs, std::nullptr_t) noexcept {
 }
 
 template <typename T>
-bool operator==(std::nullptr_t, const Reference<T>& rhs) noexcept {
-  return rhs.get() == nullptr;
-}
-
-template <typename T>
 bool operator!=(std::nullptr_t, const Reference<T>& rhs) noexcept {
   return rhs.get() != nullptr;
 }
+
+template <typename T, typename U>
+bool operator<(const Reference<T>& lhs, const Reference<U>& rhs) noexcept {
+  return lhs.get() < rhs.get();
+}
+
+template <typename T>
+bool operator<(const Reference<T>& lhs, std::nullptr_t) noexcept {
+  return lhs.get() < nullptr;
+}
+
+template <typename T>
+bool operator<(std::nullptr_t, const Reference<T>& rhs) noexcept {
+  return nullptr < rhs.get();
+}
+
+template <typename T, typename U>
+bool operator<=(const Reference<T>& lhs, const Reference<U>& rhs) noexcept {
+  return lhs.get() <= rhs.get();
+}
+
+template <typename T>
+bool operator<=(const Reference<T>& lhs, std::nullptr_t) noexcept {
+  return lhs.get() <= nullptr;
+}
+
+template <typename T>
+bool operator<=(std::nullptr_t, const Reference<T>& rhs) noexcept {
+  return nullptr <= rhs.get();
+}
+
+template <typename T, typename U>
+bool operator>(const Reference<T>& lhs, const Reference<U>& rhs) noexcept {
+  return lhs.get() > rhs.get();
+}
+
+template <typename T>
+bool operator>(const Reference<T>& lhs, std::nullptr_t) noexcept {
+  return lhs.get() > nullptr;
+}
+
+template <typename T>
+bool operator>(std::nullptr_t, const Reference<T>& rhs) noexcept {
+  return nullptr > rhs.get();
+}
+
+template <typename T, typename U>
+bool operator>=(const Reference<T>& lhs, const Reference<U>& rhs) noexcept {
+  return lhs.get() >= rhs.get();
+}
+
+template <typename T>
+bool operator>=(const Reference<T>& lhs, std::nullptr_t) noexcept {
+  return lhs.get() >= nullptr;
+}
+
+template <typename T>
+bool operator>=(std::nullptr_t, const Reference<T>& rhs) noexcept {
+  return nullptr >= rhs.get();
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 template <typename T, typename... Args>
@@ -219,4 +285,32 @@ Reference<T> make_ref(Args&&... args) {
   return Reference<T>(new T(std::forward<Args>(args)...));
 }
 
+template <typename T>
+Reference<T> get_ref(T& object) {
+  return Reference<T>(&object);
+}
+
+template <typename T>
+Reference<T> get_ref(T* object) {
+  return Reference<T>(object);
+}
+
 } // namespace yarpl
+
+//
+// custom specialization of std::hash<yarpl::Reference<T>>
+//
+namespace std
+{
+template<typename T>
+struct hash<yarpl::Reference<T>>
+{
+  typedef yarpl::Reference<T> argument_type;
+  typedef typename std::hash<T*>::result_type result_type;
+
+  result_type operator()(argument_type const& s) const
+  {
+    return std::hash<T*>()(s.get());
+  }
+};
+}

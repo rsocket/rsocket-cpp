@@ -104,7 +104,7 @@ void RSocketServer::start(OnSetupConnection onSetupConnection) {
 
 void RSocketServer::onSetupConnection(
     OnSetupConnection onSetupConnection,
-    std::shared_ptr<FrameTransport> frameTransport,
+    yarpl::Reference<FrameTransport> frameTransport,
     SetupParameters setupParams) {
   // we don't need to check for isShutdown_ here since all callbacks are
   // processed by this time
@@ -169,7 +169,7 @@ void RSocketServer::onSetupConnection(
 
 void RSocketServer::onResumeConnection(
     OnResumeConnection onResumeConnection,
-    std::shared_ptr<FrameTransport> frameTransport,
+    yarpl::Reference<FrameTransport> frameTransport,
     ResumeParameters setupPayload) {
   // we don't need to check for isShutdown_ here since all callbacks are
   // processed by this time
