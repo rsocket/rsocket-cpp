@@ -1,13 +1,14 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "RSocketServer.h"
+#include "src/RSocketServer.h"
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/EventBaseManager.h>
-#include "RSocketErrors.h"
-#include "statemachine/RSocketStateMachine.h"
-#include "internal/ScheduledRSocketResponder.h"
 #include "framing/FrameTransport.h"
-#include "RSocketStats.h"
+#include "internal/ScheduledRSocketResponder.h"
+#include "src/RSocketErrors.h"
+#include "src/RSocketNetworkStats.h"
+#include "src/RSocketStats.h"
+#include "statemachine/RSocketStateMachine.h"
 
 namespace rsocket {
 
@@ -102,6 +103,17 @@ void RSocketServer::start(OnSetupConnection onSetupConnection) {
       .get(); // block until finished and return or throw
 }
 
+class RSocketServerNetworkStats : public RSocketNetworkStats {
+ public:
+  void onClosed(const folly::exception_wrapper&) override {
+    if (onClose) {
+      onClose();
+    }
+  }
+
+   std::function<void()> onClose;
+};
+
 void RSocketServer::onSetupConnection(
     OnSetupConnection onSetupConnection,
     std::shared_ptr<FrameTransport> frameTransport,
@@ -130,23 +142,24 @@ void RSocketServer::onSetupConnection(
     requestResponder = std::make_shared<RSocketResponder>();
   }
 
+  auto removeRSocketCallback = std::make_shared<RSocketServerNetworkStats>();
+
   auto rs = std::make_shared<RSocketStateMachine>(
       *eventBase,
       std::move(requestResponder),
-      RSocketStats::noop(),
       nullptr,
-      ReactiveSocketMode::SERVER);
+      ReactiveSocketMode::SERVER,
+      RSocketStats::noop(),
+      removeRSocketCallback);
 
-  rs->addClosedListener(
-      [this, rs, eventBase](const folly::exception_wrapper&) {
-        // Enqueue another event to remove and delete it.  We cannot delete
-        // the RSocketStateMachine now as it still needs to finish processing
-        // the onClosed handlers in the stack frame above us.
-        eventBase->add([this, rs] {
+  removeRSocketCallback->onClose = [this, rs, eventBase]() {
+      // Enqueue another event to remove and delete it.  We cannot delete
+      // the RSocketStateMachine now as it still needs to finish processing
+      // the onClosed handlers in the stack frame above us.
+      eventBase->add([this, rs] {
           removeConnection(rs);
-        });
-
       });
+  };
 
   addConnection(rs, *eventBase);
   rs->connectServer(std::move(frameTransport), setupParams);

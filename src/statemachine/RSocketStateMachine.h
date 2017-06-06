@@ -15,19 +15,20 @@
 
 namespace rsocket {
 
-class StreamStateMachineBase;
 class ClientResumeStatusCallback;
-class RSocketStateMachine;
 class DuplexConnection;
 class Frame_ERROR;
-class KeepaliveTimer;
-class RSocketResponder;
-class ResumeCache;
-class RSocketStats;
-class StreamState;
-class RSocketParameters;
 class FrameSerializer;
 class FrameTransport;
+class KeepaliveTimer;
+class ResumeCache;
+class RSocketNetworkStats;
+class RSocketParameters;
+class RSocketResponder;
+class RSocketStateMachine;
+class RSocketStats;
+class StreamState;
+class StreamStateMachineBase;
 
 class FrameSink {
  public:
@@ -61,9 +62,10 @@ class RSocketStateMachine final
   RSocketStateMachine(
       folly::Executor& executor,
       std::shared_ptr<RSocketResponder> requestResponder,
-      std::shared_ptr<RSocketStats> stats,
       std::unique_ptr<KeepaliveTimer> keepaliveTimer_,
-      ReactiveSocketMode mode);
+      ReactiveSocketMode mode,
+      std::shared_ptr<RSocketStats> stats,
+      std::shared_ptr<RSocketNetworkStats> networkStats = std::shared_ptr<RSocketNetworkStats>());
 
   void closeWithError(Frame_ERROR&& error);
   void disconnectOrCloseWithError(Frame_ERROR&& error) override;
@@ -177,10 +179,6 @@ class RSocketStateMachine final
       ResumePosition serverPosition,
       ResumePosition clientPosition);
 
-  void addConnectedListener(std::function<void()> listener);
-  void addDisconnectedListener(ErrorCallback listener);
-  void addClosedListener(ErrorCallback listener);
-
   uint32_t getKeepaliveTime() const;
   bool isDisconnectedOrClosed() const;
   bool isClosed() const;
@@ -276,7 +274,6 @@ class RSocketStateMachine final
 
   bool ensureOrAutodetectFrameSerializer(const folly::IOBuf& firstFrame);
 
-  const std::shared_ptr<RSocketStats> stats_;
   ReactiveSocketMode mode_;
   bool isResumable_{false};
   bool remoteResumeable_{false};
@@ -288,14 +285,13 @@ class RSocketStateMachine final
   std::shared_ptr<FrameTransport> frameTransport_;
   std::unique_ptr<FrameSerializer> frameSerializer_;
 
-  std::list<std::function<void()>> onConnectListeners_;
-  std::list<ErrorCallback> onDisconnectListeners_;
-  std::list<ErrorCallback> onCloseListeners_;
-
   const std::unique_ptr<KeepaliveTimer> keepaliveTimer_;
 
   std::unique_ptr<ClientResumeStatusCallback> resumeCallback_;
 
   StreamsFactory streamsFactory_;
+
+  const std::shared_ptr<RSocketStats> stats_;
+  const std::shared_ptr<RSocketNetworkStats> networkStats_;
 };
 }

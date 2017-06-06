@@ -33,12 +33,12 @@ folly::Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect() {
         eventBase,
         // need to allow Responder being passed in optionally
         std::make_shared<RSocketResponder>(),
-        // need to allow stats being passed in
-        RSocketStats::noop(),
         // TODO need to optionally allow defining the keepalive timer
         std::make_unique<FollyKeepaliveTimer>(
             eventBase, std::chrono::milliseconds(5000)),
-        ReactiveSocketMode::CLIENT);
+        ReactiveSocketMode::CLIENT,
+        // need to allow stats being passed in
+        RSocketStats::noop());
 
     // TODO need to allow this being passed in
     auto setupParameters =

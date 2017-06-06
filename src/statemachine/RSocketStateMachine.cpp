@@ -7,36 +7,39 @@
 #include <folly/Optional.h>
 #include <folly/String.h>
 #include <folly/io/async/EventBase.h>
-#include "StreamState.h"
 #include "src/DuplexConnection.h"
-#include "src/RSocketParameters.h"
-#include "src/RSocketStats.h"
+#include "src/framing/Frame.h"
+#include "src/framing/FrameSerializer.h"
+#include "src/framing/FrameTransport.h"
 #include "src/framing/FrameTransport.h"
 #include "src/internal/ClientResumeStatusCallback.h"
 #include "src/internal/ResumeCache.h"
-#include "src/statemachine/ChannelResponder.h"
-#include "src/statemachine/StreamStateMachineBase.h"
+#include "src/RSocketNetworkStats.h"
+#include "src/RSocketParameters.h"
 #include "src/RSocketResponder.h"
-#include "src/framing/FrameSerializer.h"
-#include "src/framing/FrameTransport.h"
-#include "src/framing/Frame.h"
+#include "src/RSocketStats.h"
+#include "src/statemachine/ChannelResponder.h"
+#include "src/statemachine/StreamState.h"
+#include "src/statemachine/StreamStateMachineBase.h"
 
 namespace rsocket {
 
 RSocketStateMachine::RSocketStateMachine(
     folly::Executor& executor,
     std::shared_ptr<RSocketResponder> requestResponder,
-    std::shared_ptr<RSocketStats> stats,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer,
-    ReactiveSocketMode mode)
+    ReactiveSocketMode mode,
+    std::shared_ptr<RSocketStats> stats,
+    std::shared_ptr<RSocketNetworkStats> networkStats)
     : ExecutorBase(executor),
-      stats_(stats),
       mode_(mode),
       resumeCache_(std::make_shared<ResumeCache>(stats)),
       streamState_(std::make_shared<StreamState>(*stats)),
       requestResponder_(std::move(requestResponder)),
       keepaliveTimer_(std::move(keepaliveTimer)),
-      streamsFactory_(*this, mode) {
+      streamsFactory_(*this, mode),
+      stats_(stats),
+      networkStats_(networkStats) {
   // We deliberately do not "open" input or output to avoid having c'tor on the
   // stack when processing any signals from the connection. See ::connect and
   // ::onSubscribe.
@@ -100,11 +103,9 @@ bool RSocketStateMachine::connect(
 
   frameTransport_ = std::move(frameTransport);
 
-  for (auto& callback : onConnectListeners_) {
-    callback();
+  if (networkStats_) {
+    networkStats_->onConnected();
   }
-
-  //requestResponder_->socketOnConnected();
 
   // We need to create a hard reference to frameTransport_ to make sure the
   // instance survives until the setFrameProcessor returns.  There can be
@@ -153,11 +154,9 @@ void RSocketStateMachine::disconnect(folly::exception_wrapper ex) {
     return;
   }
 
-  for (auto& callback : onDisconnectListeners_) {
-    callback(ex);
+  if (networkStats_) {
+    networkStats_->onDisconnected(ex);
   }
-
-//  requestHandler_->socketOnDisconnected(ex);
 
   closeFrameTransport(std::move(ex), StreamCompletionSignal::CONNECTION_END);
   pauseStreams();
@@ -183,14 +182,10 @@ void RSocketStateMachine::close(
     resumeCallback_.reset();
   }
 
-  onConnectListeners_.clear();
-  onDisconnectListeners_.clear();
-  auto onCloseListeners = std::move(onCloseListeners_);
-  for (auto& callback : onCloseListeners) {
-    callback(ex);
+  auto networkStats = std::move(networkStats_);
+  if (networkStats) {
+    networkStats->onClosed(ex);
   }
-
-//  requestHandler_->socketOnClosed(ex);
 
   closeStreams(signal);
   closeFrameTransport(std::move(ex), signal);
@@ -838,21 +833,6 @@ void RSocketStateMachine::debugCheckCorrectExecutor() const {
   DCHECK(
       !dynamic_cast<folly::EventBase*>(&executor()) ||
       dynamic_cast<folly::EventBase*>(&executor())->isInEventBaseThread());
-}
-
-void RSocketStateMachine::addConnectedListener(std::function<void()> listener) {
-  CHECK(listener);
-  onConnectListeners_.push_back(std::move(listener));
-}
-
-void RSocketStateMachine::addDisconnectedListener(ErrorCallback listener) {
-  CHECK(listener);
-  onDisconnectListeners_.push_back(std::move(listener));
-}
-
-void RSocketStateMachine::addClosedListener(ErrorCallback listener) {
-  CHECK(listener);
-  onCloseListeners_.push_back(std::move(listener));
 }
 
 void RSocketStateMachine::setFrameSerializer(
