@@ -20,8 +20,9 @@ RSocketClient::RSocketClient(
 folly::Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect(
     SetupParameters setupParameters,
     std::shared_ptr<RSocketResponder> responder,
+    std::unique_ptr<KeepaliveTimer> keepaliveTimer,
     std::shared_ptr<RSocketStats> stats,
-    std::unique_ptr<KeepaliveTimer> keepaliveTimer) {
+    std::shared_ptr<RSocketNetworkStats> networkStats) {
   VLOG(2) << "Starting connection";
 
   folly::Promise<std::shared_ptr<RSocketRequester>> promise;
@@ -31,8 +32,9 @@ folly::Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect(
     this,
     setupParameters = std::move(setupParameters),
     responder = std::move(responder),
-    stats = std::move(stats),
     keepaliveTimer = std::move(keepaliveTimer),
+    stats = std::move(stats),
+    networkStats = std::move(networkStats),
     promise = std::move(promise)](
       std::unique_ptr<DuplexConnection> connection,
       folly::EventBase& eventBase) mutable {
@@ -56,7 +58,8 @@ folly::Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect(
         std::move(responder),
         std::move(keepaliveTimer),
         ReactiveSocketMode::CLIENT,
-        std::move(stats));
+        std::move(stats),
+        std::move(networkStats));
     rs->connectClientSendSetup(std::move(connection), std::move(setupParameters));
 
     auto rsocket = RSocketRequester::create(std::move(rs), eventBase);

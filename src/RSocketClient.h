@@ -5,6 +5,7 @@
 #include <folly/futures/Future.h>
 #include "RSocketRequester.h"
 #include "src/ConnectionFactory.h"
+#include "src/RSocketNetworkStats.h"
 #include "src/RSocketParameters.h"
 #include "src/RSocketStats.h"
 
@@ -41,8 +42,9 @@ class RSocketClient {
   folly::Future<std::shared_ptr<RSocketRequester>> connect(
       SetupParameters setupParameters = SetupParameters(),
       std::shared_ptr<RSocketResponder> responder = std::shared_ptr<RSocketResponder>(),
-      std::shared_ptr<RSocketStats> stats = RSocketStats::noop(),
-      std::unique_ptr<KeepaliveTimer> keepaliveTimer = std::unique_ptr<KeepaliveTimer>());
+      std::unique_ptr<KeepaliveTimer> keepaliveTimer = std::unique_ptr<KeepaliveTimer>(),
+      std::shared_ptr<RSocketStats> stats = std::shared_ptr<RSocketStats>(),
+      std::shared_ptr<RSocketNetworkStats> networkStats = std::shared_ptr<RSocketNetworkStats>());
 
   // TODO implement version supporting fast start (send SETUP and requests
   // without waiting for transport to connect and ack)
