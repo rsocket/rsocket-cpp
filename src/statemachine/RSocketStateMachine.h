@@ -292,6 +292,6 @@ class RSocketStateMachine final
   StreamsFactory streamsFactory_;
 
   const std::shared_ptr<RSocketStats> stats_;
-  const std::shared_ptr<RSocketNetworkStats> networkStats_;
+  std::shared_ptr<RSocketNetworkStats> networkStats_;
 };
 }

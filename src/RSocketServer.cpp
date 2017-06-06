@@ -103,6 +103,7 @@ void RSocketServer::start(OnSetupConnection onSetupConnection) {
       .get(); // block until finished and return or throw
 }
 
+// this class will be moved, its just an intermediate step
 class RSocketServerNetworkStats : public RSocketNetworkStats {
  public:
   void onClosed(const folly::exception_wrapper&) override {
