@@ -92,12 +92,9 @@ TEST(FlowableTest, SingleFlowable) {
 }
 
 TEST(FlowableTest, SingleMovableFlowable) {
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-
   auto value = std::make_unique<int>(123456);
 
   auto flowable = Flowables::justOnce(std::move(value));
-  EXPECT_EQ(std::size_t{1}, Refcounted::objects());
   EXPECT_EQ(std::size_t{1}, flowable->count());
 
   auto values = run(std::move(flowable));
@@ -108,9 +105,6 @@ TEST(FlowableTest, SingleMovableFlowable) {
   EXPECT_EQ(
       *values[0],
       123456);
-
-  flowable.reset();
-  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
 TEST(FlowableTest, JustFlowable) {

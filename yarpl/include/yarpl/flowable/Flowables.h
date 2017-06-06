@@ -84,7 +84,11 @@ class Flowables {
   template <typename T>
   static Reference<Flowable<T>> justOnce(T value) {
     auto lambda = [value = std::move(value), used = false](Subscriber<T>& subscriber, int64_t) mutable {
-      CHECK(!used) << "justOnce value was already used";
+      if (used) {
+        subscriber.onError(
+            std::make_exception_ptr(std::runtime_error("justOnce value was already used")));
+        return std::make_tuple(static_cast<int64_t>(0), true);
+      }
 
       used = true;
       // # requested should be > 0.  Ignoring the actual parameter.

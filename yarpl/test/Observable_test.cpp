@@ -304,12 +304,9 @@ TEST(Observable, Just) {
 }
 
 TEST(Observable, SingleMovable) {
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-
   auto value = std::make_unique<int>(123456);
 
   auto observable = Observables::justOnce(std::move(value));
-  EXPECT_EQ(std::size_t{1}, Refcounted::objects());
   EXPECT_EQ(std::size_t{1}, observable->count());
 
   auto values = run(std::move(observable));
@@ -320,9 +317,6 @@ TEST(Observable, SingleMovable) {
   EXPECT_EQ(
       *values[0],
       123456);
-
-  observable.reset();
-  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
 TEST(Observable, Range) {

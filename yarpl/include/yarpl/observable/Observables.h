@@ -51,7 +51,11 @@ class Observables {
   template <typename T>
   static Reference<Observable<T>> justOnce(T value) {
     auto lambda = [value = std::move(value), used = false](Reference<Observer<T>> observer) mutable {
-      CHECK(!used) << "justOnce value was already used";
+      if (used) {
+        observer->onError(
+            std::make_exception_ptr(std::runtime_error("justOnce value was already used")));
+        return;
+      }
 
       used = true;
       // # requested should be > 0.  Ignoring the actual parameter.
