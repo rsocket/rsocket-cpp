@@ -73,7 +73,6 @@ add_library(
         include/yarpl/single/SingleSubscriptions.h
         include/yarpl/single/SingleTestObserver.h
         # Flowable private
-        src/yarpl/Refcounted.cpp
         src/yarpl/flowable/sources/Flowable_FromObservable.h
         # utils
         include/yarpl/utils/type_traits.h
@@ -148,22 +147,3 @@ target_include_directories(
 )
 
 add_dependencies(yarpl-tests gmock)
-
-## perf tests
-#add_executable(
-#        yarpl-perf
-#        perf/yarpl-perf.cpp
-#        perf/Observable_perf.cpp
-#        perf/Function_perf.cpp
-#)
-#
-#target_link_libraries(
-#        yarpl-perf
-#        yarpl
-#        benchmark
-#)
-
-#target_include_directories(
-#        yarpl-perf
-#        PUBLIC "${PROJECT_SOURCE_DIR}/include" # allow include paths such as "yarpl/observable.h" can be used
-#)

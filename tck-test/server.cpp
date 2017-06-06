@@ -3,30 +3,27 @@
 #include <fstream>
 
 #include <folly/Memory.h>
-#include <folly/io/async/AsyncServerSocket.h>
-#include <folly/io/async/ScopedEventBaseThread.h>
-#include <folly/portability/GFlags.h>
+#include <folly/String.h>
+#include <folly/init/Init.h>
+
 #include <gmock/gmock.h>
-#include "test/deprecated/ReactiveSocket.h"
 
-#include "src/framing/FramedDuplexConnection.h"
-#include "src/temporary_home/NullRequestHandler.h"
-#include "src/temporary_home/SubscriptionBase.h"
-#include "src/transports/tcp/TcpDuplexConnection.h"
+#include "src/RSocket.h"
 
-#include "test/test_utils/StatsPrinter.h"
+#include "src/transports/tcp/TcpConnectionAcceptor.h"
 
 #include "tck-test/MarbleProcessor.h"
 
 using namespace ::testing;
-using namespace ::rsocket;
-using namespace ::folly;
+using namespace folly;
+using namespace rsocket;
 using namespace yarpl;
+using namespace yarpl::flowable;
+using namespace yarpl::single;
 
 DEFINE_string(ip, "0.0.0.0", "IP to bind on");
 DEFINE_int32(port, 9898, "port to listen to");
 DEFINE_string(test_file, "../tck-test/servertest.txt", "test file to run");
-DEFINE_bool(enable_stats_printer, false, "enable StatsPrinter");
 
 namespace {
 
@@ -67,173 +64,60 @@ MarbleStore parseMarbles(const std::string& fileName) {
   }
   return ms;
 }
-
-class ServerSubscription : public yarpl::flowable::Subscription {
- public:
-  explicit ServerSubscription(
-      yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response,
-      std::shared_ptr<tck::MarbleProcessor> marbleProcessor,
-      size_t /* numElems = 2 */)
-      : response_(std::move(response)),
-        marbleProcessor_(std::move(marbleProcessor)) {}
-
- private:
-  void request(int64_t n) noexcept override {
-    marbleProcessor_->request(n);
-  }
-
-  void cancel() noexcept override {
-    marbleProcessor_->cancel();
-  }
-
-  yarpl::Reference<yarpl::flowable::Subscriber<Payload>> response_;
-  std::shared_ptr<tck::MarbleProcessor> marbleProcessor_;
-};
-
-class Callback : public AsyncServerSocket::AcceptCallback {
- public:
-  explicit Callback(EventBase& eventBase) : eventBase_(eventBase) {}
-
-  virtual ~Callback() = default;
-
-  virtual void connectionAccepted(
-      int fd,
-      const SocketAddress& clientAddr) noexcept override {
-    LOG(INFO) << "ConnectionAccepted " << clientAddr.describe() << std::endl;
-
-    auto socket =
-        folly::AsyncSocket::UniquePtr(new AsyncSocket(&eventBase_, fd));
-
-    std::shared_ptr<RSocketStats> stats;
-
-    if (FLAGS_enable_stats_printer) {
-      stats.reset(new rsocket::StatsPrinter());
-    } else {
-      stats = RSocketStats::noop();
-    }
-
-    std::unique_ptr<DuplexConnection> connection =
-        std::make_unique<TcpDuplexConnection>(
-            std::move(socket), inlineExecutor(), stats);
-    std::unique_ptr<DuplexConnection> framedConnection =
-        std::make_unique<FramedDuplexConnection>(
-            std::move(connection), inlineExecutor());
-    std::unique_ptr<RequestHandler> requestHandler =
-        std::make_unique<ServerRequestHandler>();
-
-    auto rs = ReactiveSocket::fromServerConnection(
-        eventBase_,
-        std::move(framedConnection),
-        std::move(requestHandler),
-        stats);
-
-    rs->onClosed([ this, rs = rs.get() ](const folly::exception_wrapper& ex) {
-      removeSocket(*rs);
-    });
-
-    reactiveSockets_.push_back(std::move(rs));
-  }
-
-  void removeSocket(ReactiveSocket& socket) {
-    if (!shuttingDown_) {
-      reactiveSockets_.erase(std::remove_if(
-          reactiveSockets_.begin(),
-          reactiveSockets_.end(),
-          [&socket](std::unique_ptr<ReactiveSocket>& vecSocket) {
-            return vecSocket.get() == &socket;
-          }));
-    }
-  }
-
-  virtual void acceptError(const std::exception& ex) noexcept override {
-    std::cout << "AcceptError " << ex.what() << std::endl;
-  }
-
-  // unused
-  // void shutdown() {
-  //   shuttingDown_ = true;
-  //   reactiveSockets_.clear();
-  // }
-
- private:
-  class ServerRequestHandler : public DefaultRequestHandler {
-   public:
-    ServerRequestHandler() {
-      marbles_ = parseMarbles(FLAGS_test_file);
-    }
-
-    void handleRequestStream(
-        Payload request,
-        StreamId streamId,
-        const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
-            response) noexcept override {
-      LOG(INFO) << "handleRequestStream " << request;
-      std::string data = request.data->moveToFbString().toStdString();
-      std::string metadata = request.metadata->moveToFbString().toStdString();
-      auto it = marbles_.streamMarbles.find(std::make_pair(data, metadata));
-      if (it == marbles_.streamMarbles.end()) {
-        LOG(ERROR) << "No Handler found for the [data: " << data
-                   << ", metadata:" << metadata << "]";
-      } else {
-        auto marbleProcessor =
-            std::make_shared<tck::MarbleProcessor>(it->second, response);
-        auto subscription =
-            make_ref<ServerSubscription>(response, marbleProcessor, 0);
-        response->onSubscribe(subscription);
-        std::thread mpThread([marbleProcessor] { marbleProcessor->run(); });
-        mpThread.detach();
-      }
-    }
-
-    void handleRequestResponse(
-        Payload request,
-        StreamId streamId,
-        const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
-            response) noexcept override {
-      LOG(INFO) << "handleRequestResponse " << request;
-      std::string data = request.data->moveToFbString().toStdString();
-      std::string metadata = request.metadata->moveToFbString().toStdString();
-      auto it = marbles_.reqRespMarbles.find(std::make_pair(data, metadata));
-      if (it == marbles_.reqRespMarbles.end()) {
-        LOG(ERROR) << "No Handler found for the [data: " << data
-                   << ", metadata:" << metadata << "]";
-      } else {
-        auto marbleProcessor =
-            std::make_shared<tck::MarbleProcessor>(it->second, response);
-        auto subscription =
-            make_ref<ServerSubscription>(response, marbleProcessor, 0);
-        response->onSubscribe(subscription);
-        std::thread mpThread([marbleProcessor] { marbleProcessor->run(); });
-        mpThread.detach();
-      }
-    }
-
-    void handleFireAndForgetRequest(
-        Payload request,
-        StreamId streamId) noexcept override {
-      LOG(INFO) << "handleFireAndForgetRequest " << request.moveDataToString();
-    }
-
-    void handleMetadataPush(
-        std::unique_ptr<folly::IOBuf> request) noexcept override {
-      LOG(INFO) << "handleMetadataPush " << request->moveToFbString();
-    }
-
-    std::shared_ptr<StreamState> handleSetupPayload(
-        SetupParameters request) noexcept override {
-      LOG(INFO) << "handleSetupPayload " << request;
-      return nullptr;
-    }
-
-   private:
-    MarbleStore marbles_;
-  };
-
-  std::vector<std::unique_ptr<ReactiveSocket>> reactiveSockets_;
-  EventBase& eventBase_;
-  bool shuttingDown_{false};
-};
 }
+
+class ServerResponder : public RSocketResponder {
+ public:
+  ServerResponder() {
+    marbles_ = parseMarbles(FLAGS_test_file);
+  }
+
+  yarpl::Reference<Flowable<Payload>> handleRequestStream(
+      Payload request,
+      StreamId streamId) override {
+    LOG(INFO) << "handleRequestStream " << request;
+    std::string data = request.data->moveToFbString().toStdString();
+    std::string metadata = request.metadata->moveToFbString().toStdString();
+    auto it = marbles_.streamMarbles.find(std::make_pair(data, metadata));
+    if (it == marbles_.streamMarbles.end()) {
+      return yarpl::flowable::Flowables::error<rsocket::Payload>(
+          std::logic_error("No MarbleHandler found"));
+    } else {
+      auto marbleProcessor = std::make_shared<tck::MarbleProcessor>(it->second);
+      auto lambda = [marbleProcessor](
+          yarpl::flowable::Subscriber<rsocket::Payload>& subscriber,
+          int64_t requested) mutable {
+        return marbleProcessor->run(subscriber, requested);
+      };
+      return Flowable<rsocket::Payload>::create(std::move(lambda));
+    }
+  }
+
+  yarpl::Reference<Single<Payload>> handleRequestResponse(
+      Payload request,
+      StreamId streamId) override {
+    LOG(INFO) << "handleRequestResponse " << request;
+    std::string data = request.data->moveToFbString().toStdString();
+    std::string metadata = request.metadata->moveToFbString().toStdString();
+    auto it = marbles_.reqRespMarbles.find(std::make_pair(data, metadata));
+    if (it == marbles_.reqRespMarbles.end()) {
+      return yarpl::single::Singles::error<rsocket::Payload>(
+          std::logic_error("No MarbleHandler found"));
+    } else {
+      auto marbleProcessor = std::make_shared<tck::MarbleProcessor>(it->second);
+      auto lambda = [marbleProcessor](
+          yarpl::Reference<yarpl::single::SingleObserver<rsocket::Payload>>
+              subscriber) {
+        subscriber->onSubscribe(SingleSubscriptions::empty());
+        return marbleProcessor->run(subscriber);
+      };
+      return Single<rsocket::Payload>::create(std::move(lambda));
+    }
+  }
+
+ private:
+  MarbleStore marbles_;
+};
 
 [[noreturn]] static void signal_handler(int signal) {
   LOG(INFO) << "Terminating program after receiving signal " << signal;
@@ -241,38 +125,34 @@ class Callback : public AsyncServerSocket::AcceptCallback {
 }
 
 int main(int argc, char* argv[]) {
-#ifdef OSS
-  google::ParseCommandLineFlags(&argc, &argv, true);
-#else
-  gflags::ParseCommandLineFlags(&argc, &argv, true);
-#endif
-
-  google::InitGoogleLogging(argv[0]);
-  google::InstallFailureSignalHandler();
   FLAGS_logtostderr = true;
+  folly::init(&argc, &argv);
 
   signal(SIGINT, signal_handler);
   signal(SIGTERM, signal_handler);
 
-  folly::ScopedEventBaseThread evbt;
+  TcpConnectionAcceptor::Options opts;
+  opts.port = FLAGS_port;
+  opts.threads = 2;
 
-  Callback callback(*evbt.getEventBase());
+  // RSocket server accepting on TCP
+  auto rs = RSocket::createServer(
+      std::make_unique<TcpConnectionAcceptor>(std::move(opts)));
 
-  auto serverSocket = AsyncServerSocket::newSocket(evbt.getEventBase());
+  // global request handler
+  auto handler = std::make_shared<ServerResponder>();
 
-  evbt.getEventBase()->runInEventBaseThreadAndWait(
-      [&evbt, &serverSocket, &callback]() {
-        evbt.getEventBase()->setName("RsSockEvb");
-        LOG(INFO) << "Binding to " << FLAGS_ip << ":" << FLAGS_port;
-        folly::SocketAddress addr(FLAGS_ip, FLAGS_port, true);
-        serverSocket->setReusePortEnabled(true);
-        serverSocket->bind(addr);
-        serverSocket->addAcceptCallback(&callback, evbt.getEventBase());
-        serverSocket->listen(10);
-        serverSocket->startAccepting();
-        LOG(INFO) << "Server listening on " << addr.describe();
-      });
+  auto rawRs = rs.get();
+  auto serverThread = std::thread([=] {
+    // start accepting connections
+    rawRs->startAndPark([handler](auto& setupParams) { return handler; });
+  });
 
-  while (true)
-    ;
+  // Wait for a newline on the console to terminate the server.
+  std::getchar();
+
+  rs->unpark();
+  serverThread.join();
+
+  return 0;
 }

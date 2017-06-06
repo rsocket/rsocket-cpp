@@ -23,7 +23,7 @@ if(NOT REACTIVE_STREAMS_GIT_URL)
   set(REACTIVE_STREAMS_GIT_URL "https://github.com/ReactiveSocket/reactive-streams-cpp.git" CACHE STRING "Location of the ReactiveStreams C++ git repo" FORCE)
 endif(NOT REACTIVE_STREAMS_GIT_URL)
 
-option(BUILD_BENCHMARKS "Build benchmarks" OFF)
+option(BUILD_BENCHMARKS "Build benchmarks" ON)
 
 enable_testing()
 
@@ -277,52 +277,55 @@ add_dependencies(tests gmock ReactiveSocket)
 
 add_test(NAME ReactiveSocketTests COMMAND tests)
 
-#add_executable(
-#  tckclient
-#  tck-test/client.cpp
-#  tck-test/TestFileParser.cpp
-#  tck-test/TestFileParser.h
-#  tck-test/TestSubscriber.cpp
-#  tck-test/TestSubscriber.h
-#  tck-test/TestSuite.cpp
-#  tck-test/TestSuite.h
-#  tck-test/TestInterpreter.cpp
-#  tck-test/TestInterpreter.h
-#  tck-test/TypedCommands.h
-#  test/deprecated/ReactiveSocket.cpp
-#  test/deprecated/ReactiveSocket.h
-#)
-#
-#target_link_libraries(
-#  tckclient
-#  ReactiveSocket
-#  yarpl
-#  ${FOLLY_LIBRARIES}
-#  ${GFLAGS_LIBRARY}
-#  ${GLOG_LIBRARY}
-#  ${CMAKE_THREAD_LIBS_INIT})
-#
-#add_executable(
-#  tckserver
-#  tck-test/server.cpp
-#  tck-test/MarbleProcessor.cpp
-#  tck-test/MarbleProcessor.h
-#  test/test_utils/StatsPrinter.cpp
-#  test/test_utils/StatsPrinter.h
-#  test/deprecated/ReactiveSocket.cpp
-#  test/deprecated/ReactiveSocket.h
-#)
-#
-#target_link_libraries(
-#  tckserver
-#  ReactiveSocket
-#  yarpl
-#  ${FOLLY_LIBRARIES}
-#  ${GFLAGS_LIBRARY}
-#  ${GMOCK_LIBS}
-#  ${GLOG_LIBRARY}
-#  ${DOUBLE-CONVERSION}
-#  ${CMAKE_THREAD_LIBS_INIT})
+########################################
+# TCK Drivers
+########################################
+
+add_executable(
+  tckclient
+  tck-test/client.cpp
+  tck-test/TestFileParser.cpp
+  tck-test/TestFileParser.h
+  tck-test/FlowableSubscriber.cpp
+  tck-test/FlowableSubscriber.h
+  tck-test/SingleSubscriber.cpp
+  tck-test/SingleSubscriber.h
+  tck-test/TestSuite.cpp
+  tck-test/TestSuite.h
+  tck-test/TestInterpreter.cpp
+  tck-test/TestInterpreter.h
+  tck-test/TypedCommands.h
+  tck-test/BaseSubscriber.cpp
+  tck-test/BaseSubscriber.h)
+
+target_link_libraries(
+  tckclient
+  ReactiveSocket
+  yarpl
+  ${FOLLY_LIBRARIES}
+  ${GFLAGS_LIBRARY}
+  ${GLOG_LIBRARY}
+  ${CMAKE_THREAD_LIBS_INIT})
+
+add_executable(
+  tckserver
+  tck-test/server.cpp
+  tck-test/MarbleProcessor.cpp
+  tck-test/MarbleProcessor.h
+  test/test_utils/StatsPrinter.cpp
+  test/test_utils/StatsPrinter.h
+)
+
+target_link_libraries(
+  tckserver
+  ReactiveSocket
+  yarpl
+  ${FOLLY_LIBRARIES}
+  ${GFLAGS_LIBRARY}
+  ${GMOCK_LIBS}
+  ${GLOG_LIBRARY}
+  ${DOUBLE-CONVERSION}
+  ${CMAKE_THREAD_LIBS_INIT})
 
 ########################################
 # Examples
@@ -547,8 +550,47 @@ target_link_libraries(
 # End Examples
 ########################################
 
-#if(BUILD_BENCHMARKS)
+if(BUILD_BENCHMARKS)
+  ExternalProject_Add(
+      google_benchmark
+      URL ${CMAKE_SOURCE_DIR}/benchmark-1.1.0.zip
+      URL_MD5 c3c5cca410a1959efc93946f1739547f
+      CMAKE_ARGS "-DCMAKE_BUILD_TYPE=Release"
+      INSTALL_COMMAND ""
+  )
+
+  ExternalProject_Get_Property(google_benchmark source_dir)
+  set(GOOGLE_BENCHMARK_SOURCE_DIR ${source_dir})
+  ExternalProject_Get_Property(google_benchmark binary_dir)
+  set(GOOGLE_BENCHMARK_BINARY_DIR ${binary_dir})
+
+  set(
+      GOOGLE_BENCHMARK_LIBS
+      ${GOOGLE_BENCHMARK_BINARY_DIR}/src/${CMAKE_STATIC_LIBRARY_PREFIX}benchmark${CMAKE_STATIC_LIBRARY_SUFFIX}
+  )
+
+  include_directories(${GOOGLE_BENCHMARK_SOURCE_DIR}/include)
+  include_directories(${CMAKE_SOURCE_DIR}/experimental)
+
+  function(benchmark name file)
+      add_executable(${name} ${file})
+      target_link_libraries(
+          ${name}
+          ReactiveSocket
+          yarpl
+          ${GOOGLE_BENCHMARK_LIBS}
+          ${FOLLY_LIBRARIES}
+          ${GFLAGS_LIBRARY}
+          ${GLOG_LIBRARY}
+          ${CMAKE_THREAD_LIBS_INIT})
+      add_dependencies(
+          ${name}
+          ReactiveStreams
+          google_benchmark)
+  endfunction()
+
   add_subdirectory(benchmarks)
-#endif(BUILD_BENCHMARKS)
+  add_subdirectory(yarpl/perf)
+endif(BUILD_BENCHMARKS)
 
 # EOF

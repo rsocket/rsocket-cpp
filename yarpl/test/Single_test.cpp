@@ -15,84 +15,60 @@ using namespace yarpl;
 using namespace yarpl::single;
 
 TEST(Single, SingleOnNext) {
-  {
-    ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-    auto a = Single<int>::create([](Reference<SingleObserver<int>> obs) {
-      obs->onSubscribe(SingleSubscriptions::empty());
-      obs->onSuccess(1);
-    });
+  auto a = Single<int>::create([](Reference<SingleObserver<int>> obs) {
+    obs->onSubscribe(SingleSubscriptions::empty());
+    obs->onSuccess(1);
+  });
 
-    ASSERT_EQ(std::size_t{1}, Refcounted::objects());
-
-    auto to = SingleTestObserver<int>::create();
-    a->subscribe(to);
-    to->awaitTerminalEvent();
-    to->assertOnSuccessValue(1);
-  }
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto to = SingleTestObserver<int>::create();
+  a->subscribe(to);
+  to->awaitTerminalEvent();
+  to->assertOnSuccessValue(1);
 }
 
 TEST(Single, OnError) {
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-  {
-    std::string errorMessage("DEFAULT->No Error Message");
-    auto a = Single<int>::create([](Reference<SingleObserver<int>> obs) {
-      try {
-        throw std::runtime_error("something broke!");
-      } catch (const std::exception&) {
-        obs->onError(std::current_exception());
-      }
-    });
+  std::string errorMessage("DEFAULT->No Error Message");
+  auto a = Single<int>::create([](Reference<SingleObserver<int>> obs) {
+    try {
+      throw std::runtime_error("something broke!");
+    } catch (const std::exception&) {
+      obs->onError(std::current_exception());
+    }
+  });
 
-    auto to = SingleTestObserver<int>::create();
-    a->subscribe(to);
-    to->awaitTerminalEvent();
-    to->assertOnErrorMessage("something broke!");
-  }
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto to = SingleTestObserver<int>::create();
+  a->subscribe(to);
+  to->awaitTerminalEvent();
+  to->assertOnErrorMessage("something broke!");
 }
 
 TEST(Single, Just) {
-  {
-    ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-    auto a = Singles::just<int>(1);
+  auto a = Singles::just<int>(1);
 
-    auto to = SingleTestObserver<int>::create();
-    a->subscribe(to);
-    to->awaitTerminalEvent();
-    to->assertOnSuccessValue(1);
-  }
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto to = SingleTestObserver<int>::create();
+  a->subscribe(to);
+  to->awaitTerminalEvent();
+  to->assertOnSuccessValue(1);
 }
 
 TEST(Single, Error) {
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-  {
-    std::string errorMessage("DEFAULT->No Error Message");
-    auto a = Singles::error<int>(std::runtime_error("something broke!"));
+  std::string errorMessage("DEFAULT->No Error Message");
+  auto a = Singles::error<int>(std::runtime_error("something broke!"));
 
-    auto to = SingleTestObserver<int>::create();
-    a->subscribe(to);
-    to->awaitTerminalEvent();
-    to->assertOnErrorMessage("something broke!");
-  }
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto to = SingleTestObserver<int>::create();
+  a->subscribe(to);
+  to->awaitTerminalEvent();
+  to->assertOnErrorMessage("something broke!");
 }
 
 TEST(Single, SingleMap) {
-  {
-    ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-    auto a = Single<int>::create([](Reference<SingleObserver<int>> obs) {
-      obs->onSubscribe(SingleSubscriptions::empty());
-      obs->onSuccess(1);
-    });
+  auto a = Single<int>::create([](Reference<SingleObserver<int>> obs) {
+    obs->onSubscribe(SingleSubscriptions::empty());
+    obs->onSuccess(1);
+  });
 
-    ASSERT_EQ(std::size_t{1}, Refcounted::objects());
-
-    auto to = SingleTestObserver<const char*>::create();
-    a->map([](int v) { return "hello"; })->subscribe(to);
-    to->awaitTerminalEvent();
-    to->assertOnSuccessValue("hello");
-  }
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  auto to = SingleTestObserver<const char*>::create();
+  a->map([](int v) { return "hello"; })->subscribe(to);
+  to->awaitTerminalEvent();
+  to->assertOnSuccessValue("hello");
 }

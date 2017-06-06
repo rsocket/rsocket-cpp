@@ -84,74 +84,58 @@ std::vector<T> run(Reference<Observable<T>> observable) {
 } // namespace
 
 TEST(Observable, SingleOnNext) {
-  {
-    ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-    auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
-      auto s = Subscriptions::empty();
-      obs->onSubscribe(s);
-      obs->onNext(1);
-      obs->onComplete();
-    });
+  auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
+    auto s = Subscriptions::empty();
+    obs->onSubscribe(s);
+    obs->onNext(1);
+    obs->onComplete();
+  });
 
-    ASSERT_EQ(std::size_t{1}, Refcounted::objects());
-
-    std::vector<int> v;
-    a->subscribe(
-        Observers::create<int>([&v](const int& value) { v.push_back(value); }));
-
-    ASSERT_EQ(std::size_t{1}, Refcounted::objects());
-    EXPECT_EQ(v.at(0), 1);
-  }
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  std::vector<int> v;
+  a->subscribe(
+      Observers::create<int>([&v](const int& value) { v.push_back(value); }));
+  EXPECT_EQ(v.at(0), 1);
 }
 
 TEST(Observable, MultiOnNext) {
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-  {
-    auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
-      obs->onSubscribe(Subscriptions::empty());
-      obs->onNext(1);
-      obs->onNext(2);
-      obs->onNext(3);
-      obs->onComplete();
-    });
+  auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
+    obs->onSubscribe(Subscriptions::empty());
+    obs->onNext(1);
+    obs->onNext(2);
+    obs->onNext(3);
+    obs->onComplete();
+  });
 
-    std::vector<int> v;
-    a->subscribe(
-        Observers::create<int>([&v](const int& value) { v.push_back(value); }));
+  std::vector<int> v;
+  a->subscribe(
+      Observers::create<int>([&v](const int& value) { v.push_back(value); }));
 
-    EXPECT_EQ(v.at(0), 1);
-    EXPECT_EQ(v.at(1), 2);
-    EXPECT_EQ(v.at(2), 3);
-  }
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  EXPECT_EQ(v.at(0), 1);
+  EXPECT_EQ(v.at(1), 2);
+  EXPECT_EQ(v.at(2), 3);
 }
 
 TEST(Observable, OnError) {
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-  {
-    std::string errorMessage("DEFAULT->No Error Message");
-    auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
-      try {
-        throw std::runtime_error("something broke!");
-      } catch (const std::exception&) {
-        obs->onError(std::current_exception());
-      }
-    });
+  std::string errorMessage("DEFAULT->No Error Message");
+  auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
+    try {
+      throw std::runtime_error("something broke!");
+    } catch (const std::exception&) {
+      obs->onError(std::current_exception());
+    }
+  });
 
-    a->subscribe(Observers::create<int>(
-        [](int value) { /* do nothing */ },
-        [&errorMessage](const std::exception_ptr e) {
-          try {
-            std::rethrow_exception(e);
-          } catch (const std::runtime_error& ex) {
-            errorMessage = std::string(ex.what());
-          }
-        }));
+  a->subscribe(Observers::create<int>(
+      [](int value) { /* do nothing */ },
+      [&errorMessage](const std::exception_ptr e) {
+        try {
+          std::rethrow_exception(e);
+        } catch (const std::runtime_error& ex) {
+          errorMessage = std::string(ex.what());
+        }
+      }));
 
-    EXPECT_EQ("something broke!", errorMessage);
-  }
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  EXPECT_EQ("something broke!", errorMessage);
 }
 
 static std::atomic<int> instanceCount;
@@ -160,26 +144,22 @@ static std::atomic<int> instanceCount;
  * Assert that all items passed through the Observable get destroyed
  */
 TEST(Observable, ItemsCollectedSynchronously) {
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-  {
-    auto a = Observable<Tuple>::create([](Reference<Observer<Tuple>> obs) {
-      obs->onSubscribe(Subscriptions::empty());
-      obs->onNext(Tuple{1, 2});
-      obs->onNext(Tuple{2, 3});
-      obs->onNext(Tuple{3, 4});
-      obs->onComplete();
-    });
+  auto a = Observable<Tuple>::create([](Reference<Observer<Tuple>> obs) {
+    obs->onSubscribe(Subscriptions::empty());
+    obs->onNext(Tuple{1, 2});
+    obs->onNext(Tuple{2, 3});
+    obs->onNext(Tuple{3, 4});
+    obs->onComplete();
+  });
 
-    a->subscribe(Observers::create<Tuple>([](const Tuple& value) {
-      std::cout << "received value " << value.a << std::endl;
-    }));
+  a->subscribe(Observers::create<Tuple>([](const Tuple& value) {
+    std::cout << "received value " << value.a << std::endl;
+  }));
 
-    std::cout << "Finished ... remaining instances == " << instanceCount
-              << std::endl;
+  std::cout << "Finished ... remaining instances == " << instanceCount
+            << std::endl;
 
-    EXPECT_EQ(0, Tuple::instanceCount);
-  }
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  EXPECT_EQ(0, Tuple::instanceCount);
 }
 
 /*
@@ -190,7 +170,6 @@ TEST(Observable, ItemsCollectedSynchronously) {
  * in a Vector which could then be consumed on another thread.
  */
 TEST(DISABLED_Observable, ItemsCollectedAsynchronously) {
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
   // scope this so we can check destruction of Vector after this block
   {
     auto a = Observable<Tuple>::create([](Reference<Observer<Tuple>> obs) {
@@ -224,7 +203,6 @@ TEST(DISABLED_Observable, ItemsCollectedAsynchronously) {
               << std::endl;
   }
   EXPECT_EQ(0, Tuple::instanceCount);
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
 class TakeObserver : public Observer<int> {
@@ -258,82 +236,68 @@ class TakeObserver : public Observer<int> {
 
 // assert behavior of onComplete after subscription.cancel
 TEST(Observable, SubscriptionCancellation) {
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-  {
-    static std::atomic_int emitted{0};
-    auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
-      std::atomic_bool isUnsubscribed{false};
-      auto s =
-          Subscriptions::create([&isUnsubscribed] { isUnsubscribed = true; });
-      obs->onSubscribe(std::move(s));
-      int i = 0;
-      while (!isUnsubscribed && i <= 10) {
-        emitted++;
-        obs->onNext(i++);
-      }
-      if (!isUnsubscribed) {
-        obs->onComplete();
-      }
-    });
+  static std::atomic_int emitted{0};
+  auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
+    std::atomic_bool isUnsubscribed{false};
+    auto s =
+        Subscriptions::create([&isUnsubscribed] { isUnsubscribed = true; });
+    obs->onSubscribe(std::move(s));
+    int i = 0;
+    while (!isUnsubscribed && i <= 10) {
+      emitted++;
+      obs->onNext(i++);
+    }
+    if (!isUnsubscribed) {
+      obs->onComplete();
+    }
+  });
 
-    std::vector<int> v;
-    a->subscribe(Reference<Observer<int>>(new TakeObserver(2, v)));
-    EXPECT_EQ((unsigned long)2, v.size());
-    EXPECT_EQ(2, emitted);
-  }
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  std::vector<int> v;
+  a->subscribe(Reference<Observer<int>>(new TakeObserver(2, v)));
+  EXPECT_EQ((unsigned long)2, v.size());
+  EXPECT_EQ(2, emitted);
 }
 
 TEST(Observable, toFlowable) {
-  {
-    ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-    auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
-      auto s = Subscriptions::empty();
-      obs->onSubscribe(s);
-      obs->onNext(1);
-      obs->onComplete();
-    });
+  auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
+    auto s = Subscriptions::empty();
+    obs->onSubscribe(s);
+    obs->onNext(1);
+    obs->onComplete();
+  });
 
-    auto f = a->toFlowable(BackpressureStrategy::DROP);
+  auto f = a->toFlowable(BackpressureStrategy::DROP);
 
-    std::vector<int> v;
-    f->subscribe(yarpl::flowable::Subscribers::create<int>(
-        [&v](const int& value) { v.push_back(value); }));
+  std::vector<int> v;
+  f->subscribe(yarpl::flowable::Subscribers::create<int>(
+      [&v](const int& value) { v.push_back(value); }));
 
-    EXPECT_EQ(v.at(0), 1);
-  }
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  EXPECT_EQ(v.at(0), 1);
 }
 
 TEST(Observable, toFlowableWithCancel) {
-  {
-    ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-    auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
-      auto s = Subscriptions::atomicBoolSubscription();
-      obs->onSubscribe(s);
-      int i = 0;
-      while (!s->isCancelled()) {
-        obs->onNext(++i);
-      }
-      if (!s->isCancelled()) {
-        obs->onComplete();
-      }
-    });
+  auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
+    auto s = Subscriptions::atomicBoolSubscription();
+    obs->onSubscribe(s);
+    int i = 0;
+    while (!s->isCancelled()) {
+      obs->onNext(++i);
+    }
+    if (!s->isCancelled()) {
+      obs->onComplete();
+    }
+  });
 
-    auto f = a->toFlowable(BackpressureStrategy::DROP);
+  auto f = a->toFlowable(BackpressureStrategy::DROP);
 
-    std::vector<int> v;
-    f->take(5)->subscribe(yarpl::flowable::Subscribers::create<int>(
-        [&v](const int& value) { v.push_back(value); }));
+  std::vector<int> v;
+  f->take(5)->subscribe(yarpl::flowable::Subscribers::create<int>(
+      [&v](const int& value) { v.push_back(value); }));
 
-    EXPECT_EQ(v, std::vector<int>({1, 2, 3, 4, 5}));
-  }
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
+  EXPECT_EQ(v, std::vector<int>({1, 2, 3, 4, 5}));
 }
 
 TEST(Observable, Just) {
-  ASSERT_EQ(0u, Refcounted::objects());
-
   EXPECT_EQ(run(Observables::just(22)), std::vector<int>{22});
   EXPECT_EQ(
       run(Observables::justN({12, 34, 56, 98})),
@@ -341,43 +305,30 @@ TEST(Observable, Just) {
   EXPECT_EQ(
       run(Observables::justN({"ab", "pq", "yz"})),
       std::vector<const char*>({"ab", "pq", "yz"}));
-
-  EXPECT_EQ(0u, Refcounted::objects());
 }
 
 TEST(Observable, Range) {
-  ASSERT_EQ(0u, Refcounted::objects());
-
   auto observable = Observables::range(10, 14);
   EXPECT_EQ(run(std::move(observable)), std::vector<int64_t>({10, 11, 12, 13}));
-
-  EXPECT_EQ(0u, Refcounted::objects());
 }
 
 TEST(Observable, RangeWithMap) {
-  ASSERT_EQ(0u, Refcounted::objects());
-
   auto observable = Observables::range(1, 4)
                         ->map([](int64_t v) { return v * v; })
                         ->map([](int64_t v) { return v * v; })
                         ->map([](int64_t v) { return std::to_string(v); });
   EXPECT_EQ(
       run(std::move(observable)), std::vector<std::string>({"1", "16", "81"}));
-
-  EXPECT_EQ(0u, Refcounted::objects());
 }
 
 TEST(Observable, RangeWithReduce) {
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
   auto observable = Observables::range(0, 10)
       ->reduce([](int64_t acc, int64_t v) { return acc + v; });
   EXPECT_EQ(
       run(std::move(observable)), std::vector<int64_t>({45}));
-  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
 TEST(Observable, RangeWithReduceByMultiplication) {
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
   auto observable = Observables::range(0, 10)
       ->reduce([](int64_t acc, int64_t v) { return acc * v; });
   EXPECT_EQ(
@@ -387,103 +338,72 @@ TEST(Observable, RangeWithReduceByMultiplication) {
       ->reduce([](int64_t acc, int64_t v) { return acc * v; });
   EXPECT_EQ(
       run(std::move(observable)), std::vector<int64_t>({2*3*4*5*6*7*8*9}));
-  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
 TEST(Observable, RangeWithReduceOneItem) {
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
   auto observable = Observables::range(5, 6)
       ->reduce([](int64_t acc, int64_t v) { return acc + v; });
   EXPECT_EQ(
       run(std::move(observable)), std::vector<int64_t>({5}));
-  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
 TEST(Observable, RangeWithReduceNoItem) {
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-  {
-    auto observable = Observables::range(0, 0)
-        ->reduce([](int64_t acc, int64_t v) { return acc + v; });
-    auto collector = make_ref<CollectingObserver<int64_t>>();
-    observable->subscribe(collector);
-    EXPECT_EQ(collector->error(), false);
-    EXPECT_EQ(
-        collector->values(), std::vector<int64_t>({}));
-  }
-  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
+  auto observable = Observables::range(0, 0)->reduce(
+      [](int64_t acc, int64_t v) { return acc + v; });
+  auto collector = make_ref<CollectingObserver<int64_t>>();
+  observable->subscribe(collector);
+  EXPECT_EQ(collector->error(), false);
+  EXPECT_EQ(collector->values(), std::vector<int64_t>({}));
 }
 
 TEST(Observable, RangeWithReduceToBiggerType) {
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
   auto observable = Observables::range(5, 6)
       ->map([](int64_t v){ return (int32_t)v; })
       ->reduce([](int64_t acc, int32_t v) { return acc + v; });
   EXPECT_EQ(
       run(std::move(observable)), std::vector<int64_t>({5}));
-  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
 TEST(Observable, StringReduce) {
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
-  auto observable = Observables::justN<std::string>(
-      {"a", "b", "c", "d", "e", "f", "g", "h", "i"})
-      ->reduce([](std::string acc, std::string v) {
-        return acc + v;
-      });
+  auto observable =
+      Observables::justN<std::string>(
+          {"a", "b", "c", "d", "e", "f", "g", "h", "i"})
+          ->reduce([](std::string acc, std::string v) { return acc + v; });
   EXPECT_EQ(
       run(std::move(observable)), std::vector<std::string>({"abcdefghi"}));
-  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
 TEST(Observable, RangeWithFilter) {
-  ASSERT_EQ(std::size_t{0}, Refcounted::objects());
   auto observable =
       Observables::range(0, 10)->filter([](int64_t v) { return v % 2 != 0; });
   EXPECT_EQ(run(std::move(observable)), std::vector<int64_t>({1, 3, 5, 7, 9}));
-  EXPECT_EQ(std::size_t{0}, Refcounted::objects());
 }
 
 // TODO: Hits ASAN errors.
 TEST(Observable, DISABLED_SimpleTake) {
-  ASSERT_EQ(0u, Refcounted::objects());
-
   EXPECT_EQ(
       run(Observables::range(0, 100)->take(3)),
       std::vector<int64_t>({0, 1, 2}));
-
-  EXPECT_EQ(0u, Refcounted::objects());
 }
 
 TEST(Observable, SimpleSkip) {
-  ASSERT_EQ(0u, Refcounted::objects());
   EXPECT_EQ(
-      run(Observables::range(0, 10)->skip(8)),
-      std::vector<int64_t>({8, 9}));
-  ASSERT_EQ(0u, Refcounted::objects());
+      run(Observables::range(0, 10)->skip(8)), std::vector<int64_t>({8, 9}));
 }
 
 TEST(Observable, OverflowSkip) {
-  ASSERT_EQ(0u, Refcounted::objects());
-  EXPECT_EQ(
-      run(Observables::range(0, 10)->skip(12)),
-      std::vector<int64_t>({}));
-  ASSERT_EQ(0u, Refcounted::objects());
+  EXPECT_EQ(run(Observables::range(0, 10)->skip(12)), std::vector<int64_t>({}));
 }
 
 TEST(Observable, IgnoreElements) {
-  ASSERT_EQ(0u, Refcounted::objects());
-
   auto collector = make_ref<CollectingObserver<int64_t>>();
-  auto observable = Observables::range(0, 105)
-      ->ignoreElements()
-      ->map([](int64_t v) { return v + 1; });
+  auto observable = Observables::range(0, 105)->ignoreElements()->map(
+      [](int64_t v) { return v + 1; });
   observable->subscribe(collector);
 
   EXPECT_EQ(collector->values(), std::vector<int64_t>({}));
   EXPECT_EQ(collector->complete(), true);
   EXPECT_EQ(collector->error(), false);
-
-  EXPECT_EQ(4u, Refcounted::objects());
 }
 
 TEST(Observable, Error) {
@@ -518,11 +438,7 @@ TEST(Observable, Empty) {
 }
 
 TEST(Observable, ObserversComplete) {
-  EXPECT_EQ(0u, Refcounted::objects());
-
   auto observable = Observables::empty<int>();
-  EXPECT_EQ(1u, Refcounted::objects());
-
   bool completed = false;
 
   auto observer = Observers::create<int>(
@@ -531,19 +447,11 @@ TEST(Observable, ObserversComplete) {
       [&] { completed = true; });
 
   observable->subscribe(std::move(observer));
-  observable.reset();
-
-  EXPECT_EQ(0u, Refcounted::objects());
-
   EXPECT_TRUE(completed);
 }
 
 TEST(Observable, ObserversError) {
-  EXPECT_EQ(0u, Refcounted::objects());
-
   auto observable = Observables::error<int>(std::runtime_error("Whoops"));
-  EXPECT_EQ(1u, Refcounted::objects());
-
   bool errored = false;
 
   auto observer = Observers::create<int>(
@@ -552,27 +460,15 @@ TEST(Observable, ObserversError) {
       [] { unreachable(); });
 
   observable->subscribe(std::move(observer));
-  observable.reset();
-
-  EXPECT_EQ(0u, Refcounted::objects());
-
   EXPECT_TRUE(errored);
 }
 
 TEST(Observable, CancelReleasesObjects) {
-  EXPECT_EQ(0u, Refcounted::objects());
-
   auto lambda = [](Reference<Observer<int>> observer) {
     // we will send nothing
   };
   auto observable = Observable<int>::create(std::move(lambda));
 
-  EXPECT_EQ(1u, Refcounted::objects());
-
   auto collector = make_ref<CollectingObserver<int>>();
   observable->subscribe(collector);
-
-  observable.reset();
-  collector.reset();
-  EXPECT_EQ(0u, Refcounted::objects());
 }
