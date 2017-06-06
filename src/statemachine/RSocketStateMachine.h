@@ -70,10 +70,9 @@ class RSocketStateMachine final
   ///
   /// May result, depending on the implementation of the DuplexConnection, in
   /// processing of one or more frames.
-  bool connect(
+  bool connectServer(
       yarpl::Reference<FrameTransport>,
-      bool sendingPendingFrames,
-      ProtocolVersion protocolVersion);
+      const SetupParameters& setupParams);
 
   /// Disconnects DuplexConnection from the stateMachine.
   /// Existing streams will stay intact.
@@ -136,6 +135,12 @@ class RSocketStateMachine final
 
   void outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf> frame);
 
+  template<typename T>
+  void outputFrameOrEnqueue(T&& frame) {
+    VLOG(3) << "Out: " << frame;
+    outputFrameOrEnqueue(frameSerializer_->serializeOut(std::forward<T>(frame)));
+  }
+
   void requestFireAndForget(Payload request);
 
   template <typename TFrame>
@@ -181,10 +186,9 @@ class RSocketStateMachine final
     return streamsFactory_;
   }
 
-  ProtocolVersion getSerializerProtocolVersion();
-  void setUpFrame(
-      yarpl::Reference<FrameTransport> frameTransport,
-      SetupParameters setupPayload);
+  void connectClientSendSetup(
+      std::unique_ptr<DuplexConnection> connection,
+      SetupParameters setupParams);
 
   void metadataPush(std::unique_ptr<folly::IOBuf> metadata);
 
@@ -200,6 +204,12 @@ class RSocketStateMachine final
   }
 
  private:
+
+  bool connect(
+      yarpl::Reference<FrameTransport>,
+      bool sendingPendingFrames,
+      ProtocolVersion protocolVersion);
+
   /// Performs the same actions as ::endStream without propagating closure
   /// signal to the underlying connection.
   ///

@@ -3,7 +3,7 @@
 #pragma once
 
 #include "yarpl/Flowable.h"
-#include "yarpl/flowable/utils/SubscriptionHelper.h"
+#include "yarpl/utils/credits.h"
 
 namespace yarpl {
 namespace observable {
@@ -45,7 +45,7 @@ class FlowableFromObservableSubscription
     if (n <= 0) {
       return;
     }
-    int64_t r = internal::SubscriptionHelper::addCredits(&requested_, n);
+    auto const r = credits::add(&requested_, n);
     if (r <= 0) {
       return;
     }
@@ -59,7 +59,7 @@ class FlowableFromObservableSubscription
   }
 
   void cancel() override {
-    if (yarpl::flowable::internal::SubscriptionHelper::addCancel(&requested_)) {
+    if (credits::cancel(&requested_)) {
       // if this is the first time calling cancel, send the cancel
       observableSubscription_->cancel();
       release();
@@ -76,8 +76,7 @@ class FlowableFromObservableSubscription
   void onNext(T t) override {
     if (requested_ > 0) {
       subscriber_->onNext(std::move(t));
-      yarpl::flowable::internal::SubscriptionHelper::consumeCredits(
-          &requested_, 1);
+      credits::consume(&requested_, 1);
     }
     // drop anything else received while we don't have credits
   }

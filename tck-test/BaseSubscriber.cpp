@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "tck-test/TestSubscriber.h"
+#include "tck-test/BaseSubscriber.h"
 
 #include <thread>
 
@@ -11,23 +11,7 @@ using namespace folly;
 namespace rsocket {
 namespace tck {
 
-TestSubscriber::TestSubscriber(int initialRequestN)
-    : initialRequestN_(initialRequestN) {}
-
-void TestSubscriber::request(int n) {
-  LOG(INFO) << "... requesting " << n;
-  subscription_->request(n);
-}
-
-void TestSubscriber::cancel() {
-  LOG(INFO) << "... canceling ";
-  canceled_ = true;
-  if (auto subscription = std::move(subscription_)) {
-    subscription->cancel();
-  }
-}
-
-void TestSubscriber::awaitTerminalEvent() {
+void BaseSubscriber::awaitTerminalEvent() {
   std::unique_lock<std::mutex> lock(mutex_);
   if (!terminatedCV_.wait_for(lock, std::chrono::seconds(5), [&] {
         return completed_ || errored_;
@@ -36,7 +20,7 @@ void TestSubscriber::awaitTerminalEvent() {
   }
 }
 
-void TestSubscriber::awaitAtLeast(int numItems) {
+void BaseSubscriber::awaitAtLeast(int numItems) {
   std::unique_lock<std::mutex> lock(mutex_);
   if (!valuesCV_.wait_for(lock, std::chrono::seconds(5), [&] {
         return valuesCount_ >= numItems;
@@ -45,7 +29,7 @@ void TestSubscriber::awaitAtLeast(int numItems) {
   }
 }
 
-void TestSubscriber::awaitNoEvents(int waitTime) {
+void BaseSubscriber::awaitNoEvents(int waitTime) {
   int valuesCount = valuesCount_;
   bool completed = completed_;
   bool errored = errored_;
@@ -58,19 +42,19 @@ void TestSubscriber::awaitNoEvents(int waitTime) {
   }
 }
 
-void TestSubscriber::assertNoErrors() {
+void BaseSubscriber::assertNoErrors() {
   if (errored_) {
     throw std::runtime_error("Subscription completed with unexpected errors");
   }
 }
 
-void TestSubscriber::assertError() {
+void BaseSubscriber::assertError() {
   if (!errored_) {
     throw std::runtime_error("Subscriber did not receive onError");
   }
 }
 
-void TestSubscriber::assertValues(
+void BaseSubscriber::assertValues(
     const std::vector<std::pair<std::string, std::string>>& values) {
   assertValueCount(values.size());
   std::unique_lock<std::mutex> lock(mutex_);
@@ -86,7 +70,7 @@ void TestSubscriber::assertValues(
   }
 }
 
-void TestSubscriber::assertValueCount(size_t valueCount) {
+void BaseSubscriber::assertValueCount(size_t valueCount) {
   std::unique_lock<std::mutex> lock(mutex_);
   if (values_.size() != valueCount) {
     throw std::runtime_error(folly::sformat(
@@ -96,7 +80,7 @@ void TestSubscriber::assertValueCount(size_t valueCount) {
   }
 }
 
-void TestSubscriber::assertReceivedAtLeast(size_t valueCount) {
+void BaseSubscriber::assertReceivedAtLeast(size_t valueCount) {
   std::unique_lock<std::mutex> lock(mutex_);
   if (values_.size() < valueCount) {
     throw std::runtime_error(folly::sformat(
@@ -106,74 +90,22 @@ void TestSubscriber::assertReceivedAtLeast(size_t valueCount) {
   }
 }
 
-void TestSubscriber::assertCompleted() {
+void BaseSubscriber::assertCompleted() {
   if (!completed_) {
     throw std::runtime_error("Subscriber did not completed");
   }
 }
 
-void TestSubscriber::assertNotCompleted() {
+void BaseSubscriber::assertNotCompleted() {
   if (completed_) {
     throw std::runtime_error("Subscriber unexpectedly completed");
   }
 }
 
-void TestSubscriber::assertCanceled() {
+void BaseSubscriber::assertCanceled() {
   if (!canceled_) {
     throw std::runtime_error("Subscription should be canceled");
   }
-}
-
-void TestSubscriber::assertTerminated() {
-  if (!completed_ && !errored_) {
-    throw std::runtime_error(
-        "Subscription is not terminated yet. "
-        "This is most likely a bug in the test.");
-  }
-}
-
-void TestSubscriber::onSubscribe(
-    yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept {
-  VLOG(4) << "OnSubscribe in TestSubscriber";
-  subscription_ = subscription;
-  if (initialRequestN_ > 0) {
-    subscription_->request(initialRequestN_);
-  }
-}
-
-void TestSubscriber::onNext(Payload element) noexcept {
-  LOG(INFO) << "... received onNext from Publisher: " << element;
-  {
-    std::unique_lock<std::mutex> lock(mutex_);
-    std::string data =
-        element.data ? element.data->moveToFbString().toStdString() : "";
-    std::string metadata = element.metadata
-        ? element.metadata->moveToFbString().toStdString()
-        : "";
-    values_.push_back(std::make_pair(data, metadata));
-    ++valuesCount_;
-  }
-  valuesCV_.notify_one();
-}
-
-void TestSubscriber::onComplete() noexcept {
-  LOG(INFO) << "... received onComplete from Publisher";
-  {
-    std::unique_lock<std::mutex> lock(mutex_);
-    completed_ = true;
-  }
-
-  terminatedCV_.notify_one();
-}
-
-void TestSubscriber::onError(std::exception_ptr ex) noexcept {
-  LOG(INFO) << "... received onError from Publisher";
-  {
-    std::unique_lock<std::mutex> lock(mutex_);
-    errors_.push_back(std::move(ex));
-    errored_ = true;
-  }
-  terminatedCV_.notify_one();
 }
 
 } // tck

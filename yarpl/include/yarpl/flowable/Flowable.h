@@ -9,21 +9,23 @@
 #include <string>
 #include <type_traits>
 #include <utility>
-#include "yarpl/Scheduler.h"
-#include "yarpl/utils/type_traits.h"
+
 #include "../Refcounted.h"
 #include "Subscriber.h"
 #include "Subscribers.h"
+#include "yarpl/Scheduler.h"
+#include "yarpl/utils/credits.h"
+#include "yarpl/utils/type_traits.h"
 
 namespace yarpl {
 namespace flowable {
 
 template <typename T>
 class Flowable : public virtual Refcounted {
- public:
-  static const auto CANCELED = std::numeric_limits<int64_t>::min();
-  static const auto NO_FLOW_CONTROL = std::numeric_limits<int64_t>::max();
+  constexpr static auto kCanceled = credits::kCanceled;
+  constexpr static auto kNoFlowControl = credits::kNoFlowControl;
 
+ public:
   virtual void subscribe(Reference<Subscriber<T>>) = 0;
 
   /**
@@ -36,7 +38,7 @@ class Flowable : public virtual Refcounted {
       typename Next,
       typename =
           typename std::enable_if<std::is_callable<Next(T), void>::value>::type>
-  void subscribe(Next&& next, int64_t batch = Flowable<T>::NO_FLOW_CONTROL) {
+  void subscribe(Next&& next, int64_t batch = kNoFlowControl) {
     subscribe(Subscribers::create<T>(next, batch));
   }
 
@@ -56,7 +58,7 @@ class Flowable : public virtual Refcounted {
   void subscribe(
       Next&& next,
       Error&& error,
-      int64_t batch = Flowable<T>::NO_FLOW_CONTROL) {
+      int64_t batch = kNoFlowControl) {
     subscribe(Subscribers::create<T>(next, error, batch));
   }
 
@@ -80,7 +82,7 @@ class Flowable : public virtual Refcounted {
       Next&& next,
       Error&& error,
       Complete&& complete,
-      int64_t batch = Flowable<T>::NO_FLOW_CONTROL) {
+      int64_t batch = kNoFlowControl) {
     subscribe(Subscribers::create<T>(next, error, complete, batch));
   }
 
@@ -164,7 +166,7 @@ class Flowable : public virtual Refcounted {
       while (true) {
         auto current = requested_.load(std::memory_order_relaxed);
 
-        if(current == CANCELED) {
+        if (current == kCanceled) {
           // this can happen because there could be an async barrier between
           // the subscriber and the subscription
           // for instance while onComplete is being delivered
@@ -172,14 +174,10 @@ class Flowable : public virtual Refcounted {
           return;
         }
 
-        // Turn flow control off for overflow.
-        auto const total =
-            (current > std::numeric_limits<int64_t>::max() - delta)
-            ? NO_FLOW_CONTROL
-            : current + delta;
-
-        if (requested_.compare_exchange_strong(current, total))
+        auto const total = credits::add(current, delta);
+        if (requested_.compare_exchange_strong(current, total)) {
           break;
+        }
       }
 
       process();
@@ -190,8 +188,8 @@ class Flowable : public virtual Refcounted {
       // make sure we break the reference cycle between subscription and
       // subscriber
       //
-      auto previous = requested_.exchange(CANCELED, std::memory_order_relaxed);
-      if(previous != CANCELED) {
+      auto previous = requested_.exchange(kCanceled, std::memory_order_relaxed);
+      if(previous != kCanceled) {
         // this can happen because there could be an async barrier between
         // the subscriber and the subscription
         // for instance while onComplete is being delivered
@@ -213,8 +211,8 @@ class Flowable : public virtual Refcounted {
     void onComplete() override {
       // we will set the flag first to save a potential call to lock.try_lock()
       // in the process method via cancel or request methods
-      auto old = requested_.exchange(CANCELED, std::memory_order_relaxed);
-      assert(old != CANCELED && "calling onComplete or onError twice or on "
+      auto old = requested_.exchange(kCanceled, std::memory_order_relaxed);
+      assert(old != kCanceled && "calling onComplete or onError twice or on "
           "canceled subscription");
 
       subscriber_->onComplete();
@@ -227,8 +225,8 @@ class Flowable : public virtual Refcounted {
     void onError(const std::exception_ptr error) override {
       // we will set the flag first to save a potential call to lock.try_lock()
       // in the process method via cancel or request methods
-      auto old = requested_.exchange(CANCELED, std::memory_order_relaxed);
-      assert(old != CANCELED && "calling onComplete or onError twice or on "
+      auto old = requested_.exchange(kCanceled, std::memory_order_relaxed);
+      assert(old != kCanceled && "calling onComplete or onError twice or on "
           "canceled subscription");
 
       subscriber_->onError(error);
@@ -260,7 +258,7 @@ class Flowable : public virtual Refcounted {
         auto current = requested_.load(std::memory_order_relaxed);
 
         // Subscription was canceled, completed, or had an error.
-        if (current == CANCELED) {
+        if (current == kCanceled) {
           // Don't destroy a locked mutex.
           lock.unlock();
 
@@ -282,12 +280,14 @@ class Flowable : public virtual Refcounted {
 
         while (true) {
           current = requested_.load(std::memory_order_relaxed);
-          if (current == CANCELED || (current == NO_FLOW_CONTROL && !done))
+          if (current == kCanceled || (current == kNoFlowControl && !done)) {
             break;
+          }
 
-          auto updated = done ? CANCELED : current - emitted;
-          if (requested_.compare_exchange_strong(current, updated))
+          auto updated = done ? kCanceled : current - emitted;
+          if (requested_.compare_exchange_strong(current, updated)) {
             break;
+          }
         }
       }
     }

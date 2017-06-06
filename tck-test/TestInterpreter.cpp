@@ -6,6 +6,8 @@
 #include <folly/String.h>
 #include <folly/io/async/EventBase.h>
 
+#include "tck-test/FlowableSubscriber.h"
+#include "tck-test/SingleSubscriber.h"
 #include "tck-test/TypedCommands.h"
 
 using namespace folly;
@@ -16,12 +18,12 @@ namespace tck {
 
 TestInterpreter::TestInterpreter(
     const Test& test,
-    ReactiveSocket& reactiveSocket)
-    : reactiveSocket_(&reactiveSocket), test_(test) {
+    std::shared_ptr<RSocketRequester> requester)
+    : requester_(requester), test_(test) {
   DCHECK(!test.empty());
 }
 
-bool TestInterpreter::run(folly::EventBase* evb) {
+bool TestInterpreter::run() {
   LOG(INFO) << "Executing test: " << test_.name() << " ("
             << test_.commands().size() - 1 << " commands)";
 
@@ -33,19 +35,16 @@ bool TestInterpreter::run(folly::EventBase* evb) {
       ++i;
       if (command.name() == "subscribe") {
         auto subscribe = command.as<SubscribeCommand>();
-        evb->runInEventBaseThreadAndWait(
-            [this, &subscribe]() { handleSubscribe(subscribe); });
+        handleSubscribe(subscribe);
       } else if (command.name() == "request") {
         auto request = command.as<RequestCommand>();
-        evb->runInEventBaseThreadAndWait(
-            [this, &request]() { handleRequest(request); });
+        handleRequest(request);
       } else if (command.name() == "await") {
         auto await = command.as<AwaitCommand>();
         handleAwait(await);
       } else if (command.name() == "cancel") {
         auto cancel = command.as<CancelCommand>();
-        evb->runInEventBaseThreadAndWait(
-            [this, &cancel]() { handleCancel(cancel); });
+        handleCancel(cancel);
       } else if (command.name() == "assert") {
         auto assert = command.as<AssertCommand>();
         handleAssert(assert);
@@ -68,16 +67,21 @@ bool TestInterpreter::run(folly::EventBase* evb) {
 
 void TestInterpreter::handleSubscribe(const SubscribeCommand& command) {
   interactionIdToType_[command.id()] = command.type();
+  CHECK(testSubscribers_.find(command.id()) == testSubscribers_.end());
   if (command.isRequestResponseType()) {
-    auto testSubscriber = createTestSubscriber(command.id());
-    reactiveSocket_->requestResponse(
-        Payload(command.payloadData(), command.payloadMetadata()),
-        std::move(testSubscriber));
+    auto testSubscriber = make_ref<SingleSubscriber>();
+    testSubscribers_[command.id()] = testSubscriber;
+    requester_
+        ->requestResponse(
+            Payload(command.payloadData(), command.payloadMetadata()))
+        ->subscribe(std::move(testSubscriber));
   } else if (command.isRequestStreamType()) {
-    auto testSubscriber = createTestSubscriber(command.id());
-    reactiveSocket_->requestStream(
-        Payload(command.payloadData(), command.payloadMetadata()),
-        std::move(testSubscriber));
+    auto testSubscriber = make_ref<FlowableSubscriber>();
+    testSubscribers_[command.id()] = testSubscriber;
+    requester_
+        ->requestStream(
+            Payload(command.payloadData(), command.payloadMetadata()))
+        ->subscribe(std::move(testSubscriber));
   } else {
     throw std::runtime_error("unsupported interaction type");
   }
@@ -136,18 +140,7 @@ void TestInterpreter::handleAssert(const AssertCommand& command) {
   }
 }
 
-yarpl::Reference<TestSubscriber> TestInterpreter::createTestSubscriber(
-    const std::string& id) {
-  if (testSubscribers_.find(id) != testSubscribers_.end()) {
-    throw std::runtime_error("test subscriber with the same id already exists");
-  }
-
-  auto testSubscriber = make_ref<TestSubscriber>();
-  testSubscribers_[id] = testSubscriber;
-  return testSubscriber;
-}
-
-yarpl::Reference<TestSubscriber> TestInterpreter::getSubscriber(
+yarpl::Reference<BaseSubscriber> TestInterpreter::getSubscriber(
     const std::string& id) {
   auto found = testSubscribers_.find(id);
   if (found == testSubscribers_.end()) {

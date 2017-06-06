@@ -49,10 +49,8 @@ std::map<std::string, std::pair<std::string, std::string>> getArgMap(
 namespace rsocket {
 namespace tck {
 
-MarbleProcessor::MarbleProcessor(
-    const std::string marble,
-    const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>& subscriber)
-    : marble_(std::move(marble)), subscriber_(std::move(subscriber)) {
+MarbleProcessor::MarbleProcessor(const std::string marble)
+    : marble_(std::move(marble)) {
   // Remove '-' which is of no consequence for the tests
   marble_.erase(
       std::remove(marble_.begin(), marble_.end(), '-'), marble_.end());
@@ -69,28 +67,70 @@ MarbleProcessor::MarbleProcessor(
   }
 }
 
-void MarbleProcessor::run() {
-  for (const char& c : marble_) {
-    if (terminated_) {
-      return;
-    }
+std::tuple<int64_t, bool> MarbleProcessor::run(
+    yarpl::flowable::Subscriber<rsocket::Payload>& subscriber,
+    int64_t requested) {
+  canSend_ += requested;
+  if (index_ > marble_.size()) {
+    return std::make_tuple(requested, true);
+  }
+
+  while (true) {
+    auto c = marble_[index_];
     switch (c) {
       case '#':
-        while (!canTerminate_)
-          ;
         LOG(INFO) << "Sending onError";
-        subscriber_->onError(std::make_exception_ptr(
-            std::runtime_error("Marble Triggered Error")));
+        subscriber.onError(
+            std::make_exception_ptr(std::runtime_error("Marble Error")));
+        return std::make_tuple(requested, true);
+      case '|':
+        LOG(INFO) << "Sending onComplete";
+        subscriber.onComplete();
+        return std::make_tuple(requested, true);
+      default: {
+        if (canSend_ > 0) {
+          Payload payload;
+          auto it = argMap_.find(folly::to<std::string>(c));
+          LOG(INFO) << "Sending data " << c;
+          if (it != argMap_.end()) {
+            LOG(INFO) << folly::sformat(
+                "Using mapping {}->{}:{}",
+                c,
+                it->second.first,
+                it->second.second);
+            payload = Payload(it->second.first, it->second.second);
+          } else {
+            payload =
+                Payload(folly::to<std::string>(c), folly::to<std::string>(c));
+          }
+          subscriber.onNext(std::move(payload));
+          canSend_--;
+        } else {
+          return std::make_tuple(requested, false);
+        }
+      }
+    }
+    index_++;
+  }
+}
+
+void MarbleProcessor::run(
+    yarpl::Reference<yarpl::single::SingleObserver<rsocket::Payload>>
+        subscriber) {
+  while (true) {
+    auto c = marble_[index_];
+    switch (c) {
+      case '#':
+        LOG(INFO) << "Sending onError";
+        subscriber->onError(
+            std::make_exception_ptr(std::runtime_error("Marble Error")));
         return;
       case '|':
-        while (!canTerminate_)
-          ;
         LOG(INFO) << "Sending onComplete";
-        subscriber_->onComplete();
+        subscriber->onError(
+            std::make_exception_ptr(std::runtime_error("No Response found")));
         return;
-      default:
-        while (canSend_ <= 0)
-          ;
+      default: {
         Payload payload;
         auto it = argMap_.find(folly::to<std::string>(c));
         LOG(INFO) << "Sending data " << c;
@@ -105,22 +145,12 @@ void MarbleProcessor::run() {
           payload =
               Payload(folly::to<std::string>(c), folly::to<std::string>(c));
         }
-        subscriber_->onNext(std::move(payload));
-        canSend_--;
-        break;
+        subscriber->onSuccess(std::move(payload));
+        return;
+      }
     }
+    index_++;
   }
-}
-
-void MarbleProcessor::request(size_t n) {
-  LOG(INFO) << "Received request (" << n << ")";
-  canTerminate_ = true;
-  canSend_ += n;
-}
-
-void MarbleProcessor::cancel() {
-  LOG(INFO) << "Received cancel";
-  terminated_ = true;
 }
 
 } // tck

@@ -6,8 +6,10 @@
 #include <mutex>
 #include <sstream>
 #include <vector>
+
 #include "Flowable.h"
 #include "Subscriber.h"
+#include "yarpl/utils/credits.h"
 
 namespace yarpl {
 namespace flowable {
@@ -62,7 +64,7 @@ class TestSubscriber : public Subscriber<T> {
     } else {
       subscription_ = std::move(subscription);
     }
-    subscription_->request(Flowable<T>::NO_FLOW_CONTROL);
+    subscription_->request(credits::kNoFlowControl);
   }
 
   void onNext(T t) override {

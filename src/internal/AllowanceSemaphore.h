@@ -17,9 +17,6 @@ class AllowanceSemaphore {
   explicit AllowanceSemaphore(ValueType initialValue) : value_(initialValue) {}
 
   bool tryAcquire(ValueType n = 1) {
-    if (isInfinite()) {
-      return true;
-    }
     if (!canAcquire(n)) {
       return false;
     }
@@ -40,18 +37,11 @@ class AllowanceSemaphore {
     return value_ >= n;
   }
 
-  bool isInfinite() const {
-    return value_ == max();
-  }
-
   ValueType drain() {
     return drainWithLimit(max());
   }
 
   ValueType drainWithLimit(ValueType limit) {
-    if (isInfinite()) {
-      return value_;
-    }
     if (limit > value_) {
       limit = value_;
     }

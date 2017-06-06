@@ -5,6 +5,8 @@
 #include <folly/futures/Future.h>
 #include "RSocketRequester.h"
 #include "src/ConnectionFactory.h"
+#include "src/RSocketParameters.h"
+#include "src/RSocketStats.h"
 
 namespace rsocket {
 
@@ -23,10 +25,6 @@ class RSocketClient {
   RSocketClient& operator=(const RSocketClient&) = delete; // copy
   RSocketClient& operator=(RSocketClient&&) = delete; // move
 
-  // TODO ConnectionSetupPayload
-  // TODO keepalive timer
-  // TODO duplex with RequestHandler
-
   /*
    * Connect asynchronously and return a Future which will deliver the RSocket
    *
@@ -40,7 +38,11 @@ class RSocketClient {
    * To destruct a single RSocketRequester sooner than the RSocketClient
    * call RSocketRequester.close().
    */
-  folly::Future<std::shared_ptr<RSocketRequester>> connect();
+  folly::Future<std::shared_ptr<RSocketRequester>> connect(
+      SetupParameters setupParameters = SetupParameters(),
+      std::shared_ptr<RSocketResponder> responder = std::shared_ptr<RSocketResponder>(),
+      std::shared_ptr<RSocketStats> stats = RSocketStats::noop(),
+      std::unique_ptr<KeepaliveTimer> keepaliveTimer = std::unique_ptr<KeepaliveTimer>());
 
   // TODO implement version supporting fast start (send SETUP and requests
   // without waiting for transport to connect and ack)

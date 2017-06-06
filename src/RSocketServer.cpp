@@ -149,22 +149,7 @@ void RSocketServer::onSetupConnection(
       });
 
   addConnection(rs, *eventBase);
-
-  // TODO ---> this code needs to be moved inside RSocketStateMachine
-
-  // Connect last, after all state has been set up.
-  rs->setResumable(setupParams.resumable);
-
-  if (setupParams.protocolVersion != ProtocolVersion::Unknown) {
-    rs->setFrameSerializer(
-        FrameSerializer::createFrameSerializer(setupParams.protocolVersion));
-  }
-
-  rs->connect(std::move(frameTransport), true, setupParams.protocolVersion);
-
-  // TODO <---- up to here
-  // TODO and then a simple API such as:
-  // TODO rs->connectServer(frameTransport, params)
+  rs->connectServer(std::move(frameTransport), setupParams);
 }
 
 void RSocketServer::onResumeConnection(

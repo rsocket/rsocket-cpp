@@ -3,10 +3,11 @@
 #pragma once
 
 #include <map>
-#include "src/Payload.h"
-#include "test/deprecated/ReactiveSocket.h"
 
-#include "tck-test/TestSubscriber.h"
+#include "src/Payload.h"
+#include "src/RSocketRequester.h"
+
+#include "tck-test/BaseSubscriber.h"
 #include "tck-test/TestSuite.h"
 
 namespace folly {
@@ -27,9 +28,11 @@ class AssertCommand;
 
 class TestInterpreter {
  public:
-  TestInterpreter(const Test& test, ReactiveSocket& reactiveSocket);
+  TestInterpreter(
+      const Test& test,
+      std::shared_ptr<RSocketRequester> requester);
 
-  bool run(folly::EventBase* evb);
+  bool run();
 
  private:
   void handleSubscribe(const SubscribeCommand& command);
@@ -38,13 +41,12 @@ class TestInterpreter {
   void handleCancel(const CancelCommand& command);
   void handleAssert(const AssertCommand& command);
 
-  yarpl::Reference<TestSubscriber> createTestSubscriber(const std::string& id);
-  yarpl::Reference<TestSubscriber> getSubscriber(const std::string& id);
+  yarpl::Reference<BaseSubscriber> getSubscriber(const std::string& id);
 
-  ReactiveSocket* reactiveSocket_;
+  std::shared_ptr<RSocketRequester> requester_;
   const Test& test_;
   std::map<std::string, std::string> interactionIdToType_;
-  std::map<std::string, yarpl::Reference<TestSubscriber>> testSubscribers_;
+  std::map<std::string, yarpl::Reference<BaseSubscriber>> testSubscribers_;
 };
 
 } // tck
