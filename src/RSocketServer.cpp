@@ -9,6 +9,7 @@
 #include "src/RSocketNetworkStats.h"
 #include "src/RSocketStats.h"
 #include "statemachine/RSocketStateMachine.h"
+#include "src/internal/RSocketConnectionManager.h"
 
 namespace rsocket {
 
@@ -19,7 +20,8 @@ RSocketServer::RSocketServer(
         return new rsocket::SetupResumeAcceptor(
             ProtocolVersion::Unknown,
             folly::EventBaseManager::get()->getExistingEventBase());
-      }) {}
+      }),
+      connectionManager_(std::make_unique<RSocketConnectionManager>()) {}
 
 RSocketServer::~RSocketServer() {
   // Will stop forwarding connections from duplexConnectionAcceptor_ to
@@ -37,29 +39,7 @@ RSocketServer::~RSocketServer() {
 
   folly::collectAll(closingFutures).get();
 
-  // Asynchronously close all existing ReactiveSockets.  If there are none, then
-  // we can do an early exit.
-  {
-    auto locked = sockets_.lock();
-    if (locked->empty()) {
-      return;
-    }
-
-    shutdown_.emplace();
-
-    for (auto& connectionPair : *locked) {
-      // close() has to be called on the same executor as the socket
-      auto& executor_ = connectionPair.second;
-      executor_.add([s = connectionPair.first] {
-        s->close(
-            folly::exception_wrapper(), StreamCompletionSignal::SOCKET_CLOSED);
-      });
-    }
-  }
-
-  // Wait for all ReactiveSockets to close.
-  shutdown_->wait();
-  DCHECK(sockets_.lock()->empty());
+  connectionManager_.reset(); // will close all existing RSockets and wait
 
   // All requests are fully finished, worker threads can be safely killed off.
 }
@@ -103,17 +83,6 @@ void RSocketServer::start(OnSetupConnection onSetupConnection) {
       .get(); // block until finished and return or throw
 }
 
-class RSocketServerNetworkStats : public RSocketNetworkStats {
- public:
-  void onClosed(const folly::exception_wrapper&) override {
-    if (onClose) {
-      onClose();
-    }
-  }
-
-   std::function<void()> onClose;
-};
-
 void RSocketServer::onSetupConnection(
     OnSetupConnection onSetupConnection,
     std::shared_ptr<FrameTransport> frameTransport,
@@ -123,6 +92,7 @@ void RSocketServer::onSetupConnection(
   VLOG(1) << "Received new setup payload";
 
   auto* eventBase = folly::EventBaseManager::get()->getExistingEventBase();
+  CHECK(eventBase);
 
   std::shared_ptr<RSocketResponder> requestResponder;
   try {
@@ -142,26 +112,14 @@ void RSocketServer::onSetupConnection(
     requestResponder = std::make_shared<RSocketResponder>();
   }
 
-  auto removeRSocketCallback = std::make_shared<RSocketServerNetworkStats>();
-
   auto rs = std::make_shared<RSocketStateMachine>(
       *eventBase,
       std::move(requestResponder),
       nullptr,
       ReactiveSocketMode::SERVER,
-      RSocketStats::noop(),
-      removeRSocketCallback);
+      RSocketStats::noop());
 
-  removeRSocketCallback->onClose = [this, rs, eventBase]() {
-      // Enqueue another event to remove and delete it.  We cannot delete
-      // the RSocketStateMachine now as it still needs to finish processing
-      // the onClosed handlers in the stack frame above us.
-      eventBase->add([this, rs] {
-          removeConnection(rs);
-      });
-  };
-
-  addConnection(rs, *eventBase);
+  connectionManager_->manageConnection(rs, *eventBase);
   rs->connectServer(std::move(frameTransport), setupParams);
 }
 
@@ -184,21 +142,4 @@ void RSocketServer::unpark() {
   waiting_.post();
 }
 
-void RSocketServer::addConnection(
-    std::shared_ptr<RSocketStateMachine> socket,
-    folly::Executor& executor) {
-  sockets_.lock()->insert({std::move(socket), executor});
-}
-
-void RSocketServer::removeConnection(
-    const std::shared_ptr<RSocketStateMachine>& socket) {
-  auto locked = sockets_.lock();
-  locked->erase(socket);
-
-  VLOG(2) << "Removed ReactiveSocket";
-
-  if (shutdown_ && locked->empty()) {
-    shutdown_->post();
-  }
-}
 } // namespace rsocket

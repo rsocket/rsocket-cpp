@@ -15,6 +15,7 @@
 namespace rsocket {
 
 class RSocketStateMachine;
+class RSocketConnectionManager;
 
 using OnSetupConnection = std::function<std::shared_ptr<RSocketResponder>(SetupParameters&)>;
 using OnResumeConnection = std::function<void(ResumeParameters&)>;
@@ -90,27 +91,15 @@ class RSocketServer {
       std::shared_ptr<rsocket::FrameTransport> frameTransport,
       rsocket::ResumeParameters setupPayload);
 
-    void addConnection(
-      std::shared_ptr<rsocket::RSocketStateMachine>,
-      folly::Executor&);
-  void removeConnection(const std::shared_ptr<rsocket::RSocketStateMachine>&);
-
   std::unique_ptr<ConnectionAcceptor> duplexConnectionAcceptor_;
   bool started{false};
-
-  /// Set of currently open ReactiveSockets.
-  folly::Synchronized<
-      std::unordered_map<
-          std::shared_ptr<rsocket::RSocketStateMachine>,
-          folly::Executor&>,
-      std::mutex>
-      sockets_;
 
   class SetupResumeAcceptorTag{};
   folly::ThreadLocal<rsocket::SetupResumeAcceptor, SetupResumeAcceptorTag> setupResumeAcceptors_;
 
   folly::Baton<> waiting_;
-  folly::Optional<folly::Baton<>> shutdown_;
   std::atomic<bool> isShutdown_{false};
+
+  std::unique_ptr<RSocketConnectionManager> connectionManager_;
 };
 } // namespace rsocket

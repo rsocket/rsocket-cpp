@@ -205,6 +205,10 @@ class RSocketStateMachine final
     return *stats_;
   }
 
+  std::shared_ptr<RSocketNetworkStats>& networkStats() {
+    return networkStats_;
+  }
+
  private:
 
   bool connect(
@@ -292,6 +296,6 @@ class RSocketStateMachine final
   StreamsFactory streamsFactory_;
 
   const std::shared_ptr<RSocketStats> stats_;
-  const std::shared_ptr<RSocketNetworkStats> networkStats_;
+  std::shared_ptr<RSocketNetworkStats> networkStats_;
 };
 }
