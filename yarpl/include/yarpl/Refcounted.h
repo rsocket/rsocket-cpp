@@ -14,32 +14,24 @@ namespace yarpl {
 /// of boost::intrusive_ptr<>, except that we have virtual methods
 /// anyway, and want to avoid argument-dependent lookup.
 ///
-/// NOTE: only derive using "virtual public" inheritance.
+/// NOTE: Only derive using "virtual public" inheritance.
 class Refcounted {
  public:
-#if !defined(NDEBUG)
-  Refcounted();
-  virtual ~Refcounted();
-
-  // Return the number of live refcounted objects.  For testing.
-  static std::size_t objects();
+  virtual ~Refcounted() = default;
 
   // Return the current count.  For testing.
   std::size_t count() const {
     return refcount_;
   }
-#else /* NDEBUG */
-  virtual ~Refcounted() = default;
-#endif /* NDEBUG */
 
-  // not intended to be broadly used by the application code
-  // mostly for library code (static to purposely make it more awkward)
+  // Not intended to be broadly used by the application code mostly for library
+  // code (static to purposely make it more awkward).
   static void incRef(Refcounted& obj) {
     obj.incRef();
   }
 
-  // not intended to be broadly used by the application code
-  // mostly for library code (static to purposely make it more awkward)
+  // Not intended to be broadly used by the application code mostly for library
+  // code (static to purposely make it more awkward).
   static void decRef(Refcounted& obj) {
     obj.decRef();
   }
@@ -59,15 +51,11 @@ class Refcounted {
   }
 
   mutable std::atomic_size_t refcount_{0};
-
-#if !defined(NDEBUG)
-  static std::atomic_size_t objects_;
-#endif /* NDEBUG */
 };
 
 /// RAII-enabling smart pointer for refcounted objects.  Each reference
-/// constructed against a target refcounted object increases its count
-/// by 1 during its lifetime.
+/// constructed against a target refcounted object increases its count by 1
+/// during its lifetime.
 template <typename T>
 class Reference {
  public:

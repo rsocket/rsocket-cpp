@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <folly/Function.h>
 #include "src/DuplexConnection.h"
 
 namespace folly {
@@ -10,7 +11,7 @@ class EventBase;
 
 namespace rsocket {
 
-using OnConnect = std::function<
+using OnConnect = folly::Function<
     void(std::unique_ptr<rsocket::DuplexConnection>, folly::EventBase&)>;
 
 /**

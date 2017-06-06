@@ -17,38 +17,53 @@ RSocketClient::RSocketClient(
   VLOG(1) << "Constructing RSocketClient";
 }
 
-folly::Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect() {
+folly::Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect(
+    SetupParameters setupParameters,
+    std::shared_ptr<RSocketResponder> responder,
+    std::shared_ptr<RSocketStats> stats,
+    std::unique_ptr<KeepaliveTimer> keepaliveTimer) {
   VLOG(2) << "Starting connection";
 
-  auto promise =
-      std::make_shared<folly::Promise<std::shared_ptr<RSocketRequester>>>();
-  auto future = promise->getFuture();
+  folly::Promise<std::shared_ptr<RSocketRequester>> promise;
+  auto future = promise.getFuture();
 
-  connectionFactory_->connect([this, promise = std::move(promise)](
+  connectionFactory_->connect([
+    this,
+    setupParameters = std::move(setupParameters),
+    responder = std::move(responder),
+    stats = std::move(stats),
+    keepaliveTimer = std::move(keepaliveTimer),
+    promise = std::move(promise)](
       std::unique_ptr<DuplexConnection> connection,
       folly::EventBase& eventBase) mutable {
     VLOG(3) << "onConnect received DuplexConnection";
 
+    if (!responder) {
+      responder = std::make_shared<RSocketResponder>();
+    }
+
+    if (!stats) {
+      stats = RSocketStats::noop();
+    }
+
+    if (!keepaliveTimer) {
+      keepaliveTimer = std::make_unique<FollyKeepaliveTimer>(
+          eventBase, std::chrono::milliseconds(5000));
+    }
+
     auto rs = std::make_shared<RSocketStateMachine>(
         eventBase,
-        // need to allow Responder being passed in optionally
-        std::make_shared<RSocketResponder>(),
-        // need to allow stats being passed in
-        RSocketStats::noop(),
-        // TODO need to optionally allow defining the keepalive timer
-        std::make_unique<FollyKeepaliveTimer>(
-            eventBase, std::chrono::milliseconds(5000)),
+        std::move(responder),
+        std::move(stats),
+        std::move(keepaliveTimer),
         ReactiveSocketMode::CLIENT);
-
-    // TODO need to allow this being passed in
-    auto setupParameters =
-        SetupParameters("text/plain", "text/plain", Payload("meta", "data"));
     rs->connectClientSendSetup(std::move(connection), std::move(setupParameters));
 
     auto rsocket = RSocketRequester::create(std::move(rs), eventBase);
+
     // store it so it lives as long as the RSocketClient
     rsockets_.push_back(rsocket);
-    promise->setValue(rsocket);
+    promise.setValue(std::move(rsocket));
   });
 
   return future;
