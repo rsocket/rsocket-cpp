@@ -22,8 +22,8 @@ class RSocketParameters {
 class SetupParameters : public RSocketParameters {
  public:
   explicit SetupParameters(
-      std::string _metadataMimeType = "",
-      std::string _dataMimeType = "",
+      std::string _metadataMimeType = "text/plain",
+      std::string _dataMimeType = "text/plain",
       Payload _payload = Payload(),
       bool _resumable = false,
       const ResumeIdentificationToken& _token =
