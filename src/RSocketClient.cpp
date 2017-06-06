@@ -1,10 +1,11 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "RSocketClient.h"
-#include "RSocketRequester.h"
-#include "RSocketResponder.h"
-#include "RSocketStats.h"
+#include "src/RSocketClient.h"
+#include "src/RSocketRequester.h"
+#include "src/RSocketResponder.h"
+#include "src/RSocketStats.h"
 #include "src/internal/FollyKeepaliveTimer.h"
+#include "src/internal/RSocketConnectionManager.h"
 #include "src/framing/FrameTransport.h"
 
 using namespace folly;
@@ -13,8 +14,13 @@ namespace rsocket {
 
 RSocketClient::RSocketClient(
     std::unique_ptr<ConnectionFactory> connectionFactory)
-    : connectionFactory_(std::move(connectionFactory)) {
+    : connectionFactory_(std::move(connectionFactory)),
+      connectionManager_(std::make_unique<RSocketConnectionManager>()) {
   VLOG(1) << "Constructing RSocketClient";
+}
+
+RSocketClient::~RSocketClient() {
+  VLOG(1) << "Destroying RSocketClient";
 }
 
 folly::Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect(
@@ -60,19 +66,16 @@ folly::Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect(
         ReactiveSocketMode::CLIENT,
         std::move(stats),
         std::move(networkStats));
+
+    connectionManager_->manageConnection(rs, eventBase);
+
     rs->connectClientSendSetup(std::move(connection), std::move(setupParameters));
 
-    auto rsocket = RSocketRequester::create(std::move(rs), eventBase);
-
-    // store it so it lives as long as the RSocketClient
-    rsockets_.push_back(rsocket);
+    auto rsocket = std::make_shared<RSocketRequester>(std::move(rs), eventBase);
     promise.setValue(std::move(rsocket));
   });
 
   return future;
 }
 
-RSocketClient::~RSocketClient() {
-  VLOG(1) << "Destroying RSocketClient";
-}
 }

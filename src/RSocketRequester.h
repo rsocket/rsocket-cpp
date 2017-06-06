@@ -34,7 +34,7 @@ namespace rsocket {
  */
 class RSocketRequester {
  public:
-  static std::shared_ptr<RSocketRequester> create(
+  RSocketRequester(
       std::shared_ptr<rsocket::RSocketStateMachine> srs,
       folly::EventBase& eventBase);
 
@@ -102,11 +102,9 @@ class RSocketRequester {
    */
   void metadataPush(std::unique_ptr<folly::IOBuf> metadata);
 
- private:
-  RSocketRequester(
-      std::shared_ptr<rsocket::RSocketStateMachine> srs,
-      folly::EventBase& eventBase);
+  void closeSocket();
 
+ private:
   std::shared_ptr<rsocket::RSocketStateMachine> stateMachine_;
   folly::EventBase& eventBase_;
 };

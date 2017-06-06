@@ -2,6 +2,7 @@
 
 #include "src/internal/RSocketConnectionManager.h"
 #include <folly/io/async/EventBase.h>
+#include <folly/ScopeGuard.h>
 #include <folly/ExceptionWrapper.h>
 #include "src/statemachine/RSocketStateMachine.h"
 #include "src/RSocketNetworkStats.h"
@@ -11,11 +12,16 @@ namespace rsocket {
 RSocketConnectionManager::~RSocketConnectionManager() {
   // Asynchronously close all existing ReactiveSockets.  If there are none, then
   // we can do an early exit.
+  VLOG(1) << "Destroying RSocketConnectionManager...";
+  auto scopeGuard = folly::makeGuard([]{ VLOG(1) << "Destroying RSocketConnectionManager... DONE"; });
+
   {
     auto locked = sockets_.lock();
     if (locked->empty()) {
       return;
     }
+
+    shutdown_.emplace();
 
     for (auto& connectionPair : *locked) {
       // close() has to be called on the same executor as the socket

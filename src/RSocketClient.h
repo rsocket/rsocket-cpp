@@ -11,6 +11,8 @@
 
 namespace rsocket {
 
+class RSocketConnectionManager;
+
 /**
  * API for connecting to an RSocket server. Returned from RSocket::createClient.
  *
@@ -52,6 +54,6 @@ class RSocketClient {
 
  private:
   std::unique_ptr<ConnectionFactory> connectionFactory_;
-  std::vector<std::shared_ptr<RSocketRequester>> rsockets_;
+  std::unique_ptr<RSocketConnectionManager> connectionManager_;
 };
 }
