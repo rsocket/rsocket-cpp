@@ -57,7 +57,7 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
     } else {
       outputSubscription_ = std::move(subscription);
       // no flow control at tcp level, since we can't know the size of messages
-      subscription->request(kMaxRequestN);
+      outputSubscription_->request(kMaxRequestN);
     }
   }
 

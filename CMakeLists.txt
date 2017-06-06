@@ -174,7 +174,7 @@ add_library(
   src/statemachine/RSocketStateMachine.cpp
   src/statemachine/RSocketStateMachine.h
   src/DuplexConnection.h
-        src/internal/FollyKeepaliveTimer.cpp
+  src/internal/FollyKeepaliveTimer.cpp
   src/internal/FollyKeepaliveTimer.h
   src/framing/Frame.cpp
   src/framing/Frame.h
@@ -191,13 +191,13 @@ add_library(
   src/framing/FrameTransport.h
   src/Payload.cpp
   src/Payload.h
-        src/internal/ResumeCache.cpp
+  src/internal/ResumeCache.cpp
   src/internal/ResumeCache.h
   src/internal/SetupResumeAcceptor.cpp
   src/internal/SetupResumeAcceptor.h
   src/RSocketStats.cpp
   src/RSocketStats.h
-        src/transports/tcp/TcpDuplexConnection.cpp
+  src/transports/tcp/TcpDuplexConnection.cpp
   src/transports/tcp/TcpDuplexConnection.h
   src/framing/FrameSerializer_v0.cpp
   src/framing/FrameSerializer_v0.h
