@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <limits>
 #include <vector>
-
+#include <glog/logging.h>
 #include "Flowable.h"
 
 namespace yarpl {
@@ -75,6 +75,26 @@ class Flowables {
       }
 
       return std::make_tuple(emitted, done);
+    };
+
+    return Flowable<T>::create(std::move(lambda));
+  }
+
+  // this will generate a flowable which can be subscribed to only once
+  template <typename T>
+  static Reference<Flowable<T>> justOnce(T value) {
+    auto lambda = [value = std::move(value), used = false](Subscriber<T>& subscriber, int64_t) mutable {
+      if (used) {
+        subscriber.onError(
+            std::make_exception_ptr(std::runtime_error("justOnce value was already used")));
+        return std::make_tuple(static_cast<int64_t>(0), true);
+      }
+
+      used = true;
+      // # requested should be > 0.  Ignoring the actual parameter.
+      subscriber.onNext(std::move(value));
+      subscriber.onComplete();
+      return std::make_tuple(static_cast<int64_t>(1), true);
     };
 
     return Flowable<T>::create(std::move(lambda));

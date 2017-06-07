@@ -437,7 +437,7 @@ void RSocketStateMachine::handleConnectionFrame(
               remoteResumeable_, frame, std::move(payload))) {
         return;
       }
-      VLOG(3) << "In:" << frame;
+      VLOG(3) << "In: " << frame;
       resumeCache_->resetUpToPosition(frame.position_);
       if (mode_ == ReactiveSocketMode::SERVER) {
         if (!!(frame.header_.flags_ & FrameFlags::KEEPALIVE_RESPOND)) {
@@ -459,7 +459,7 @@ void RSocketStateMachine::handleConnectionFrame(
     case FrameType::METADATA_PUSH: {
       Frame_METADATA_PUSH frame;
       if (deserializeFrameOrError(frame, std::move(payload))) {
-        VLOG(3) << "In:" << frame;
+        VLOG(3) << "In: " << frame;
         requestResponder_->handleMetadataPush(std::move(frame.metadata_));
       }
       return;
@@ -469,7 +469,7 @@ void RSocketStateMachine::handleConnectionFrame(
       if (!deserializeFrameOrError(frame, std::move(payload))) {
         return;
       }
-      VLOG(3) << "In:" << frame;
+      VLOG(3) << "In: " << frame;
       if (resumeCallback_) {
         if (resumeCache_->isPositionAvailable(frame.position_)) {
           resumeCallback_->onResumeOk();
@@ -491,7 +491,7 @@ void RSocketStateMachine::handleConnectionFrame(
       if (!deserializeFrameOrError(frame, std::move(payload))) {
         return;
       }
-      VLOG(3) << "In:" << frame;
+      VLOG(3) << "In: " << frame;
 
       // TODO: handle INVALID_SETUP, UNSUPPORTED_SETUP, REJECTED_SETUP
 
@@ -546,12 +546,12 @@ void RSocketStateMachine::handleStreamFrame(
       if (!deserializeFrameOrError(frameRequestN, std::move(serializedFrame))) {
         return;
       }
-      VLOG(3) << "In:" << frameRequestN;
+      VLOG(3) << "In: " << frameRequestN;
       stateMachine->handleRequestN(frameRequestN.requestN_);
       break;
     }
     case FrameType::CANCEL: {
-      VLOG(3) << "In:" << Frame_CANCEL();
+      VLOG(3) << "In: " << Frame_CANCEL();
       stateMachine->handleCancel();
       break;
     }
@@ -560,7 +560,7 @@ void RSocketStateMachine::handleStreamFrame(
       if (!deserializeFrameOrError(framePayload, std::move(serializedFrame))) {
         return;
       }
-      VLOG(3) << "In:" << framePayload;
+      VLOG(3) << "In: " << framePayload;
       stateMachine->handlePayload(
           std::move(framePayload.payload_),
           framePayload.header_.flagsComplete(),
@@ -572,7 +572,7 @@ void RSocketStateMachine::handleStreamFrame(
       if (!deserializeFrameOrError(frameError, std::move(serializedFrame))) {
         return;
       }
-      VLOG(3) << "In:" << frameError;
+      VLOG(3) << "In: " << frameError;
       stateMachine->handleError(
           std::runtime_error(frameError.payload_.moveDataToString()));
       break;
@@ -617,7 +617,7 @@ void RSocketStateMachine::handleUnknownStream(
       if (!deserializeFrameOrError(frame, std::move(serializedFrame))) {
         return;
       }
-      VLOG(3) << "In:" << frame;
+      VLOG(3) << "In: " << frame;
       auto stateMachine =
           streamsFactory_.createChannelResponder(frame.requestN_, streamId);
       auto requestSink = requestResponder_->handleRequestChannelCore(
@@ -630,7 +630,7 @@ void RSocketStateMachine::handleUnknownStream(
       if (!deserializeFrameOrError(frame, std::move(serializedFrame))) {
         return;
       }
-      VLOG(3) << "In:" << frame;
+      VLOG(3) << "In: " << frame;
       auto stateMachine =
           streamsFactory_.createStreamResponder(frame.requestN_, streamId);
       requestResponder_->handleRequestStreamCore(
@@ -642,7 +642,7 @@ void RSocketStateMachine::handleUnknownStream(
       if (!deserializeFrameOrError(frame, std::move(serializedFrame))) {
         return;
       }
-      VLOG(3) << "In:" << frame;
+      VLOG(3) << "In: " << frame;
       auto stateMachine =
           streamsFactory_.createRequestResponseResponder(streamId);
       requestResponder_->handleRequestResponseCore(
@@ -654,7 +654,7 @@ void RSocketStateMachine::handleUnknownStream(
       if (!deserializeFrameOrError(frame, std::move(serializedFrame))) {
         return;
       }
-      VLOG(3) << "In:" << frame;
+      VLOG(3) << "In: " << frame;
       // no stream tracking is necessary
       requestResponder_->handleFireAndForget(
           std::move(frame.payload_), streamId);
@@ -785,15 +785,12 @@ void RSocketStateMachine::requestFireAndForget(Payload request) {
       streamsFactory().getNextStreamId(),
       FrameFlags::EMPTY,
       std::move(std::move(request)));
-  VLOG(3) << "Out: " << frame;
-  outputFrameOrEnqueue(frameSerializer_->serializeOut(std::move(frame)));
+  outputFrameOrEnqueue(std::move(frame));
 }
 
 void RSocketStateMachine::metadataPush(std::unique_ptr<folly::IOBuf> metadata) {
   Frame_METADATA_PUSH metadataPushFrame(std::move(metadata));
-  VLOG(3) << "Out: " << metadataPushFrame;
-  outputFrameOrEnqueue(
-      frameSerializer_->serializeOut(std::move(metadataPushFrame)));
+  outputFrameOrEnqueue(std::move(metadataPushFrame));
 }
 
 void RSocketStateMachine::outputFrame(std::unique_ptr<folly::IOBuf> frame) {

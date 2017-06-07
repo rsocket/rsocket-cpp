@@ -83,6 +83,18 @@ void RSocketServer::start(OnSetupConnection onSetupConnection) {
       .get(); // block until finished and return or throw
 }
 
+// this class will be moved, its just an intermediate step
+class RSocketServerNetworkStats : public RSocketNetworkStats {
+ public:
+  void onClosed(const folly::exception_wrapper&) override {
+    if (onClose) {
+      onClose();
+    }
+  }
+
+   std::function<void()> onClose;
+};
+
 void RSocketServer::onSetupConnection(
     OnSetupConnection onSetupConnection,
     std::shared_ptr<FrameTransport> frameTransport,
@@ -112,12 +124,15 @@ void RSocketServer::onSetupConnection(
     requestResponder = std::make_shared<RSocketResponder>();
   }
 
+  auto removeRSocketCallback = std::make_shared<RSocketServerNetworkStats>();
+
   auto rs = std::make_shared<RSocketStateMachine>(
       *eventBase,
       std::move(requestResponder),
       nullptr,
       ReactiveSocketMode::SERVER,
-      RSocketStats::noop());
+      RSocketStats::noop(),
+      removeRSocketCallback);
 
   connectionManager_->manageConnection(rs, *eventBase);
   rs->connectServer(std::move(frameTransport), setupParams);

@@ -44,7 +44,7 @@ class CollectingSubscriber : public Subscriber<T> {
     }
   }
 
-  const std::vector<T>& values() const {
+  std::vector<T>& values() {
     return values_;
   }
 
@@ -81,7 +81,7 @@ std::vector<T> run(
     uint64_t requestCount = 100) {
   auto collector = make_ref<CollectingSubscriber<T>>(requestCount);
   flowable->subscribe(collector);
-  return collector->values();
+  return std::move(collector->values());
 }
 
 } // namespace
@@ -89,6 +89,22 @@ std::vector<T> run(
 TEST(FlowableTest, SingleFlowable) {
   auto flowable = Flowables::just(10);
   flowable.reset();
+}
+
+TEST(FlowableTest, SingleMovableFlowable) {
+  auto value = std::make_unique<int>(123456);
+
+  auto flowable = Flowables::justOnce(std::move(value));
+  EXPECT_EQ(std::size_t{1}, flowable->count());
+
+  auto values = run(std::move(flowable));
+  EXPECT_EQ(
+      values.size(),
+      size_t(1));
+
+  EXPECT_EQ(
+      *values[0],
+      123456);
 }
 
 TEST(FlowableTest, JustFlowable) {

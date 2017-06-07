@@ -31,6 +31,14 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG")
 
+# Find glog and gflags libraries specifically
+find_path(GLOG_INCLUDE_DIR glog/logging.h)
+
+find_library(GLOG_LIBRARY glog)
+
+message("glog include_dir <${GLOG_INCLUDE_DIR}> lib <${GLOG_LIBRARY}>")
+
+include_directories(SYSTEM ${GLOG_INCLUDE_DIR})
 include_directories(${CMAKE_SOURCE_DIR})
 
 
@@ -138,6 +146,7 @@ target_link_libraries(
         yarpl
         ${FOLLY_LIBRARIES} # inherited from rsocket-cpp CMake
         ${GMOCK_LIBS} # inherited from rsocket-cpp CMake
+        ${GLOG_LIBRARY}
         ${CMAKE_THREAD_LIBS_INIT}
 )
 

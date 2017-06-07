@@ -24,10 +24,6 @@ void unreachable() {
 template <typename T>
 class CollectingObserver : public Observer<T> {
  public:
-  static_assert(
-      std::is_copy_constructible<T>::value,
-      "CollectingSubscriber needs to copy the value in order to collect it");
-
   void onNext(T next) override {
     values_.push_back(std::move(next));
   }
@@ -48,7 +44,7 @@ class CollectingObserver : public Observer<T> {
     }
   }
 
-  const std::vector<T>& values() const {
+  std::vector<T>& values() {
     return values_;
   }
 
@@ -78,7 +74,7 @@ template <typename T>
 std::vector<T> run(Reference<Observable<T>> observable) {
   auto collector = make_ref<CollectingObserver<T>>();
   observable->subscribe(collector);
-  return collector->values();
+  return std::move(collector->values());
 }
 
 } // namespace
@@ -305,6 +301,22 @@ TEST(Observable, Just) {
   EXPECT_EQ(
       run(Observables::justN({"ab", "pq", "yz"})),
       std::vector<const char*>({"ab", "pq", "yz"}));
+}
+
+TEST(Observable, SingleMovable) {
+  auto value = std::make_unique<int>(123456);
+
+  auto observable = Observables::justOnce(std::move(value));
+  EXPECT_EQ(std::size_t{1}, observable->count());
+
+  auto values = run(std::move(observable));
+  EXPECT_EQ(
+      values.size(),
+      size_t(1));
+
+  EXPECT_EQ(
+      *values[0],
+      123456);
 }
 
 TEST(Observable, Range) {

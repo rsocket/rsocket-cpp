@@ -95,8 +95,34 @@ std::ostream& operator<<(std::ostream& os, ErrorCode errorCode) {
 }
 
 std::ostream& operator<<(std::ostream& os, FrameFlags frameFlags) {
-  std::bitset<16> flags(static_cast<uint16_t>(frameFlags));
-  return os << flags;
+  // TODO Match the Flag names with the AllowedFlags in the Frame declarations
+
+  std::stringstream ss;
+  std::string delimeter = "";
+  if (!!(frameFlags & FrameFlags::NEXT)) {
+    ss << "NEXT";
+    delimeter = "|";
+  }
+  if (!!(frameFlags & FrameFlags::COMPLETE)) {
+    ss << delimeter << "COMPLETE";
+    delimeter = "|";
+  }
+  if (!!(frameFlags & FrameFlags::FOLLOWS)) {
+    ss << delimeter << "FOLLOWS";
+    delimeter = "|";
+  }
+  if (!!(frameFlags & FrameFlags::METADATA)) {
+    ss << delimeter << "METADATA";
+    delimeter = "|";
+  }
+  if (!!(frameFlags & FrameFlags::IGNORE)) {
+    ss << delimeter << "IGNORE";
+    delimeter = "|";
+  }
+  if (!delimeter.empty()) {
+    return os << ss.str();
+  }
+  return os << "EMPTY";
 }
 
 std::ostream& operator<<(std::ostream& os, const FrameHeader& header) {
@@ -184,7 +210,9 @@ std::ostream& operator<<(std::ostream& os, const Frame_KEEPALIVE& frame) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Frame_SETUP& frame) {
-  return os << frame.header_ << ", (" << frame.payload_;
+  return os << frame.header_
+            << ", Version: " << frame.versionMajor_ << "." << frame.versionMinor_
+            << ", (" << frame.payload_;
 }
 
 void Frame_SETUP::moveToSetupPayload(SetupParameters& setupPayload) {

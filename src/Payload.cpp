@@ -24,15 +24,23 @@ void Payload::checkFlags(FrameFlags flags) const {
 }
 
 std::ostream& operator<<(std::ostream& os, const Payload& payload) {
-  return os << "[metadata: "
+  return os
+            << "[Metadata("
             << (payload.metadata
                     ? folly::to<std::string>(
                           payload.metadata->computeChainDataLength())
-                    : "<null>")
-            << " data: " << (payload.data
-                                 ? folly::to<std::string>(
-                                       payload.data->computeChainDataLength())
-                                 : "<null>")
+                    : "0")
+            << (payload.metadata
+                    ?  "): '" + payload.metadata->cloneAsValue().moveToFbString().substr(0, 80).toStdString() + "'"
+                    : "): <nullptr>")
+            << ", Data("
+            << (payload.data
+                     ? folly::to<std::string>(
+                           payload.data->computeChainDataLength())
+                     : "0")
+            << (payload.data
+                    ? "): '" + payload.data->cloneAsValue().moveToFbString().substr(0, 80).toStdString() + "'"
+                    : "): <nullptr>")
             << "]";
 }
 
