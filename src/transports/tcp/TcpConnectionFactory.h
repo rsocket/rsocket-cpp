@@ -3,13 +3,14 @@
 #pragma once
 
 #include <folly/SocketAddress.h>
+#include <folly/io/async/AsyncSocket.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
-
 #include "src/ConnectionFactory.h"
-
 #include "src/DuplexConnection.h"
 
 namespace rsocket {
+
+class RSocketStats;
 
 /**
  * TCP implementation of ConnectionFactory for use with RSocket::createClient().
@@ -27,6 +28,11 @@ class TcpConnectionFactory : public ConnectionFactory {
    * Each call to connect() creates a new AsyncSocket.
    */
   void connect(OnConnect) override;
+
+  static std::unique_ptr<DuplexConnection> createDuplexConnectionFromSocket(
+      folly::AsyncSocket::UniquePtr socket,
+      folly::EventBase& eventBase,
+      std::shared_ptr<RSocketStats> stats = std::shared_ptr<RSocketStats>());
 
  private:
   folly::SocketAddress address_;

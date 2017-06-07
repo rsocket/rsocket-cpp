@@ -44,12 +44,9 @@ class ConnectCallback : public folly::AsyncSocket::ConnectCallback {
 
     VLOG(4) << "connectSuccess() on " << address_;
 
-    auto connection = std::make_unique<TcpDuplexConnection>(
+    auto connection = TcpConnectionFactory::createDuplexConnectionFromSocket(
         std::move(socket_), *evb, RSocketStats::noop());
-    auto framedConnection =
-        std::make_unique<FramedDuplexConnection>(std::move(connection), *evb);
-
-    onConnect_(std::move(framedConnection), *evb);
+    onConnect_(std::move(connection), *evb);
   }
 
   void connectErr(const folly::AsyncSocketException& ex) noexcept {
@@ -71,6 +68,10 @@ TcpConnectionFactory::TcpConnectionFactory(folly::SocketAddress address)
   VLOG(1) << "Constructing TcpConnectionFactory";
 }
 
+TcpConnectionFactory::~TcpConnectionFactory() {
+  VLOG(1) << "Destroying TcpConnectionFactory";
+}
+
 void TcpConnectionFactory::connect(OnConnect cb) {
   worker_.getEventBase()->runInEventBaseThread(
       [ this, fn = std::move(cb) ]() mutable {
@@ -78,7 +79,20 @@ void TcpConnectionFactory::connect(OnConnect cb) {
       });
 }
 
-TcpConnectionFactory::~TcpConnectionFactory() {
-  VLOG(1) << "Destroying TcpConnectionFactory";
+std::unique_ptr<DuplexConnection>
+TcpConnectionFactory::createDuplexConnectionFromSocket(
+    folly::AsyncSocket::UniquePtr socket,
+    folly::EventBase& eventBase,
+    std::shared_ptr<RSocketStats> stats) {
+  if (!stats) {
+    stats = RSocketStats::noop();
+  }
+
+  auto connection = std::make_unique<TcpDuplexConnection>(
+      std::move(socket), eventBase, RSocketStats::noop());
+  auto framedConnection = std::make_unique<FramedDuplexConnection>(
+      std::move(connection), eventBase);
+  return std::move(framedConnection);
 }
+
 } // namespace rsocket

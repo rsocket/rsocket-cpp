@@ -52,6 +52,15 @@ class RSocketClient {
   // without waiting for transport to connect and ack)
   //  std::shared_ptr<RSocketRequester> fastConnect();
 
+  std::unique_ptr<RSocketRequester> fromConnection(
+      std::unique_ptr<DuplexConnection> connection,
+      folly::EventBase& eventBase,
+      SetupParameters setupParameters = SetupParameters(),
+      std::shared_ptr<RSocketResponder> responder = std::shared_ptr<RSocketResponder>(),
+      std::unique_ptr<KeepaliveTimer> keepaliveTimer = std::unique_ptr<KeepaliveTimer>(),
+      std::shared_ptr<RSocketStats> stats = std::shared_ptr<RSocketStats>(),
+      std::shared_ptr<RSocketNetworkStats> networkStats = std::shared_ptr<RSocketNetworkStats>());
+
  private:
   std::unique_ptr<ConnectionFactory> connectionFactory_;
   std::unique_ptr<RSocketConnectionManager> connectionManager_;

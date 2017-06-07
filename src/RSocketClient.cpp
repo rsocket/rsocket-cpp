@@ -46,36 +46,55 @@ folly::Future<std::unique_ptr<RSocketRequester>> RSocketClient::connect(
       folly::EventBase& eventBase) mutable {
     VLOG(3) << "onConnect received DuplexConnection";
 
-    if (!responder) {
-      responder = std::make_shared<RSocketResponder>();
-    }
-
-    if (!stats) {
-      stats = RSocketStats::noop();
-    }
-
-    if (!keepaliveTimer) {
-      keepaliveTimer = std::make_unique<FollyKeepaliveTimer>(
-          eventBase, std::chrono::milliseconds(5000));
-    }
-
-    auto rs = std::make_shared<RSocketStateMachine>(
+    auto rsocket = fromConnection(
+        std::move(connection),
         eventBase,
+        std::move(setupParameters),
         std::move(responder),
         std::move(keepaliveTimer),
-        ReactiveSocketMode::CLIENT,
         std::move(stats),
         std::move(networkStats));
-
-    connectionManager_->manageConnection(rs, eventBase);
-
-    rs->connectClientSendSetup(std::move(connection), std::move(setupParameters));
-
-    auto rsocket = std::make_unique<RSocketRequester>(std::move(rs), eventBase);
     promise.setValue(std::move(rsocket));
   });
 
   return future;
+}
+
+std::unique_ptr<RSocketRequester> RSocketClient::fromConnection(
+    std::unique_ptr<DuplexConnection> connection,
+    folly::EventBase& eventBase,
+    SetupParameters setupParameters,
+    std::shared_ptr<RSocketResponder> responder,
+    std::unique_ptr<KeepaliveTimer> keepaliveTimer,
+    std::shared_ptr<RSocketStats> stats,
+    std::shared_ptr<RSocketNetworkStats> networkStats) {
+  CHECK(eventBase.isInEventBaseThread());
+
+  if (!responder) {
+    responder = std::make_shared<RSocketResponder>();
+  }
+
+  if (!keepaliveTimer) {
+    keepaliveTimer = std::make_unique<FollyKeepaliveTimer>(
+        eventBase, std::chrono::milliseconds(5000));
+  }
+
+  if (!stats) {
+    stats = RSocketStats::noop();
+  }
+
+  auto rs = std::make_shared<RSocketStateMachine>(
+      eventBase,
+      std::move(responder),
+      std::move(keepaliveTimer),
+      ReactiveSocketMode::CLIENT,
+      std::move(stats),
+      std::move(networkStats));
+
+  connectionManager_->manageConnection(rs, eventBase);
+
+  rs->connectClientSendSetup(std::move(connection), std::move(setupParameters));
+  return std::make_unique<RSocketRequester>(std::move(rs), eventBase);
 }
 
 }
