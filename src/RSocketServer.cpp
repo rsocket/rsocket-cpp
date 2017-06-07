@@ -3,12 +3,10 @@
 #include "src/RSocketServer.h"
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/EventBaseManager.h>
-#include "framing/FrameTransport.h"
-#include "internal/ScheduledRSocketResponder.h"
+#include "src/framing/FrameTransport.h"
 #include "src/RSocketErrors.h"
 #include "src/RSocketNetworkStats.h"
 #include "src/RSocketStats.h"
-#include "statemachine/RSocketStateMachine.h"
 #include "src/internal/RSocketConnectionManager.h"
 
 namespace rsocket {
@@ -44,7 +42,7 @@ RSocketServer::~RSocketServer() {
   // All requests are fully finished, worker threads can be safely killed off.
 }
 
-void RSocketServer::start(OnSetupConnection onSetupConnection) {
+void RSocketServer::start(OnRSocketSetup onRSocketSetup) {
   if (started) {
     throw std::runtime_error("RSocketServer::start() already called.");
   }
@@ -52,51 +50,44 @@ void RSocketServer::start(OnSetupConnection onSetupConnection) {
 
   LOG(INFO) << "Starting RSocketServer";
 
-  duplexConnectionAcceptor_
-      ->start([ this, onSetupConnection = std::move(onSetupConnection) ](
-          std::unique_ptr<DuplexConnection> connection,
-          folly::EventBase & eventBase) {
-        if (isShutdown_) {
-          // connection is getting out of scope and terminated
-          return;
-        }
-
-        auto* acceptor = setupResumeAcceptors_.get();
-
-        VLOG(2) << "Going to accept duplex connection";
-
-        acceptor->accept(
-            std::move(connection),
-            std::bind(
-                &RSocketServer::onSetupConnection,
-                this,
-                std::move(onSetupConnection),
-                std::placeholders::_1,
-                std::placeholders::_2),
-            std::bind(
-                &RSocketServer::onResumeConnection,
-                this,
-                OnResumeConnection(),
-                std::placeholders::_1,
-                std::placeholders::_2));
-      })
-      .get(); // block until finished and return or throw
+  duplexConnectionAcceptor_->start([ this, onRSocketSetup = std::move(onRSocketSetup) ](
+      std::unique_ptr<DuplexConnection> connection,
+      folly::EventBase & eventBase) {
+    acceptConnection(std::move(connection), eventBase, onRSocketSetup);
+  }).get(); // block until finished and return or throw
 }
 
-// this class will be moved, its just an intermediate step
-class RSocketServerNetworkStats : public RSocketNetworkStats {
- public:
-  void onClosed(const folly::exception_wrapper&) override {
-    if (onClose) {
-      onClose();
-    }
+void RSocketServer::acceptConnection(
+    std::unique_ptr<DuplexConnection> connection,
+    folly::EventBase & eventBase,
+    OnRSocketSetup onRSocketSetup) {
+  if (isShutdown_) {
+    // connection is getting out of scope and terminated
+    return;
   }
 
-   std::function<void()> onClose;
-};
+  auto* acceptor = setupResumeAcceptors_.get();
 
-void RSocketServer::onSetupConnection(
-    OnSetupConnection onSetupConnection,
+  VLOG(2) << "Going to accept duplex connection";
+
+  acceptor->accept(
+      std::move(connection),
+      std::bind(
+          &RSocketServer::onRSocketSetup,
+          this,
+          std::move(onRSocketSetup),
+          std::placeholders::_1,
+          std::placeholders::_2),
+      std::bind(
+          &RSocketServer::onRSocketResume,
+          this,
+          OnRSocketResume(),
+          std::placeholders::_1,
+          std::placeholders::_2));
+}
+
+void RSocketServer::onRSocketSetup(
+    OnRSocketSetup onRSocketSetup,
     std::shared_ptr<FrameTransport> frameTransport,
     SetupParameters setupParams) {
   // we don't need to check for isShutdown_ here since all callbacks are
@@ -106,40 +97,12 @@ void RSocketServer::onSetupConnection(
   auto* eventBase = folly::EventBaseManager::get()->getExistingEventBase();
   CHECK(eventBase);
 
-  std::shared_ptr<RSocketResponder> requestResponder;
-  try {
-    requestResponder = onSetupConnection(setupParams);
-  } catch (const RSocketError& e) {
-    // TODO emit ERROR ... but how do I do that here?
-    frameTransport->close(
-        folly::exception_wrapper{std::current_exception(), e});
-    return;
-  }
-
-  if(requestResponder) {
-    requestResponder = std::make_shared<ScheduledRSocketResponder>(
-        std::move(requestResponder), *eventBase);
-  } else {
-    // if the responder was not provided, we will create a default one
-    requestResponder = std::make_shared<RSocketResponder>();
-  }
-
-  auto removeRSocketCallback = std::make_shared<RSocketServerNetworkStats>();
-
-  auto rs = std::make_shared<RSocketStateMachine>(
-      *eventBase,
-      std::move(requestResponder),
-      nullptr,
-      ReactiveSocketMode::SERVER,
-      RSocketStats::noop(),
-      removeRSocketCallback);
-
-  connectionManager_->manageConnection(rs, *eventBase);
-  rs->connectServer(std::move(frameTransport), setupParams);
+  RSocketSetup setup(std::move(frameTransport), std::move(setupParams), *eventBase, *connectionManager_);
+  onRSocketSetup(setup);
 }
 
-void RSocketServer::onResumeConnection(
-    OnResumeConnection onResumeConnection,
+void RSocketServer::onRSocketResume(
+    OnRSocketResume onRSocketResume,
     std::shared_ptr<FrameTransport> frameTransport,
     ResumeParameters setupPayload) {
   // we don't need to check for isShutdown_ here since all callbacks are
@@ -148,8 +111,8 @@ void RSocketServer::onResumeConnection(
   CHECK(false) << "not implemented";
 }
 
-void RSocketServer::startAndPark(OnSetupConnection onSetupConnection) {
-  start(std::move(onSetupConnection));
+void RSocketServer::startAndPark(OnRSocketSetup onRSocketSetup) {
+  start(std::move(onRSocketSetup));
   waiting_.wait();
 }
 

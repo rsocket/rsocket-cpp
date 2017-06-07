@@ -19,13 +19,13 @@ using namespace yarpl::observable;
 
 DEFINE_int32(port, 9898, "port to connect to");
 
-class PushStreamRequestHandler : public rsocket::RSocketResponder {
+class PushStreamRequestResponder : public rsocket::RSocketResponder {
  public:
   /// Handles a new inbound Stream requested by the other end.
   yarpl::Reference<Flowable<Payload>> handleRequestStream(
       Payload request,
       rsocket::StreamId streamId) override {
-    std::cout << "PushStreamRequestHandler.handleRequestStream " << request
+    std::cout << "PushStreamRequestResponder.handleRequestStream " << request
               << std::endl;
 
     // string from payload data
@@ -82,13 +82,13 @@ int main(int argc, char* argv[]) {
   auto rs = RSocket::createServer(
       std::make_unique<TcpConnectionAcceptor>(std::move(opts)));
 
-  // global request handler
-  auto handler = std::make_shared<PushStreamRequestHandler>();
+  // global request responder
+  auto responder = std::make_shared<PushStreamRequestResponder>();
 
   auto rawRs = rs.get();
   auto serverThread = std::thread([=] {
     // start accepting connections
-    rawRs->startAndPark([handler](auto& setupParams) { return handler; });
+    rawRs->startAndPark([responder](auto& setup) { setup.createRSocket(responder); });
   });
 
   // Wait for a newline on the console to terminate the server.

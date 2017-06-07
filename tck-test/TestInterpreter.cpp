@@ -18,8 +18,8 @@ namespace tck {
 
 TestInterpreter::TestInterpreter(
     const Test& test,
-    std::shared_ptr<RSocketRequester> requester)
-    : requester_(requester), test_(test) {
+    std::unique_ptr<RSocketRequester> requester)
+    : requester_(std::move(requester)), test_(test) {
   DCHECK(!test.empty());
 }
 

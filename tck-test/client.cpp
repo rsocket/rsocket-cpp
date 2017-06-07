@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
         std::find(testsToRun.begin(), testsToRun.end(), test.name()) !=
             testsToRun.end()) {
       ++ran;
-      TestInterpreter interpreter(test, rs);
+      TestInterpreter interpreter(test, std::move(rs));
       bool passing = interpreter.run();
       if (passing) {
         ++passed;

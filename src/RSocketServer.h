@@ -10,15 +10,15 @@
 #include "src/ConnectionAcceptor.h"
 #include "src/RSocketParameters.h"
 #include "src/RSocketResponder.h"
+#include "src/RSocketSetup.h"
 #include "src/internal/SetupResumeAcceptor.h"
 
 namespace rsocket {
 
-class RSocketStateMachine;
 class RSocketConnectionManager;
 
-using OnSetupConnection = std::function<std::shared_ptr<RSocketResponder>(SetupParameters&)>;
-using OnResumeConnection = std::function<void(ResumeParameters&)>;
+using OnRSocketSetup = std::function<void(RSocketSetup&)>;
+using OnRSocketResume = std::function<void(ResumeParameters&)>;
 
 /**
  * API for starting an RSocket server. Returned from RSocket::createServer.
@@ -49,7 +49,7 @@ class RSocketServer {
    *
    * This method assumes it will be called only once.
    */
-  void start(OnSetupConnection);
+  void start(OnRSocketSetup);
 
   /**
    * Start the ConnectionAcceptor and begin handling connections.
@@ -59,7 +59,7 @@ class RSocketServer {
    *
    * This method assumes it will be called only once.
    */
-  void startAndPark(OnSetupConnection);
+  void startAndPark(OnRSocketSetup);
 
   /**
    * Unblock the server if it has called startAndPark().  Can only be called
@@ -76,18 +76,21 @@ class RSocketServer {
   //          std::unique_ptr<ConnectionResumeRequest>)>);
 
   // TODO version supporting RSocketStats and other params
-  // RSocketServer::start(OnSetupConnection onSetupConnection, ServerSetup setupParams)
+  // RSocketServer::start(OnRSocketSetup onRSocketSetup, ServerSetup setupParams)
 
-  friend class RSocketServerConnectionHandler;
+  void acceptConnection(
+      std::unique_ptr<DuplexConnection> connection,
+      folly::EventBase & eventBase,
+      OnRSocketSetup onRSocketSetup);
 
  private:
 
-  void onSetupConnection(
-      OnSetupConnection onSetupConnection,
+  void onRSocketSetup(
+      OnRSocketSetup onRSocketSetup,
       std::shared_ptr<rsocket::FrameTransport> frameTransport,
       rsocket::SetupParameters setupPayload);
-  void onResumeConnection(
-      OnResumeConnection onResumeConnection,
+  void onRSocketResume(
+      OnRSocketResume onRSocketResume,
       std::shared_ptr<rsocket::FrameTransport> frameTransport,
       rsocket::ResumeParameters setupPayload);
 

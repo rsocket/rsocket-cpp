@@ -23,7 +23,7 @@ RSocketClient::~RSocketClient() {
   VLOG(1) << "Destroying RSocketClient";
 }
 
-folly::Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect(
+folly::Future<std::unique_ptr<RSocketRequester>> RSocketClient::connect(
     SetupParameters setupParameters,
     std::shared_ptr<RSocketResponder> responder,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer,
@@ -31,7 +31,7 @@ folly::Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect(
     std::shared_ptr<RSocketNetworkStats> networkStats) {
   VLOG(2) << "Starting connection";
 
-  folly::Promise<std::shared_ptr<RSocketRequester>> promise;
+  folly::Promise<std::unique_ptr<RSocketRequester>> promise;
   auto future = promise.getFuture();
 
   connectionFactory_->connect([
@@ -71,7 +71,7 @@ folly::Future<std::shared_ptr<RSocketRequester>> RSocketClient::connect(
 
     rs->connectClientSendSetup(std::move(connection), std::move(setupParameters));
 
-    auto rsocket = std::make_shared<RSocketRequester>(std::move(rs), eventBase);
+    auto rsocket = std::make_unique<RSocketRequester>(std::move(rs), eventBase);
     promise.setValue(std::move(rsocket));
   });
 

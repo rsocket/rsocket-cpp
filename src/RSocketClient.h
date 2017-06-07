@@ -41,7 +41,7 @@ class RSocketClient {
    * To destruct a single RSocketRequester sooner than the RSocketClient
    * call RSocketRequester.close().
    */
-  folly::Future<std::shared_ptr<RSocketRequester>> connect(
+  folly::Future<std::unique_ptr<RSocketRequester>> connect(
       SetupParameters setupParameters = SetupParameters(),
       std::shared_ptr<RSocketResponder> responder = std::shared_ptr<RSocketResponder>(),
       std::unique_ptr<KeepaliveTimer> keepaliveTimer = std::unique_ptr<KeepaliveTimer>(),

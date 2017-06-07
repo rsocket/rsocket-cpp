@@ -9,8 +9,8 @@ using namespace yarpl::flowable;
 
 /// Handles a new inbound Stream requested by the other end.
 yarpl::Reference<Flowable<rsocket::Payload>>
-TextRequestHandler::handleRequestStream(Payload request, StreamId streamId) {
-  LOG(INFO) << "TextRequestHandler.handleRequestStream " << request;
+TextRequestResponder::handleRequestStream(Payload request, StreamId streamId) {
+  LOG(INFO) << "TextRequestResponder.handleRequestStream " << request;
 
   // string from payload data
   auto requestString = request.moveDataToString();

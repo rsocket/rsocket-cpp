@@ -5,7 +5,7 @@
 #include "src/Payload.h"
 #include "src/RSocket.h"
 
-class JsonRequestHandler : public rsocket::RSocketResponder {
+class JsonRequestResponder : public rsocket::RSocketResponder {
  public:
   /// Handles a new inbound Stream requested by the other end.
   yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>

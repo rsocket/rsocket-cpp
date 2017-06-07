@@ -220,7 +220,9 @@ add_library(
   src/internal/ScheduledSingleSubscription.cpp
   src/internal/ScheduledSingleSubscription.h
   src/internal/RSocketConnectionManager.cpp
-  src/internal/RSocketConnectionManager.h)
+  src/internal/RSocketConnectionManager.h
+  src/RSocketSetup.cpp
+  src/RSocketSetup.h)
 
 target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/include")
 target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/src")

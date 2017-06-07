@@ -21,7 +21,7 @@ RSocketRequester::~RSocketRequester() {
 
   if (stateMachine_) {
     eventBase_.add([stateMachine = std::move(stateMachine_)] {
-      VLOG(2) << "Destroying RSocketStateMachine on EventBase";
+      VLOG(2) << "Releasing RSocketStateMachine on EventBase";
     });
   }
 }

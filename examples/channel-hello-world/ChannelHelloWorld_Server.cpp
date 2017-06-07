@@ -15,7 +15,7 @@ using namespace yarpl::flowable;
 
 DEFINE_int32(port, 9898, "port to connect to");
 
-class HelloChannelRequestHandler : public rsocket::RSocketResponder {
+class HelloChannelRequestResponder : public rsocket::RSocketResponder {
  public:
   /// Handles a new inbound Stream requested by the other end.
   yarpl::Reference<Flowable<rsocket::Payload>> handleRequestChannel(
@@ -49,13 +49,13 @@ int main(int argc, char* argv[]) {
   auto rs = RSocket::createServer(
       std::make_unique<TcpConnectionAcceptor>(std::move(opts)));
 
-  // global request handler
-  auto handler = std::make_shared<HelloChannelRequestHandler>();
+  // global request responder
+  auto responder = std::make_shared<HelloChannelRequestResponder>();
 
   auto* rawRs = rs.get();
-  auto serverThread = std::thread([rawRs, handler] {
+  auto serverThread = std::thread([rawRs, responder] {
     // start accepting connections
-    rawRs->startAndPark([handler](auto& setupParams) { return handler; });
+    rawRs->startAndPark([responder](RSocketSetup& setup) { setup.createRSocket(responder); });
   });
 
   // Wait for a newline on the console to terminate the server.

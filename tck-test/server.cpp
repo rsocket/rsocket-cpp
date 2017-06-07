@@ -140,12 +140,12 @@ int main(int argc, char* argv[]) {
       std::make_unique<TcpConnectionAcceptor>(std::move(opts)));
 
   // global request handler
-  auto handler = std::make_shared<ServerResponder>();
+  auto responder = std::make_shared<ServerResponder>();
 
   auto rawRs = rs.get();
   auto serverThread = std::thread([=] {
     // start accepting connections
-    rawRs->startAndPark([handler](auto& setupParams) { return handler; });
+    rawRs->startAndPark([responder](auto& setup) { setup.createRSocket(responder); });
   });
 
   // Wait for a newline on the console to terminate the server.
