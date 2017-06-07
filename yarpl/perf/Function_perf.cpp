@@ -24,11 +24,11 @@ struct Tuple {
 
 void functionByCopyAgain(Tuple a) {
   a.doSomething();
-};
+}
 
 void functionByCopy(Tuple a) {
   functionByCopyAgain(a);
-};
+}
 
 static void function_nested_copy(benchmark::State& state) {
   while (state.KeepRunning()) {
@@ -40,11 +40,11 @@ BENCHMARK(function_nested_copy);
 
 void functionByMoveAgain(Tuple a) {
   a.doSomething();
-};
+}
 
 void functionByMove(Tuple a) {
   functionByMoveAgain(std::move(a));
-};
+}
 
 static void function_nested_move(benchmark::State& state) {
   while (state.KeepRunning()) {
@@ -56,11 +56,11 @@ BENCHMARK(function_nested_move);
 
 void functionByRefAgain(Tuple& a) {
   a.doSomething();
-};
+}
 
 void functionByRef(Tuple& a) {
   functionByRefAgain(a);
-};
+}
 
 static void function_nested_ref(benchmark::State& state) {
   while (state.KeepRunning()) {
@@ -76,7 +76,7 @@ void functionByUniquePtrAgain(std::unique_ptr<Tuple> a) {
 
 void functionByUniquePtr(std::unique_ptr<Tuple> a) {
   functionByUniquePtrAgain(std::move(a));
-};
+}
 
 static void function_nested_unique_ptr(benchmark::State& state) {
   while (state.KeepRunning()) {
