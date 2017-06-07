@@ -41,19 +41,15 @@ RSocketConnectionManager::~RSocketConnectionManager() {
 void RSocketConnectionManager::manageConnection(
     std::shared_ptr<RSocketStateMachine> socket,
     folly::EventBase& eventBase) {
-  auto onClose = [this, rs = socket, eventBase = &eventBase]() mutable {
-      // Enqueue another event to remove and delete it.  We cannot delete
-      // the RSocketStateMachine now as it still needs to finish processing
-      // the onClosed handlers in the stack frame above us.
-      eventBase->add([this, rs = std::move(rs)] {
-          removeConnection(rs);
-      });
-  };
-
-  class RemoveSocketNetworkStats : public RSocketNetworkStats, public decltype(onClose) {
+  class RemoveSocketNetworkStats : public RSocketNetworkStats {
    public:
-    using Super = decltype(onClose);
-    using Super::Super; // ctor from the lambda
+    RemoveSocketNetworkStats(
+        RSocketConnectionManager& connectionManager,
+        std::shared_ptr<RSocketStateMachine> socket,
+        folly::EventBase& eventBase)
+      : connectionManager_(connectionManager),
+        socket_(std::move(socket)),
+        eventBase_(eventBase) {}
 
     void onConnected() override {
       if (inner) {
@@ -68,16 +64,27 @@ void RSocketConnectionManager::manageConnection(
     }
 
     void onClosed(const folly::exception_wrapper& ex) override {
-      (*this)();
+      // Enqueue another event to remove and delete it.  We cannot delete
+      // the RSocketStateMachine now as it still needs to finish processing
+      // the onClosed handlers in the stack frame above us.
+      eventBase_.add([connectionManager = &connectionManager_, socket = std::move(socket_)] {
+        connectionManager->removeConnection(socket);
+      });
+
       if (inner) {
         inner->onClosed(ex);
       }
     }
 
+    RSocketConnectionManager& connectionManager_;
+    std::shared_ptr<RSocketStateMachine> socket_;
+    folly::EventBase& eventBase_;
+
     std::shared_ptr<RSocketNetworkStats> inner;
   };
 
-  auto newNetworkStats = std::make_shared<RemoveSocketNetworkStats>(std::move(onClose));
+  auto newNetworkStats = std::make_shared<RemoveSocketNetworkStats>(
+      *this, socket, eventBase);
   newNetworkStats->inner = std::move(socket->networkStats());
   socket->networkStats() = std::move(newNetworkStats);
 
