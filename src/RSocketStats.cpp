@@ -1,7 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "RSocketStats.h"
-#include <src/transports/tcp/TcpDuplexConnection.h>
 
 namespace rsocket {
 

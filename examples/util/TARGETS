@@ -1,8 +1,0 @@
-
-cpp_library(
-  name = 'subscriber',
-  header_namespace = 'examples/util',
-  headers = ['ExampleSubscriber.h'],
-  srcs = ['ExampleSubscriber.cpp'],
-  deps = ['@/lithium/reactivesocket-cpp:reactivesocket'],
-)

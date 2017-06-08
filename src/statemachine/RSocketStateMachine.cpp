@@ -11,7 +11,6 @@
 #include "src/framing/Frame.h"
 #include "src/framing/FrameSerializer.h"
 #include "src/framing/FrameTransport.h"
-#include "src/framing/FrameTransport.h"
 #include "src/internal/ClientResumeStatusCallback.h"
 #include "src/internal/ResumeCache.h"
 #include "src/RSocketNetworkStats.h"

@@ -2,7 +2,6 @@
 
 #include <folly/Baton.h>
 #include <gtest/gtest.h>
-#include <yarpl/include/yarpl/single/SingleTestObserver.h>
 #include <atomic>
 
 #include "yarpl/Single.h"
