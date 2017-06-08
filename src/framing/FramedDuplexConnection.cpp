@@ -7,45 +7,29 @@
 
 namespace rsocket {
 
-FramedDuplexConnection::FramedDuplexConnection(
-    std::unique_ptr<DuplexConnection> connection,
-    folly::Executor& executor)
-    : FramedDuplexConnection(
-          std::move(connection),
-          FrameSerializer::getCurrentProtocolVersion(),
-          executor) {}
+using namespace yarpl::flowable;
+
+FramedDuplexConnection::~FramedDuplexConnection() {}
 
 FramedDuplexConnection::FramedDuplexConnection(
     std::unique_ptr<DuplexConnection> connection,
-    ProtocolVersion protocolVersion,
-    folly::Executor& executor)
-    : connection_(std::move(connection)),
-      protocolVersion_(std::make_shared<ProtocolVersion>(protocolVersion)),
-      executor_(executor) {}
+    ProtocolVersion protocolVersion)
+    : inner_(std::move(connection)),
+      protocolVersion_(std::make_shared<ProtocolVersion>(protocolVersion)) {}
 
-FramedDuplexConnection::~FramedDuplexConnection() {
-  // to make sure we close the parties when the connection dies
-  if (outputWriter_) {
-    outputWriter_->cancel();
-  }
-  if (inputReader_) {
-    inputReader_->onComplete();
-  }
-}
-
-std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>>
+yarpl::Reference<Subscriber<std::unique_ptr<folly::IOBuf>>>
 FramedDuplexConnection::getOutput() noexcept {
-  outputWriter_ = std::make_shared<FramedWriter>(
-      connection_->getOutput(), executor_, protocolVersion_);
-  return outputWriter_;
+  return yarpl::make_ref<FramedWriter>(
+      inner_->getOutput(), protocolVersion_);
 }
 
 void FramedDuplexConnection::setInput(
-    std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>> framesSink) {
-  CHECK(!inputReader_);
-  inputReader_ = std::make_shared<FramedReader>(
-      std::move(framesSink), executor_, protocolVersion_);
-  connection_->setInput(inputReader_);
+    yarpl::Reference<Subscriber<std::unique_ptr<folly::IOBuf>>> framesSink) {
+  if(!inputReader_) {
+    inputReader_ = yarpl::make_ref<FramedReader>(protocolVersion_);
+    inner_->setInput(inputReader_);
+  }
+  inputReader_->setInput(std::move(framesSink));
 }
 
 } // reactivesocket

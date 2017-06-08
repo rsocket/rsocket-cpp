@@ -7,7 +7,6 @@
 #include "src/Payload.h"
 #include "src/statemachine/ConsumerBase.h"
 #include "src/statemachine/PublisherBase.h"
-#include "src/temporary_home/SubscriberBase.h"
 #include "yarpl/flowable/Subscriber.h"
 
 namespace folly {

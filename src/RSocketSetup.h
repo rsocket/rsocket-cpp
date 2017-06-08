@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <yarpl/Refcounted.h>
+
 #include "src/RSocketParameters.h"
 
 namespace folly {
@@ -22,7 +24,7 @@ class RSocketStats;
 class RSocketSetup {
  public:
   RSocketSetup(
-      std::shared_ptr<FrameTransport> frameTransport,
+      yarpl::Reference<FrameTransport> frameTransport,
       SetupParameters setupParams,
       folly::EventBase& eventBase,
       RSocketConnectionManager& connectionManager);
@@ -51,7 +53,7 @@ class RSocketSetup {
       std::shared_ptr<RSocketStats> stats,
       std::shared_ptr<RSocketNetworkStats> networkStats);
 
-  std::shared_ptr<FrameTransport> frameTransport_;
+  yarpl::Reference<FrameTransport> frameTransport_;
   SetupParameters setupParams_;
   folly::EventBase& eventBase_;
   RSocketConnectionManager& connectionManager_;
