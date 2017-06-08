@@ -13,7 +13,8 @@
 #include "src/framing/FrameProcessor.h"
 #include "src/internal/AllowanceSemaphore.h"
 #include "src/internal/Common.h"
-#include "src/internal/ReactiveStreamsCompat.h"
+#include "yarpl/flowable/Subscriber.h"
+#include "yarpl/flowable/Subscription.h"
 
 namespace rsocket {
 
@@ -21,10 +22,9 @@ class DuplexConnection;
 
 class FrameTransport :
     /// Registered as an input in the DuplexConnection.
-    public Subscriber<std::unique_ptr<folly::IOBuf>>,
+    public yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>,
     /// Receives signals about connection writability.
-    public Subscription,
-    public std::enable_shared_from_this<FrameTransport> {
+    public yarpl::flowable::Subscription {
  public:
   explicit FrameTransport(std::unique_ptr<DuplexConnection> connection);
   ~FrameTransport();
@@ -51,12 +51,12 @@ class FrameTransport :
  private:
   void connect();
 
-  void onSubscribe(std::shared_ptr<Subscription>) noexcept override;
+  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>) noexcept override;
   void onNext(std::unique_ptr<folly::IOBuf>) noexcept override;
   void onComplete() noexcept override;
-  void onError(folly::exception_wrapper) noexcept override;
+  void onError(std::exception_ptr) noexcept override;
 
-  void request(size_t) noexcept override;
+  void request(int64_t) noexcept override;
   void cancel() noexcept override;
 
   void drainOutputFramesQueue();
@@ -76,9 +76,9 @@ class FrameTransport :
   AllowanceSemaphore writeAllowance_;
   std::shared_ptr<DuplexConnection> connection_;
 
-  std::shared_ptr<rsocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
+  yarpl::Reference<yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>
       connectionOutput_;
-  std::shared_ptr<Subscription> connectionInputSub_;
+  yarpl::Reference<yarpl::flowable::Subscription> connectionInputSub_;
 
   std::deque<std::unique_ptr<folly::IOBuf>> pendingWrites_;
   std::deque<std::unique_ptr<folly::IOBuf>> pendingReads_;
