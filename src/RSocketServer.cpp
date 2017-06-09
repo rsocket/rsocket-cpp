@@ -1,7 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "src/RSocketServer.h"
-#include <folly/io/async/EventBase.h>
 #include <folly/io/async/EventBaseManager.h>
 #include "src/framing/FrameTransport.h"
 #include "src/RSocketErrors.h"
@@ -22,12 +21,22 @@ RSocketServer::RSocketServer(
       connectionManager_(std::make_unique<RSocketConnectionManager>()) {}
 
 RSocketServer::~RSocketServer() {
+  shutdownAndWait();
+}
+
+void RSocketServer::shutdownAndWait() {
+  if (isShutdown_) {
+    return;
+  }
+
   // Will stop forwarding connections from duplexConnectionAcceptor_ to
   // setupResumeAcceptors_
   isShutdown_ = true;
 
   // Stop accepting new connections.
-  duplexConnectionAcceptor_->stop();
+  if (duplexConnectionAcceptor_) {
+    duplexConnectionAcceptor_->stop();
+  }
 
   std::vector<folly::Future<folly::Unit>> closingFutures;
   for (auto& acceptor : setupResumeAcceptors_.accessAllThreads()) {
@@ -61,6 +70,8 @@ void RSocketServer::acceptConnection(
     std::unique_ptr<DuplexConnection> connection,
     folly::EventBase & eventBase,
     OnRSocketSetup onRSocketSetup) {
+  CHECK(duplexConnectionAcceptor_); // RSocketServer has to be initialized with the acceptor
+
   if (isShutdown_) {
     // connection is getting out of scope and terminated
     return;
