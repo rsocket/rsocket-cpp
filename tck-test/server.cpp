@@ -148,10 +148,6 @@ int main(int argc, char* argv[]) {
     rawRs->startAndPark([responder](auto& setup) { setup.createRSocket(responder); });
   });
 
-  // Wait for a newline on the console to terminate the server.
-  std::getchar();
-
-  rs->unpark();
   serverThread.join();
 
   return 0;

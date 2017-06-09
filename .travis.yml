@@ -81,11 +81,10 @@ script:
   - ./yarpl/yarpl-tests
   - cd ..
   - ./scripts/prepare_tck_drivers.sh
-# Commenting out TCK until it is upgraded to new APIs
-#  - ./scripts/tck_test.sh -c cpp -s cpp
-#  - ./scripts/tck_test.sh -c java -s java
-#  - ./scripts/tck_test.sh -c java -s cpp
-#  - ./scripts/tck_test.sh -c cpp -s java
+  - ./scripts/tck_test.sh -c cpp -s cpp
+  - ./scripts/tck_test.sh -c java -s java
+  - ./scripts/tck_test.sh -c java -s cpp
+  - ./scripts/tck_test.sh -c cpp -s java
 
 after_success:
   - if [ -n "$GCC_VERSION" ]; then lcov --directory . --capture --output-file coverage.info; fi # capture coverage info
