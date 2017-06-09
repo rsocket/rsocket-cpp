@@ -1,6 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include <fstream>
+#include <future>
 
 #include <folly/Memory.h>
 #include <folly/String.h>
@@ -119,9 +120,11 @@ class ServerResponder : public RSocketResponder {
   MarbleStore marbles_;
 };
 
-[[noreturn]] static void signal_handler(int signal) {
+std::promise<void> terminate;
+
+static void signal_handler(int signal) {
   LOG(INFO) << "Terminating program after receiving signal " << signal;
-  exit(signal);
+  terminate.set_value();
 }
 
 int main(int argc, char* argv[]) {
@@ -148,6 +151,8 @@ int main(int argc, char* argv[]) {
     rawRs->startAndPark([responder](auto& setup) { setup.createRSocket(responder); });
   });
 
+  terminate.get_future().wait();
+  rs->unpark();
   serverThread.join();
 
   return 0;
