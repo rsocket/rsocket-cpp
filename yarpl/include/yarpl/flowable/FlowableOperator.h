@@ -84,19 +84,19 @@ class FlowableOperator : public Flowable<D> {
       Refcounted::decRef(*this);
     }
 
+    void onError(const std::exception_ptr error) override {
+      assert(upstream_ && "subscription was already terminated");
+      upstream_.reset(); // breaking the cycle
+      subscriber_->onError(error);
+      Refcounted::decRef(*this);
+    }
+
    private:
     void onSubscribe(
         Reference<::yarpl::flowable::Subscription> subscription) override {
       upstream_ = std::move(subscription);
       subscriber_->onSubscribe(
           Reference<::yarpl::flowable::Subscription>(this));
-    }
-
-    void onError(const std::exception_ptr error) override {
-      assert(upstream_ && "subscription was already terminated");
-      upstream_.reset(); // breaking the cycle
-      subscriber_->onError(error);
-      Refcounted::decRef(*this);
     }
 
     /// The Flowable has the lambda, and other creation parameters.
