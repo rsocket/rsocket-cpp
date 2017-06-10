@@ -4,6 +4,7 @@
 #include <vector>
 #include <gtest/gtest.h>
 #include "yarpl/Flowable.h"
+#include "yarpl/utils/ExceptionString.h"
 
 namespace yarpl {
 namespace flowable {
@@ -36,12 +37,7 @@ class CollectingSubscriber : public Subscriber<T> {
   void onError(const std::exception_ptr ex) override {
     Subscriber<T>::onError(ex);
     error_ = true;
-
-    try {
-      std::rethrow_exception(ex);
-    } catch (const std::exception& e) {
-      errorMsg_ = e.what();
-    }
+    errorMsg_ = yarpl::exceptionStr(ex);
   }
 
   std::vector<T>& values() {
@@ -351,11 +347,12 @@ TEST(FlowableTest, FlowableFromGenerator) {
 }
 
 TEST(FlowableTest, FlowableFromGeneratorException) {
+  constexpr const char* errorMsg = "error from generator";
   int count = 5;
   auto flowable = Flowables::fromGenerator<std::unique_ptr<int>>(
   [&] {
     while (count--) { return std::unique_ptr<int>(); }
-    throw std::runtime_error("error from generator");
+    throw std::runtime_error(errorMsg);
   });
 
   auto collector = make_ref<CollectingSubscriber<std::unique_ptr<int>>>(10);
@@ -363,6 +360,7 @@ TEST(FlowableTest, FlowableFromGeneratorException) {
 
   EXPECT_EQ(collector->complete(), false);
   EXPECT_EQ(collector->error(), true);
+  EXPECT_EQ(collector->errorMsg(), errorMsg);
   EXPECT_EQ(std::size_t{5}, collector->values().size());
 }
 

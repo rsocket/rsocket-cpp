@@ -86,10 +86,10 @@ add_library(
         include/yarpl/utils/type_traits.h
         include/yarpl/utils/credits.h
         src/yarpl/utils/credits.cpp
+        include/yarpl/utils/ExceptionString.h
         # Scheduler
         include/yarpl/schedulers/ThreadScheduler.h
-        src/yarpl/schedulers/ThreadScheduler.cpp
-)
+        src/yarpl/schedulers/ThreadScheduler.cpp)
 
 target_include_directories(
         yarpl

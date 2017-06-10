@@ -1,7 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "src/statemachine/StreamResponder.h"
-#include <folly/ExceptionString.h>
+#include "yarpl/utils/ExceptionString.h"
 
 namespace rsocket {
 
@@ -26,8 +26,8 @@ void StreamResponder::onComplete() noexcept {
 
 void StreamResponder::onError(const std::exception_ptr ex) noexcept {
   publisherComplete();
-  applicationError(folly::exceptionStr(ex).toStdString());
-  closeStream(StreamCompletionSignal::COMPLETE);
+  applicationError(yarpl::exceptionStr(ex));
+  closeStream(StreamCompletionSignal::ERROR);
 }
 
 //void StreamResponder::pauseStream(RequestHandler& requestHandler) {

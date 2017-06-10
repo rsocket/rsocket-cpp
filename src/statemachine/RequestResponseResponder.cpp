@@ -1,9 +1,9 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "src/statemachine/RequestResponseResponder.h"
-#include <folly/ExceptionString.h>
 #include <glog/logging.h>
 #include "src/Payload.h"
+#include "yarpl/utils/ExceptionString.h"
 
 namespace rsocket {
 
@@ -41,7 +41,7 @@ void RequestResponseResponder::onError(const std::exception_ptr ex) noexcept {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
-      applicationError(folly::exceptionStr(ex).toStdString());
+      applicationError(yarpl::exceptionStr(ex));
       closeStream(StreamCompletionSignal::APPLICATION_ERROR);
     } break;
     case State::CLOSED:
