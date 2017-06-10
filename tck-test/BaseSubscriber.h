@@ -14,18 +14,18 @@ class BaseSubscriber : public virtual yarpl::Refcounted {
  public:
   virtual void request(int n) = 0;
   virtual void cancel() = 0;
-  virtual void awaitTerminalEvent();
-  virtual void awaitAtLeast(int numItems);
-  virtual void awaitNoEvents(int waitTime);
-  virtual void assertNoErrors();
-  virtual void assertError();
-  virtual void assertValues(
+  void awaitTerminalEvent();
+  void awaitAtLeast(int numItems);
+  void awaitNoEvents(int waitTime);
+  void assertNoErrors();
+  void assertError();
+  void assertValues(
       const std::vector<std::pair<std::string, std::string>>& values);
-  virtual void assertValueCount(size_t valueCount);
-  virtual void assertReceivedAtLeast(size_t valueCount);
-  virtual void assertCompleted();
-  virtual void assertNotCompleted();
-  virtual void assertCanceled();
+  void assertValueCount(size_t valueCount);
+  void assertReceivedAtLeast(size_t valueCount);
+  void assertCompleted();
+  void assertNotCompleted();
+  void assertCanceled();
 
  protected:
   std::atomic<bool> canceled_{false};

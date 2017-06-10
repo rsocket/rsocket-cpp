@@ -2,12 +2,11 @@
 
 #include <fstream>
 #include <future>
+#include <signal.h>
 
 #include <folly/Memory.h>
 #include <folly/String.h>
 #include <folly/init/Init.h>
-
-#include <gmock/gmock.h>
 
 #include "src/RSocket.h"
 
@@ -15,7 +14,6 @@
 
 #include "tck-test/MarbleProcessor.h"
 
-using namespace ::testing;
 using namespace folly;
 using namespace rsocket;
 using namespace yarpl;
