@@ -7,7 +7,6 @@
 #include "src/internal/FollyKeepaliveTimer.h"
 #include "src/internal/RSocketConnectionManager.h"
 #include "src/framing/FrameTransport.h"
-#include "src/framing/FramedDuplexConnection.h"
 
 using namespace folly;
 
@@ -44,21 +43,11 @@ folly::Future<std::unique_ptr<RSocketRequester>> RSocketClient::connect(
     networkStats = std::move(networkStats),
     promise = std::move(promise)](
       std::unique_ptr<DuplexConnection> connection,
-      bool isFramedConnection,
       folly::EventBase& eventBase) mutable {
     VLOG(3) << "onConnect received DuplexConnection";
 
-    std::unique_ptr<DuplexConnection> framedConnection;
-    if(isFramedConnection) {
-      framedConnection = std::move(connection);
-    } else {
-      framedConnection = std::make_unique<FramedDuplexConnection>(
-          std::move(connection),
-          setupParameters.protocolVersion);
-    }
-
     auto rsocket = fromConnection(
-        std::move(framedConnection),
+        std::move(connection),
         eventBase,
         std::move(setupParameters),
         std::move(responder),
