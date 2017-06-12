@@ -9,14 +9,6 @@ namespace rsocket {
 
 FramedDuplexConnection::FramedDuplexConnection(
     std::unique_ptr<DuplexConnection> connection,
-    folly::Executor& executor)
-    : FramedDuplexConnection(
-          std::move(connection),
-          FrameSerializer::getCurrentProtocolVersion(),
-          executor) {}
-
-FramedDuplexConnection::FramedDuplexConnection(
-    std::unique_ptr<DuplexConnection> connection,
     ProtocolVersion protocolVersion,
     folly::Executor& executor)
     : connection_(std::move(connection)),

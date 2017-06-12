@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include <src/RSocketStats.h>
 #include <src/temporary_home/Executor.h>
 #include "src/DuplexConnection.h"
 #include "src/internal/Common.h"
@@ -15,10 +14,6 @@ struct ProtocolVersion;
 
 class FramedDuplexConnection : public virtual DuplexConnection {
  public:
-  // TODO: remove this ctor overload
-  FramedDuplexConnection(
-      std::unique_ptr<DuplexConnection> connection,
-      folly::Executor& executor);
   FramedDuplexConnection(
       std::unique_ptr<DuplexConnection> connection,
       ProtocolVersion protocolVersion,
