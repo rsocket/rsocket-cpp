@@ -1,17 +1,16 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include <benchmark/benchmark.h>
-#include <folly/ExceptionString.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <src/transports/tcp/TcpConnectionAcceptor.h>
 #include <condition_variable>
 #include <iostream>
 #include <thread>
 #include <gflags/gflags.h>
-
 #include "src/RSocket.h"
 #include "src/transports/tcp/TcpConnectionFactory.h"
 #include "yarpl/Flowable.h"
+#include "yarpl/utils/ExceptionString.h"
 
 using namespace ::folly;
 using namespace ::rsocket;
@@ -129,8 +128,8 @@ class BM_Subscriber : public Subscriber<Payload> {
   }
 
   void onError(std::exception_ptr ex) noexcept override {
-    LOG(INFO) << "BM_Subscriber " << this << " onError "
-              << folly::exceptionStr(ex);
+    LOG(INFO) << "BM_Subscriber " << this << " onError: "
+              << yarpl::exceptionStr(ex);
     terminated_ = true;
     terminalEventCV_.notify_all();
   }

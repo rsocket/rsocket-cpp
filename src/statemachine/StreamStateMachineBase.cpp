@@ -20,7 +20,7 @@ void StreamStateMachineBase::handleRequestN(uint32_t n) {
 
 void StreamStateMachineBase::handleError(
     folly::exception_wrapper errorPayload) {
-  VLOG(4) << "Unexpected handleError";
+  closeStream(StreamCompletionSignal::ERROR);
 }
 
 void StreamStateMachineBase::handleCancel() {

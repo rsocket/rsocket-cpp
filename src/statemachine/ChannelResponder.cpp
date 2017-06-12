@@ -1,7 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "src/statemachine/ChannelResponder.h"
-#include <folly/ExceptionString.h>
+#include "yarpl/utils/ExceptionString.h"
 
 namespace rsocket {
 
@@ -26,7 +26,7 @@ void ChannelResponder::onComplete() noexcept {
 
 void ChannelResponder::onError(const std::exception_ptr ex) noexcept {
   publisherComplete();
-  applicationError(folly::exceptionStr(ex).toStdString());
+  applicationError(yarpl::exceptionStr(ex));
   tryCompleteChannel();
 }
 

@@ -69,6 +69,7 @@ void StreamRequester::handlePayload(
 
 void StreamRequester::handleError(folly::exception_wrapper errorPayload) {
   CHECK(requested_);
+  errorConsumer(std::move(errorPayload));
   closeStream(StreamCompletionSignal::ERROR);
 }
 }

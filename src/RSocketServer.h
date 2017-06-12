@@ -83,6 +83,8 @@ class RSocketServer {
       folly::EventBase & eventBase,
       OnRSocketSetup onRSocketSetup);
 
+  void shutdownAndWait();
+
  private:
 
   void onRSocketSetup(
