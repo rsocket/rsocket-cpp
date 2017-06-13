@@ -61,7 +61,7 @@ timeout 60 ${!client}
 ret=$?
 
 # terminate server
-kill -9 $!
+kill $!
 
 # wait for server to relinquish its socket resources
 sleep 2

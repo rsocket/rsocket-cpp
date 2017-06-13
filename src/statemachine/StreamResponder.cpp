@@ -39,13 +39,13 @@ void StreamResponder::onError(const std::exception_ptr ex) noexcept {
 //}
 
 void StreamResponder::endStream(StreamCompletionSignal signal) {
-  StreamStateMachineBase::endStream(signal);
   terminatePublisher();
+  StreamStateMachineBase::endStream(signal);
 }
 
 void StreamResponder::handleCancel() {
-  publisherComplete();
   closeStream(StreamCompletionSignal::CANCEL);
+  publisherComplete();
 }
 
 void StreamResponder::handleRequestN(uint32_t n) {
