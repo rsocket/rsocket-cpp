@@ -39,8 +39,8 @@ void StreamResponder::onError(const std::exception_ptr ex) noexcept {
 //}
 
 void StreamResponder::endStream(StreamCompletionSignal signal) {
-  terminatePublisher();
   StreamStateMachineBase::endStream(signal);
+  terminatePublisher();
 }
 
 void StreamResponder::handleCancel() {
