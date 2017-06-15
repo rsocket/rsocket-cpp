@@ -35,8 +35,6 @@ class Observable : public virtual Refcounted {
 
   /**
    * Subscribe overload that accepts lambdas.
-   *
-   * @param next
    */
   template <
       typename Next,
@@ -48,9 +46,6 @@ class Observable : public virtual Refcounted {
 
   /**
    * Subscribe overload that accepts lambdas.
-   *
-   * @param next
-   * @param error
    */
   template <
       typename Next,
@@ -64,10 +59,6 @@ class Observable : public virtual Refcounted {
 
   /**
    * Subscribe overload that accepts lambdas.
-   *
-   * @param next
-   * @param error
-   * @param complete
    */
   template <
       typename Next,
@@ -105,9 +96,6 @@ class Observable : public virtual Refcounted {
   * Convert from Observable to Flowable with a given BackpressureStrategy.
   *
   * Currently the only strategy is DROP.
-  *
-  * @param strategy
-  * @return
   */
   auto toFlowable(BackpressureStrategy strategy);
 };

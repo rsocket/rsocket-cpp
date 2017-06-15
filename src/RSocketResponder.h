@@ -2,9 +2,9 @@
 
 #pragma once
 
+#include "src/Payload.h"
 #include "yarpl/Flowable.h"
 #include "yarpl/Single.h"
-#include "src/Payload.h"
 
 namespace rsocket {
 
@@ -34,11 +34,7 @@ class RSocketResponder {
   /**
    * Called when a new `requestResponse` occurs from an RSocketRequester.
    *
-   * Return a Single with the response.
-   *
-   * @param request
-   * @param streamId
-   * @return
+   * Returns a Single with the response.
    */
   virtual yarpl::Reference<yarpl::single::Single<rsocket::Payload>>
   handleRequestResponse(rsocket::Payload request, rsocket::StreamId streamId);
@@ -46,24 +42,16 @@ class RSocketResponder {
   /**
    * Called when a new `requestStream` occurs from an RSocketRequester.
    *
-   * Return a Flowable with the response stream.
-   *
-   * @param request
-   * @param streamId
-   * @return
+   * Returns a Flowable with the response stream.
    */
   virtual yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
   handleRequestStream(rsocket::Payload request, rsocket::StreamId streamId);
 
   /**
-     * Called when a new `requestChannel` occurs from an RSocketRequester.
-     *
-     * Return a Flowable with the response stream.
-     *
-     * @param request
-     * @param streamId
-     * @return
-     */
+   * Called when a new `requestChannel` occurs from an RSocketRequester.
+   *
+   * Returns a Flowable with the response stream.
+   */
   virtual yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
   handleRequestChannel(
       rsocket::Payload request,
@@ -75,10 +63,6 @@ class RSocketResponder {
    * Called when a new `fireAndForget` occurs from an RSocketRequester.
    *
    * No response.
-   *
-   * @param request
-   * @param streamId
-   * @return
    */
   virtual void handleFireAndForget(
       rsocket::Payload request,
@@ -88,34 +72,32 @@ class RSocketResponder {
    * Called when a new `metadataPush` occurs from an RSocketRequester.
    *
    * No response.
-   *
-   * @param metadata
    */
   virtual void handleMetadataPush(std::unique_ptr<folly::IOBuf> metadata);
 
-  /// internal method for handling channel requests, not intended to be used
-  /// by the application code
+  /// Internal method for handling channel requests, not intended to be used by
+  /// application code.
   virtual yarpl::Reference<yarpl::flowable::Subscriber<Payload>>
   handleRequestChannelCore(
       Payload request,
       StreamId streamId,
       const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
-      response) noexcept;
+          response) noexcept;
 
-  /// internal method for handling stream requests, not intended to be used
-  /// by the application code
+  /// Internal method for handling stream requests, not intended to be used
+  /// by application code.
   virtual void handleRequestStreamCore(
       Payload request,
       StreamId streamId,
       const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
-      response) noexcept;
+          response) noexcept;
 
-  /// internal method for handling request-response requests, not intended to be used
-  /// by the application code
+  /// Internal method for handling request-response requests, not intended to be
+  /// used by application code.
   virtual void handleRequestResponseCore(
       Payload request,
       StreamId streamId,
       const yarpl::Reference<yarpl::single::SingleObserver<Payload>>&
-      response) noexcept;
+          response) noexcept;
 };
 }

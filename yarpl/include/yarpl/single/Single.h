@@ -29,8 +29,6 @@ class Single : public virtual Refcounted {
 
   /**
    * Subscribe overload that accepts lambdas.
-   *
-   * @param success
    */
   template <
       typename Success,
@@ -42,9 +40,6 @@ class Single : public virtual Refcounted {
 
   /**
    * Subscribe overload that accepts lambdas.
-   *
-   * @param success
-   * @param error
    */
   template <
       typename Success,
@@ -60,8 +55,6 @@ class Single : public virtual Refcounted {
    * Blocking subscribe that accepts lambdas.
    *
    * This blocks the current thread waiting on the response.
-   *
-   * @param success
    */
   template <
       typename Success,
@@ -74,7 +67,7 @@ class Single : public virtual Refcounted {
           next(std::move(t));
           waiting_->post();
         }));
-      // TODO get errors and throw if one is received
+    // TODO get errors and throw if one is received
     waiting_->wait();
   }
 
@@ -99,10 +92,8 @@ class Single<void> : public virtual Refcounted {
   virtual void subscribe(Reference<SingleObserver<void>>) = 0;
 
   /**
-   * subscribe overload taking lambda for onSuccess that is called upon writing
-   * to the network
-   * @tparam Success
-   * @param s
+   * Subscribe overload taking lambda for onSuccess that is called upon writing
+   * to the network.
    */
   template <
       typename Success,

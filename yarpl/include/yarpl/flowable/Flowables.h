@@ -14,11 +14,7 @@ namespace flowable {
 class Flowables {
  public:
   /**
-   * Emit a sequence of numbers.
-   *
-   * @param start starting value
-   * @param count how many to emit
-   * @return
+   * Emit the sequence of numbers [start, start + count).
    */
   static Reference<Flowable<int64_t>> range(int64_t start, int64_t count) {
     auto lambda = [ start, count, i = start ](
@@ -152,7 +148,7 @@ class Flowables {
       } catch(...) {
         subscriber.onError(std::current_exception());
         return std::make_tuple(generated, true);
-      } 
+      }
     };
     return Flowable<T>::create(std::move(lambda));
   }
