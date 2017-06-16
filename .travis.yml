@@ -9,15 +9,16 @@ language: cpp
 matrix:
 
    include:
-    - env: CLANG_VERSION=4.0 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
+    - env: CLANG_VERSION=3.8 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
       os: linux
       addons:
         apt:
           packages:
-            - clang-4.0
+            - clang-3.8
             - valgrind
           sources:
-            - llvm-toolchain-trusty-4.0
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-precise-3.8
 
     - env: GCC_VERSION=4.9 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
       os: linux
