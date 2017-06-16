@@ -96,6 +96,7 @@ folly::Future<folly::Unit> TcpConnectionAcceptor::start(
       serverSocket_->addAcceptCallback(callback.get(), callback->eventBase());
     }
 
+    serverSocket_->setReusePortEnabled(false);
     serverSocket_->listen(options_.backlog);
     serverSocket_->startAccepting();
 
