@@ -9,7 +9,7 @@ language: cpp
 matrix:
 
    include:
-    - env: CLANG_VERSION=4.0 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
+    - env: &clang_build CLANG_VERSION=4.0 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
       os: linux
       addons:
         apt:
@@ -50,8 +50,8 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
 
-    allow_failures:
-      - env: CLANG_VERSION=4.0 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
+   allow_failures:
+      - env: *clang_build
 
 
 before_script:
