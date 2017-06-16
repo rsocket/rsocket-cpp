@@ -14,9 +14,25 @@ TEST(RSocketClientServer, StartAndShutdown) {
   makeClient(randPort());
 }
 
-// TODO(alexanderm): Failing upon closing the server.  Error says we're on the
-// wrong EventBase for the AsyncSocket.
-TEST(RSocketClientServer, DISABLED_SimpleConnect) {
+TEST(RSocketClientServer, RacyConnect) {
+  auto const port = randPort();
+  auto server = makeServer(port, std::make_shared<HelloStreamRequestHandler>());
+  auto client = makeClient(port);
+  auto requester = client->connect();
+}
+
+TEST(RSocketClientServer, RacyConnectLoop) {
+  auto const port = randPort();
+  auto server = makeServer(port, std::make_shared<HelloStreamRequestHandler>());
+
+  for (size_t i = 0; i < 1000; ++i) {
+    auto client = makeClient(port);
+    auto requester = client->connect();
+  }
+}
+
+// TODO: Investigate "Broken promise" errors that sporadically show up in trunk.
+TEST(RSocketClientServer, DISABLED_SyncConnect) {
   auto const port = randPort();
   auto server = makeServer(port, std::make_shared<HelloStreamRequestHandler>());
   auto client = makeClient(port);

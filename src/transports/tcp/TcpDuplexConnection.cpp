@@ -34,19 +34,21 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
     CHECK(!inputSubscriber_);
     inputSubscriber_ = std::move(inputSubscriber);
 
-    selfRef_ = shared_from_this();
-    // safe to call repeatedly
+    self_ = shared_from_this();
+
+    // Safe to call repeatedly.
     socket_->setReadCB(this);
   }
 
   void setOutputSubscription(std::shared_ptr<Subscription> subscription) {
     if (isClosed()) {
       subscription->cancel();
-    } else {
-      // no flow control at tcp level, since we can't know the size of messages
-      subscription->request(std::numeric_limits<size_t>::max());
-      outputSubscription_ = std::move(subscription);
+      return;
     }
+
+    // No flow control at TCP level, since we can't know the size of messages.
+    subscription->request(std::numeric_limits<size_t>::max());
+    outputSubscription_ = std::move(subscription);
   }
 
   void send(std::unique_ptr<folly::IOBuf> element) {
@@ -58,35 +60,42 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
     socket_->writeChain(this, std::move(element));
   }
 
-  void closeFromWriter() {
-    if (isClosed()) {
-      return;
+  void close() {
+    if (auto socket = std::move(socket_)) {
+      socket->close();
     }
-
-    socket_->close();
+    if (auto subscriber = std::move(inputSubscriber_)) {
+      subscriber->onComplete();
+    }
+    if (auto subscription = std::move(outputSubscription_)) {
+      subscription->cancel();
+    }
   }
 
-  void closeFromReader() {
-    closeFromWriter();
-  }
-
-  void closeIfUnused() {
-    if(isClosed() || selfRef_) {
-      return;
+  void closeErr(folly::exception_wrapper ew) {
+    if (auto socket = std::move(socket_)) {
+      socket->close();
     }
-    socket_->close();
+    if (auto subscriber = std::move(inputSubscriber_)) {
+      subscriber->onError(std::move(ew));
+    }
+    if (auto subscription = std::move(outputSubscription_)) {
+      subscription->cancel();
+    }
   }
 
  private:
+  bool isClosed() const {
+    return !socket_;
+  }
+
   void writeSuccess() noexcept override {}
 
   void writeErr(
-      size_t bytesWritten,
-      const ::folly::AsyncSocketException& ex) noexcept override {
-    if (auto subscriber = std::move(inputSubscriber_)) {
-      subscriber->onError(ex);
-    }
-    close();
+      size_t,
+      const folly::AsyncSocketException& exn) noexcept override {
+    closeErr(exn);
+    self_ = nullptr;
   }
 
   void getReadBuffer(void** bufReturn, size_t* lenReturn) noexcept override {
@@ -103,17 +112,13 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
   }
 
   void readEOF() noexcept override {
-    if (auto subscriber = std::move(inputSubscriber_)) {
-      subscriber->onComplete();
-    }
     close();
+    self_ = nullptr;
   }
 
-  void readErr(const folly::AsyncSocketException& ex) noexcept override {
-    if (auto subscriber = std::move(inputSubscriber_)) {
-      subscriber->onError(ex);
-    }
-    close();
+  void readErr(const folly::AsyncSocketException& exn) noexcept override {
+    closeErr(exn);
+    self_ = nullptr;
   }
 
   bool isBufferMovable() noexcept override {
@@ -125,20 +130,6 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
     inputSubscriber_->onNext(std::move(readBuf));
   }
 
-  bool isClosed() const {
-    return !socket_;
-  }
-
-  void close() {
-    if (auto socket = std::move(socket_)) {
-      socket->close();
-    }
-    if (auto outputSubscription = std::move(outputSubscription_)) {
-      outputSubscription->cancel();
-    }
-    selfRef_ = nullptr;
-  }
-
   folly::IOBufQueue readBuffer_{folly::IOBufQueue::cacheChainLength()};
   folly::AsyncSocket::UniquePtr socket_;
   const std::shared_ptr<RSocketStats> stats_;
@@ -147,9 +138,8 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
       inputSubscriber_;
   std::shared_ptr<Subscription> outputSubscription_;
 
-  // self reference is used to keep the instance alive for the AsyncSocket
-  // callbacks even after DuplexConnection releases references to this
-  std::shared_ptr<TcpReaderWriter> selfRef_;
+  // Used to hold the reference the AsyncSocket callbacks have on us.
+  std::shared_ptr<TcpReaderWriter> self_;
 };
 
 class TcpOutputSubscriber
@@ -162,14 +152,13 @@ class TcpOutputSubscriber
 
   void onSubscribeImpl(
       std::shared_ptr<Subscription> subscription) noexcept override {
-    if (tcpReaderWriter_) {
-      // no flow control at tcp level, since we can't know the size of messages
-      subscription->request(std::numeric_limits<size_t>::max());
-      tcpReaderWriter_->setOutputSubscription(std::move(subscription));
-    } else {
+    if (!tcpReaderWriter_) {
       LOG(ERROR) << "trying to resubscribe on a closed subscriber";
       subscription->cancel();
+      return;
     }
+
+    tcpReaderWriter_->setOutputSubscription(std::move(subscription));
   }
 
   void onNextImpl(std::unique_ptr<folly::IOBuf> element) noexcept override {
@@ -180,11 +169,13 @@ class TcpOutputSubscriber
   void onCompleteImpl() noexcept override {
     CHECK(tcpReaderWriter_);
     auto tcpReaderWriter = std::move(tcpReaderWriter_);
-    tcpReaderWriter->closeFromWriter();
+    tcpReaderWriter->close();
   }
 
-  void onErrorImpl(folly::exception_wrapper ex) noexcept override {
-    onCompleteImpl();
+  void onErrorImpl(folly::exception_wrapper ew) noexcept override {
+    CHECK(tcpReaderWriter_);
+    auto tcpReaderWriter = std::move(tcpReaderWriter_);
+    tcpReaderWriter->closeErr(std::move(ew));
   }
 
  private:
@@ -200,12 +191,12 @@ class TcpInputSubscription : public SubscriptionBase {
     CHECK(tcpReaderWriter_);
   }
 
-  void requestImpl(size_t n) noexcept override {
-    // TcpDuplexConnection doesnt support propper flow control
+  void requestImpl(size_t) noexcept override {
+    // TcpDuplexConnection doesn't support proper flow control.
   }
 
   void cancelImpl() noexcept override {
-    tcpReaderWriter_->closeFromReader();
+    tcpReaderWriter_->close();
   }
 
  private:
@@ -225,7 +216,7 @@ TcpDuplexConnection::TcpDuplexConnection(
 
 TcpDuplexConnection::~TcpDuplexConnection() {
   stats_->duplexConnectionClosed("tcp", this);
-  tcpReaderWriter_->closeIfUnused();
+  tcpReaderWriter_->close();
 }
 
 std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>>
