@@ -9,16 +9,16 @@ language: cpp
 matrix:
 
    include:
-    - env: CLANG_VERSION=3.8 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
+    - env: CLANG_VERSION=4.0 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
       os: linux
       addons:
         apt:
           packages:
-            - clang-3.8
+            - clang-4.0
             - valgrind
           sources:
             - ubuntu-toolchain-r-test
-            - llvm-toolchain-precise-3.8
+            - llvm-toolchain-precise-4.0
 
     - env: GCC_VERSION=4.9 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
       os: linux
@@ -49,6 +49,10 @@ matrix:
             - valgrind
           sources:
             - ubuntu-toolchain-r-test
+
+    allow_failures:
+      - env: CLANG_VERSION=4.0 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
+
 
 before_script:
   - ./scripts/build_folly.sh
