@@ -1,0 +1,23 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+# Vagrant configuration that creates Travis-CI compatible build environment
+# for rsocket.
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/trusty64"
+
+  config.vm.provider "virtualbox" do |vb|
+    # Need more than 512MB to compile folly.
+    vb.memory = "1024"
+  end
+
+  config.vm.provision "shell", inline: <<-SHELL
+    apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+    apt-get update
+    apt-get -y install \
+      autoconf autoconf-archive automake binutils-dev g++-4.9 git lcov \
+      libboost-all-dev  libdouble-conversion-dev libevent-dev libgflags-dev \
+      libgoogle-glog-dev libiberty-dev libjemalloc-dev liblz4-dev liblzma-dev \
+      libsnappy-dev libssl-dev libtool make pkg-config valgrind zlib1g-dev
+  SHELL
+end
