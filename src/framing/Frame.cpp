@@ -1,11 +1,12 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "src/framing/Frame.h"
-#include <bitset>
-#include <sstream>
 #include <folly/Memory.h>
 #include <folly/Optional.h>
 #include <folly/io/Cursor.h>
+#include <bitset>
+#include <map>
+#include <sstream>
 #include "src/RSocketParameters.h"
 
 namespace rsocket {
@@ -95,41 +96,83 @@ std::ostream& operator<<(std::ostream& os, ErrorCode errorCode) {
   return os << "ErrorCode(" << static_cast<uint32_t>(errorCode) << ")";
 }
 
-std::ostream& operator<<(std::ostream& os, FrameFlags frameFlags) {
-  // TODO Match the Flag names with the AllowedFlags in the Frame declarations
+std::ostream&
+writeFlags(std::ostream& os, FrameFlags frameFlags, FrameType frameType) {
+  constexpr const char* kEmpty = "0x00";
+  constexpr const char* kMetadata = "METADATA";
+  constexpr const char* kResumeEnable = "RESUME_ENABLE";
+  constexpr const char* kLease = "LEASE";
+  constexpr const char* kKeepAliveRespond = "KEEPALIVE_RESPOND";
+  constexpr const char* kFollows = "FOLLOWS";
+  constexpr const char* kComplete = "COMPLETE";
+  constexpr const char* kNext = "NEXT";
 
-  std::stringstream ss;
+  static std::map<FrameType, std::vector<std::pair<FrameFlags, std::string>>>
+      flagToNameMap{{FrameType::REQUEST_N, {}},
+                    {FrameType::REQUEST_RESPONSE,
+                     {{FrameFlags::METADATA, kMetadata},
+                      {FrameFlags::FOLLOWS, kFollows}}},
+                    {FrameType::REQUEST_FNF,
+                     {{FrameFlags::METADATA, kMetadata},
+                      {FrameFlags::FOLLOWS, kFollows}}},
+                    {FrameType::METADATA_PUSH, {}},
+                    {FrameType::CANCEL, {}},
+                    {FrameType::PAYLOAD,
+                     {{FrameFlags::METADATA, kMetadata},
+                      {FrameFlags::FOLLOWS, kFollows},
+                      {FrameFlags::COMPLETE, kComplete},
+                      {FrameFlags::NEXT, kNext}}},
+                    {FrameType::ERROR, {{FrameFlags::METADATA, kMetadata}}},
+                    {FrameType::KEEPALIVE,
+                     {{FrameFlags::KEEPALIVE_RESPOND, kKeepAliveRespond}}},
+                    {FrameType::SETUP,
+                     {{FrameFlags::METADATA, kMetadata},
+                      {FrameFlags::RESUME_ENABLE, kResumeEnable},
+                      {FrameFlags::LEASE, kLease}}},
+                    {FrameType::LEASE, {{FrameFlags::METADATA, kMetadata}}},
+                    {FrameType::RESUME, {}},
+                    {FrameType::REQUEST_CHANNEL,
+                     {{FrameFlags::METADATA, kMetadata},
+                      {FrameFlags::FOLLOWS, kFollows},
+                      {FrameFlags::COMPLETE, kComplete}}},
+                    {FrameType::REQUEST_STREAM,
+                     {{FrameFlags::METADATA, kMetadata},
+                      {FrameFlags::FOLLOWS, kFollows}}}};
+
+  FrameFlags foundFlags = FrameFlags::EMPTY;
+
+  // Search the corresponding string value for each flag, insert the missing
+  // ones as empty
+  const std::vector<std::pair<FrameFlags, std::string>>& allowedFlags =
+      flagToNameMap[frameType];
+
   std::string delimeter = "";
-  if (!!(frameFlags & FrameFlags::NEXT)) {
-    ss << "NEXT";
-    delimeter = "|";
+  for (const auto& pair : allowedFlags) {
+    if (!!(frameFlags & pair.first)) {
+      os << delimeter << pair.second;
+      delimeter = "|";
+      foundFlags |= pair.first;
+    }
   }
-  if (!!(frameFlags & FrameFlags::COMPLETE)) {
-    ss << delimeter << "COMPLETE";
-    delimeter = "|";
+
+  if (foundFlags != frameFlags) {
+    os << frameFlags;
+  } else if (delimeter.empty()) {
+    os << kEmpty;
   }
-  if (!!(frameFlags & FrameFlags::FOLLOWS)) {
-    ss << delimeter << "FOLLOWS";
-    delimeter = "|";
-  }
-  if (!!(frameFlags & FrameFlags::METADATA)) {
-    ss << delimeter << "METADATA";
-    delimeter = "|";
-  }
-  if (!!(frameFlags & FrameFlags::IGNORE)) {
-    ss << delimeter << "IGNORE";
-    delimeter = "|";
-  }
-  if (!delimeter.empty()) {
-    return os << ss.str();
-  }
-  return os << "EMPTY";
+  return os;
+}
+
+std::ostream& operator<<(std::ostream& os, FrameFlags frameFlags) {
+  std::bitset<16> flags(static_cast<uint16_t>(frameFlags));
+  return os << flags;
 }
 
 std::ostream& operator<<(std::ostream& os, const FrameHeader& header) {
-  return os << header.type_ << "[" << header.flags_ << ", " << header.streamId_
-            << "]";
+  os << header.type_ << "[";
+  return writeFlags(os, header.flags_, header.type_) << ", " << header.streamId_ << "]";
 }
+
 /// @}
 
 std::ostream& operator<<(std::ostream& os, const Frame_REQUEST_Base& frame) {
@@ -211,9 +254,8 @@ std::ostream& operator<<(std::ostream& os, const Frame_KEEPALIVE& frame) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Frame_SETUP& frame) {
-  return os << frame.header_
-            << ", Version: " << frame.versionMajor_ << "." << frame.versionMinor_
-            << ", (" << frame.payload_;
+  return os << frame.header_ << ", Version: " << frame.versionMajor_ << "."
+            << frame.versionMinor_ << ", (" << frame.payload_;
 }
 
 void Frame_SETUP::moveToSetupPayload(SetupParameters& setupPayload) {
@@ -241,4 +283,13 @@ std::ostream& operator<<(std::ostream& os, const Frame_RESUME& frame) {
 std::ostream& operator<<(std::ostream& os, const Frame_RESUME_OK& frame) {
   return os << frame.header_ << ", (@" << frame.position_ << ")";
 }
-} // reactivesocket
+
+std::ostream& operator<<(std::ostream& os, const Frame_REQUEST_CHANNEL& frame) {
+  return os << frame.header_ << ", " << frame.payload_;
+}
+
+std::ostream& operator<<(std::ostream& os, const Frame_REQUEST_STREAM& frame) {
+  return os << frame.header_ << ", " << frame.payload_;
+}
+
+} // namespace rsocket

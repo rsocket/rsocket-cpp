@@ -27,7 +27,7 @@ class TcpConnectionAcceptor::SocketCallback
     auto connection = std::make_unique<TcpDuplexConnection>(
         std::move(socket), inlineExecutor());
     auto framedConnection = std::make_unique<FramedDuplexConnection>(
-        std::move(connection), inlineExecutor());
+        std::move(connection), ProtocolVersion::Unknown, inlineExecutor());
 
     onAccept_(std::move(framedConnection), *eventBase());
   }

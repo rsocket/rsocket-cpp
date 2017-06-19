@@ -24,23 +24,29 @@ void Payload::checkFlags(FrameFlags flags) const {
 }
 
 std::ostream& operator<<(std::ostream& os, const Payload& payload) {
-  return os
-            << "[Metadata("
+  return os << "[Metadata("
             << (payload.metadata
                     ? folly::to<std::string>(
                           payload.metadata->computeChainDataLength())
                     : "0")
-            << (payload.metadata
-                    ?  "): '" + payload.metadata->cloneAsValue().moveToFbString().substr(0, 80).toStdString() + "'"
-                    : "): <nullptr>")
+            << (payload.metadata ? "): '" +
+                        payload.metadata->cloneAsValue()
+                            .moveToFbString()
+                            .substr(0, 40)
+                            .toStdString() +
+                        "'"
+                                 : "): <nullptr>")
             << ", Data("
-            << (payload.data
-                     ? folly::to<std::string>(
-                           payload.data->computeChainDataLength())
-                     : "0")
-            << (payload.data
-                    ? "): '" + payload.data->cloneAsValue().moveToFbString().substr(0, 80).toStdString() + "'"
-                    : "): <nullptr>")
+            << (payload.data ? folly::to<std::string>(
+                                   payload.data->computeChainDataLength())
+                             : "0")
+            << (payload.data ? "): '" +
+                        payload.data->cloneAsValue()
+                            .moveToFbString()
+                            .substr(0, 40)
+                            .toStdString() +
+                        "'"
+                             : "): <nullptr>")
             << "]";
 }
 
@@ -79,4 +85,4 @@ FrameFlags Payload::getFlags() const {
   return (metadata != nullptr ? FrameFlags::METADATA : FrameFlags::EMPTY);
 }
 
-} // reactivesocket
+} // namespace rsocket
