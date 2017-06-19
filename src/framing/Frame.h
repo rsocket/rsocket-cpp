@@ -254,6 +254,7 @@ class Frame_REQUEST_STREAM : public Frame_REQUEST_Base {
             0,
             std::move(payload)) {}
 };
+std::ostream& operator<<(std::ostream& os, const Frame_REQUEST_STREAM& frame);
 
 class Frame_REQUEST_CHANNEL : public Frame_REQUEST_Base {
  public:
@@ -281,6 +282,7 @@ class Frame_REQUEST_CHANNEL : public Frame_REQUEST_Base {
             0,
             std::move(payload)) {}
 };
+std::ostream& operator<<(std::ostream&, const Frame_REQUEST_CHANNEL&);
 
 class Frame_REQUEST_RESPONSE {
  public:

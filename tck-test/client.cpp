@@ -4,6 +4,7 @@
 #include <folly/SocketAddress.h>
 #include <folly/String.h>
 #include <folly/init/Init.h>
+#include <folly/portability/GFlags.h>
 
 #include "src/RSocket.h"
 

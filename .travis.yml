@@ -15,6 +15,7 @@ matrix:
         apt:
           packages:
             - clang-4.0
+            - libstdc++-4.9-dev
             - valgrind
           sources:
             - ubuntu-toolchain-r-test
@@ -49,9 +50,6 @@ matrix:
             - valgrind
           sources:
             - ubuntu-toolchain-r-test
-
-   allow_failures:
-      - env: *clang_build
 
 
 before_script:

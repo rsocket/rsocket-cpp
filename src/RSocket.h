@@ -14,9 +14,8 @@ class RSocket {
  public:
   /**
    * Create an RSocketClient that can be used to open RSocket connections.
-   * @param connectionFactory factory of DuplexConnections on the desired
-   * transport, such as TcpClientConnectionFactory
-   * @return RSocketClient which can then make RSocket connections.
+   * Takes a factory of DuplexConnections on the desired transport, such as
+   * TcpClientConnectionFactory.
    */
   static std::unique_ptr<RSocketClient> createClient(
       std::unique_ptr<ConnectionFactory>);
@@ -25,20 +24,21 @@ class RSocket {
   // TODO ConnectionSetupPayload arguments such as MimeTypes, Keepalive, etc
 
   /**
-   * Create an RSocketServer that will accept connections.
-   * @param connectionAcceptor acceptor of DuplexConnections on the desired
-   * transport, such as TcpServerConnectionAcceptor
-   * @return RSocketServer which can then accept RSocket connections.
+   * Create an RSocketServer that will accept connections.  Takes an acceptor of
+   * DuplexConnections on the desired transport, such as
+   * TcpServerConnectionAcceptor
    */
   static std::unique_ptr<RSocketServer> createServer(
-      std::unique_ptr<ConnectionAcceptor> ca);
+      std::unique_ptr<ConnectionAcceptor>);
 
   // TODO createResumeServer
 
   RSocket() = delete;
-  RSocket(const RSocket&) = delete; // copy
-  RSocket(RSocket&&) = delete; // move
-  RSocket& operator=(const RSocket&) = delete; // copy
-  RSocket& operator=(RSocket&&) = delete; // move
+
+  RSocket(const RSocket&) = delete;
+  RSocket(RSocket&&) = delete;
+
+  RSocket& operator=(const RSocket&) = delete;
+  RSocket& operator=(RSocket&&) = delete;
 };
 }

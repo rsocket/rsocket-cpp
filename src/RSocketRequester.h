@@ -40,30 +40,27 @@ class RSocketRequester {
 
   ~RSocketRequester(); // implementing for logging right now
 
-  RSocketRequester(const RSocketRequester&) = delete; // copy
-  RSocketRequester(RSocketRequester&&) = delete; // move
-  RSocketRequester& operator=(const RSocketRequester&) = delete; // copy
-  RSocketRequester& operator=(RSocketRequester&&) = delete; // move
+  RSocketRequester(const RSocketRequester&) = delete;
+  RSocketRequester(RSocketRequester&&) = delete;
+
+  RSocketRequester& operator=(const RSocketRequester&) = delete;
+  RSocketRequester& operator=(RSocketRequester&&) = delete;
 
   /**
    * Send a single request and get a response stream.
    *
    * Interaction model details can be found at
    * https://github.com/ReactiveSocket/reactivesocket/blob/master/Protocol.md#request-stream
-   *
-   * @param payload
    */
   yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>> requestStream(
       rsocket::Payload request);
 
   /**
-    * Start a channel (streams in both directions).
-    *
-    * Interaction model details can be found at
-    * https://github.com/ReactiveSocket/reactivesocket/blob/master/Protocol.md#request-channel
-    *
-    * @param request
-    */
+   * Start a channel (streams in both directions).
+   *
+   * Interaction model details can be found at
+   * https://github.com/ReactiveSocket/reactivesocket/blob/master/Protocol.md#request-channel
+   */
   yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>> requestChannel(
       yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>> requests);
 
@@ -72,8 +69,6 @@ class RSocketRequester {
    *
    * Interaction model details can be found at
    * https://github.com/ReactiveSocket/reactivesocket/blob/master/Protocol.md#stream-sequences-request-response
-   *
-   * @param payload
    */
   yarpl::Reference<yarpl::single::Single<rsocket::Payload>> requestResponse(
       rsocket::Payload request);
@@ -89,16 +84,12 @@ class RSocketRequester {
    *
    * Interaction model details can be found at
    * https://github.com/ReactiveSocket/reactivesocket/blob/master/Protocol.md#request-fire-n-forget
-   *
-   * @param payload
    */
   yarpl::Reference<yarpl::single::Single<void>> fireAndForget(
       rsocket::Payload request);
 
   /**
    * Send metadata without response.
-   *
-   * @param metadata
    */
   void metadataPush(std::unique_ptr<folly::IOBuf> metadata);
 
