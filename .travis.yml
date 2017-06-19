@@ -51,9 +51,6 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
 
-   allow_failures:
-      - env: *clang_build
-
 
 before_script:
   - ./scripts/build_folly.sh
