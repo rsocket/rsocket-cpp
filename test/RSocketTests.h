@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include <random>
 #include <utility>
 
 #include <gtest/gtest.h>
@@ -16,21 +15,11 @@ namespace rsocket {
 namespace tests {
 namespace client_server {
 
-// Helps prevent against port collisions.
-inline uint16_t randPort() {
-  std::random_device device;
-  std::uniform_int_distribution<uint16_t> dis(9000, 65000);
-
-  auto const n = dis(device);
-  return static_cast<uint16_t>(n);
-}
-
 inline std::unique_ptr<RSocketServer> makeServer(
-    uint16_t port,
     std::shared_ptr<rsocket::RSocketResponder> responder) {
   TcpConnectionAcceptor::Options opts;
   opts.threads = 2;
-  opts.port = port;
+  opts.port = 0;
 
   // RSocket server accepting on TCP.
   auto rs = RSocket::createServer(

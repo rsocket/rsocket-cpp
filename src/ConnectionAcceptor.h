@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <folly/Optional.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/EventBase.h>
 
@@ -53,5 +54,11 @@ class ConnectionAcceptor {
    * the implementation's destructor.  Must be synchronous.
    */
   virtual void stop() = 0;
+
+  /**
+   * Get the port the acceptor is listening on.  Returns folly::none when the
+   * acceptor is not listening.
+   */
+  virtual folly::Optional<uint16_t> listeningPort() const = 0;
 };
 }

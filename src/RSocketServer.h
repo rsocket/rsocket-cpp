@@ -85,6 +85,12 @@ class RSocketServer {
 
   void shutdownAndWait();
 
+  /**
+   * Gets the port the ConnectionAcceptor is listening on.  Returns folly::none
+   * if this server is not listening on a port.
+   */
+  folly::Optional<uint16_t> listeningPort() const;
+
  private:
 
   void onRSocketSetup(

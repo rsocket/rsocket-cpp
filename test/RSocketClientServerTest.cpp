@@ -10,15 +10,14 @@ using namespace rsocket::tests;
 using namespace rsocket::tests::client_server;
 
 TEST(RSocketClientServer, StartAndShutdown) {
-  makeServer(randPort(), std::make_shared<HelloStreamRequestHandler>());
-  makeClient(randPort());
+  auto server = makeServer(std::make_shared<HelloStreamRequestHandler>());
+  auto client = makeClient(*server->listeningPort());
 }
 
 // TODO(alexanderm): Failing upon closing the server.  Error says we're on the
 // wrong EventBase for the AsyncSocket.
 TEST(RSocketClientServer, DISABLED_SimpleConnect) {
-  auto const port = randPort();
-  auto server = makeServer(port, std::make_shared<HelloStreamRequestHandler>());
-  auto client = makeClient(port);
+  auto server = makeServer(std::make_shared<HelloStreamRequestHandler>());
+  auto client = makeClient(*server->listeningPort());
   auto requester = client->connect().get();
 }
