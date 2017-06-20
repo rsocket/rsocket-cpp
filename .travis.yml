@@ -2,6 +2,7 @@
 
 sudo: false
 dist: trusty
+group: edge
 
 language: cpp
 
