@@ -2,7 +2,6 @@
 
 #include <benchmark/benchmark.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
-#include <src/temporary_home/SubscriptionBase.h>
 #include <src/transports/tcp/TcpConnectionAcceptor.h>
 #include <condition_variable>
 #include <iostream>
@@ -23,18 +22,21 @@ using namespace yarpl;
 DEFINE_string(host, "localhost", "host to connect to");
 DEFINE_int32(port, 9898, "host:port to connect to");
 
-class BM_Subscription : public SubscriptionBase {
+using yarpl::flowable::Subscription;
+using yarpl::flowable::Subscriber;
+using yarpl::flowable::Flowable;
+
+class BM_Subscription : public Subscription {
  public:
   explicit BM_Subscription(
-      std::shared_ptr<Subscriber<Payload>> subscriber,
-      size_t length)
-      : ExecutorBase(defaultExecutor()),
-        subscriber_(std::move(subscriber)),
+      yarpl::Reference<Subscriber<Payload>> subscriber,
+      int64_t length)
+      : subscriber_(std::move(subscriber)),
         data_(length, 'a'),
         cancelled_(false) {}
 
  private:
-  void requestImpl(size_t n) noexcept override {
+  void request(int64_t n) noexcept override {
     LOG(INFO) << "requested=" << n;
 
     if (cancelled_) {
@@ -46,12 +48,12 @@ class BM_Subscription : public SubscriptionBase {
     subscriber_->onComplete();
   }
 
-  void cancelImpl() noexcept override {
+  void cancel() noexcept override {
     LOG(INFO) << "cancellation received";
     cancelled_ = true;
   }
 
-  std::shared_ptr<Subscriber<Payload>> subscriber_;
+  yarpl::Reference<Subscriber<Payload>> subscriber_;
   std::string data_;
   std::atomic_bool cancelled_;
 };
@@ -59,7 +61,7 @@ class BM_Subscription : public SubscriptionBase {
 class BM_RequestHandler : public RSocketResponder {
  public:
   // TODO(lehecka): enable when we have support for request-response
-  yarpl::Reference<yarpl::flowable::Flowable<Payload>> handleRequestStream(
+  yarpl::Reference<Flowable<Payload>> handleRequestStream(
       Payload request,
       StreamId streamId) override {
     CHECK(false) << "not implemented";
@@ -84,7 +86,7 @@ class BM_RequestHandler : public RSocketResponder {
   // }
 };
 
-class BM_Subscriber : public yarpl::flowable::Subscriber<Payload> {
+class BM_Subscriber : public Subscriber<Payload> {
  public:
   ~BM_Subscriber() {
     LOG(INFO) << "BM_Subscriber destroy " << this;
@@ -97,7 +99,7 @@ class BM_Subscriber : public yarpl::flowable::Subscriber<Payload> {
               << "  Threshold for re-request: " << thresholdForRequest_;
   }
 
-  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
+  void onSubscribe(yarpl::Reference<Subscription>
                        subscription) noexcept override {
     LOG(INFO) << "BM_Subscriber " << this << " onSubscribe";
     subscription_ = std::move(subscription);
@@ -149,7 +151,7 @@ class BM_Subscriber : public yarpl::flowable::Subscriber<Payload> {
   int initialRequest_;
   int thresholdForRequest_;
   int requested_;
-  yarpl::Reference<yarpl::flowable::Subscription> subscription_;
+  yarpl::Reference<Subscription> subscription_;
   bool terminated_{false};
   std::mutex m_;
   std::condition_variable terminalEventCV_;

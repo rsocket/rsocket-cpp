@@ -13,7 +13,7 @@
 namespace rsocket {
 
 RSocketSetup::RSocketSetup(
-    std::shared_ptr<FrameTransport> frameTransport,
+    yarpl::Reference<FrameTransport> frameTransport,
     SetupParameters setupParams,
     folly::EventBase& eventBase,
     RSocketConnectionManager& connectionManager)

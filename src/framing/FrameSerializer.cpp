@@ -16,7 +16,7 @@ DEFINE_string(
 namespace rsocket {
 
 // TODO: this should default to 1.0 when we deploy successfully
-constexpr const ProtocolVersion ProtocolVersion::Latest =
+const ProtocolVersion ProtocolVersion::Latest =
     FrameSerializerV0_1::Version;
 
 ProtocolVersion FrameSerializer::getCurrentProtocolVersion() {

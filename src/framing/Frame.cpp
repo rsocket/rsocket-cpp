@@ -170,7 +170,8 @@ std::ostream& operator<<(std::ostream& os, FrameFlags frameFlags) {
 
 std::ostream& operator<<(std::ostream& os, const FrameHeader& header) {
   os << header.type_ << "[";
-  return writeFlags(os, header.flags_, header.type_) << ", " << header.streamId_ << "]";
+  return writeFlags(os, header.flags_, header.type_)
+      << ", " << header.streamId_ << "]";
 }
 
 /// @}

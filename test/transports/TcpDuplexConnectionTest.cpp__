@@ -1,0 +1,345 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
+#include "../DuplexConnectionTest.h"
+
+#include <iostream>
+#include <thread>
+
+#include <folly/ThreadName.h>
+#include <folly/futures/Future.h>
+#include <folly/io/async/AsyncServerSocket.h>
+#include <folly/io/async/ScopedEventBaseThread.h>
+#include <src/framing/FrameSerializer_v1_0.h>
+#include <yarpl/include/yarpl/flowable/TestSubscriber.h>
+#include "src/ConnectionAcceptor.h"
+#include "src/RSocket.h"
+#include "src/framing/FrameTransport.h"
+#include "src/framing/FramedDuplexConnection.h"
+#include "src/transports/tcp/TcpConnectionAcceptor.h"
+#include "src/transports/tcp/TcpConnectionFactory.h"
+#include "src/transports/tcp/TcpDuplexConnection.h"
+#include "yarpl/Flowable.h"
+#include "yarpl/Refcounted.h"
+
+using namespace rsocket;
+using namespace rsocket::tests::duplexconnection;
+using namespace yarpl::flowable;
+
+class FuatCallBack : public folly::AsyncServerSocket::AcceptCallback {
+ public:
+  explicit FuatCallBack(OnDuplexConnectionAccept& onAccept)
+      : onAccept_{onAccept} {}
+
+  void connectionAccepted(
+      int fd,
+      const folly::SocketAddress& address) noexcept override {
+    VLOG(3) << "Accepting TCP connection from " << address << " on FD " << fd;
+
+    folly::AsyncSocket::UniquePtr socket(
+        new folly::AsyncSocket(eventBase(), fd));
+
+    auto connection = std::make_unique<TcpDuplexConnection>(std::move(socket));
+    auto framedConnection = std::make_unique<FramedDuplexConnection>(
+        std::move(connection), FrameSerializer::getCurrentProtocolVersion());
+
+    VLOG(3) << "Accepted!" << std::endl;
+    onAccept_(std::move(framedConnection), *eventBase());
+  }
+
+  void acceptError(const std::exception& ex) noexcept override {
+    VLOG(3) << "TCP error: " << ex.what();
+  }
+
+  folly::EventBase* eventBase() const {
+    return thread_.getEventBase();
+  }
+
+  void acceptStarted() noexcept override {
+    VLOG(3) << "Accept started" << std::endl;
+  }
+
+  void acceptStopped() noexcept override {
+    VLOG(3) << "Accept stopped" << std::endl;
+  }
+
+ private:
+  /// The thread running this callback.
+  folly::ScopedEventBaseThread thread_;
+
+  /// Reference to the ConnectionAcceptor's callback.
+  OnDuplexConnectionAccept& onAccept_;
+};
+
+class ServerSubscription : public ::yarpl::flowable::Subscription {
+ public:
+  virtual void request(int64_t delta) override {
+    VLOG(3) << "ServerSubscription::Request: " << delta << std::endl;
+    // TODO
+  }
+
+  virtual void cancel() override {
+    VLOG(3) << "ServerSubscription::Cancel" << std::endl;
+    // TODO
+  }
+};
+
+class ClientSubscription : public ::yarpl::flowable::Subscription {
+public:
+  virtual void request(int64_t delta) override {
+    VLOG(3) << "ClientSubscription::Request: " << delta << std::endl;
+    // TODO
+  }
+
+  virtual void cancel() override {
+    VLOG(3) << "ClientSubscription::Cancel" << std::endl;
+    // TODO
+  }
+};
+
+
+class ServerFrameProcessor : public FrameProcessor {
+ public:
+  int index = 0;
+
+  void processFrame(std::unique_ptr<folly::IOBuf> upFrame) override {
+
+    auto frameType = serializer_.peekFrameType(*upFrame);
+
+    auto streamIdPtr = serializer_.peekStreamId(*upFrame);
+    auto streamId = *streamIdPtr;
+
+    VLOG(3) <<index++ <<". ServerFrameProcessor::processFrame, streamid: " <<streamId <<std::endl;
+
+    if (streamId == 0) {
+      // handleConnectionFrame(frameType, std::move(upFrame));
+      //VLOG(3) << "FrameType: " << frameType << std::endl;
+      return;
+    }
+  }
+
+  void onTerminal(folly::exception_wrapper) override {
+    VLOG(2) <<"ServerFrameProcessor::onTerminal" <<std::endl;
+  }
+
+  FrameSerializerV1_0 serializer_;
+};
+
+class ClientFrameProcessor : public FrameProcessor {
+public:
+  int index = 0;
+
+  void processFrame(std::unique_ptr<folly::IOBuf> upFrame) override {
+    VLOG(3) <<index++ <<". ClientFrameProcessor::processFrame" <<std::endl;
+
+    auto frameType = serializer_.peekFrameType(*upFrame);
+
+    auto streamIdPtr = serializer_.peekStreamId(*upFrame);
+    auto streamId = *streamIdPtr;
+    if (streamId == 0) {
+      // handleConnectionFrame(frameType, std::move(upFrame));
+      //VLOG(3) << "FrameType: " << frameType << std::endl;
+      return;
+    }
+  }
+
+  void onTerminal(folly::exception_wrapper) override {
+    VLOG(3) <<"ClientFrameProcessor::onTerminal" <<std::endl;
+  }
+
+  FrameSerializerV1_0 serializer_;
+};
+
+class ServerSubscriber : public Subscriber<std::unique_ptr<folly::IOBuf>> {
+public:
+  ServerSubscriber(std::shared_ptr<folly::Baton<>> onComplete)
+  : onComplete_(onComplete) {}
+
+  void onNext(std::unique_ptr<folly::IOBuf> input) {
+    VLOG(3) <<"ServerSubscriber::onNext: " <<input->moveToFbString() <<std::endl;
+  }
+
+  void onComplete() override {
+    Subscriber::onComplete();
+    VLOG(2) <<"ServerSubscriber::onComplete" <<std::endl;
+    onComplete_->post();
+  }
+
+  void onSubscribe(yarpl::Reference<Subscription> subscription) override {
+    Subscriber::onSubscribe(subscription);
+    subscription->request(100);
+  }
+
+private:
+
+  std::shared_ptr<folly::Baton<>> onComplete_;
+};
+
+class ClientSubscriber : public Subscriber<std::unique_ptr<folly::IOBuf>> {
+public:
+
+  ClientSubscriber(std::shared_ptr<folly::Baton<>> onComplete)
+   : onComplete_(onComplete) {}
+
+  void onNext(std::unique_ptr<folly::IOBuf> input) {
+    VLOG(3) <<"ClientSubscriber::onNext: " <<input->moveToFbString() <<std::endl;
+  }
+
+  void onComplete() override {
+    Subscriber::onComplete();
+    VLOG(2) <<"ClientSubscriber::onComplete" <<std::endl;
+    onComplete_->post();
+  }
+
+  void onSubscribe(yarpl::Reference<Subscription> subscription) override {
+    Subscriber::onSubscribe(subscription);
+    subscription->request(100);
+  }
+
+private:
+
+  std::shared_ptr<folly::Baton<>> onComplete_;
+};
+
+template <typename ConnectionFactory>
+void MultipleSetInputOutputCallsTest() {
+  folly::SocketAddress address;
+  address.setFromHostPort("localhost", 9898);
+
+  constexpr int64_t kMaxRequestN = std::numeric_limits<int32_t>::max();
+
+  // global request responder
+  auto serverThread = std::make_unique<folly::ScopedEventBaseThread>();
+
+  VLOG(3) << "Starting TCP listener on port " << 9898 << " with " << 1
+            << " request threads" << std::endl;
+
+  auto serverSocket =
+      new folly::AsyncServerSocket(serverThread->getEventBase());
+
+  auto onCompleteServer = std::make_shared<folly::Baton<>>();
+  auto subscriber = yarpl::make_ref<ServerSubscriber>(onCompleteServer);
+  auto subscription = yarpl::make_ref<ServerSubscription>();
+  auto subscriber2 = yarpl::make_ref<ServerSubscriber>(onCompleteServer);
+  auto subscription2 = yarpl::make_ref<ServerSubscription>();
+  OnDuplexConnectionAccept onAccept_ =
+      [subscriber, subscription, subscriber2, subscription2](
+          std::unique_ptr<rsocket::DuplexConnection> connection,
+          folly::EventBase&) {
+        VLOG(3) << "SERVER THREAD" << std::endl;
+
+        auto frameSerializer = FrameSerializer::createCurrentVersion();
+        Frame_KEEPALIVE pingFrame(FrameFlags::KEEPALIVE_RESPOND, 101, folly::IOBuf::copyBuffer("424242"));
+        VLOG(3) << "Out: " << pingFrame;
+
+//        connection->setInput(subscriber);
+//        auto output = connection->getOutput();
+//        output->onSubscribe(subscription);
+//        output->onNext(frameSerializer->serializeOut(std::move(pingFrame), false));
+//        output->onNext(frameSerializer->serializeOut(std::move(pingFrame), false));
+//        output->onNext(frameSerializer->serializeOut(std::move(pingFrame), false));
+//        output->onNext(frameSerializer->serializeOut(std::move(pingFrame), false));
+//        output->onNext(frameSerializer->serializeOut(std::move(pingFrame), false));
+//        output->onNext(frameSerializer->serializeOut(std::move(pingFrame), false));
+//        output->onComplete();
+
+        // Second time calling setInput / setOutput
+        auto serverFrameProcessor = std::make_shared<ServerFrameProcessor>();
+        auto transport = yarpl::make_ref<FrameTransport>(std::move(connection));
+        transport->setFrameProcessor(serverFrameProcessor);
+
+
+        subscription = yarpl::make_ref<ServerSubscription>();
+        auto output = transport->duplexConnection()->getOutput();
+        output->onSubscribe(subscription);
+        output->onNext(frameSerializer->serializeOut(std::move(pingFrame), false));
+        output->onComplete();
+      };
+
+  std::shared_ptr<FuatCallBack> callback =
+      std::make_shared<FuatCallBack>(onAccept_);
+
+  auto onServerStart = std::make_shared<folly::Baton<>>();
+  serverThread->getEventBase()->runInEventBaseThread(
+      [ serverSocket = std::move(serverSocket), onServerStart, callback ] {
+        VLOG(3) << "In server thread!" << std::endl;
+        folly::SocketAddress addr;
+        addr.setFromLocalPort(9898);
+        serverSocket->bind(addr);
+
+        serverSocket->addAcceptCallback(callback.get(), callback->eventBase());
+
+        VLOG(3) << "Starting to listen" << std::endl;
+        serverSocket->listen(/*backlog*/ 1); // execute immediately!
+        serverSocket->startAccepting();
+
+        for (auto& i : serverSocket->getAddresses()) {
+          VLOG(3) << "Listening on " << i.describe() << std::endl;
+        }
+        onServerStart->post();
+      });
+
+  onServerStart->wait();
+
+  auto connectionFactory =
+      std::make_unique<ConnectionFactory>(std::move(address));
+
+  auto onCompleteClient = std::make_shared<folly::Baton<>>();
+
+  auto subscriberCli = yarpl::make_ref<ClientSubscriber>(onCompleteClient);
+  auto subscriptionCli = yarpl::make_ref<ClientSubscription>();
+
+  connectionFactory->connect([subscriberCli, subscriptionCli](
+                                 std::unique_ptr<DuplexConnection> connection,
+                                 folly::EventBase& eventBase) mutable {
+
+    VLOG(3) << "Client thread" << std::endl;
+
+    auto clientFrameProcessor = std::make_shared<ClientFrameProcessor>();
+    // Next lines makes: connection->setInput(spTransport)
+    // so it consumes the frames
+
+    Frame_KEEPALIVE pingFrame;
+    VLOG(3) << "Out: " << pingFrame;
+    auto frameSerializer = FrameSerializer::createCurrentVersion();
+
+    auto transport = yarpl::make_ref<FrameTransport>(std::move(connection));
+    transport->setFrameProcessor(clientFrameProcessor);
+
+    auto output = transport->duplexConnection()->getOutput();
+//    output->onSubscribe(transport->empty());
+//
+//    output->onNext(frameSerializer->serializeOut(std::move(pingFrame), false));
+//    output->onNext(frameSerializer->serializeOut(std::move(pingFrame), false));
+//    output->onNext(frameSerializer->serializeOut(std::move(pingFrame), false));
+//    output->onNext(frameSerializer->serializeOut(std::move(pingFrame), false));
+//    output->onNext(frameSerializer->serializeOut(std::move(pingFrame), false));
+//
+//    output->onComplete();
+
+
+    connection->setInput(subscriberCli);
+    auto output = connection->getOutput();
+    output->onSubscribe(subscriptionCli);
+    output->onNext(frameSerializer->serializeOut(std::move(pingFrame), false));
+    output->onComplete();
+
+
+//    auto subscription = yarpl::make_ref<ClientSubscription>();
+//    auto output = transport->duplexConnection()->getOutput();
+//    output->onSubscribe(subscription);
+//
+//    output->onNext(folly::IOBuf::copyBuffer("FUAT"));
+//    output->onComplete();
+  });
+
+  VLOG(3) << "onCompleteClient.wait()" << std::endl;
+  onCompleteClient->wait();
+  VLOG(3) << "onCompleteServer.wait()" << std::endl;
+  onCompleteServer->wait();
+
+  //serverThread->getEventBase()->waitUntilRunning();
+}
+
+TEST(TcpDuplexConnection, MultipleSetInputOutputCalls) {
+  MultipleSetInputOutputCallsTest<TcpConnectionFactory>();
+}
