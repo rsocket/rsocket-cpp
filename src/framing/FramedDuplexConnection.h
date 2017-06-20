@@ -14,8 +14,7 @@ struct ProtocolVersion;
 class FramedDuplexConnection : public virtual DuplexConnection {
  public:
   // TODO: remove this ctor overload
-  FramedDuplexConnection(
-      std::unique_ptr<DuplexConnection> connection);
+  FramedDuplexConnection(std::unique_ptr<DuplexConnection> connection);
 
   FramedDuplexConnection(
       std::unique_ptr<DuplexConnection> connection,
@@ -26,8 +25,8 @@ class FramedDuplexConnection : public virtual DuplexConnection {
   yarpl::Reference<yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>
   getOutput() noexcept override;
 
-  void setInput(yarpl::Reference<yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>
-                    framesSink) override;
+  void setInput(yarpl::Reference<yarpl::flowable::Subscriber<
+                    std::unique_ptr<folly::IOBuf>>> framesSink) override;
 
  private:
   std::unique_ptr<DuplexConnection> inner_;
@@ -35,4 +34,4 @@ class FramedDuplexConnection : public virtual DuplexConnection {
   std::shared_ptr<ProtocolVersion> protocolVersion_;
 };
 
-} // reactivesocket
+} // namespace rsocket

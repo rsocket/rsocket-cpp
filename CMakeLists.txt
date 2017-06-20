@@ -255,6 +255,8 @@ add_executable(
   test/RequestResponseTest.cpp
   test/RequestStreamTest.cpp
   test/RequestChannelTest.cpp
+  test/transports/TcpDuplexConnectionTest.cpp
+  test/test_utils/BasicClientServer.h
   test/test_utils/Mocks.h
   test/MocksTest.cpp
 )

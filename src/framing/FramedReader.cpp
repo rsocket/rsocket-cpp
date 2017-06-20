@@ -161,6 +161,15 @@ void FramedReader::cancel() noexcept {
 
 void FramedReader::setInput(yarpl::Reference<Subscriber<std::unique_ptr<folly::IOBuf>>>
               frames) {
+  if (frames_) {
+    payloadQueue_.move(); // equivalent to clear(), releases the buffers
+    if (auto subscriber = std::move(frames_)) {
+      subscriber->onComplete();
+    }
+  }
+  if (frames == nullptr) {
+    return;
+  }
   CHECK(!frames_);
   frames_ = std::move(frames);
   frames_->onSubscribe(yarpl::get_ref(this));

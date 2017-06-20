@@ -74,7 +74,7 @@ int64_t consume(std::atomic<std::int64_t>* current, int64_t n) {
       // do nothing, return existing unmodified value
       return r;
     }
-    if (r < n) {
+  if (r < n) {
       // bad usage somewhere ... be resilient, just set to r
       n = r;
     }

@@ -52,13 +52,13 @@ class MockSubscriber : public Subscriber<T> {
   void onComplete() override {
     onComplete_();
     checkpoint_.Call();
-    subscription_ = nullptr;
+    subscription_.reset();
   }
 
   void onError(const std::exception_ptr ex) override {
     onError_(ex);
     checkpoint_.Call();
-    subscription_ = nullptr;
+    subscription_.reset();
   }
 
   Subscription* subscription() const {
