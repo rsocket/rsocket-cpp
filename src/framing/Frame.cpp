@@ -209,7 +209,7 @@ Frame_PAYLOAD Frame_PAYLOAD::complete(StreamId streamId) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Frame_PAYLOAD& frame) {
-  return os << frame.header_ << ", (" << frame.payload_;
+  return os << frame.header_ << ", " << frame.payload_;
 }
 
 Frame_ERROR Frame_ERROR::unexpectedFrame() {
@@ -255,7 +255,7 @@ std::ostream& operator<<(std::ostream& os, const Frame_KEEPALIVE& frame) {
 
 std::ostream& operator<<(std::ostream& os, const Frame_SETUP& frame) {
   return os << frame.header_ << ", Version: " << frame.versionMajor_ << "."
-            << frame.versionMinor_ << ", (" << frame.payload_;
+            << frame.versionMinor_ << ", " << frame.payload_;
 }
 
 void Frame_SETUP::moveToSetupPayload(SetupParameters& setupPayload) {
