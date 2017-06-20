@@ -261,6 +261,8 @@ add_executable(
   test/RequestResponseTest.cpp
   test/RequestStreamTest.cpp
   test/RequestChannelTest.cpp
+  test/test_utils/Mocks.h
+  test/MocksTest.cpp
 )
 
 target_link_libraries(

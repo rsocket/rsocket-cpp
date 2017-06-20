@@ -1,26 +1,10 @@
-if [ -z "$OSX_LOCAL" ]; then
-  # libs required for Folly
-  sudo apt-get -y install \
-      g++ \
-      automake \
-      autoconf \
-      autoconf-archive \
-      libtool \
-      libboost-all-dev \
-      libevent-dev \
-      libdouble-conversion-dev \
-      libgoogle-glog-dev \
-      libgflags-dev \
-      liblz4-dev \
-      liblzma-dev \
-      libsnappy-dev \
-      make \
-      zlib1g-dev \
-      binutils-dev \
-      libjemalloc-dev \
-      libssl-dev \
-      libiberty-dev
-else
+install_dir=$HOME/folly
+if [ -d "$install_dir/include" ]; then
+  echo "Using cache $install_dir"
+  exit 0
+fi
+
+if [ -n "$OSX_LOCAL" ]; then
   export CPPFLAGS="-I/usr/local/opt/openssl/include"
   export LDFLAGS="-L/usr/local/opt/openssl/lib"
 fi
@@ -60,9 +44,9 @@ folly_compile=`cat <<EOF
 mv ../*googletest* folly/test/gtest \
 && cd folly \
 && autoreconf -ivf \
-&& ./configure \
+&& ./configure --prefix=$install_dir \
 && make -j 4 \
-&& sudo make install \\
+&& make install \\
 )
 EOF
 `
