@@ -2,7 +2,6 @@
 
 #include <benchmark/benchmark.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
-#include <src/temporary_home/SubscriptionBase.h>
 #include <src/transports/tcp/TcpConnectionAcceptor.h>
 #include <condition_variable>
 #include <iostream>
@@ -22,10 +21,14 @@ using namespace yarpl;
 DEFINE_string(host, "localhost", "host to connect to");
 DEFINE_int32(port, 9898, "host:port to connect to");
 
-class BM_Subscription : public yarpl::flowable::Subscription {
+using yarpl::flowable::Subscription;
+using yarpl::flowable::Subscriber;
+using yarpl::flowable::Flowable;
+
+class BM_Subscription : public Subscription {
  public:
   explicit BM_Subscription(
-      yarpl::Reference<yarpl::flowable::Subscriber<Payload>> subscriber,
+      yarpl::Reference<Subscriber<Payload>> subscriber,
       size_t length)
       : subscriber_(std::move(subscriber)),
         data_(length, 'a'),
@@ -50,7 +53,7 @@ class BM_Subscription : public yarpl::flowable::Subscription {
     cancelled_ = true;
   }
 
-  yarpl::Reference<yarpl::flowable::Subscriber<Payload>> subscriber_;
+  yarpl::Reference<Subscriber<Payload>> subscriber_;
   std::string data_;
   size_t currentElem_ = 0;
   std::atomic_bool cancelled_;
@@ -58,7 +61,7 @@ class BM_Subscription : public yarpl::flowable::Subscription {
 
 class BM_RequestHandler : public RSocketResponder {
  public:
-  yarpl::Reference<yarpl::flowable::Flowable<Payload>> handleRequestStream(
+  yarpl::Reference<Flowable<Payload>> handleRequestStream(
       Payload request,
       StreamId streamId) override {
     CHECK(false) << "not implemented";
@@ -68,7 +71,7 @@ class BM_RequestHandler : public RSocketResponder {
   }
 };
 
-class BM_Subscriber : public yarpl::flowable::Subscriber<Payload> {
+class BM_Subscriber : public Subscriber<Payload> {
  public:
   ~BM_Subscriber() {
     LOG(INFO) << "BM_Subscriber destroy " << this;
@@ -83,7 +86,7 @@ class BM_Subscriber : public yarpl::flowable::Subscriber<Payload> {
               << "  Threshold for re-request: " << thresholdForRequest_;
   }
 
-  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
+  void onSubscribe(yarpl::Reference<Subscription>
                        subscription) noexcept override {
     LOG(INFO) << "BM_Subscriber " << this << " onSubscribe";
     subscription_ = std::move(subscription);
@@ -144,7 +147,7 @@ class BM_Subscriber : public yarpl::flowable::Subscriber<Payload> {
   int initialRequest_;
   int thresholdForRequest_;
   int requested_;
-  yarpl::Reference<yarpl::flowable::Subscription> subscription_;
+  yarpl::Reference<Subscription> subscription_;
   bool terminated_{false};
   std::mutex m_;
   std::condition_variable terminalEventCV_;

@@ -8,7 +8,6 @@
 #include "yarpl/Single.h"
 
 #include "Payload.h"
-#include "src/internal/ReactiveStreamsCompat.h"
 #include "src/statemachine/RSocketStateMachine.h"
 
 namespace rsocket {
