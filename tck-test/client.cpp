@@ -4,6 +4,7 @@
 #include <folly/SocketAddress.h>
 #include <folly/String.h>
 #include <folly/init/Init.h>
+#include <folly/portability/GFlags.h>
 
 #include "src/RSocket.h"
 
@@ -37,6 +38,8 @@ int main(int argc, char* argv[]) {
   folly::SocketAddress address;
   address.setFromHostPort(FLAGS_ip, FLAGS_port);
 
+  LOG(INFO) << "Creating client to connect to " << address.describe();
+
   // create a client which can then make connections below
   auto rsf = RSocket::createClient(
       std::make_unique<TcpConnectionFactory>(std::move(address)));
@@ -57,7 +60,7 @@ int main(int argc, char* argv[]) {
         std::find(testsToRun.begin(), testsToRun.end(), test.name()) !=
             testsToRun.end()) {
       ++ran;
-      TestInterpreter interpreter(test, std::move(rs));
+      TestInterpreter interpreter(test, rs.get());
       bool passing = interpreter.run();
       if (passing) {
         ++passed;

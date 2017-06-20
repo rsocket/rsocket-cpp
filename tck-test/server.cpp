@@ -1,12 +1,13 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include <fstream>
+#include <future>
+#include <signal.h>
 
 #include <folly/Memory.h>
 #include <folly/String.h>
 #include <folly/init/Init.h>
-
-#include <gmock/gmock.h>
+#include <folly/portability/GFlags.h>
 
 #include "src/RSocket.h"
 
@@ -14,7 +15,6 @@
 
 #include "tck-test/MarbleProcessor.h"
 
-using namespace ::testing;
 using namespace folly;
 using namespace rsocket;
 using namespace yarpl;
@@ -119,9 +119,11 @@ class ServerResponder : public RSocketResponder {
   MarbleStore marbles_;
 };
 
-[[noreturn]] static void signal_handler(int signal) {
+std::promise<void> terminate;
+
+static void signal_handler(int signal) {
   LOG(INFO) << "Terminating program after receiving signal " << signal;
-  exit(signal);
+  terminate.set_value();
 }
 
 int main(int argc, char* argv[]) {
@@ -148,9 +150,7 @@ int main(int argc, char* argv[]) {
     rawRs->startAndPark([responder](auto& setup) { setup.createRSocket(responder); });
   });
 
-  // Wait for a newline on the console to terminate the server.
-  std::getchar();
-
+  terminate.get_future().wait();
   rs->unpark();
   serverThread.join();
 

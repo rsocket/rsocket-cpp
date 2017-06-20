@@ -30,9 +30,6 @@ class Flowable : public virtual Refcounted {
 
   /**
    * Subscribe overload that accepts lambdas.
-   *
-   * @param next
-   * @param batch Optional batch size for request_n. Default: no flow control.
    */
   template <
       typename Next,
@@ -45,9 +42,7 @@ class Flowable : public virtual Refcounted {
   /**
    * Subscribe overload that accepts lambdas.
    *
-   * @param next
-   * @param error
-   * @param batch Optional batch size for request_n. Default: no flow control.
+   * Takes an optional batch size for request_n. Default is no flow control.
    */
   template <
       typename Next,
@@ -65,10 +60,7 @@ class Flowable : public virtual Refcounted {
   /**
    * Subscribe overload that accepts lambdas.
    *
-   * @param next
-   * @param error
-   * @param complete
-   * @param batch Optional batch size for request_n. Default: no flow control.
+   * Takes an optional batch size for request_n. Default is no flow control.
    */
   template <
       typename Next,

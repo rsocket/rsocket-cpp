@@ -44,8 +44,8 @@ void StreamResponder::endStream(StreamCompletionSignal signal) {
 }
 
 void StreamResponder::handleCancel() {
-  publisherComplete();
   closeStream(StreamCompletionSignal::CANCEL);
+  publisherComplete();
 }
 
 void StreamResponder::handleRequestN(uint32_t n) {

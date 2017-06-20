@@ -88,8 +88,6 @@ class TestObserver : public yarpl::observable::Observer<T>,
   /**
    * If the onNext values received does not match the given count,
    * throw a runtime_error
-   *
-   * @param count
    */
   void assertValueCount(size_t count);
 
@@ -103,9 +101,6 @@ class TestObserver : public yarpl::observable::Observer<T>,
    * Get a reference to a stored value at a given index position.
    *
    * The values are stored in the order received from onNext.
-   *
-   * @param index
-   * @return
    */
   T& getValueAt(size_t index);
 

@@ -30,7 +30,7 @@ class TestInterpreter {
  public:
   TestInterpreter(
       const Test& test,
-      std::unique_ptr<RSocketRequester> requester);
+      RSocketRequester* requester);
 
   bool run();
 
@@ -43,7 +43,7 @@ class TestInterpreter {
 
   yarpl::Reference<BaseSubscriber> getSubscriber(const std::string& id);
 
-  std::unique_ptr<RSocketRequester> requester_;
+  RSocketRequester* requester_;
   const Test& test_;
   std::map<std::string, std::string> interactionIdToType_;
   std::map<std::string, yarpl::Reference<BaseSubscriber>> testSubscribers_;

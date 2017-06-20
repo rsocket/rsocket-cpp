@@ -40,8 +40,6 @@ class ConnectionFactory {
    * multiplex many RSocket connections on a single transport.
    *
    * Resource creation depends on the particular implementation.
-   *
-   * @param onConnect
    */
   virtual void connect(OnConnect onConnect) = 0;
 };

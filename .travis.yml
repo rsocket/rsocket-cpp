@@ -9,20 +9,21 @@ language: cpp
 matrix:
 
    include:
-    - env: CLANG_VERSION=3.9 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
+    - env: &clang_build CLANG_VERSION=4.0 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
       os: linux
-      addons: &clang39
+      addons:
         apt:
           packages:
-            - clang-3.9
+            - clang-4.0
+            - libstdc++-4.9-dev
             - valgrind
           sources:
             - ubuntu-toolchain-r-test
-            - llvm-toolchain-precise-3.9
+            - llvm-toolchain-trusty-4.0
 
     - env: GCC_VERSION=4.9 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
       os: linux
-      addons: &gcc49
+      addons:
         apt:
           packages:
             - g++-4.9
@@ -32,7 +33,7 @@ matrix:
 
     - env: GCC_VERSION=5 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
       os: linux
-      addons: &gcc5
+      addons:
         apt:
           packages:
             - g++-5
@@ -42,13 +43,14 @@ matrix:
 
     - env: GCC_VERSION=6 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
       os: linux
-      addons: &gcc6
+      addons:
         apt:
           packages:
             - g++-6
             - valgrind
           sources:
             - ubuntu-toolchain-r-test
+
 
 before_script:
   - ./scripts/build_folly.sh
@@ -76,16 +78,15 @@ script:
   - if [ -n "$GCC_VERSION" -a "$ASAN" == "On" ]; then CXX_FLAGS="${CXX_FLAGS} -fsanitize=address,undefined -fuse-ld=gold"; fi
   - if [ -n "$GCC_VERSION" ]; then CXX_FLAGS="${CXX_FLAGS} --coverage"; fi # enable code coverage on GCC builds
   - cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_FLAGS="${CXX_FLAGS}" -DCMAKE_EXE_LINKER_FLAGS="${CXX_LINKER_FLAGS}" -DMETA_CXX_STD=$CPP_VERSION
-  - make -j8
+  - make -j8 VERBOSE=1
   - ./tests
   - ./yarpl/yarpl-tests
   - cd ..
   - ./scripts/prepare_tck_drivers.sh
-# Commenting out TCK until it is upgraded to new APIs
-#  - ./scripts/tck_test.sh -c cpp -s cpp
-#  - ./scripts/tck_test.sh -c java -s java
-#  - ./scripts/tck_test.sh -c java -s cpp
-#  - ./scripts/tck_test.sh -c cpp -s java
+  - ./scripts/tck_test.sh -c cpp -s cpp
+  - ./scripts/tck_test.sh -c java -s java
+  - ./scripts/tck_test.sh -c java -s cpp
+  - ./scripts/tck_test.sh -c cpp -s java
 
 after_success:
   - if [ -n "$GCC_VERSION" ]; then lcov --directory . --capture --output-file coverage.info; fi # capture coverage info

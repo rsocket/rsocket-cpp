@@ -3,7 +3,7 @@ name%%streamTest3
 subscribe%%rs%%cf114994-3782-4cb6-943f-78e4a45e9359%%c%%d
 request%%5%%cf114994-3782-4cb6-943f-78e4a45e9359
 await%%atLeast%%cf114994-3782-4cb6-943f-78e4a45e9359%%5%%100
-await%%no_events%%cf114994-3782-4cb6-943f-78e4a45e9359%%5000
+await%%no_events%%cf114994-3782-4cb6-943f-78e4a45e9359%%3000
 cancel%%cf114994-3782-4cb6-943f-78e4a45e9359
 assert%%canceled%%cf114994-3782-4cb6-943f-78e4a45e9359
 assert%%no_error%%cf114994-3782-4cb6-943f-78e4a45e9359
