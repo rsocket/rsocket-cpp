@@ -14,27 +14,36 @@ TEST(RSocketClientServer, StartAndShutdown) {
   makeClient(randPort());
 }
 
-TEST(RSocketClientServer, RacyConnect) {
-  auto const port = randPort();
-  auto server = makeServer(port, std::make_shared<HelloStreamRequestHandler>());
-  auto client = makeClient(port);
-  auto requester = client->connect();
-}
-
-TEST(RSocketClientServer, RacyConnectLoop) {
-  auto const port = randPort();
-  auto server = makeServer(port, std::make_shared<HelloStreamRequestHandler>());
-
-  for (size_t i = 0; i < 1000; ++i) {
-    auto client = makeClient(port);
-    auto requester = client->connect();
-  }
-}
-
-// TODO: Investigate "Broken promise" errors that sporadically show up in trunk.
-TEST(RSocketClientServer, DISABLED_SyncConnect) {
+TEST(RSocketClientServer, ConnectOne) {
   auto const port = randPort();
   auto server = makeServer(port, std::make_shared<HelloStreamRequestHandler>());
   auto client = makeClient(port);
   auto requester = client->connect().get();
+}
+
+TEST(RSocketClientServer, ConnectManySync) {
+  auto const port = randPort();
+  auto server = makeServer(port, std::make_shared<HelloStreamRequestHandler>());
+
+  for (size_t i = 0; i < 100; ++i) {
+    auto client = makeClient(port);
+    auto requester = client->connect().get();
+  }
+}
+
+// TODO: Investigate why this hangs (even with i < 2).
+TEST(RSocketClientServer, DISABLED_ConnectManyAsync) {
+  auto const port = randPort();
+  auto server = makeServer(port, std::make_shared<HelloStreamRequestHandler>());
+
+  std::vector<folly::Future<folly::Unit>> futures;
+
+  for (size_t i = 0; i < 100; ++i) {
+    auto client = makeClient(port);
+    auto requester = client->connect();
+
+    futures.push_back(requester.unit());
+  }
+
+  folly::collectAll(futures).get();
 }
