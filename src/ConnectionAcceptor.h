@@ -10,8 +10,10 @@
 
 namespace rsocket {
 
-using OnDuplexConnectionAccept = std::function<
-    void(std::unique_ptr<rsocket::DuplexConnection>, folly::EventBase&)>;
+using OnDuplexConnectionAccept = std::function<void(
+    std::unique_ptr<rsocket::DuplexConnection>,
+    bool framedConnection,
+    folly::EventBase&)>;
 
 /**
  * Common interface for a server that accepts connections and turns them into
@@ -61,4 +63,4 @@ class ConnectionAcceptor {
    */
   virtual folly::Optional<uint16_t> listeningPort() const = 0;
 };
-}
+} // namespace rsocket

@@ -4,10 +4,10 @@
 #include "src/RSocketRequester.h"
 #include "src/RSocketResponder.h"
 #include "src/RSocketStats.h"
-#include "src/internal/FollyKeepaliveTimer.h"
-#include "src/internal/RSocketConnectionManager.h"
 #include "src/framing/FrameTransport.h"
 #include "src/framing/FramedDuplexConnection.h"
+#include "src/internal/FollyKeepaliveTimer.h"
+#include "src/internal/RSocketConnectionManager.h"
 
 using namespace folly;
 
@@ -42,20 +42,18 @@ folly::Future<std::unique_ptr<RSocketRequester>> RSocketClient::connect(
     keepaliveTimer = std::move(keepaliveTimer),
     stats = std::move(stats),
     networkStats = std::move(networkStats),
-    promise = std::move(promise)](
-      std::unique_ptr<DuplexConnection> connection,
-      bool isFramedConnection,
-      folly::EventBase& eventBase) mutable {
+    promise = std::move(promise)
+  ](std::unique_ptr<DuplexConnection> connection,
+    bool isFramedConnection,
+    folly::EventBase& eventBase) mutable {
     VLOG(3) << "onConnect received DuplexConnection";
 
     std::unique_ptr<DuplexConnection> framedConnection;
-    if(isFramedConnection) {
+    if (isFramedConnection) {
       framedConnection = std::move(connection);
     } else {
       framedConnection = std::make_unique<FramedDuplexConnection>(
-          std::move(connection),
-          setupParameters.protocolVersion,
-          eventBase);
+          std::move(connection), setupParameters.protocolVersion, eventBase);
     }
 
     auto rsocket = fromConnection(
@@ -109,4 +107,4 @@ std::unique_ptr<RSocketRequester> RSocketClient::fromConnection(
   return std::make_unique<RSocketRequester>(std::move(rs), eventBase);
 }
 
-}
+} // namespace rsocket

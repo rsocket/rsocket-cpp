@@ -2,9 +2,10 @@
 
 #include "src/RSocketServer.h"
 #include <folly/io/async/EventBaseManager.h>
-#include "src/framing/FrameTransport.h"
 #include "src/RSocketErrors.h"
 #include "src/RSocketStats.h"
+#include "src/framing/FrameTransport.h"
+#include "src/framing/FramedDuplexConnection.h"
 #include "src/internal/RSocketConnectionManager.h"
 
 namespace rsocket {
@@ -12,7 +13,7 @@ namespace rsocket {
 RSocketServer::RSocketServer(
     std::unique_ptr<ConnectionAcceptor> connectionAcceptor)
     : duplexConnectionAcceptor_(std::move(connectionAcceptor)),
-      setupResumeAcceptors_([]{
+      setupResumeAcceptors_([] {
         return new rsocket::SetupResumeAcceptor(
             ProtocolVersion::Unknown,
             folly::EventBaseManager::get()->getExistingEventBase());
@@ -51,7 +52,8 @@ void RSocketServer::shutdownAndWait() {
 }
 
 void RSocketServer::start(OnRSocketSetup onRSocketSetup) {
-  CHECK(duplexConnectionAcceptor_); // RSocketServer has to be initialized with the acceptor
+  CHECK(duplexConnectionAcceptor_); // RSocketServer has to be initialized with
+                                    // the acceptor
 
   if (started) {
     throw std::runtime_error("RSocketServer::start() already called.");
@@ -60,11 +62,21 @@ void RSocketServer::start(OnRSocketSetup onRSocketSetup) {
 
   LOG(INFO) << "Starting RSocketServer";
 
-  duplexConnectionAcceptor_->start([ this, onRSocketSetup = std::move(onRSocketSetup) ](
-      std::unique_ptr<DuplexConnection> connection,
-      folly::EventBase & eventBase) {
-    acceptConnection(std::move(connection), eventBase, onRSocketSetup);
-  }).get(); // block until finished and return or throw
+  duplexConnectionAcceptor_
+      ->start([ this, onRSocketSetup = std::move(onRSocketSetup) ](
+          std::unique_ptr<DuplexConnection> connection,
+          bool isFramedConnection,
+          folly::EventBase& eventBase) {
+        std::unique_ptr<DuplexConnection> framedConnection;
+        if (isFramedConnection) {
+          framedConnection = std::move(connection);
+        } else {
+          framedConnection = std::make_unique<FramedDuplexConnection>(
+              std::move(connection), ProtocolVersion::Unknown, eventBase);
+        }
+        acceptConnection(std::move(framedConnection), eventBase, onRSocketSetup);
+      })
+      .get(); // block until finished and return or throw
 }
 
 void RSocketServer::acceptConnection(
@@ -107,7 +119,11 @@ void RSocketServer::onRSocketSetup(
   auto* eventBase = folly::EventBaseManager::get()->getExistingEventBase();
   CHECK(eventBase);
 
-  RSocketSetup setup(std::move(frameTransport), std::move(setupParams), *eventBase, *connectionManager_);
+  RSocketSetup setup(
+      std::move(frameTransport),
+      std::move(setupParams),
+      *eventBase,
+      *connectionManager_);
   onRSocketSetup(setup);
 }
 
