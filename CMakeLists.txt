@@ -1,7 +1,22 @@
 cmake_minimum_required(VERSION 3.2)
+
+# The RSOCKET_CC CMake variable specifies the C compiler, e.g. gcc-4.9.
+# The C++ compiler name is obtained by replacing "gcc" with "g++" and "clang"
+# with "clang++"". If RSOCKET_CC is not given, the compiler is detected
+# automatically.
+if (RSOCKET_CC)
+  set(ENV{CC} ${RSOCKET_CC})
+  if (${RSOCKET_CC} MATCHES clang)
+    string(REPLACE clang clang++ CXX ${RSOCKET_CC})
+  else ()
+    string(REPLACE gcc g++ CXX ${RSOCKET_CC})
+  endif ()
+  set(ENV{CXX} ${CXX})
+endif ()
+
 project(ReactiveSocket)
 
-# Cmake modules.
+# CMake modules.
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 
 # Generate compilation database for use by YouCompleteMe.
@@ -14,9 +29,44 @@ if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
 endif()
 
 # default built type is Debug
-if(NOT CMAKE_BUILD_TYPE)
+if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build" FORCE)
 endif(NOT CMAKE_BUILD_TYPE)
+
+# Add compiler-specific options.
+if (CMAKE_COMPILER_IS_GNUCXX)
+  if (RSOCKET_ASAN)
+    set(ASAN_FLAGS -fsanitize=address,undefined)
+  endif ()
+  set(EXTRA_LINK_FLAGS ${EXTRA_LINK_FLAGS} -fuse-ld=gold)
+
+  # Enable code coverage.
+  add_compile_options(--coverage)
+  set(EXTRA_LINK_FLAGS ${EXTRA_LINK_FLAGS} --coverage)
+  set(COVERAGE_INFO coverage.info)
+  add_custom_command(
+    OUTPUT ${COVERAGE_INFO}
+    # Capture coverage info.
+    COMMAND lcov --directory . --capture --output-file ${COVERAGE_INFO}
+    # Filter out system and test code.
+    COMMAND lcov --remove ${COVERAGE_INFO} 'tests/*' '/usr/*' --output-file
+                 ${COVERAGE_INFO}
+    # Debug before upload.
+    COMMAND lcov --list ${COVERAGE_INFO})
+elseif (${CMAKE_CXX_COMPILER_ID} MATCHES Clang)
+  if (RSOCKET_ASAN)
+    set(ASAN_FLAGS
+      -fsanitize=address,undefined,integer
+      -fno-sanitize=unsigned-integer-overflow)
+  endif ()
+endif ()
+
+if (DEFINED ASAN_FLAGS)
+  add_compile_options(${ASAN_FLAGS})
+  set(EXTRA_LINK_FLAGS ${EXTRA_LINK_FLAGS} ${ASAN_FLAGS})
+endif ()
+
+add_custom_target(coverage DEPENDS ${COVERAGE_INFO})
 
 # default is to use ReactiveStreams location from github directly
 if(NOT REACTIVE_STREAMS_GIT_URL)
@@ -32,6 +82,48 @@ add_definitions(-DOSS)
 
 include(ExternalProject)
 include(CTest)
+
+if (NOT FOLLY_INSTALL_DIR)
+  set(FOLLY_INSTALL_DIR $ENV{HOME}/folly)
+endif ()
+
+if (RSOCKET_INSTALL_DEPS AND NOT EXISTS ${FOLLY_INSTALL_DIR}/include/folly)
+  # Build and install folly.
+  ExternalProject_Add(
+    folly-ext
+    GIT_REPOSITORY https://github.com/facebook/folly
+    GIT_TAG v2017.03.06.00
+    BINARY_DIR folly-ext-prefix/src/folly-ext/folly
+    CONFIGURE_COMMAND autoreconf -ivf
+      COMMAND ./configure --prefix=${FOLLY_INSTALL_DIR}
+    BUILD_COMMAND make -j4)
+
+  set(FOLLY_INCLUDE_DIR ${FOLLY_INSTALL_DIR}/include)
+  set(lib ${CMAKE_STATIC_LIBRARY_PREFIX}folly${CMAKE_STATIC_LIBRARY_SUFFIX})
+  set(FOLLY_LIBRARY ${FOLLY_INSTALL_DIR}/lib/${lib})
+
+  # CMake requires directories listed in INTERFACE_INCLUDE_DIRECTORIES to exist.
+  file(MAKE_DIRECTORY ${FOLLY_INCLUDE_DIR})
+else ()
+  # Use installed folly.
+  find_package(Folly REQUIRED)
+endif ()
+
+add_library(folly STATIC IMPORTED)
+set_property(TARGET folly PROPERTY IMPORTED_LOCATION ${FOLLY_LIBRARY})
+set_property(TARGET folly
+  APPEND PROPERTY INTERFACE_LINK_LIBRARIES
+  ${EXTRA_LINK_FLAGS} ${CMAKE_THREAD_LIBS_INIT})
+if (TARGET folly-ext)
+  add_dependencies(folly folly-ext)
+endif ()
+
+# Folly includes are marked as system to prevent errors on non-standard
+# extensions when compiling with -pedantic and -Werror.
+set_property(TARGET folly
+  APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES ${FOLLY_INCLUDE_DIR})
+set_property(TARGET folly
+  APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${FOLLY_INCLUDE_DIR})
 
 # gmock
 ExternalProject_Add(
@@ -97,7 +189,6 @@ endif()
 
 find_library(DOUBLE-CONVERSION double-conversion)
 
-find_package(Folly REQUIRED)
 find_package(OpenSSL REQUIRED)
 
 # Find glog and gflags libraries specifically
@@ -110,7 +201,6 @@ find_library(GFLAGS_LIBRARY gflags)
 message("gflags include_dir <${GFLAGS_INCLUDE_DIR}> lib <${GFLAGS_LIBRARY}>")
 message("glog include_dir <${GLOG_INCLUDE_DIR}> lib <${GLOG_LIBRARY}>")
 
-include_directories(SYSTEM ${FOLLY_INCLUDE_DIR})
 include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
 
 include_directories(SYSTEM ${GFLAGS_INCLUDE_DIR})
@@ -227,13 +317,9 @@ add_library(
 target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/include")
 target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/src")
 
-target_link_libraries(
-  ReactiveSocket
-  ${FOLLY_LIBRARIES}
-  ${GFLAGS_LIBRARY}
-  ${GLOG_LIBRARY})
+target_link_libraries(ReactiveSocket yarpl ${GFLAGS_LIBRARY} ${GLOG_LIBRARY})
 
-add_dependencies(ReactiveSocket ReactiveStreams yarpl)
+add_dependencies(ReactiveSocket ReactiveStreams)
 
 target_compile_options(
   ReactiveSocket
@@ -598,5 +684,3 @@ if(BUILD_BENCHMARKS)
   add_subdirectory(benchmarks)
   add_subdirectory(yarpl/perf)
 endif(BUILD_BENCHMARKS)
-
-# EOF
