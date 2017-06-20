@@ -6,13 +6,17 @@
 namespace rsocket {
 
 yarpl::Reference<yarpl::single::Single<rsocket::Payload>>
-RSocketResponder::handleRequestResponse(rsocket::Payload request, rsocket::StreamId streamId) {
+RSocketResponder::handleRequestResponse(
+    rsocket::Payload request,
+    rsocket::StreamId streamId) {
   return yarpl::single::Singles::error<rsocket::Payload>(
       std::logic_error("handleRequestResponse not implemented"));
 }
 
 yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
-RSocketResponder::handleRequestStream(rsocket::Payload request, rsocket::StreamId streamId) {
+RSocketResponder::handleRequestStream(
+    rsocket::Payload request,
+    rsocket::StreamId streamId) {
   return yarpl::flowable::Flowables::error<rsocket::Payload>(
       std::logic_error("handleRequestStream not implemented"));
 }
@@ -33,7 +37,8 @@ void RSocketResponder::handleFireAndForget(
   // no default implementation, no error response to provide
 }
 
-void RSocketResponder::handleMetadataPush(std::unique_ptr<folly::IOBuf> metadata) {
+void RSocketResponder::handleMetadataPush(
+    std::unique_ptr<folly::IOBuf> metadata) {
   // no default implementation, no error response to provide
 }
 
@@ -47,8 +52,8 @@ RSocketResponder::handleRequestChannelCore(
   class EagerSubscriberBridge
       : public yarpl::flowable::Subscriber<rsocket::Payload> {
    public:
-    void onSubscribe(
-        yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept {
+    void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
+                         subscription) noexcept override {
       CHECK(!subscription_);
       subscription_ = std::move(subscription);
       if (inner_) {
@@ -56,12 +61,12 @@ RSocketResponder::handleRequestChannelCore(
       }
     }
 
-    void onNext(rsocket::Payload element) noexcept {
+    void onNext(rsocket::Payload element) noexcept override {
       DCHECK(inner_);
       inner_->onNext(std::move(element));
     }
 
-    void onComplete() noexcept {
+    void onComplete() noexcept override {
       DCHECK(inner_);
       inner_->onComplete();
 
@@ -69,7 +74,7 @@ RSocketResponder::handleRequestChannelCore(
       subscription_.reset();
     }
 
-    void onError(std::exception_ptr ex) noexcept {
+    void onError(std::exception_ptr ex) noexcept override {
       DCHECK(inner_);
       inner_->onError(std::move(ex));
 

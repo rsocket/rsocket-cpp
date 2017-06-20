@@ -37,7 +37,7 @@ class ConnectCallback : public folly::AsyncSocket::ConnectCallback {
     VLOG(2) << "Destroying ConnectCallback";
   }
 
-  void connectSuccess() noexcept {
+  void connectSuccess() noexcept override {
     std::unique_ptr<ConnectCallback> deleter(this);
 
     auto evb = folly::EventBaseManager::get()->getExistingEventBase();
@@ -49,7 +49,7 @@ class ConnectCallback : public folly::AsyncSocket::ConnectCallback {
     onConnect_(std::move(connection), *evb);
   }
 
-  void connectErr(const folly::AsyncSocketException& ex) noexcept {
+  void connectErr(const folly::AsyncSocketException& ex) noexcept override {
     std::unique_ptr<ConnectCallback> deleter(this);
 
     VLOG(4) << "connectErr(" << ex.what() << ") on " << address_;
