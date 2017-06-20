@@ -48,16 +48,9 @@ folly::Future<std::unique_ptr<RSocketRequester>> RSocketClient::connect(
     folly::EventBase& eventBase) mutable {
     VLOG(3) << "onConnect received DuplexConnection";
 
-    std::unique_ptr<DuplexConnection> framedConnection;
-    if (isFramedConnection) {
-      framedConnection = std::move(connection);
-    } else {
-      framedConnection = std::make_unique<FramedDuplexConnection>(
-          std::move(connection), setupParameters.protocolVersion, eventBase);
-    }
-
     auto rsocket = fromConnection(
-        std::move(framedConnection),
+        std::move(connection),
+        isFramedConnection,
         eventBase,
         std::move(setupParameters),
         std::move(responder),
@@ -72,6 +65,7 @@ folly::Future<std::unique_ptr<RSocketRequester>> RSocketClient::connect(
 
 std::unique_ptr<RSocketRequester> RSocketClient::fromConnection(
     std::unique_ptr<DuplexConnection> connection,
+    bool isFramedConnection,
     folly::EventBase& eventBase,
     SetupParameters setupParameters,
     std::shared_ptr<RSocketResponder> responder,
@@ -103,7 +97,15 @@ std::unique_ptr<RSocketRequester> RSocketClient::fromConnection(
 
   connectionManager_->manageConnection(rs, eventBase);
 
-  rs->connectClientSendSetup(std::move(connection), std::move(setupParameters));
+  std::unique_ptr<DuplexConnection> framedConnection;
+  if (isFramedConnection) {
+    framedConnection = std::move(connection);
+  } else {
+    framedConnection = std::make_unique<FramedDuplexConnection>(
+        std::move(connection), setupParameters.protocolVersion, eventBase);
+  }
+
+  rs->connectClientSendSetup(std::move(framedConnection), std::move(setupParameters));
   return std::make_unique<RSocketRequester>(std::move(rs), eventBase);
 }
 

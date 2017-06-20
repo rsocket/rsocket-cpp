@@ -29,8 +29,13 @@ class TcpConnectionFactory : public ConnectionFactory {
    */
   void connect(OnDuplexConnectionConnect) override;
 
+  static std::unique_ptr<DuplexConnection> createDuplexConnectionFromSocket(
+      folly::AsyncSocket::UniquePtr socket,
+      folly::EventBase& eventBase,
+      std::shared_ptr<RSocketStats> stats = std::shared_ptr<RSocketStats>());
+
  private:
   folly::SocketAddress address_;
   folly::ScopedEventBaseThread worker_;
 };
-}
+} // namespace rsocket
