@@ -2,8 +2,6 @@
 
 #pragma once
 
-#include <src/RSocketStats.h>
-#include <src/temporary_home/Executor.h>
 #include "src/DuplexConnection.h"
 #include "src/internal/Common.h"
 
@@ -17,27 +15,24 @@ class FramedDuplexConnection : public virtual DuplexConnection {
  public:
   // TODO: remove this ctor overload
   FramedDuplexConnection(
-      std::unique_ptr<DuplexConnection> connection,
-      folly::Executor& executor);
+      std::unique_ptr<DuplexConnection> connection);
+
   FramedDuplexConnection(
       std::unique_ptr<DuplexConnection> connection,
-      ProtocolVersion protocolVersion,
-      folly::Executor& executor);
+      ProtocolVersion protocolVersion);
 
   ~FramedDuplexConnection();
 
-  std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>>
+  yarpl::Reference<yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>
   getOutput() noexcept override;
 
-  void setInput(std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>>
+  void setInput(yarpl::Reference<yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>
                     framesSink) override;
 
  private:
-  std::unique_ptr<DuplexConnection> connection_;
-  std::shared_ptr<FramedReader> inputReader_;
-  std::shared_ptr<FramedWriter> outputWriter_;
+  std::unique_ptr<DuplexConnection> inner_;
+  yarpl::Reference<FramedReader> inputReader_;
   std::shared_ptr<ProtocolVersion> protocolVersion_;
-  folly::Executor& executor_;
 };
 
 } // reactivesocket

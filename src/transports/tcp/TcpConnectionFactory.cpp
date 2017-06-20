@@ -40,12 +40,13 @@ class ConnectCallback : public folly::AsyncSocket::ConnectCallback {
   void connectSuccess() noexcept {
     std::unique_ptr<ConnectCallback> deleter(this);
 
-    auto evb = folly::EventBaseManager::get()->getExistingEventBase();
-
     VLOG(4) << "connectSuccess() on " << address_;
 
     auto connection = TcpConnectionFactory::createDuplexConnectionFromSocket(
-        std::move(socket_), *evb, RSocketStats::noop());
+        std::move(socket_), RSocketStats::noop());
+
+    auto evb = folly::EventBaseManager::get()->getExistingEventBase();
+    CHECK(evb);
     onConnect_(std::move(connection), *evb);
   }
 
@@ -82,16 +83,15 @@ void TcpConnectionFactory::connect(OnConnect cb) {
 std::unique_ptr<DuplexConnection>
 TcpConnectionFactory::createDuplexConnectionFromSocket(
     folly::AsyncSocket::UniquePtr socket,
-    folly::EventBase& eventBase,
     std::shared_ptr<RSocketStats> stats) {
   if (!stats) {
     stats = RSocketStats::noop();
   }
 
   auto connection = std::make_unique<TcpDuplexConnection>(
-      std::move(socket), eventBase, RSocketStats::noop());
+      std::move(socket), RSocketStats::noop());
   auto framedConnection = std::make_unique<FramedDuplexConnection>(
-      std::move(connection), eventBase);
+      std::move(connection));
   return std::move(framedConnection);
 }
 
