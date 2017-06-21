@@ -86,7 +86,7 @@ folly::Future<folly::Unit> TcpConnectionAcceptor::start(
   serverSocket_.reset(
       new folly::AsyncServerSocket(serverThread_->getEventBase()));
 
-  serverThread_->getEventBase()->runInEventBaseThread([this] {
+  return via(serverThread_->getEventBase()).then([this] {
     folly::SocketAddress addr;
     addr.setFromLocalPort(options_.port);
 
@@ -102,9 +102,9 @@ folly::Future<folly::Unit> TcpConnectionAcceptor::start(
     for (auto& i : serverSocket_->getAddresses()) {
       LOG(INFO) << "Listening on " << i.describe();
     }
-  });
 
-  return folly::unit;
+    return folly::unit;
+  });
 }
 
 void TcpConnectionAcceptor::stop() {

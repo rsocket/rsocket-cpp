@@ -14,6 +14,20 @@ TEST(RSocketClientServer, StartAndShutdown) {
   makeClient(randPort());
 }
 
+TEST(RSocketClientServer, ServerPortCollision) {
+  auto const port = randPort();
+  auto responder = std::make_shared<HelloStreamRequestHandler>();
+
+  try {
+    auto server1 = makeServer(port, responder);
+    auto server2 = makeServer(port, responder);
+  } catch (const std::exception& exn) {
+    return;
+  }
+
+  FAIL() << "Expected port collision";
+}
+
 TEST(RSocketClientServer, ConnectOne) {
   auto const port = randPort();
   auto server = makeServer(port, std::make_shared<HelloStreamRequestHandler>());
