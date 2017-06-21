@@ -9,7 +9,7 @@ if [ -n "$OSX_LOCAL" ]; then
   export LDFLAGS="-L/usr/local/opt/openssl/lib"
 fi
 
-folly_version="2017.03.06.00"
+folly_version="2017.06.19.00"
 gtest_version="1.8.0"
 
 cachedir="$HOME/.rscache"
