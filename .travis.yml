@@ -1,56 +1,84 @@
-# inspired by https://github.com/ericniebler/meta/blob/master/.travis.yml
+# Travis CI config for rsocket-cpp.
 
-sudo: required
+sudo: false
 dist: trusty
 
 language: cpp
 
-# Test matrix:
-matrix:
+os: linux
 
+addons:
+  apt:
+    sources: &common_srcs
+      - ubuntu-toolchain-r-test
+    packages: &common_deps
+      - lcov
+      - valgrind
+      # Folly dependencies
+      - autoconf
+      - autoconf-archive
+      - automake
+      - binutils-dev
+      - g++
+      - libboost-all-dev
+      - libdouble-conversion-dev
+      - libevent-dev
+      - libgflags-dev
+      - libgoogle-glog-dev
+      - libiberty-dev
+      - libjemalloc-dev
+      - liblz4-dev
+      - liblzma-dev
+      - libsnappy-dev
+      - libssl-dev
+      - libtool
+      - make
+      - pkg-config
+      - zlib1g-dev
+
+matrix:
    include:
-    - env: &clang_build CLANG_VERSION=4.0 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
-      os: linux
+    - env: CLANG_VERSION=4.0 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
       addons:
         apt:
+          sources:
+            - *common_srcs
+            - llvm-toolchain-trusty-4.0
           packages:
+            - *common_deps
             - clang-4.0
             - libstdc++-4.9-dev
-            - valgrind
-          sources:
-            - ubuntu-toolchain-r-test
-            - llvm-toolchain-trusty-4.0
 
     - env: GCC_VERSION=4.9 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
-      os: linux
       addons:
         apt:
-          packages:
-            - g++-4.9
-            - valgrind
           sources:
-            - ubuntu-toolchain-r-test
+            - *common_srcs
+          packages:
+            - *common_deps
+            - g++-4.9
 
     - env: GCC_VERSION=5 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
-      os: linux
       addons:
         apt:
-          packages:
-            - g++-5
-            - valgrind
           sources:
-            - ubuntu-toolchain-r-test
+            - *common_srcs
+          packages:
+            - *common_deps
+            - g++-5
 
     - env: GCC_VERSION=6 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
-      os: linux
       addons:
         apt:
-          packages:
-            - g++-6
-            - valgrind
           sources:
-            - ubuntu-toolchain-r-test
+            - *common_srcs
+          packages:
+            - *common_deps
+            - g++-6
 
+cache:
+  directories:
+    - $HOME/folly
 
 before_script:
   - ./scripts/build_folly.sh
@@ -60,14 +88,9 @@ before_script:
   - which $CC
   - which valgrind
   - $CXX --version
-  # install latest LCOV (1.9 was failing for me) [1]
-  - wget http://ftp.de.debian.org/debian/pool/main/l/lcov/lcov_1.11.orig.tar.gz
-  - tar xf lcov_1.11.orig.tar.gz
-  - sudo make -C lcov-1.11/ install
   # install lcov to coveralls conversion + upload tool
   - gem install coveralls-lcov
   - lcov --directory . --zerocounters
-
 
 script:
   - mkdir -p build
@@ -77,7 +100,7 @@ script:
   - if [ -n "$GCC_VERSION" -a "$ASAN" == "On" ]; then echo "turning on ASAN sanitize=address,undefined"; fi
   - if [ -n "$GCC_VERSION" -a "$ASAN" == "On" ]; then CXX_FLAGS="${CXX_FLAGS} -fsanitize=address,undefined -fuse-ld=gold"; fi
   - if [ -n "$GCC_VERSION" ]; then CXX_FLAGS="${CXX_FLAGS} --coverage"; fi # enable code coverage on GCC builds
-  - cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_FLAGS="${CXX_FLAGS}" -DCMAKE_EXE_LINKER_FLAGS="${CXX_LINKER_FLAGS}" -DMETA_CXX_STD=$CPP_VERSION
+  - cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_FLAGS="${CXX_FLAGS}" -DMETA_CXX_STD=$CPP_VERSION -DFOLLY_INSTALL_DIR=$HOME/folly
   - make -j8 VERBOSE=1
   - ./tests
   - ./yarpl/yarpl-tests

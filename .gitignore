@@ -77,3 +77,6 @@ cmake-build-debug/
 
 # Facebook
 BUILD_MODE
+
+# Vagrant
+.vagrant/
