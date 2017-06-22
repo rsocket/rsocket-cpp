@@ -92,7 +92,7 @@ if (RSOCKET_INSTALL_DEPS AND NOT EXISTS ${FOLLY_INSTALL_DIR}/include/folly)
   ExternalProject_Add(
     folly-ext
     GIT_REPOSITORY https://github.com/facebook/folly
-    GIT_TAG v2017.03.06.00
+    GIT_TAG v2017.06.19.00
     BINARY_DIR folly-ext-prefix/src/folly-ext/folly
     CONFIGURE_COMMAND autoreconf -ivf
       COMMAND ./configure --prefix=${FOLLY_INSTALL_DIR}
