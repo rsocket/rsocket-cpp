@@ -3,7 +3,6 @@
 #pragma once
 
 #include <folly/ExceptionWrapper.h>
-#include <folly/MoveWrapper.h>
 #include <glog/logging.h>
 #include "src/Payload.h"
 #include "src/internal/EnableSharedFromThis.h"
@@ -112,18 +111,17 @@ class SubscriberBaseT : public Subscriber<T>,
   }
 
   void onNext(T payload) noexcept override final {
-    auto movedPayload = folly::makeMoveWrapper(std::move(payload));
     auto thisPtr = this->shared_from_this();
-    runInExecutor([thisPtr, movedPayload]() mutable {
+    runInExecutor([ thisPtr, p = std::move(payload) ]() mutable {
       if (!thisPtr->cancelled_) {
-        thisPtr->onNextImpl(movedPayload.move());
+        thisPtr->onNextImpl(std::move(p));
       }
     });
   }
 
   void onComplete() noexcept override final {
     auto thisPtr = this->shared_from_this();
-    runInExecutor([thisPtr]() {
+    runInExecutor([thisPtr] {
       if (!thisPtr->cancelled_.exchange(true)) {
         thisPtr->onCompleteImpl();
 
@@ -135,11 +133,10 @@ class SubscriberBaseT : public Subscriber<T>,
   }
 
   void onError(folly::exception_wrapper ex) noexcept override final {
-    auto movedEx = folly::makeMoveWrapper(std::move(ex));
     auto thisPtr = this->shared_from_this();
-    runInExecutor([thisPtr, movedEx]() mutable {
+    runInExecutor([ thisPtr, e = std::move(ex) ]() mutable {
       if (!thisPtr->cancelled_.exchange(true)) {
-        thisPtr->onErrorImpl(movedEx.move());
+        thisPtr->onErrorImpl(std::move(e));
 
         DCHECK(thisPtr->originalSubscription_);
         thisPtr->originalSubscription_->cancel();

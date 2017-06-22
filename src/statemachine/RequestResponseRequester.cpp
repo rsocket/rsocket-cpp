@@ -2,7 +2,6 @@
 
 #include "src/statemachine/RequestResponseRequester.h"
 #include <folly/ExceptionWrapper.h>
-#include <folly/MoveWrapper.h>
 #include "RSocketStateMachine.h"
 #include "src/internal/Common.h"
 

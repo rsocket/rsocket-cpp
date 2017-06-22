@@ -3,7 +3,6 @@
 #include "RSocketStateMachine.h"
 
 #include <folly/ExceptionWrapper.h>
-#include <folly/MoveWrapper.h>
 #include <folly/Optional.h>
 #include <folly/String.h>
 #include <folly/io/async/EventBase.h>
@@ -410,9 +409,8 @@ void RSocketStateMachine::processFrameImpl(
 
 void RSocketStateMachine::onTerminal(folly::exception_wrapper ex) {
   auto thisPtr = this->shared_from_this();
-  auto movedEx = folly::makeMoveWrapper(ex);
-  runInExecutor([thisPtr, movedEx]() mutable {
-    thisPtr->onTerminalImpl(movedEx.move());
+  runInExecutor([ thisPtr, e = std::move(ex) ]() mutable {
+    thisPtr->onTerminalImpl(std::move(e));
   });
 }
 
