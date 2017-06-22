@@ -366,7 +366,7 @@ class IgnoreElementsOperator : public FlowableOperator<T, T> {
         Reference<Subscriber<T>> subscriber)
         : Super(std::move(flowable), std::move(subscriber)) {}
 
-    void onNext(T value) override {}
+    void onNext(T) override {}
   };
 };
 

@@ -9,7 +9,7 @@ using namespace yarpl::flowable;
 
 /// Handles a new inbound Stream requested by the other end.
 yarpl::Reference<Flowable<rsocket::Payload>>
-JsonRequestResponder::handleRequestStream(Payload request, StreamId streamId) {
+JsonRequestResponder::handleRequestStream(Payload request, StreamId) {
   LOG(INFO) << "JsonRequestResponder.handleRequestStream " << request;
 
   // string from payload data

@@ -347,7 +347,7 @@ class IgnoreElementsOperator : public ObservableOperator<T, T> {
               std::move(observable),
               std::move(observer)) {}
 
-    void onNext(T value) override {}
+    void onNext(T) override {}
   };
 };
 
