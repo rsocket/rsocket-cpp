@@ -6,40 +6,34 @@
 namespace rsocket {
 
 yarpl::Reference<yarpl::single::Single<rsocket::Payload>>
-RSocketResponder::handleRequestResponse(
-    rsocket::Payload request,
-    rsocket::StreamId streamId) {
+RSocketResponder::handleRequestResponse(rsocket::Payload, rsocket::StreamId) {
   return yarpl::single::Singles::error<rsocket::Payload>(
       std::logic_error("handleRequestResponse not implemented"));
 }
 
 yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
-RSocketResponder::handleRequestStream(
-    rsocket::Payload request,
-    rsocket::StreamId streamId) {
+RSocketResponder::handleRequestStream(rsocket::Payload, rsocket::StreamId) {
   return yarpl::flowable::Flowables::error<rsocket::Payload>(
       std::logic_error("handleRequestStream not implemented"));
 }
 
 yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
 RSocketResponder::handleRequestChannel(
-    rsocket::Payload request,
-    yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
-        requestStream,
-    rsocket::StreamId streamId) {
+    rsocket::Payload,
+    yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>,
+    rsocket::StreamId) {
   return yarpl::flowable::Flowables::error<rsocket::Payload>(
       std::logic_error("handleRequestChannel not implemented"));
 }
 
 void RSocketResponder::handleFireAndForget(
-    rsocket::Payload request,
-    rsocket::StreamId streamId) {
-  // no default implementation, no error response to provide
+    rsocket::Payload,
+    rsocket::StreamId) {
+  // No default implementation, no error response to provide.
 }
 
-void RSocketResponder::handleMetadataPush(
-    std::unique_ptr<folly::IOBuf> metadata) {
-  // no default implementation, no error response to provide
+void RSocketResponder::handleMetadataPush(std::unique_ptr<folly::IOBuf>) {
+  // No default implementation, no error response to provide.
 }
 
 /// Handles a new Channel requested by the other end.

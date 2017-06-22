@@ -18,9 +18,8 @@ using namespace std::chrono_literals;
 namespace {
 class TestHandlerHello : public rsocket::RSocketResponder {
  public:
-  Reference<Single<Payload>> handleRequestResponse(
-      Payload request,
-      StreamId streamId) override {
+  Reference<Single<Payload>> handleRequestResponse(Payload request, StreamId)
+      override {
     auto requestString = request.moveDataToString();
     return Single<Payload>::create([name = std::move(requestString)](
         auto subscriber) {
@@ -55,9 +54,8 @@ class TestHandlerCancel : public rsocket::RSocketResponder {
       std::shared_ptr<folly::Baton<>> onCancel,
       std::shared_ptr<folly::Baton<>> onSubscribe)
       : onCancel_(std::move(onCancel)), onSubscribe_(std::move(onSubscribe)) {}
-  Reference<Single<Payload>> handleRequestResponse(
-      Payload request,
-      StreamId streamId) override {
+  Reference<Single<Payload>> handleRequestResponse(Payload request, StreamId)
+      override {
     // used to signal to the client when the subscribe is received
     onSubscribe_->post();
     // used to block this responder thread until a cancel is sent from client

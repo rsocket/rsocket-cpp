@@ -17,7 +17,7 @@ class TestHandlerSync : public rsocket::RSocketResponder {
  public:
   Reference<Flowable<Payload>> handleRequestStream(
       Payload request,
-      StreamId streamId) override {
+      StreamId) override {
     // string from payload data
     auto requestString = request.moveDataToString();
 
@@ -51,7 +51,7 @@ class TestHandlerAsync : public rsocket::RSocketResponder {
  public:
   Reference<Flowable<Payload>> handleRequestStream(
       Payload request,
-      StreamId streamId) override {
+      StreamId) override {
     // string from payload data
     auto requestString = request.moveDataToString();
 

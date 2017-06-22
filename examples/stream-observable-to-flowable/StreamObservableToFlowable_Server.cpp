@@ -24,7 +24,7 @@ class PushStreamRequestResponder : public rsocket::RSocketResponder {
   /// Handles a new inbound Stream requested by the other end.
   yarpl::Reference<Flowable<Payload>> handleRequestStream(
       Payload request,
-      rsocket::StreamId streamId) override {
+      rsocket::StreamId) override {
     std::cout << "PushStreamRequestResponder.handleRequestStream " << request
               << std::endl;
 
