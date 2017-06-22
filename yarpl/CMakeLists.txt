@@ -97,7 +97,7 @@ target_include_directories(
         PUBLIC "${PROJECT_SOURCE_DIR}/src" # allow include paths such as "yarpl/flowable/FlowableRange.h"
         )
 
-target_link_libraries(yarpl ${CMAKE_THREAD_LIBS_INIT} folly)
+target_link_libraries(yarpl folly)
 
 # Executable for Experimenting
 add_executable(
@@ -140,11 +140,8 @@ add_executable(
 target_link_libraries(
         yarpl-tests
         yarpl
-        ${FOLLY_LIBRARIES} # inherited from rsocket-cpp CMake
         ${GMOCK_LIBS} # inherited from rsocket-cpp CMake
-        ${GLOG_LIBRARY}
-        ${CMAKE_THREAD_LIBS_INIT}
-)
+        ${GLOG_LIBRARY})
 
 target_include_directories(
         yarpl-tests
