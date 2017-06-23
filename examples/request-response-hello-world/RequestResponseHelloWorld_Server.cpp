@@ -18,9 +18,8 @@ DEFINE_int32(port, 9898, "port to connect to");
 
 class HelloRequestResponseRequestResponder : public rsocket::RSocketResponder {
  public:
-  Reference<Single<Payload>> handleRequestResponse(
-      Payload request,
-      StreamId streamId) override {
+  Reference<Single<Payload>> handleRequestResponse(Payload request, StreamId)
+      override {
     std::cout << "HelloRequestResponseRequestResponder.handleRequestResponse "
               << request << std::endl;
 

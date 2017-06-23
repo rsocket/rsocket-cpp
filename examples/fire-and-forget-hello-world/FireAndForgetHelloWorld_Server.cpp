@@ -18,7 +18,7 @@ DEFINE_int32(port, 9898, "port to connect to");
 
 class HelloFireAndForgetRequestResponder : public rsocket::RSocketResponder {
  public:
-  void handleFireAndForget(Payload request, StreamId streamId) override {
+  void handleFireAndForget(Payload request, StreamId) override {
     std::cout << "Received fireAndForget: " << request.moveDataToString()
               << std::endl;
   }

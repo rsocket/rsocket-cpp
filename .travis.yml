@@ -13,7 +13,6 @@ addons:
       - ubuntu-toolchain-r-test
     packages: &common_deps
       - lcov
-      - valgrind
       # Folly dependencies
       - autoconf
       - autoconf-archive
@@ -37,8 +36,11 @@ addons:
       - zlib1g-dev
 
 matrix:
-   include:
-    - env: CLANG_VERSION=4.0 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
+  include:
+    # Set COMPILER environment variable instead of CC or CXX because the latter
+    # are overriden by Travis. Setting the compiler in Travis doesn't work
+    # either because it strips version.
+    - env: COMPILER=clang-4.0
       addons:
         apt:
           sources:
@@ -49,7 +51,7 @@ matrix:
             - clang-4.0
             - libstdc++-4.9-dev
 
-    - env: GCC_VERSION=4.9 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
+    - env: COMPILER=gcc-4.9
       addons:
         apt:
           sources:
@@ -58,7 +60,7 @@ matrix:
             - *common_deps
             - g++-4.9
 
-    - env: GCC_VERSION=5 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
+    - env: COMPILER=gcc-5
       addons:
         apt:
           sources:
@@ -67,7 +69,7 @@ matrix:
             - *common_deps
             - g++-5
 
-    - env: GCC_VERSION=6 BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
+    - env: COMPILER=gcc-6
       addons:
         apt:
           sources:
@@ -76,32 +78,37 @@ matrix:
             - *common_deps
             - g++-6
 
+env:
+  global:
+    - BUILD_TYPE=Debug CPP_VERSION=14 ASAN=On
+    - secure: |-
+        DOPCvF/oFMkzTHcE1U7jJ1z3isJYKySiJfuzZQqY6IUmjvVxJuE2k4rvz1pURdqYIXs/3k
+        OHhtf59q0VJcCsdurpGXrF+E51JLQyG6SM1L3JzjVjEZ60a7laUyPer7rNnrj6g4K7CK0K
+        cSZKOAsrRxBGGllR5XnxYE9p6zEEPuDxbPJLS8ruDNI2LBCx0eMW/pzTvY4IA+pc2TlGBS
+        h85LH+p+aelp6Q5GKRFWxxy8ju3FcUI4LfJChEgn9Wb9dZ9VsBX1gZjUgXZ1gs0yp2Wcoh
+        kJuITsb1oRINA0DnwpADlAHpl/+t8NZZKwknTsEHW5KQtvnuqM4nnN4KszkMZQDhlOxgNp
+        vnvcS2lWlbeAE3f7lgtPZDWkmo8SaR+MRH0F1/+nnC7pdMvWoFRfkq5VsXDOiCMrXEJMZF
+        CokHdtxhfNRpwvqchD2BaYQ9xOAToi2GhbV4k/5Zc5bO+bxnTmlFR6fWtHtChCIXLrkKyG
+        LFlDvU4lS9eeaYzv4OaXL/HZ3HPn91/F96ZSVm8X17NmYwD1wfj+ad3D8YMXhWnnBQYpfF
+        eHz/lHAoLXWg/BhtgQbPmMYYKRrQaH7EKzBbqEHv6PhOk7vLMtdx5X7KmhVuFjpAMbaYoj
+        zwxxH0u+VAnVB5iazzyjhySjvzkvx6pGzZtTnjLJHxKcp9633z4OU=
+
 cache:
   directories:
     - $HOME/folly
 
 before_script:
-  - ./scripts/build_folly.sh
-  - if [ -n "$GCC_VERSION" ]; then export CXX="g++-${GCC_VERSION}" CC="gcc-${GCC_VERSION}"; fi
-  - if [ -n "$CLANG_VERSION" ]; then export CXX="clang++-${CLANG_VERSION}" CC="clang-${CLANG_VERSION}"; fi
-  - which $CXX
-  - which $CC
-  - which valgrind
-  - $CXX --version
-  # install lcov to coveralls conversion + upload tool
+  # Install lcov to coveralls conversion + upload tool.
   - gem install coveralls-lcov
-  - lcov --directory . --zerocounters
+  - lcov --directory build --zerocounters
 
 script:
-  - mkdir -p build
-  - cd build
-  - if [ -n "$CLANG_VERSION" -a "$ASAN" == "On" ]; then echo "turning on ASAN sanitize=address,undefined,integer no-sanitize=unsigned-integer-overflow"; fi
-  - if [ -n "$CLANG_VERSION" -a "$ASAN" == "On" ]; then CXX_FLAGS="${CXX_FLAGS} -fsanitize=address,undefined,integer -fno-sanitize=unsigned-integer-overflow"; fi
-  - if [ -n "$GCC_VERSION" -a "$ASAN" == "On" ]; then echo "turning on ASAN sanitize=address,undefined"; fi
-  - if [ -n "$GCC_VERSION" -a "$ASAN" == "On" ]; then CXX_FLAGS="${CXX_FLAGS} -fsanitize=address,undefined -fuse-ld=gold"; fi
-  - if [ -n "$GCC_VERSION" ]; then CXX_FLAGS="${CXX_FLAGS} --coverage"; fi # enable code coverage on GCC builds
-  - cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_FLAGS="${CXX_FLAGS}" -DMETA_CXX_STD=$CPP_VERSION -DFOLLY_INSTALL_DIR=$HOME/folly
-  - make -j8 VERBOSE=1
+  - mkdir build &&
+    cd build &&
+    cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DMETA_CXX_STD=$CPP_VERSION
+          -DRSOCKET_CC=$COMPILER -DRSOCKET_ASAN=$ASAN
+          -DRSOCKET_INSTALL_DEPS=True .. &&
+    make -j8 VERBOSE=1
   - ./tests
   - ./yarpl/yarpl-tests
   - cd ..
@@ -110,13 +117,10 @@ script:
   - ./scripts/tck_test.sh -c java -s java
   - ./scripts/tck_test.sh -c java -s cpp
   - ./scripts/tck_test.sh -c cpp -s java
+  - cd build && make VERBOSE=1 coverage
 
 after_success:
-  - if [ -n "$GCC_VERSION" ]; then lcov --directory . --capture --output-file coverage.info; fi # capture coverage info
-  - if [ -n "$GCC_VERSION" ]; then lcov --remove coverage.info 'tests/*' '/usr/*' --output-file coverage.info; fi # filter out system and test code
-  - if [ -n "$GCC_VERSION" ]; then lcov --list coverage.info; fi # debug before upload
-  - if [ -n "$GCC_VERSION" ]; then coveralls-lcov --repo-token ${COVERALLS_TOKEN} coverage.info; fi # uploads to coveralls
-
-env:
-  global:
-    secure: DOPCvF/oFMkzTHcE1U7jJ1z3isJYKySiJfuzZQqY6IUmjvVxJuE2k4rvz1pURdqYIXs/3kOHhtf59q0VJcCsdurpGXrF+E51JLQyG6SM1L3JzjVjEZ60a7laUyPer7rNnrj6g4K7CK0KcSZKOAsrRxBGGllR5XnxYE9p6zEEPuDxbPJLS8ruDNI2LBCx0eMW/pzTvY4IA+pc2TlGBSh85LH+p+aelp6Q5GKRFWxxy8ju3FcUI4LfJChEgn9Wb9dZ9VsBX1gZjUgXZ1gs0yp2WcohkJuITsb1oRINA0DnwpADlAHpl/+t8NZZKwknTsEHW5KQtvnuqM4nnN4KszkMZQDhlOxgNpvnvcS2lWlbeAE3f7lgtPZDWkmo8SaR+MRH0F1/+nnC7pdMvWoFRfkq5VsXDOiCMrXEJMZFCokHdtxhfNRpwvqchD2BaYQ9xOAToi2GhbV4k/5Zc5bO+bxnTmlFR6fWtHtChCIXLrkKyGLFlDvU4lS9eeaYzv4OaXL/HZ3HPn91/F96ZSVm8X17NmYwD1wfj+ad3D8YMXhWnnBQYpfFeHz/lHAoLXWg/BhtgQbPmMYYKRrQaH7EKzBbqEHv6PhOk7vLMtdx5X7KmhVuFjpAMbaYojzwxxH0u+VAnVB5iazzyjhySjvzkvx6pGzZtTnjLJHxKcp9633z4OU=
+    # Upload to coveralls.
+  - if [ -f build/coverage.info ]; then
+      coveralls-lcov --repo-token ${COVERALLS_TOKEN} build/coverage.info;
+    fi

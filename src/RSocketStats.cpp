@@ -11,19 +11,18 @@ class NoopStats : public RSocketStats {
 
   void socketCreated() override {}
   void socketDisconnected() override {}
-  void socketClosed(StreamCompletionSignal signal) override {}
+  void socketClosed(StreamCompletionSignal) override {}
 
-  void duplexConnectionCreated(
-      const std::string& type,
-      rsocket::DuplexConnection* connection) override {}
-  void duplexConnectionClosed(
-      const std::string& type,
-      rsocket::DuplexConnection* connection) override {}
+  void duplexConnectionCreated(const std::string&, rsocket::DuplexConnection*)
+      override {}
 
-  void bytesWritten(size_t bytes) override {}
-  void bytesRead(size_t bytes) override {}
-  void frameWritten(FrameType frameType) override {}
-  void frameRead(FrameType frameType) override {}
+  void duplexConnectionClosed(const std::string&, rsocket::DuplexConnection*)
+      override {}
+
+  void bytesWritten(size_t) override {}
+  void bytesRead(size_t) override {}
+  void frameWritten(FrameType) override {}
+  void frameRead(FrameType) override {}
 
   void resumeBufferChanged(int, int) override {}
   void streamBufferChanged(int64_t, int64_t) override {}
@@ -34,7 +33,7 @@ class NoopStats : public RSocketStats {
   }
 
  private:
-  NoopStats(const NoopStats& other) = delete; // non construction-copyable
+  NoopStats(const NoopStats&) = delete; // non construction-copyable
   NoopStats& operator=(const NoopStats&) = delete; // non copyable
   NoopStats& operator=(const NoopStats&&) = delete; // non movable
   NoopStats(NoopStats&&) = delete; // non construction-movable

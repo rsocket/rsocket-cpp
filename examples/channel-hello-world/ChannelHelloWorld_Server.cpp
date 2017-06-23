@@ -21,7 +21,7 @@ class HelloChannelRequestResponder : public rsocket::RSocketResponder {
   yarpl::Reference<Flowable<rsocket::Payload>> handleRequestChannel(
       rsocket::Payload initialPayload,
       yarpl::Reference<Flowable<rsocket::Payload>> request,
-      rsocket::StreamId streamId) override {
+      rsocket::StreamId) override {
     std::cout << "Initial request " << initialPayload.cloneDataToString()
               << std::endl;
 

@@ -70,7 +70,7 @@ void RSocketServer::start(OnRSocketSetup onRSocketSetup) {
 
 void RSocketServer::acceptConnection(
     std::unique_ptr<DuplexConnection> connection,
-    folly::EventBase & eventBase,
+    folly::EventBase&,
     OnRSocketSetup onRSocketSetup) {
   if (isShutdown_) {
     // connection is getting out of scope and terminated
@@ -113,11 +113,11 @@ void RSocketServer::onRSocketSetup(
 }
 
 void RSocketServer::onRSocketResume(
-    OnRSocketResume onRSocketResume,
-    std::shared_ptr<FrameTransport> frameTransport,
-    ResumeParameters setupPayload) {
-  // we don't need to check for isShutdown_ here since all callbacks are
-  // processed by this time
+    OnRSocketResume,
+    std::shared_ptr<FrameTransport>,
+    ResumeParameters) {
+  // We don't need to check for isShutdown_ here since all callbacks are
+  // processed by this time.
 
   CHECK(false) << "not implemented";
 }
