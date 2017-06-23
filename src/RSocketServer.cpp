@@ -119,7 +119,9 @@ void RSocketServer::onRSocketResume(
   // We don't need to check for isShutdown_ here since all callbacks are
   // processed by this time.
 
-  CHECK(false) << "not implemented";
+  LOG(ERROR) << "onRSocketResume: not implemented";
+  frameTransport->close(
+      folly::make_exception_wrapper<std::runtime_error>("not_implemented"));
 }
 
 void RSocketServer::startAndPark(OnRSocketSetup onRSocketSetup) {
