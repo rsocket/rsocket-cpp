@@ -46,7 +46,7 @@ class TcpConnectionAcceptor : public ConnectionAcceptor {
   /**
    * Bind an AsyncServerSocket and start accepting TCP connections.
    */
-  folly::Future<folly::Unit> start(OnDuplexConnectionAccept) override;
+  void start(OnDuplexConnectionAccept) override;
 
   /**
    * Shutdown the AsyncServerSocket and associated listener thread.

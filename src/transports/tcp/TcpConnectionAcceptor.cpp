@@ -3,6 +3,7 @@
 #include "TcpConnectionAcceptor.h"
 
 #include <folly/ThreadName.h>
+#include <folly/futures/Future.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 
 #include "src/framing/FramedDuplexConnection.h"
@@ -59,11 +60,9 @@ TcpConnectionAcceptor::~TcpConnectionAcceptor() {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-folly::Future<folly::Unit> TcpConnectionAcceptor::start(
-    OnDuplexConnectionAccept onAccept) {
+void TcpConnectionAcceptor::start(OnDuplexConnectionAccept onAccept) {
   if (onAccept_ != nullptr) {
-    return folly::makeFuture<folly::Unit>(
-        std::runtime_error("TcpConnectionAcceptor::start() already called"));
+    throw std::runtime_error("TcpConnectionAcceptor::start() already called");
   }
 
   onAccept_ = std::move(onAccept);
@@ -84,25 +83,29 @@ folly::Future<folly::Unit> TcpConnectionAcceptor::start(
   serverSocket_.reset(
       new folly::AsyncServerSocket(serverThread_->getEventBase()));
 
-  return via(serverThread_->getEventBase()).then([this] {
-    folly::SocketAddress addr;
-    addr.setFromLocalPort(options_.port);
+  // The AsyncServerSocket needs to be accessed from the listener thread only.
+  // This will propagate out any exceptions the listener throws.
+  folly::via(
+      serverThread_->getEventBase(),
+      [this] {
+        folly::SocketAddress addr;
+        addr.setFromLocalPort(options_.port);
 
-    serverSocket_->bind(addr);
+        serverSocket_->bind(addr);
 
-    for (auto const& callback : callbacks_) {
-      serverSocket_->addAcceptCallback(callback.get(), callback->eventBase());
-    }
+        for (auto const& callback : callbacks_) {
+          serverSocket_->addAcceptCallback(
+              callback.get(), callback->eventBase());
+        }
 
-    serverSocket_->listen(options_.backlog);
-    serverSocket_->startAccepting();
+        serverSocket_->listen(options_.backlog);
+        serverSocket_->startAccepting();
 
-    for (auto& i : serverSocket_->getAddresses()) {
-      LOG(INFO) << "Listening on " << i.describe();
-    }
-
-    return folly::unit;
-  });
+        for (auto& i : serverSocket_->getAddresses()) {
+          LOG(INFO) << "Listening on " << i.describe();
+        }
+      })
+      .get();
 }
 
 void TcpConnectionAcceptor::stop() {
