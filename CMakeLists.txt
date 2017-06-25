@@ -19,6 +19,19 @@ project(ReactiveSocket)
 # CMake modules.
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 
+# Joins arguments and stores the result in ${var}.
+function(join var)
+  unset(result)
+  foreach (arg ${ARGN})
+    if (DEFINED result)
+      set(result "${result}${arg}")
+    else ()
+      set(result "${arg}")
+    endif ()
+  endforeach ()
+  set(${var} "${result}" PARENT_SCOPE)
+endfunction()
+
 # Generate compilation database for use by YouCompleteMe.
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
@@ -412,8 +425,7 @@ add_executable(
   tck-test/MarbleProcessor.cpp
   tck-test/MarbleProcessor.h
   test/test_utils/StatsPrinter.cpp
-  test/test_utils/StatsPrinter.h
-)
+  test/test_utils/StatsPrinter.h)
 
 target_link_libraries(
   tckserver
@@ -423,6 +435,14 @@ target_link_libraries(
   ${GMOCK_LIBS}
   ${GLOG_LIBRARY}
   ${DOUBLE-CONVERSION})
+
+# Download the latest TCK drivers JAR.
+set(TCK_DRIVERS_JAR reactivesocket-tck-drivers-0.9-SNAPSHOT.jar)
+join(TCK_DRIVERS_URL
+  "https://oss.jfrog.org/libs-snapshot/io/reactivesocket/"
+  "reactivesocket-tck-drivers/0.9-SNAPSHOT/${TCK_DRIVERS_JAR}")
+message(STATUS "Downloading ${TCK_DRIVERS_URL}")
+file(DOWNLOAD ${TCK_DRIVERS_URL} ${CMAKE_SOURCE_DIR}/${TCK_DRIVERS_JAR})
 
 ########################################
 # Examples

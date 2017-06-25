@@ -149,3 +149,5 @@ target_include_directories(
 )
 
 add_dependencies(yarpl-tests gmock)
+
+add_test(NAME yarpl-tests COMMAND yarpl-tests)

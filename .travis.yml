@@ -80,7 +80,7 @@ matrix:
 
 env:
   global:
-    - BUILD_TYPE=Debug ASAN=On
+    - BUILD_TYPE=Debug ASAN=On CTEST_OUTPUT_ON_FAILURE=1
     - secure: |-
         DOPCvF/oFMkzTHcE1U7jJ1z3isJYKySiJfuzZQqY6IUmjvVxJuE2k4rvz1pURdqYIXs/3k
         OHhtf59q0VJcCsdurpGXrF+E51JLQyG6SM1L3JzjVjEZ60a7laUyPer7rNnrj6g4K7CK0K
@@ -107,16 +107,14 @@ script:
     cd build &&
     cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DRSOCKET_CC=$COMPILER
           -DRSOCKET_ASAN=$ASAN -DRSOCKET_INSTALL_DEPS=True .. &&
-    make -j8 VERBOSE=1
-  - ./tests
-  - ./yarpl/yarpl-tests
+    make -j8 &&
+    make test
   - cd ..
-  - ./scripts/prepare_tck_drivers.sh
   - ./scripts/tck_test.sh -c cpp -s cpp
   - ./scripts/tck_test.sh -c java -s java
   - ./scripts/tck_test.sh -c java -s cpp
   - ./scripts/tck_test.sh -c cpp -s java
-  - cd build && make VERBOSE=1 coverage
+  - cd build && make coverage
 
 after_success:
     # Upload to coveralls.
