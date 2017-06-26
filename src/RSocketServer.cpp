@@ -114,7 +114,7 @@ void RSocketServer::onRSocketSetup(
 
 void RSocketServer::onRSocketResume(
     OnRSocketResume,
-    std::shared_ptr<FrameTransport>,
+    std::shared_ptr<FrameTransport> frameTransport,
     ResumeParameters) {
   // We don't need to check for isShutdown_ here since all callbacks are
   // processed by this time.
