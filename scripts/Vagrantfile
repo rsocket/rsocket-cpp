@@ -3,6 +3,12 @@
 # Vagrant configuration that creates Travis-CI compatible build environment
 # for rsocket.
 
+# Get the APT dependencies from the Travis config.
+require 'yaml'
+yml = YAML.load_file(File.dirname(__dir__) + '/.travis.yml')
+apt = yml['addons']['apt']
+packages = apt['packages'] + ['git', 'cmake3']
+
 Vagrant.configure("2") do |config|
   config.vm.box = "ubuntu/trusty64"
 
@@ -12,12 +18,8 @@ Vagrant.configure("2") do |config|
   end
 
   config.vm.provision "shell", inline: <<-SHELL
-    apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+    apt-add-repository -y "apt['sources'].join(' ')"
     apt-get update
-    apt-get -y install \
-      autoconf autoconf-archive automake binutils-dev cmake3 g++-4.9 git lcov \
-      libboost-all-dev  libdouble-conversion-dev libevent-dev libgflags-dev \
-      libgoogle-glog-dev libiberty-dev libjemalloc-dev liblz4-dev liblzma-dev \
-      libsnappy-dev libssl-dev libtool make pkg-config valgrind zlib1g-dev
+    apt-get -y install #{packages.join(' ')}
   SHELL
 end

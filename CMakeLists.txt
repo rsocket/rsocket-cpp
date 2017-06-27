@@ -19,6 +19,19 @@ project(ReactiveSocket)
 # CMake modules.
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 
+# Joins arguments and stores the result in ${var}.
+function(join var)
+  unset(result)
+  foreach (arg ${ARGN})
+    if (DEFINED result)
+      set(result "${result}${arg}")
+    else ()
+      set(result "${arg}")
+    endif ()
+  endforeach ()
+  set(${var} "${result}" PARENT_SCOPE)
+endfunction()
+
 # Generate compilation database for use by YouCompleteMe.
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
@@ -87,19 +100,33 @@ if (NOT FOLLY_INSTALL_DIR)
   set(FOLLY_INSTALL_DIR $ENV{HOME}/folly)
 endif ()
 
-if (RSOCKET_INSTALL_DEPS AND NOT EXISTS ${FOLLY_INSTALL_DIR}/include/folly)
+# Check if the correct version of folly is already installed.
+set(FOLLY_VERSION v2017.06.19.00)
+set(FOLLY_VERSION_FILE ${FOLLY_INSTALL_DIR}/${FOLLY_VERSION})
+if (RSOCKET_INSTALL_DEPS)
+  if (NOT EXISTS ${FOLLY_VERSION_FILE})
+    # Remove the old version of folly.
+    file(REMOVE_RECURSE ${FOLLY_INSTALL_DIR})
+    set(INSTALL_FOLLY True)
+  endif ()
+endif ()
+
+if (INSTALL_FOLLY)
   # Build and install folly.
   ExternalProject_Add(
     folly-ext
     GIT_REPOSITORY https://github.com/facebook/folly
-    GIT_TAG v2017.03.06.00
+    GIT_TAG ${FOLLY_VERSION}
     BINARY_DIR folly-ext-prefix/src/folly-ext/folly
     CONFIGURE_COMMAND autoreconf -ivf
-      COMMAND ./configure --prefix=${FOLLY_INSTALL_DIR}
-    BUILD_COMMAND make -j4)
+      COMMAND ./configure CXX=${CMAKE_CXX_COMPILER}
+                          --prefix=${FOLLY_INSTALL_DIR}
+    BUILD_COMMAND make -j4
+    INSTALL_COMMAND make install
+      COMMAND cmake -E touch ${FOLLY_VERSION_FILE})
 
   set(FOLLY_INCLUDE_DIR ${FOLLY_INSTALL_DIR}/include)
-  set(lib ${CMAKE_STATIC_LIBRARY_PREFIX}folly${CMAKE_STATIC_LIBRARY_SUFFIX})
+  set(lib ${CMAKE_SHARED_LIBRARY_PREFIX}folly${CMAKE_SHARED_LIBRARY_SUFFIX})
   set(FOLLY_LIBRARY ${FOLLY_INSTALL_DIR}/lib/${lib})
 
   # CMake requires directories listed in INTERFACE_INCLUDE_DIRECTORIES to exist.
@@ -109,11 +136,14 @@ else ()
   find_package(Folly REQUIRED)
 endif ()
 
-add_library(folly STATIC IMPORTED)
+find_package(Threads)
+find_library(EVENT_LIBRARY event)
+
+add_library(folly SHARED IMPORTED)
 set_property(TARGET folly PROPERTY IMPORTED_LOCATION ${FOLLY_LIBRARY})
 set_property(TARGET folly
   APPEND PROPERTY INTERFACE_LINK_LIBRARIES
-  ${EXTRA_LINK_FLAGS} ${CMAKE_THREAD_LIBS_INIT})
+  ${EXTRA_LINK_FLAGS} ${EVENT_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
 if (TARGET folly-ext)
   add_dependencies(folly folly-ext)
 endif ()
@@ -153,8 +183,6 @@ ExternalProject_Add(
     "-DCMAKE_EXE_LINKER_FLAGS=${CXX_LINKER_FLAGS}"
 )
 
-find_package(Threads)
-
 string(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_LOWER)
 
 if(APPLE)
@@ -164,14 +192,10 @@ if(APPLE)
   endif()
 endif()
 
-if(NOT META_CXX_STD)
-  # Defaults to C++14 if not set:
-  set(META_CXX_STD 14)
-endif()
+set(CMAKE_CXX_STANDARD 14)
 
 # Common configuration for all build modes.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++${META_CXX_STD} -pedantic")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Woverloaded-virtual")
 
 set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Werror)
@@ -355,11 +379,9 @@ target_link_libraries(
   tests
   ReactiveSocket
   yarpl
-  ${FOLLY_LIBRARIES}
   ${GMOCK_LIBS}
   ${GFLAGS_LIBRARY}
-  ${GLOG_LIBRARY}
-  ${CMAKE_THREAD_LIBS_INIT})
+  ${GLOG_LIBRARY})
 
 target_compile_options(
   tests
@@ -394,10 +416,8 @@ target_link_libraries(
   tckclient
   ReactiveSocket
   yarpl
-  ${FOLLY_LIBRARIES}
   ${GFLAGS_LIBRARY}
-  ${GLOG_LIBRARY}
-  ${CMAKE_THREAD_LIBS_INIT})
+  ${GLOG_LIBRARY})
 
 add_executable(
   tckserver
@@ -405,19 +425,24 @@ add_executable(
   tck-test/MarbleProcessor.cpp
   tck-test/MarbleProcessor.h
   test/test_utils/StatsPrinter.cpp
-  test/test_utils/StatsPrinter.h
-)
+  test/test_utils/StatsPrinter.h)
 
 target_link_libraries(
   tckserver
   ReactiveSocket
   yarpl
-  ${FOLLY_LIBRARIES}
   ${GFLAGS_LIBRARY}
   ${GMOCK_LIBS}
   ${GLOG_LIBRARY}
-  ${DOUBLE-CONVERSION}
-  ${CMAKE_THREAD_LIBS_INIT})
+  ${DOUBLE-CONVERSION})
+
+# Download the latest TCK drivers JAR.
+set(TCK_DRIVERS_JAR reactivesocket-tck-drivers-0.9-SNAPSHOT.jar)
+join(TCK_DRIVERS_URL
+  "https://oss.jfrog.org/libs-snapshot/io/reactivesocket/"
+  "reactivesocket-tck-drivers/0.9-SNAPSHOT/${TCK_DRIVERS_JAR}")
+message(STATUS "Downloading ${TCK_DRIVERS_URL}")
+file(DOWNLOAD ${TCK_DRIVERS_URL} ${CMAKE_SOURCE_DIR}/${TCK_DRIVERS_JAR})
 
 ########################################
 # Examples
@@ -433,11 +458,8 @@ target_link_libraries(
   reactivesocket_examples_util
   yarpl
   ReactiveSocket
-  ${FOLLY_LIBRARIES}
   ${GFLAGS_LIBRARY}
-  ${GLOG_LIBRARY}
-  ${CMAKE_THREAD_LIBS_INIT}
-)
+  ${GLOG_LIBRARY})
 
 # request-response-hello-world
 
@@ -451,10 +473,8 @@ target_link_libraries(
   ReactiveSocket
   reactivesocket_examples_util
   yarpl
-  ${FOLLY_LIBRARIES}
   ${GFLAGS_LIBRARY}
-  ${GLOG_LIBRARY}
-  ${CMAKE_THREAD_LIBS_INIT})
+  ${GLOG_LIBRARY})
 
 add_executable(
   example_request-response-hello-world-client
@@ -466,10 +486,8 @@ target_link_libraries(
   ReactiveSocket
   reactivesocket_examples_util
   yarpl
-  ${FOLLY_LIBRARIES}
   ${GFLAGS_LIBRARY}
-  ${GLOG_LIBRARY}
-  ${CMAKE_THREAD_LIBS_INIT})
+  ${GLOG_LIBRARY})
 
 # fire-and-forget-hello-world
 
@@ -483,10 +501,8 @@ target_link_libraries(
   ReactiveSocket
   reactivesocket_examples_util
   yarpl
-  ${FOLLY_LIBRARIES}
   ${GFLAGS_LIBRARY}
-  ${GLOG_LIBRARY}
-  ${CMAKE_THREAD_LIBS_INIT})
+  ${GLOG_LIBRARY})
 
 add_executable(
   example_fire-and-forget-hello-world-client
@@ -498,10 +514,8 @@ target_link_libraries(
   ReactiveSocket
   reactivesocket_examples_util
   yarpl
-  ${FOLLY_LIBRARIES}
   ${GFLAGS_LIBRARY}
-  ${GLOG_LIBRARY}
-  ${CMAKE_THREAD_LIBS_INIT})
+  ${GLOG_LIBRARY})
 
 
 # stream-hello-world
@@ -516,10 +530,8 @@ target_link_libraries(
   ReactiveSocket
   reactivesocket_examples_util
   yarpl
-  ${FOLLY_LIBRARIES}
   ${GFLAGS_LIBRARY}
-  ${GLOG_LIBRARY}
-  ${CMAKE_THREAD_LIBS_INIT})
+  ${GLOG_LIBRARY})
 
 add_executable(
   example_stream-hello-world-client
@@ -531,11 +543,8 @@ target_link_libraries(
   ReactiveSocket
   reactivesocket_examples_util
   yarpl
-  ${FOLLY_LIBRARIES}
   ${GFLAGS_LIBRARY}
-  ${GLOG_LIBRARY}
-  ${CMAKE_THREAD_LIBS_INIT})
-
+  ${GLOG_LIBRARY})
 
 # channel-hello-world
 
@@ -549,10 +558,8 @@ target_link_libraries(
   ReactiveSocket
   reactivesocket_examples_util
   yarpl
-  ${FOLLY_LIBRARIES}
   ${GFLAGS_LIBRARY}
-  ${GLOG_LIBRARY}
-  ${CMAKE_THREAD_LIBS_INIT})
+  ${GLOG_LIBRARY})
 
 add_executable(
   example_channel-hello-world-client
@@ -564,10 +571,8 @@ target_link_libraries(
   ReactiveSocket
   reactivesocket_examples_util
   yarpl
-  ${FOLLY_LIBRARIES}
   ${GFLAGS_LIBRARY}
-  ${GLOG_LIBRARY}
-  ${CMAKE_THREAD_LIBS_INIT})
+  ${GLOG_LIBRARY})
 
 # stream-observable-to-flowable
 
@@ -581,10 +586,8 @@ target_link_libraries(
   ReactiveSocket
   reactivesocket_examples_util
   yarpl
-  ${FOLLY_LIBRARIES}
   ${GFLAGS_LIBRARY}
-  ${GLOG_LIBRARY}
-  ${CMAKE_THREAD_LIBS_INIT})
+  ${GLOG_LIBRARY})
 
 add_executable(
   example_observable-to-flowable-client
@@ -596,10 +599,8 @@ target_link_libraries(
   ReactiveSocket
   reactivesocket_examples_util
   yarpl
-  ${FOLLY_LIBRARIES}
   ${GFLAGS_LIBRARY}
-  ${GLOG_LIBRARY}
-  ${CMAKE_THREAD_LIBS_INIT})
+  ${GLOG_LIBRARY})
 
 # conditional-request-handling
 
@@ -617,10 +618,8 @@ target_link_libraries(
   ReactiveSocket
   reactivesocket_examples_util
   yarpl
-  ${FOLLY_LIBRARIES}
   ${GFLAGS_LIBRARY}
-  ${GLOG_LIBRARY}
-  ${CMAKE_THREAD_LIBS_INIT})
+  ${GLOG_LIBRARY})
 
 add_executable(
   example_conditional-request-handling-client
@@ -632,10 +631,8 @@ target_link_libraries(
   ReactiveSocket
   reactivesocket_examples_util
   yarpl
-  ${FOLLY_LIBRARIES}
   ${GFLAGS_LIBRARY}
-  ${GLOG_LIBRARY}
-  ${CMAKE_THREAD_LIBS_INIT})
+  ${GLOG_LIBRARY})
 
 
 ########################################
@@ -671,10 +668,8 @@ if(BUILD_BENCHMARKS)
           ReactiveSocket
           yarpl
           ${GOOGLE_BENCHMARK_LIBS}
-          ${FOLLY_LIBRARIES}
           ${GFLAGS_LIBRARY}
-          ${GLOG_LIBRARY}
-          ${CMAKE_THREAD_LIBS_INIT})
+          ${GLOG_LIBRARY})
       add_dependencies(
           ${name}
           ReactiveStreams

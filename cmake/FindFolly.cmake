@@ -10,7 +10,5 @@ endif ()
 find_library(FOLLY_LIBRARY folly PATHS ${lib_paths})
 find_path(FOLLY_INCLUDE_DIR "folly/String.h" PATHS ${include_paths})
 
-set(FOLLY_LIBRARIES ${FOLLY_LIBRARY})
-
 find_package_handle_standard_args(Folly
   DEFAULT_MSG FOLLY_LIBRARY FOLLY_INCLUDE_DIR)
