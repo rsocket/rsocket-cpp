@@ -80,3 +80,6 @@ BUILD_MODE
 
 # Vagrant
 .vagrant/
+
+# TCK test artifacts
+*.jar
