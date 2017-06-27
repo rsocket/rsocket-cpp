@@ -133,4 +133,9 @@ void RSocketServer::unpark() {
   waiting_.post();
 }
 
+folly::Optional<uint16_t> RSocketServer::listeningPort() const {
+  return duplexConnectionAcceptor_ ? duplexConnectionAcceptor_->listeningPort()
+                                   : folly::none;
+}
+
 } // namespace rsocket

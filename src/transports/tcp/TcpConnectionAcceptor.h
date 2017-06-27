@@ -53,6 +53,11 @@ class TcpConnectionAcceptor : public ConnectionAcceptor {
    */
   void stop() override;
 
+  /**
+   * Get the port being listened on.
+   */
+  folly::Optional<uint16_t> listeningPort() const override;
+
  private:
   class SocketCallback;
 

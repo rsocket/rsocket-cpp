@@ -34,9 +34,8 @@ class TestHandlerHello : public rsocket::RSocketResponder {
 }
 
 TEST(RequestResponseTest, Hello) {
-  auto port = randPort();
-  auto server = makeServer(port, std::make_shared<TestHandlerHello>());
-  auto client = makeClient(port);
+  auto server = makeServer(std::make_shared<TestHandlerHello>());
+  auto client = makeClient(*server->listeningPort());
   auto requester = client->connect().get();
 
   auto to = SingleTestObserver<std::string>::create();
@@ -98,12 +97,11 @@ class TestHandlerCancel : public rsocket::RSocketResponder {
 }
 
 TEST(RequestResponseTest, Cancel) {
-  auto port = randPort();
   auto onCancel = std::make_shared<folly::Baton<>>();
   auto onSubscribe = std::make_shared<folly::Baton<>>();
-  auto server = makeServer(
-      port, std::make_shared<TestHandlerCancel>(onCancel, onSubscribe));
-  auto client = makeClient(port);
+  auto server =
+      makeServer(std::make_shared<TestHandlerCancel>(onCancel, onSubscribe));
+  auto client = makeClient(*server->listeningPort());
   auto requester = client->connect().get();
 
   auto to = SingleTestObserver<std::string>::create();
