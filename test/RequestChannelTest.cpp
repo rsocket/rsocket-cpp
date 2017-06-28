@@ -1,6 +1,5 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include <chrono>
 #include <thread>
 
 #include "RSocketTests.h"
@@ -12,7 +11,6 @@ using namespace yarpl::flowable;
 using namespace rsocket;
 using namespace rsocket::tests;
 using namespace rsocket::tests::client_server;
-using namespace std::chrono_literals;
 
 /**
  * Test a finite stream both directions.

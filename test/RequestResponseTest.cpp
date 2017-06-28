@@ -1,7 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include <folly/Baton.h>
-#include <chrono>
 #include <thread>
 
 #include "RSocketTests.h"
@@ -13,7 +12,6 @@ using namespace yarpl::single;
 using namespace rsocket;
 using namespace rsocket::tests;
 using namespace rsocket::tests::client_server;
-using namespace std::chrono_literals;
 
 namespace {
 class TestHandlerHello : public rsocket::RSocketResponder {

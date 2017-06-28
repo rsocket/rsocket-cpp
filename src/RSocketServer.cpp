@@ -4,7 +4,6 @@
 #include <folly/io/async/EventBaseManager.h>
 #include "src/framing/FrameTransport.h"
 #include "src/RSocketErrors.h"
-#include "src/RSocketNetworkStats.h"
 #include "src/RSocketStats.h"
 #include "src/internal/RSocketConnectionManager.h"
 
