@@ -50,7 +50,7 @@ class ScheduledSubscriber : public yarpl::flowable::Subscriber<T> {
     }
   }
 
-  void onError(const std::exception_ptr ex) override {
+  void onError(std::exception_ptr ex) override {
     if (eventBase_.isInEventBaseThread()) {
       inner_->onError(std::move(ex));
     } else {
@@ -104,7 +104,7 @@ class ScheduledSubscriptionSubscriber : public yarpl::flowable::Subscriber<T> {
     inner_->onComplete();
   }
 
-  void onError(const std::exception_ptr ex) override {
+  void onError(std::exception_ptr ex) override {
     inner_->onError(std::move(ex));
   }
 

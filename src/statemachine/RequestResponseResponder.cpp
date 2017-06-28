@@ -35,7 +35,7 @@ void RequestResponseResponder::onSuccess(Payload response) noexcept {
   }
 }
 
-void RequestResponseResponder::onError(const std::exception_ptr ex) noexcept {
+void RequestResponseResponder::onError(std::exception_ptr ex) noexcept {
   DCHECK(producingSubscription_);
   producingSubscription_ = nullptr;
   switch (state_) {

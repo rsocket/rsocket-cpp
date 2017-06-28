@@ -24,7 +24,7 @@ class Observer : public virtual Refcounted {
   }
 
   // No further calls to the subscription after this method is invoked.
-  virtual void onError(const std::exception_ptr) {
+  virtual void onError(std::exception_ptr) {
     subscription_.reset();
   }
 

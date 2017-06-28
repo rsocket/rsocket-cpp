@@ -37,7 +37,7 @@ TEST(FlowableChaining, Lift) {
       std::cout << "onComplete " << std::endl;
     }
 
-    void onError(const std::exception_ptr error) {
+    void onError(std::exception_ptr error) {
       std::cout << "onError " << std::endl;
     }
 
@@ -80,7 +80,7 @@ TEST(FlowableChaining, Map) {
       std::cout << "onComplete " << std::endl;
     }
 
-    void onError(const std::exception_ptr error) {
+    void onError(std::exception_ptr error) {
       std::cout << "onError " << std::endl;
     }
   };

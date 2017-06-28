@@ -83,7 +83,7 @@ class FlowableOperator : public Flowable<D> {
       Refcounted::decRef(*this);
     }
 
-    void onError(const std::exception_ptr error) override {
+    void onError(std::exception_ptr error) override {
       assert(upstream_ && "subscription was already terminated");
       upstream_.reset(); // breaking the cycle
       subscriber_->onError(error);

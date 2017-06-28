@@ -24,7 +24,7 @@ class ExampleSubscriber : public yarpl::flowable::Subscriber<rsocket::Payload> {
                        subscription) noexcept override;
   void onNext(rsocket::Payload) noexcept override;
   void onComplete() noexcept override;
-  void onError(const std::exception_ptr ex) noexcept override;
+  void onError(std::exception_ptr ex) noexcept override;
 
   void awaitTerminalEvent();
 

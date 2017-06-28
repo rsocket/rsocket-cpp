@@ -55,7 +55,7 @@ void ExampleSubscriber::onComplete() noexcept {
   terminalEventCV_.notify_all();
 }
 
-void ExampleSubscriber::onError(const std::exception_ptr ex) noexcept {
+void ExampleSubscriber::onError(std::exception_ptr ex) noexcept {
   try {
     std::rethrow_exception(ex);
   } catch (const std::exception& e) {

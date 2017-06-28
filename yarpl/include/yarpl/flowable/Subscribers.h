@@ -36,7 +36,7 @@ class Subscribers {
       typename Error,
       typename = typename std::enable_if<
           std::is_callable<Next(T), void>::value &&
-          std::is_callable<Error(const std::exception_ptr), void>::value>::type>
+          std::is_callable<Error(std::exception_ptr), void>::value>::type>
   static auto
   create(Next&& next, Error&& error, int64_t batch = kNoFlowControl) {
     return Reference<Subscriber<T>>(new WithError<T, Next, Error>(
@@ -50,7 +50,7 @@ class Subscribers {
       typename Complete,
       typename = typename std::enable_if<
           std::is_callable<Next(T), void>::value &&
-          std::is_callable<Error(const std::exception_ptr), void>::value &&
+          std::is_callable<Error(std::exception_ptr), void>::value &&
           std::is_callable<Complete(), void>::value>::type>
   static auto create(
       Next&& next,

@@ -67,7 +67,7 @@ TEST(FlowableCreateSubscribe, SubscribeRequestAndCancel) {
         subscription->cancel();
       }
     }
-    void onError(const std::exception_ptr e) override {}
+    void onError(std::exception_ptr e) override {}
     void onComplete() override {}
     void onSubscribe(Subscription* s) override {
       std::cout << "onSubscribe in subscriber" << std::endl;
@@ -199,7 +199,7 @@ TEST(
                 << std::this_thread::get_id() << std::endl;
     }
 
-    void onError(const std::exception_ptr e) override {}
+    void onError(std::exception_ptr e) override {}
     void onComplete() override {}
     void onSubscribe(Subscription* s) override {
       subscription_ = std::move(s);

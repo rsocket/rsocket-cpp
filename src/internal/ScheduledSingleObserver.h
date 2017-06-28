@@ -50,7 +50,7 @@ class ScheduledSingleObserver : public yarpl::single::SingleObserver<T> {
   }
 
   // No further calls to the subscription after this method is invoked.
-  void onError(const std::exception_ptr ex) override {
+  void onError(std::exception_ptr ex) override {
     if (eventBase_.isInEventBaseThread()) {
       inner_->onError(std::move(ex));
     } else {
@@ -92,7 +92,7 @@ class ScheduledSubscriptionSingleObserver : public yarpl::single::SingleObserver
   }
 
   // No further calls to the subscription after this method is invoked.
-  void onError(const std::exception_ptr ex) override {
+  void onError(std::exception_ptr ex) override {
     inner_->onError(std::move(ex));
   }
 

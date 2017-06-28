@@ -107,7 +107,7 @@ class SingleTestObserver : public yarpl::single::SingleObserver<T> {
     terminalEventCV_.notify_all();
   }
 
-  void onError(const std::exception_ptr ex) override {
+  void onError(std::exception_ptr ex) override {
     if (delegate_) {
       // Do NOT hold the mutex while emitting
       delegate_->onError(ex);

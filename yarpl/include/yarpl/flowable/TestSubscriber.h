@@ -85,7 +85,7 @@ class TestSubscriber : public Subscriber<T> {
     terminalEventCV_.notify_all();
   }
 
-  void onError(const std::exception_ptr ex) override {
+  void onError(std::exception_ptr ex) override {
     if (delegate_) {
       delegate_->onError(ex);
     }

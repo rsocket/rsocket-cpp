@@ -34,7 +34,7 @@ class CollectingSubscriber : public Subscriber<T> {
     complete_ = true;
   }
 
-  void onError(const std::exception_ptr ex) override {
+  void onError(std::exception_ptr ex) override {
     Subscriber<T>::onError(ex);
     error_ = true;
     errorMsg_ = yarpl::exceptionStr(ex);

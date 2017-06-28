@@ -65,7 +65,7 @@ TEST(FlowableRange, 1_to_100_in_concurrent_jumps) {
       std::cout << "onComplete " << std::endl;
     }
 
-    void onError(const std::exception_ptr error) {
+    void onError(std::exception_ptr) {
       std::cout << "onError " << std::endl;
     }
 

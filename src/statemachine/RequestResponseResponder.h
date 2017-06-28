@@ -21,7 +21,7 @@ class RequestResponseResponder : public StreamStateMachineBase,
   void onSubscribe(yarpl::Reference<yarpl::single::SingleSubscription>
                        subscription) noexcept override;
   void onSuccess(Payload) noexcept override;
-  void onError(const std::exception_ptr) noexcept override;
+  void onError(std::exception_ptr) noexcept override;
 
   void handleCancel() override;
 

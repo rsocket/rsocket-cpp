@@ -28,7 +28,7 @@ class StreamResponder : public StreamStateMachineBase,
                        subscription) noexcept override;
   void onNext(Payload) noexcept override;
   void onComplete() noexcept override;
-  void onError(const std::exception_ptr) noexcept override;
+  void onError(std::exception_ptr) noexcept override;
 
 //  void pauseStream(RequestHandler&) override;
 //  void resumeStream(RequestHandler&) override;

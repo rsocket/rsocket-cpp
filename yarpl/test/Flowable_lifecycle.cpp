@@ -73,7 +73,7 @@ TEST(FlowableLifecycle, DISABLED_HandlerClass) {
       std::cout << "onComplete " << std::endl;
     }
 
-    void onError(const std::exception_ptr error) {
+    void onError(std::exception_ptr) {
       std::cout << "onError " << std::endl;
     }
 

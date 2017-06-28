@@ -76,7 +76,7 @@ class ObservableOperator : public Observable<D> {
           Reference<::yarpl::observable::Subscription>(this));
     }
 
-    void onError(const std::exception_ptr error) override {
+    void onError(std::exception_ptr error) override {
       observer_->onError(error);
       upstream_.reset(); // breaking the cycle
     }

@@ -123,7 +123,7 @@ TEST(Observable, OnError) {
 
   a->subscribe(Observers::create<int>(
       [](int value) { /* do nothing */ },
-      [&errorMessage](const std::exception_ptr e) {
+      [&errorMessage](std::exception_ptr e) {
         try {
           std::rethrow_exception(e);
         } catch (const std::runtime_error& ex) {
@@ -226,7 +226,7 @@ class TakeObserver : public Observer<int> {
     }
   }
 
-  void onError(const std::exception_ptr e) override {}
+  void onError(std::exception_ptr) override {}
   void onComplete() override {}
 };
 

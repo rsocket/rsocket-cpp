@@ -28,7 +28,7 @@ class ChannelRequester : public ConsumerBase,
                        subscription) noexcept override;
   void onNext(Payload) noexcept override;
   void onComplete() noexcept override;
-  void onError(const std::exception_ptr) noexcept override;
+  void onError(std::exception_ptr) noexcept override;
 
   // implementation from ConsumerBase::SubscriptionBase
   void request(int64_t) noexcept override;

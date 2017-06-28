@@ -35,7 +35,7 @@ void ObservableExamples::run() {
   //      std::cout << "onComplete" << std::endl;
   //    }
   //
-  //    void onError(const std::exception_ptr error) override {}
+  //    void onError(std::exception_ptr) override {}
   //  };
   //
   //  // the most basic Observable (and that ignores cancellation)
@@ -143,7 +143,7 @@ void ObservableExamples::run() {
       std::cout << "onComplete " << std::endl;
     }
 
-    void onError(const std::exception_ptr error) override {
+    void onError(std::exception_ptr) override {
       std::cout << "onError " << std::endl;
     }
 

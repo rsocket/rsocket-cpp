@@ -35,7 +35,7 @@ class MockSubscriber : public Subscriber<T> {
   MOCK_METHOD1(onSubscribe_, void(yarpl::Reference<Subscription> subscription));
   MOCK_METHOD1_T(onNext_, void(T& value));
   MOCK_METHOD0(onComplete_, void());
-  MOCK_METHOD1_T(onError_, void(const std::exception_ptr ex));
+  MOCK_METHOD1_T(onError_, void(std::exception_ptr ex));
 
   void onSubscribe(
       yarpl::Reference<Subscription> subscription) override {
@@ -55,7 +55,7 @@ class MockSubscriber : public Subscriber<T> {
     subscription_ = nullptr;
   }
 
-  void onError(const std::exception_ptr ex) override {
+  void onError(std::exception_ptr ex) override {
     onError_(ex);
     checkpoint_.Call();
     subscription_ = nullptr;

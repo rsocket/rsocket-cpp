@@ -57,7 +57,7 @@ void ChannelRequester::onComplete() noexcept {
   tryCompleteChannel();
 }
 
-void ChannelRequester::onError(const std::exception_ptr ex) noexcept {
+void ChannelRequester::onError(std::exception_ptr ex) noexcept {
   if (!requested_) {
     closeStream(StreamCompletionSignal::CANCEL);
     return;

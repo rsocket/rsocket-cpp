@@ -24,7 +24,7 @@ void StreamResponder::onComplete() noexcept {
   closeStream(StreamCompletionSignal::COMPLETE);
 }
 
-void StreamResponder::onError(const std::exception_ptr ex) noexcept {
+void StreamResponder::onError(std::exception_ptr ex) noexcept {
   publisherComplete();
   applicationError(yarpl::exceptionStr(ex));
   closeStream(StreamCompletionSignal::ERROR);

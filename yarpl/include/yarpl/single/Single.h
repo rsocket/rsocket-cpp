@@ -46,7 +46,7 @@ class Single : public virtual Refcounted {
       typename Error,
       typename = typename std::enable_if<
           std::is_callable<Success(T), void>::value &&
-          std::is_callable<Error(const std::exception_ptr), void>::value>::type>
+          std::is_callable<Error(std::exception_ptr), void>::value>::type>
   void subscribe(Success&& next, Error&& error) {
     subscribe(SingleObservers::create<T>(next, error));
   }
@@ -114,7 +114,7 @@ class Single<void> : public virtual Refcounted {
       }
 
       // No further calls to the subscription after this method is invoked.
-      virtual void onError(const std::exception_ptr eptr) override {
+      virtual void onError(std::exception_ptr eptr) override {
         SingleObserver<void>::onError(eptr);
       }
 

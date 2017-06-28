@@ -24,7 +24,7 @@ void ChannelResponder::onComplete() noexcept {
   tryCompleteChannel();
 }
 
-void ChannelResponder::onError(const std::exception_ptr ex) noexcept {
+void ChannelResponder::onError(std::exception_ptr ex) noexcept {
   publisherComplete();
   applicationError(yarpl::exceptionStr(ex));
   tryCompleteChannel();
