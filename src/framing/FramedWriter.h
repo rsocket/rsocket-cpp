@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include <folly/ExceptionWrapper.h>
 #include <vector>
+#include <memory>
 #include "yarpl/flowable/Subscriber.h"
 
 namespace folly {
@@ -19,8 +19,7 @@ class FramedWriter : public yarpl::flowable::Subscriber<std::unique_ptr<folly::I
 
  public:
   explicit FramedWriter(
-      yarpl::Reference<yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>
-          stream,
+      yarpl::Reference<SubscriberBase> stream,
       std::shared_ptr<ProtocolVersion> protocolVersion)
       : stream_(std::move(stream)),
         protocolVersion_(std::move(protocolVersion)) {}
@@ -43,7 +42,7 @@ class FramedWriter : public yarpl::flowable::Subscriber<std::unique_ptr<folly::I
   std::unique_ptr<folly::IOBuf> appendSize(
       std::unique_ptr<folly::IOBuf> payload);
 
-  yarpl::Reference<yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>> stream_;
+  yarpl::Reference<SubscriberBase> stream_;
   std::shared_ptr<ProtocolVersion> protocolVersion_;
 };
 

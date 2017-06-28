@@ -29,10 +29,6 @@ class Subscriber : public virtual Refcounted {
     subscription_.reset();
   }
 
-  void onError() {
-    subscription_.reset();
-  }
-
   virtual void onNext(T) = 0;
 
  protected:

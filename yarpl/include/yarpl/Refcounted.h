@@ -64,7 +64,7 @@ class Reference {
   friend class Reference;
 
   Reference() = default;
-  /* implicit */ Reference(std::nullptr_t) {}
+  inline /* implicit */ Reference(std::nullptr_t) {}
 
   explicit Reference(T* pointer) : pointer_(pointer) {
     inc();

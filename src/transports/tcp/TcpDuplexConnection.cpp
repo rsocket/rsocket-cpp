@@ -42,6 +42,7 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
     inputSubscriber_ = std::move(inputSubscriber);
 
     self_ = shared_from_this();
+
     // safe to call repeatedly
     socket_->setReadCB(this);
   }
@@ -87,11 +88,11 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
     if (auto socket = std::move(socket_)) {
       socket->close();
     }
-    if (auto subscriber = std::move(inputSubscriber_)) {
-      subscriber->onError(ew.to_exception_ptr());
-    }
     if (auto subscription = std::move(outputSubscription_)) {
       subscription->cancel();
+    }
+    if (auto subscriber = std::move(inputSubscriber_)) {
+      subscriber->onError(ew.to_exception_ptr());
     }
   }
 
@@ -182,8 +183,10 @@ class TcpOutputSubscriber
     tcpReaderWriter_->setOutputSubscription(nullptr);
   }
 
-  void onError(std::exception_ptr) noexcept override {
-    onComplete();
+  void onError(std::exception_ptr ex) noexcept override {
+    CHECK(tcpReaderWriter_);
+    auto tcpReaderWriter = std::move(tcpReaderWriter_);
+    tcpReaderWriter->closeErr(folly::exception_wrapper(std::move(ex)));
   }
 
  private:
@@ -192,7 +195,7 @@ class TcpOutputSubscriber
 
 class TcpInputSubscription : public Subscription {
  public:
-  TcpInputSubscription(
+  explicit TcpInputSubscription(
       std::shared_ptr<TcpReaderWriter> tcpReaderWriter)
       : tcpReaderWriter_(std::move(tcpReaderWriter)) {
     CHECK(tcpReaderWriter_);
@@ -200,7 +203,8 @@ class TcpInputSubscription : public Subscription {
 
   void request(int64_t n) noexcept override {
     DCHECK(tcpReaderWriter_);
-    DCHECK(n == kMaxRequestN) << "TcpDuplexConnection doesn't support proper flow control";
+    DCHECK(n == kMaxRequestN)
+        << "TcpDuplexConnection doesnt support proper flow control";
   }
 
   void cancel() noexcept override {

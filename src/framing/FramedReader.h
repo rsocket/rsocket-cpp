@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include <folly/ExceptionWrapper.h>
 #include <folly/io/IOBufQueue.h>
 #include "src/internal/AllowanceSemaphore.h"
 #include "yarpl/flowable/Subscriber.h"

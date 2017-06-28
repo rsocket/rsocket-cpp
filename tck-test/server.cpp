@@ -5,7 +5,7 @@
 #include <signal.h>
 
 #include <folly/Memory.h>
-#include <folly/String.h>tc
+#include <folly/String.h>
 #include <folly/init/Init.h>
 #include <folly/portability/GFlags.h>
 

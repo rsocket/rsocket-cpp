@@ -121,7 +121,7 @@ void FramedWriter::onComplete() {
 }
 
 void FramedWriter::onError(std::exception_ptr ex) {
-  SubscriberBase::onError();
+  SubscriberBase::onError(ex);
   stream_->onError(std::move(ex));
   stream_ = nullptr;
 }

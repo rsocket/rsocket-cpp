@@ -159,9 +159,10 @@ void FramedReader::cancel() noexcept {
   frames_ = nullptr;
 }
 
-void FramedReader::setInput(yarpl::Reference<Subscriber<std::unique_ptr<folly::IOBuf>>>
-              frames) {
-  CHECK(!frames_);
+void FramedReader::setInput(
+    yarpl::Reference<Subscriber<std::unique_ptr<folly::IOBuf>>> frames) {
+  CHECK(!frames_)
+      << "FrameReader should be closed before setting another input.";
   frames_ = std::move(frames);
   frames_->onSubscribe(yarpl::get_ref(this));
 }
@@ -208,4 +209,4 @@ void FramedReader::error(std::string errorMsg) {
   SubscriberBase::subscription()->cancel();
 }
 
-} // reactivesocket
+} // namespace rsocket
