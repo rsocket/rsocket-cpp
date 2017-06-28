@@ -209,4 +209,4 @@ void FramedReader::error(std::string errorMsg) {
   SubscriberBase::subscription()->cancel();
 }
 
-} // namespace rsocket
+} // reactivesocket
