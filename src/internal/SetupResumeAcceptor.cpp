@@ -143,8 +143,19 @@ void SetupResumeAcceptor::processFrame(
         break;
       }
 
-      removeConnection(transport);
-      onResume(std::move(transport), std::move(resumeParams));
+      if (!onResume(transport, std::move(resumeParams))) {
+        transport->outputFrameOrEnqueue(frameSerializer->serializeOut(
+            Frame_ERROR::connectionError("Resumption Failure")));
+        eventBase_->runInEventBaseThread(
+            [ this, transport = std::move(transport) ] {
+              closeAndRemoveConnection(
+                  std::move(transport),
+                  std::runtime_error("Resumption Failure"));
+            });
+      } else {
+        connections_.erase(transport);
+      }
+
       break;
     }
 

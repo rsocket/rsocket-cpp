@@ -97,7 +97,7 @@ class RSocketServer {
       OnRSocketSetup onRSocketSetup,
       std::shared_ptr<rsocket::FrameTransport> frameTransport,
       rsocket::SetupParameters setupPayload);
-  void onRSocketResume(
+  bool onRSocketResume(
       OnRSocketResume onRSocketResume,
       std::shared_ptr<rsocket::FrameTransport> frameTransport,
       rsocket::ResumeParameters setupPayload);

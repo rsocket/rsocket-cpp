@@ -29,7 +29,7 @@ class SetupResumeAcceptor final {
   using OnSetup =
       std::function<void(std::shared_ptr<FrameTransport>, SetupParameters)>;
   using OnResume =
-      std::function<void(std::shared_ptr<FrameTransport>, ResumeParameters)>;
+      std::function<bool(std::shared_ptr<FrameTransport>, ResumeParameters)>;
 
   explicit SetupResumeAcceptor(
       ProtocolVersion defaultProtocolVersion,
