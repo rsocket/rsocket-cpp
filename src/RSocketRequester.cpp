@@ -26,14 +26,6 @@ RSocketRequester::~RSocketRequester() {
   }
 }
 
-void RSocketRequester::closeSocket() {
-  eventBase_.add([stateMachine = std::move(stateMachine_)]{
-    VLOG(2) << "Closing RSocketStateMachine on EventBase";
-    stateMachine->close(
-        folly::exception_wrapper(), StreamCompletionSignal::SOCKET_CLOSED);
-  });
-}
-
 yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
 RSocketRequester::requestChannel(
     yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>

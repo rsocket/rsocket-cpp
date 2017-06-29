@@ -8,6 +8,7 @@
 #include "src/RSocketNetworkStats.h"
 #include "src/RSocketParameters.h"
 #include "src/RSocketStats.h"
+#include "src/internal/ClientResumeStatusCallback.h"
 
 namespace rsocket {
 
@@ -61,8 +62,16 @@ class RSocketClient {
       std::shared_ptr<RSocketStats> stats = std::shared_ptr<RSocketStats>(),
       std::shared_ptr<RSocketNetworkStats> networkStats = std::shared_ptr<RSocketNetworkStats>());
 
+  void resume(std::unique_ptr<ClientResumeStatusCallback> resumeCallback);
+
+  void disconnect(folly::exception_wrapper ex);
+
  private:
   std::unique_ptr<ConnectionFactory> connectionFactory_;
   std::unique_ptr<RSocketConnectionManager> connectionManager_;
+
+  std::shared_ptr<RSocketStateMachine> stateMachine_;
+  folly::EventBase* evb_;
+  ResumeIdentificationToken resumeToken_;
 };
 }

@@ -24,4 +24,10 @@ class ClientResumeStatusCallback {
   virtual void onConnectionError(folly::exception_wrapper ex) noexcept = 0;
 };
 
+class DefaultResumeCallback : public rsocket::ClientResumeStatusCallback {
+  void onResumeOk() noexcept override {}
+  void onResumeError(folly::exception_wrapper) noexcept override {}
+  void onConnectionError(folly::exception_wrapper) noexcept override {}
+};
+
 } // reactivesocket

@@ -52,7 +52,7 @@ RSocketStateMachine::~RSocketStateMachine() {
   // automatons destroyed on different threads can be the last ones referencing
   // this.
 
-  VLOG(6) << "RSocketStateMachine";
+  VLOG(6) << "~RSocketStateMachine";
   // We rely on SubscriptionPtr and SubscriberPtr to dispatch appropriate
   // terminal signals.
   DCHECK(!resumeCallback_);
@@ -72,6 +72,15 @@ bool RSocketStateMachine::connectServer(
     const SetupParameters& setupParams) {
   setResumable(setupParams.resumable);
   return connect(std::move(frameTransport), true, setupParams.protocolVersion);
+}
+
+bool RSocketStateMachine::resumeServer(
+    std::shared_ptr<FrameTransport> frameTransport,
+    const ResumeParameters& resumeParams) {
+  return connect(
+             std::move(frameTransport), false, resumeParams.protocolVersion) &&
+      resumeFromPositionOrClose(
+             resumeParams.serverPosition, resumeParams.clientPosition);
 }
 
 bool RSocketStateMachine::connect(

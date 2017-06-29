@@ -32,6 +32,9 @@ folly::Future<std::unique_ptr<RSocketRequester>> RSocketClient::connect(
     std::shared_ptr<RSocketNetworkStats> networkStats) {
   VLOG(2) << "Starting connection";
 
+  CHECK(!stateMachine_);
+  resumeToken_ = setupParameters.token;
+
   folly::Promise<std::unique_ptr<RSocketRequester>> promise;
   auto future = promise.getFuture();
 
@@ -46,7 +49,7 @@ folly::Future<std::unique_ptr<RSocketRequester>> RSocketClient::connect(
       std::unique_ptr<DuplexConnection> connection,
       folly::EventBase& eventBase) mutable {
     VLOG(3) << "onConnect received DuplexConnection";
-
+    evb_ = &eventBase;
     auto rsocket = fromConnection(
         std::move(connection),
         eventBase,
@@ -59,6 +62,30 @@ folly::Future<std::unique_ptr<RSocketRequester>> RSocketClient::connect(
   });
 
   return future;
+}
+
+void RSocketClient::resume(
+    std::unique_ptr<ClientResumeStatusCallback> resumeCallback) {
+  CHECK(stateMachine_);
+  connectionFactory_->connect([
+    this,
+    resumeCallback = std::move(resumeCallback)
+  ](std::unique_ptr<DuplexConnection> connection,
+    folly::EventBase & evb) mutable {
+    CHECK(evb_ == &evb);
+    auto frameTransport =
+        std::make_shared<FrameTransport>(std::move(connection));
+    stateMachine_->tryClientResume(
+        resumeToken_, std::move(frameTransport), std::move(resumeCallback));
+  });
+}
+
+void RSocketClient::disconnect(folly::exception_wrapper ex) {
+  CHECK(stateMachine_);
+  evb_->runInEventBaseThread([this, ex = std::move(ex)] {
+    VLOG(2) << "Disconnecting RSocketStateMachine on EventBase";
+    stateMachine_->disconnect(std::move(ex));
+  });
 }
 
 std::unique_ptr<RSocketRequester> RSocketClient::fromConnection(
@@ -92,7 +119,9 @@ std::unique_ptr<RSocketRequester> RSocketClient::fromConnection(
       std::move(stats),
       std::move(networkStats));
 
-  connectionManager_->manageConnection(rs, eventBase);
+  stateMachine_ = rs;
+
+  connectionManager_->manageConnection(rs, eventBase, setupParameters.token);
 
   std::unique_ptr<DuplexConnection> framedConnection;
   if (connection->isFramed()) {

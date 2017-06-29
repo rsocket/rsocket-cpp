@@ -210,11 +210,11 @@ SetupResumeAcceptor::getOrAutodetectFrameSerializer(
 
   auto serializer = FrameSerializer::createAutodetectedSerializer(firstFrame);
   if (!serializer) {
-    LOG(ERROR) << "unable to detect protocol version";
+    LOG(ERROR) << "Unable to detect ProtocolVersion";
     return nullptr;
   }
 
-  VLOG(2) << "detected protocol version" << serializer->protocolVersion();
+  VLOG(2) << "Detected ProtocolVersion v" << serializer->protocolVersion();
   return std::move(serializer);
 }
 

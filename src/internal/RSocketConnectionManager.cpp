@@ -25,7 +25,7 @@ RSocketConnectionManager::~RSocketConnectionManager() {
 
     for (auto& connectionPair : *locked) {
       // close() has to be called on the same executor as the socket
-      auto& executor_ = connectionPair.second;
+      auto& executor_ = connectionPair.second.first;
       executor_.add([rs = std::move(connectionPair.first)] {
         rs->close(
             folly::exception_wrapper(), StreamCompletionSignal::SOCKET_CLOSED);
@@ -40,7 +40,8 @@ RSocketConnectionManager::~RSocketConnectionManager() {
 
 void RSocketConnectionManager::manageConnection(
     std::shared_ptr<RSocketStateMachine> socket,
-    folly::EventBase& eventBase) {
+    folly::EventBase& eventBase,
+    ResumeIdentificationToken resumeToken) {
   class RemoveSocketNetworkStats : public RSocketNetworkStats {
    public:
     RemoveSocketNetworkStats(
@@ -87,8 +88,20 @@ void RSocketConnectionManager::manageConnection(
       *this, socket, eventBase);
   newNetworkStats->inner = std::move(socket->networkStats());
   socket->networkStats() = std::move(newNetworkStats);
+  sockets_.lock()->insert({std::move(socket), {eventBase, resumeToken}});
+}
 
-  sockets_.lock()->insert({std::move(socket), eventBase});
+std::shared_ptr<rsocket::RSocketStateMachine>
+RSocketConnectionManager::getConnection(
+    ResumeIdentificationToken resumeToken) const {
+  std::shared_ptr<rsocket::RSocketStateMachine> conn{nullptr};
+  auto locked = sockets_.lock();
+  for (auto& socket : *locked) {
+    if (resumeToken == socket.second.second) {
+      return socket.first;
+    }
+  }
+  return conn;
 }
 
 void RSocketConnectionManager::removeConnection(

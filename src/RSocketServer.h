@@ -92,7 +92,6 @@ class RSocketServer {
   folly::Optional<uint16_t> listeningPort() const;
 
  private:
-
   void onRSocketSetup(
       OnRSocketSetup onRSocketSetup,
       yarpl::Reference<rsocket::FrameTransport> frameTransport,

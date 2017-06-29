@@ -295,7 +295,8 @@ std::ostream& operator<<(std::ostream& os, const Frame_REQUEST_CHANNEL& frame) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Frame_REQUEST_STREAM& frame) {
-  return os << frame.header_ << ", " << frame.payload_;
+  return os << frame.header_ << ", initialRequestN(" << frame.requestN_ << "), "
+            << frame.payload_;
 }
 
 } // namespace rsocket
