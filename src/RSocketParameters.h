@@ -61,4 +61,11 @@ class ResumeParameters : public RSocketParameters {
   ResumePosition clientPosition;
 };
 
+class ServerOptions {
+ public:
+  ServerOptions(bool _resumable = false) : resumable(_resumable) {}
+
+  bool resumable;
+};
+
 } // reactivesocket

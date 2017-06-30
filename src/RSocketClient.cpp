@@ -64,25 +64,46 @@ folly::Future<std::unique_ptr<RSocketRequester>> RSocketClient::connect(
   return future;
 }
 
-void RSocketClient::resume(
-    std::unique_ptr<ClientResumeStatusCallback> resumeCallback) {
+folly::Future<folly::Unit> RSocketClient::resume() {
   CHECK(stateMachine_);
-  connectionFactory_->connect([
-    this,
-    resumeCallback = std::move(resumeCallback)
-  ](std::unique_ptr<DuplexConnection> connection,
-    folly::EventBase & evb) mutable {
+  folly::Promise<folly::Unit> promise;
+  auto future = promise.getFuture();
+  connectionFactory_->connect([ this, promise = std::move(promise) ](
+      std::unique_ptr<DuplexConnection> connection,
+      folly::EventBase & evb) mutable {
     CHECK(evb_ == &evb);
+
+    class ResumeCallback : public ClientResumeStatusCallback {
+     public:
+      ResumeCallback(folly::Promise<folly::Unit> promise)
+          : promise_(std::move(promise)) {}
+      void onResumeOk() noexcept override {
+        promise_.setValue(folly::Unit());
+      }
+      void onResumeError(folly::exception_wrapper ex) noexcept override {
+        promise_.setException(ex);
+      }
+      void onConnectionError(folly::exception_wrapper ex) noexcept override {
+        promise_.setException(ex);
+      }
+      folly::Promise<folly::Unit> promise_;
+    };
+
+    auto resumeCallback = std::make_unique<ResumeCallback>(std::move(promise));
     auto frameTransport =
         std::make_shared<FrameTransport>(std::move(connection));
+
     stateMachine_->tryClientResume(
         resumeToken_, std::move(frameTransport), std::move(resumeCallback));
+
   });
+
+  return future;
 }
 
 void RSocketClient::disconnect(folly::exception_wrapper ex) {
   CHECK(stateMachine_);
-  evb_->runInEventBaseThread([this, ex = std::move(ex)] {
+  evb_->runInEventBaseThread([ this, ex = std::move(ex) ] {
     VLOG(2) << "Disconnecting RSocketStateMachine on EventBase";
     stateMachine_->disconnect(std::move(ex));
   });

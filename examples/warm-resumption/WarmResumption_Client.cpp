@@ -66,53 +66,62 @@ class HelloSubscriber : public virtual yarpl::Refcounted,
 };
 }
 
+std::unique_ptr<RSocketClient> getClient(
+    yarpl::Reference<HelloSubscriber> subscriber) {
+  folly::SocketAddress address;
+  address.setFromHostPort(FLAGS_host, FLAGS_port);
+  auto client = RSocket::createClient(
+      std::make_unique<TcpConnectionFactory>(std::move(address)));
+  SetupParameters setupParameters;
+  setupParameters.resumable = true;
+  auto rs = client->connect(std::move(setupParameters)).get();
+  rs->requestStream(Payload("Jane"))->subscribe(subscriber);
+  return client;
+}
+
 int main(int argc, char* argv[]) {
   FLAGS_logtostderr = true;
   FLAGS_minloglevel = 0;
   folly::init(&argc, &argv);
 
-  folly::SocketAddress address;
-  address.setFromHostPort(FLAGS_host, FLAGS_port);
+  auto subscriber1 = yarpl::make_ref<HelloSubscriber>();
+  auto client = getClient(subscriber1);
 
-  // create a client which can then make connections below
-  auto client = RSocket::createClient(
-      std::make_unique<TcpConnectionFactory>(std::move(address)));
+  subscriber1->request(7);
 
-  // connect and wait for connection
-  SetupParameters setupParameters;
-  setupParameters.resumable = true;
-  auto rs = client->connect(std::move(setupParameters)).get();
-
-  // subscriber
-  auto subscriber = yarpl::make_ref<HelloSubscriber>();
-
-  // perform request on connected RSocket
-  rs->requestStream(Payload("Jane"))->subscribe(subscriber);
-
-  subscriber->request(7);
-
-  while (subscriber->rcvdCount() < 3) {
+  while (subscriber1->rcvdCount() < 3) {
     std::this_thread::yield();
   }
-
   client->disconnect(std::runtime_error("disconnect triggered from client"));
 
   // This request should get buffered
-  subscriber->request(3);
+  subscriber1->request(3);
 
-  client->resume(std::make_unique<DefaultResumeCallback>());
+  folly::ScopedEventBaseThread worker_;
 
-  subscriber->request(3);
+  client->resume()
+      .via(worker_.getEventBase())
+      .then([subscriber1] {
+        // continue with the old client.
+        subscriber1->request(3);
+        while (subscriber1->rcvdCount() < 13) {
+          std::this_thread::yield();
+        }
+        subscriber1->cancel();
+      })
+      .onError([](folly::exception_wrapper ex) {
+        LOG(INFO) << "Resumption Failed: " << ex;
+        // Create a new client
+        auto subscriber2 = yarpl::make_ref<HelloSubscriber>();
+        auto client = getClient(subscriber2);
+        subscriber2->request(7);
+        while (subscriber2->rcvdCount() < 7) {
+          std::this_thread::yield();
+        }
+        subscriber2->cancel();
+      });
 
-  while (subscriber->rcvdCount() < 13) {
-    std::this_thread::yield();
-  }
-
-  std::getchar();
-
-  subscriber->cancel();
-
-  std::getchar();
+  getchar();
 
   return 0;
 }

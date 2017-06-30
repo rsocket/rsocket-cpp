@@ -35,7 +35,7 @@ class RSocketSetup {
 
   void createRSocket(
       std::shared_ptr<RSocketResponder> requestResponder,
-      bool resumable = false,
+      ServerOptions serverOptions = ServerOptions(),
       std::shared_ptr<RSocketStats> stats = std::shared_ptr<RSocketStats>(),
       std::shared_ptr<RSocketNetworkStats> networkStats = std::shared_ptr<RSocketNetworkStats>());
 

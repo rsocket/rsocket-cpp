@@ -62,7 +62,7 @@ class RSocketClient {
       std::shared_ptr<RSocketStats> stats = std::shared_ptr<RSocketStats>(),
       std::shared_ptr<RSocketNetworkStats> networkStats = std::shared_ptr<RSocketNetworkStats>());
 
-  void resume(std::unique_ptr<ClientResumeStatusCallback> resumeCallback);
+  folly::Future<folly::Unit> resume();
 
   void disconnect(folly::exception_wrapper ex);
 

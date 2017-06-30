@@ -43,12 +43,12 @@ std::unique_ptr<RSocketRequester> RSocketSetup::createRSocketRequester(
 
 void RSocketSetup::createRSocket(
     std::shared_ptr<RSocketResponder> requestResponder,
-    bool resumable,
+    ServerOptions serverOptions,
     std::shared_ptr<RSocketStats> stats,
     std::shared_ptr<RSocketNetworkStats> networkStats) {
   auto rs = createRSocketStateMachine(
       std::move(requestResponder), std::move(stats), std::move(networkStats));
-  rs->setResumable(resumable);
+  rs->setResumable(serverOptions.resumable);
   connectionManager_.manageConnection(rs, eventBase_, setupParams_.token);
   rs->connectServer(std::move(frameTransport_), setupParams_);
 }

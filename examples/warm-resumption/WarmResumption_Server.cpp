@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
   auto serverThread = std::thread([=] {
     // start accepting connections
     rawRs->startAndPark([responder](auto& setup) {
-      setup.createRSocket(responder, FLAGS_resumable);
+      setup.createRSocket(responder, ServerOptions(FLAGS_resumable));
     });
   });
 
