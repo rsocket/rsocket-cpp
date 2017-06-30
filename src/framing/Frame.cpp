@@ -148,18 +148,18 @@ writeFlags(std::ostream& os, FrameFlags frameFlags, FrameType frameType) {
   const std::vector<std::pair<FrameFlags, std::string>>& allowedFlags =
       flagToNameMap[frameType];
 
-  std::string delimeter = "";
+  std::string delimiter = "";
   for (const auto& pair : allowedFlags) {
     if (!!(frameFlags & pair.first)) {
-      os << delimeter << pair.second;
-      delimeter = "|";
+      os << delimiter << pair.second;
+      delimiter = "|";
       foundFlags |= pair.first;
     }
   }
 
   if (foundFlags != frameFlags) {
     os << frameFlags;
-  } else if (delimeter.empty()) {
+  } else if (delimiter.empty()) {
     os << kEmpty;
   }
   return os;
