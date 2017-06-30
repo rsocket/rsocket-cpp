@@ -9,6 +9,7 @@
 
 #include "Flowable.h"
 #include "Subscriber.h"
+#include "yarpl/utils/ExceptionString.h"
 #include "yarpl/utils/credits.h"
 
 namespace yarpl {
@@ -137,6 +138,13 @@ class TestSubscriber : public Subscriber<T> {
 
   bool isError() const {
     return terminated_ && e_;
+  }
+
+  std::string getErrorMsg() const {
+    if (e_ == nullptr) {
+      return "";
+    }
+    return exceptionStr(e_);
   }
 
   void assertValueAt(int64_t index, T expected) {

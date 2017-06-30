@@ -300,7 +300,7 @@ TEST(FlowableTest, IgnoreElementsError) {
   flowable->subscribe(subscriber);
 
   EXPECT_TRUE(subscriber->isError());
-  subscriber->assertOnErrorMessage(kMsg);
+  EXPECT_EQ(subscriber->getErrorMsg(), kMsg);
 }
 
 TEST(FlowableTest, FlowableError) {
@@ -312,7 +312,7 @@ TEST(FlowableTest, FlowableError) {
 
   EXPECT_FALSE(subscriber->isComplete());
   EXPECT_TRUE(subscriber->isError());
-  subscriber->assertOnErrorMessage(kMsg);
+  EXPECT_EQ(subscriber->getErrorMsg(), kMsg);
 }
 
 TEST(FlowableTest, FlowableErrorPtr) {
@@ -325,7 +325,7 @@ TEST(FlowableTest, FlowableErrorPtr) {
 
   EXPECT_FALSE(subscriber->isComplete());
   EXPECT_TRUE(subscriber->isError());
-  subscriber->assertOnErrorMessage(kMsg);
+  EXPECT_EQ(subscriber->getErrorMsg(), kMsg);
 }
 
 TEST(FlowableTest, FlowableEmpty) {
