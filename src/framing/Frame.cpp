@@ -92,6 +92,8 @@ std::ostream& operator<<(std::ostream& os, ErrorCode errorCode) {
       return os << "UNSUPPORTED_SETUP";
     case ErrorCode::CONNECTION_ERROR:
       return os << "CONNECTION_ERROR";
+    case ErrorCode::REJECTED_RESUME:
+      return os << "REJECTED_RESUME";
   }
   return os << "ErrorCode(" << static_cast<uint32_t>(errorCode) << ")";
 }
@@ -227,6 +229,10 @@ Frame_ERROR Frame_ERROR::badSetupFrame(const std::string& message) {
 
 Frame_ERROR Frame_ERROR::connectionError(const std::string& message) {
   return Frame_ERROR(0, ErrorCode::CONNECTION_ERROR, Payload(message));
+}
+
+Frame_ERROR Frame_ERROR::rejectedResume(const std::string& message) {
+  return Frame_ERROR(0, ErrorCode::REJECTED_RESUME, Payload(message));
 }
 
 Frame_ERROR Frame_ERROR::error(StreamId streamId, Payload&& payload) {

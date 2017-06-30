@@ -492,7 +492,9 @@ void RSocketStateMachine::handleConnectionFrame(
 
       // TODO: handle INVALID_SETUP, UNSUPPORTED_SETUP, REJECTED_SETUP
 
-      if (frame.errorCode_ == ErrorCode::CONNECTION_ERROR && resumeCallback_) {
+      if ((frame.errorCode_ == ErrorCode::CONNECTION_ERROR ||
+           frame.errorCode_ == ErrorCode::REJECTED_RESUME) &&
+          resumeCallback_) {
         resumeCallback_->onResumeError(
             std::runtime_error(frame.payload_.moveDataToString()));
         resumeCallback_.reset();

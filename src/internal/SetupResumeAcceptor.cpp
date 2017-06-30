@@ -145,7 +145,12 @@ void SetupResumeAcceptor::processFrame(
 
       if (!onResume(transport, std::move(resumeParams))) {
         transport->outputFrameOrEnqueue(frameSerializer->serializeOut(
-            Frame_ERROR::connectionError("Resumption Failure")));
+            Frame_ERROR::rejectedResume("Resumption Failure")));
+        // We are currently in FrameTransport's callstack where it would
+        // have already acquired a recursive_mutex.  After the following block
+        // of code, FrameTransport goes out of scope and will get destroyed. But
+        // we cant destroy it while holding a recursive_mutex.  So schedule this
+        // block of code to be executed after callstack has unwinded.
         eventBase_->runInEventBaseThread(
             [ this, transport = std::move(transport) ] {
               closeAndRemoveConnection(
