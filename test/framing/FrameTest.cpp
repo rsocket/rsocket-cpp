@@ -157,7 +157,12 @@ TEST(FrameTest, Frame_KEEPALIVE) {
   expectHeader(
       FrameType::KEEPALIVE, FrameFlags::KEEPALIVE_RESPOND, streamId, frame);
   // Default position
-  EXPECT_EQ(0, frame.position_);
+  auto currProtVersion = FrameSerializer::getCurrentProtocolVersion();
+  if (currProtVersion == ProtocolVersion(0, 1)) {
+    EXPECT_EQ(0, frame.position_);
+  } else if (currProtVersion == ProtocolVersion(1, 0)) {
+    EXPECT_EQ(position, frame.position_);
+  }
   EXPECT_TRUE(folly::IOBufEqual()(*data, *frame.data_));
 }
 
