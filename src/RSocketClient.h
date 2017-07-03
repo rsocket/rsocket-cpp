@@ -72,6 +72,7 @@ class RSocketClient {
 
   std::shared_ptr<RSocketStateMachine> stateMachine_;
   folly::EventBase* evb_;
+  ProtocolVersion protocolVersion_;
   ResumeIdentificationToken resumeToken_;
 };
 }

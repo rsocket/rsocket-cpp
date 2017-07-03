@@ -34,6 +34,7 @@ folly::Future<std::unique_ptr<RSocketRequester>> RSocketClient::connect(
 
   CHECK(!stateMachine_);
   resumeToken_ = setupParameters.token;
+  protocolVersion_ = setupParameters.protocolVersion;
 
   folly::Promise<std::unique_ptr<RSocketRequester>> promise;
   auto future = promise.getFuture();
@@ -70,6 +71,7 @@ folly::Future<folly::Unit> RSocketClient::resume() {
   auto future = promise.getFuture();
   connectionFactory_->connect([ this, promise = std::move(promise) ](
       std::unique_ptr<DuplexConnection> connection,
+      bool isFramedConnection,
       folly::EventBase & evb) mutable {
     CHECK(evb_ == &evb);
 
@@ -90,8 +92,17 @@ folly::Future<folly::Unit> RSocketClient::resume() {
     };
 
     auto resumeCallback = std::make_unique<ResumeCallback>(std::move(promise));
+
+    std::unique_ptr<DuplexConnection> framedConnection;
+    if (isFramedConnection) {
+      framedConnection = std::move(connection);
+    } else {
+      framedConnection = std::make_unique<FramedDuplexConnection>(
+          std::move(connection), protocolVersion_, evb);
+    }
+
     auto frameTransport =
-        std::make_shared<FrameTransport>(std::move(connection));
+        std::make_shared<FrameTransport>(std::move(framedConnection));
 
     stateMachine_->tryClientResume(
         resumeToken_, std::move(frameTransport), std::move(resumeCallback));
