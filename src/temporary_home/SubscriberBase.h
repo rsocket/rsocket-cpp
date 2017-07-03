@@ -99,7 +99,6 @@ class SubscriberBaseT : public Subscriber<T>,
       std::shared_ptr<Subscription> subscription) noexcept override final {
     auto thisPtr = this->shared_from_this();
     runInExecutor([thisPtr, subscription]() {
-      CHECK(!thisPtr->originalSubscription_);
       thisPtr->originalSubscription_ = std::move(subscription);
       // if the subscription got cancelled in the meantime, we will not try to
       // subscribe. Instead we will let the instance die when released.

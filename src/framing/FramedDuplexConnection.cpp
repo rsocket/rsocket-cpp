@@ -34,10 +34,16 @@ FramedDuplexConnection::getOutput() noexcept {
 
 void FramedDuplexConnection::setInput(
     std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>> framesSink) {
-  CHECK(!inputReader_);
-  inputReader_ = std::make_shared<FramedReader>(
+  if (!inputReader_) {
+    // First time setInput is called, no danger of losing a FramedReader
+    inputReader_ = std::make_shared<FramedReader>(
       std::move(framesSink), executor_, protocolVersion_);
-  connection_->setInput(inputReader_);
+    connection_->setInput(inputReader_);
+  } else{
+    // There might be a FramedReader with a partial message, need to save it
+    inputReader_->setFrame(std::move(framesSink));
+    connection_->setInput(inputReader_);
+  }
 }
 
 } // reactivesocket
