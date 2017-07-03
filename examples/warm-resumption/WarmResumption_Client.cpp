@@ -66,7 +66,7 @@ class HelloSubscriber : public virtual yarpl::Refcounted,
 };
 }
 
-std::unique_ptr<RSocketClient> getClient(
+std::unique_ptr<RSocketClient> getClientAndRequestStream(
     yarpl::Reference<HelloSubscriber> subscriber) {
   folly::SocketAddress address;
   address.setFromHostPort(FLAGS_host, FLAGS_port);
@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
   folly::init(&argc, &argv);
 
   auto subscriber1 = yarpl::make_ref<HelloSubscriber>();
-  auto client = getClient(subscriber1);
+  auto client = getClientAndRequestStream(subscriber1);
 
   subscriber1->request(7);
 
@@ -110,10 +110,19 @@ int main(int argc, char* argv[]) {
         subscriber1->cancel();
       })
       .onError([](folly::exception_wrapper ex) {
-        LOG(INFO) << "Resumption Failed: " << ex;
+        LOG(INFO) << "Resumption Failed: " << ex.what();
+        try {
+          ex.throw_exception();
+        } catch (const ResumptionException& e) {
+          LOG(INFO) << "ResumeException";
+        } catch (const ConnectionException& e) {
+          LOG(INFO) << "ConnectionException";
+        } catch (const std::exception& e) {
+          LOG(INFO) << "UnknownException " << typeid(e).name();
+        }
         // Create a new client
         auto subscriber2 = yarpl::make_ref<HelloSubscriber>();
-        auto client = getClient(subscriber2);
+        auto client = getClientAndRequestStream(subscriber2);
         subscriber2->request(7);
         while (subscriber2->rcvdCount() < 7) {
           std::this_thread::yield();

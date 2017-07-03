@@ -85,9 +85,6 @@ folly::Future<folly::Unit> RSocketClient::resume() {
       void onResumeError(folly::exception_wrapper ex) noexcept override {
         promise_.setException(ex);
       }
-      void onConnectionError(folly::exception_wrapper ex) noexcept override {
-        promise_.setException(ex);
-      }
       folly::Promise<folly::Unit> promise_;
     };
 
