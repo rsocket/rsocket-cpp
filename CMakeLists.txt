@@ -369,7 +369,9 @@ add_executable(
   test/RequestChannelTest.cpp
   test/test_utils/Mocks.h
   test/MocksTest.cpp
-)
+  test/transport/TcpDuplexConnectionTest.cpp
+  test/transport/DuplexConnectionTest.h
+  test/transport/DuplexConnectionTest.cpp)
 
 target_link_libraries(
   tests

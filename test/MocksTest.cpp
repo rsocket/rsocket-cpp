@@ -16,7 +16,7 @@ TEST(MocksTest, SelfManagedMocks) {
 
   MockFlowable<int> flowable;
   auto subscription = yarpl::make_ref<MockSubscription>();
-  auto subscriber = yarpl::make_ref<MockSubscriber<int>>();
+  auto subscriber = yarpl::make_ref<MockSubscriber<int>>(0);
   {
     InSequence dummy;
     EXPECT_CALL(flowable, subscribe_(_))

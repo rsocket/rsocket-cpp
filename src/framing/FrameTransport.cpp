@@ -221,4 +221,4 @@ DuplexConnection* FrameTransport::duplexConnection() const {
   return connection_.get();
 }
 
-} // reactivesocket
+} // namespace rsocket
