@@ -132,7 +132,7 @@ void RSocketServer::onRSocketSetup(
 
 bool RSocketServer::onRSocketResume(
     OnRSocketResume,
-    std::shared_ptr<FrameTransport> frameTransport,
+    yarpl::Reference<FrameTransport> frameTransport,
     ResumeParameters resumeParams) {
   auto rsocketStateMachine =
       connectionManager_->getConnection(resumeParams.token);

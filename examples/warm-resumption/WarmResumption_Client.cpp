@@ -7,6 +7,7 @@
 #include <folly/portability/GFlags.h>
 
 #include "examples/util/ExampleSubscriber.h"
+#include "src/internal/ClientResumeStatusCallback.h"
 #include "src/RSocket.h"
 #include "src/transports/tcp/TcpConnectionFactory.h"
 

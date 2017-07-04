@@ -75,7 +75,7 @@ bool RSocketStateMachine::connectServer(
 }
 
 bool RSocketStateMachine::resumeServer(
-    std::shared_ptr<FrameTransport> frameTransport,
+    yarpl::Reference<FrameTransport> frameTransport,
     const ResumeParameters& resumeParams) {
   return connect(
              std::move(frameTransport), false, resumeParams.protocolVersion) &&

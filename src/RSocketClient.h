@@ -8,7 +8,6 @@
 #include "src/RSocketNetworkStats.h"
 #include "src/RSocketParameters.h"
 #include "src/RSocketStats.h"
-#include "src/internal/ClientResumeStatusCallback.h"
 
 namespace rsocket {
 

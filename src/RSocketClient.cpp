@@ -6,6 +6,7 @@
 #include "src/RSocketStats.h"
 #include "src/framing/FrameTransport.h"
 #include "src/framing/FramedDuplexConnection.h"
+#include "src/internal/ClientResumeStatusCallback.h"
 #include "src/internal/FollyKeepaliveTimer.h"
 #include "src/internal/RSocketConnectionManager.h"
 
@@ -71,13 +72,12 @@ folly::Future<folly::Unit> RSocketClient::resume() {
   auto future = promise.getFuture();
   connectionFactory_->connect([ this, promise = std::move(promise) ](
       std::unique_ptr<DuplexConnection> connection,
-      bool isFramedConnection,
       folly::EventBase & evb) mutable {
     CHECK(evb_ == &evb);
 
     class ResumeCallback : public ClientResumeStatusCallback {
      public:
-      ResumeCallback(folly::Promise<folly::Unit> promise)
+      explicit ResumeCallback(folly::Promise<folly::Unit> promise)
           : promise_(std::move(promise)) {}
       void onResumeOk() noexcept override {
         promise_.setValue(folly::Unit());
@@ -91,15 +91,15 @@ folly::Future<folly::Unit> RSocketClient::resume() {
     auto resumeCallback = std::make_unique<ResumeCallback>(std::move(promise));
 
     std::unique_ptr<DuplexConnection> framedConnection;
-    if (isFramedConnection) {
+    if (connection->isFramed()) {
       framedConnection = std::move(connection);
     } else {
       framedConnection = std::make_unique<FramedDuplexConnection>(
-          std::move(connection), protocolVersion_, evb);
+          std::move(connection), protocolVersion_);
     }
 
     auto frameTransport =
-        std::make_shared<FrameTransport>(std::move(framedConnection));
+        yarpl::make_ref<FrameTransport>(std::move(framedConnection));
 
     stateMachine_->tryClientResume(
         resumeToken_, std::move(frameTransport), std::move(resumeCallback));

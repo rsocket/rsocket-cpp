@@ -77,7 +77,7 @@ class RSocketStateMachine final
       const SetupParameters& setupParams);
 
   bool resumeServer(
-      std::shared_ptr<FrameTransport>,
+      yarpl::Reference<FrameTransport>,
       const ResumeParameters& resumeParams);
 
   /// Disconnects DuplexConnection from the stateMachine.
