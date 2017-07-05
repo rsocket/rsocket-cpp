@@ -62,12 +62,14 @@ install_manifest.txt
 # vim temp files
 *.swp
 *.un~
+*.*~
 
 # Emacs files:
 # VCS comparison files:
 *.~*~
 # Autosave files
 .#*
+[#]*[#]
 
 # Metadata files created by Mac OS.
 .DS_Store
