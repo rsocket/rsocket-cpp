@@ -55,48 +55,110 @@ class FlowableOperator : public Flowable<D> {
     }
 
     void subscriberOnNext(D value) {
-      subscriber_->onNext(std::move(value));
+      if (subscriber_) {
+        subscriber_->onNext(std::move(value));
+      }
     }
+
+    /// Terminates both ends of an operator normally.
+    void terminate() {
+      if (isTerminated()) {
+        return;
+      }
+
+      if (auto upstream = std::move(upstream_)) {
+        upstream->cancel();
+      }
+      if (auto subscriber = std::move(subscriber_)) {
+        subscriber->onComplete();
+      }
+
+      Refcounted::decRef(*this);
+    }
+
+    /// Terminates both ends of an operator with an error.
+    void terminateErr(std::exception_ptr eptr) {
+      if (isTerminated()) {
+        return;
+      }
+
+      if (auto upstream = std::move(upstream_)) {
+        upstream->cancel();
+      }
+      if (auto subscriber = std::move(subscriber_)) {
+        subscriber->onError(std::move(eptr));
+      }
+
+      Refcounted::decRef(*this);
+    }
+
+    // Subscription.
 
     void request(int64_t delta) override {
-      upstream_->request(delta);
-    }
-
-    // this method should be used to terminate the operators
-    void terminate() {
-      subscriber_->onComplete(); // should break the cycle to this
-      upstream_->cancel(); // should break the cycle to this
-      Refcounted::decRef(*this);
+      if (upstream_) {
+        upstream_->request(delta);
+      }
     }
 
     void cancel() override {
-      assert(upstream_ && "subscription was already terminated");
-      (decltype(upstream_)(std::move(upstream_)))->cancel();
-      subscriber_.reset(); // breaking the cycle
+      if (isTerminated()) {
+        return;
+      }
+
+      if (auto upstream = std::move(upstream_)) {
+        upstream->cancel();
+      }
+
+      subscriber_.reset();
+
       Refcounted::decRef(*this);
     }
 
-    void onComplete() override {
-      assert(upstream_ && "subscription was already terminated");
-      upstream_.reset(); // breaking the cycle
-      subscriber_->onComplete();
-      Refcounted::decRef(*this);
-    }
-
-    void onError(std::exception_ptr error) override {
-      assert(upstream_ && "subscription was already terminated");
-      upstream_.reset(); // breaking the cycle
-      subscriber_->onError(error);
-      Refcounted::decRef(*this);
-    }
+    // Subscriber.
 
     void onSubscribe(
         Reference<yarpl::flowable::Subscription> subscription) override {
+      if (upstream_) {
+        subscription->cancel();
+        return;
+      }
+
       upstream_ = std::move(subscription);
       subscriber_->onSubscribe(Reference<yarpl::flowable::Subscription>(this));
     }
 
+    void onComplete() override {
+      if (isTerminated()) {
+        return;
+      }
+
+      upstream_.reset();
+
+      if (auto subscriber = std::move(subscriber_)) {
+        subscriber->onComplete();
+      }
+
+      Refcounted::decRef(*this);
+    }
+
+    void onError(std::exception_ptr eptr) override {
+      if (isTerminated()) {
+        return;
+      }
+
+      upstream_.reset();
+
+      subscriber_->onError(std::move(eptr));
+      subscriber_.reset();
+
+      Refcounted::decRef(*this);
+    }
+
    private:
+    bool isTerminated() const {
+      return !upstream_ && !subscriber_;
+    }
+
     /// The Flowable has the lambda, and other creation parameters.
     Reference<Flowable<D>> flowable_;
 

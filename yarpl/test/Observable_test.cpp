@@ -391,8 +391,7 @@ TEST(Observable, RangeWithFilter) {
   EXPECT_EQ(run(std::move(observable)), std::vector<int64_t>({1, 3, 5, 7, 9}));
 }
 
-// TODO: Hits ASAN errors.
-TEST(Observable, DISABLED_SimpleTake) {
+TEST(Observable, SimpleTake) {
   EXPECT_EQ(
       run(Observables::range(0, 100)->take(3)),
       std::vector<int64_t>({0, 1, 2}));
