@@ -46,6 +46,16 @@ if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build" FORCE)
 endif(NOT CMAKE_BUILD_TYPE)
 
+string(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_LOWER)
+
+# Enable ASAN by default on debug macOS builds.
+if (APPLE)
+  set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl")
+  if ("${BUILD_TYPE_LOWER}" MATCHES "debug")
+    set(RSOCKET_ASAN 1)
+  endif()
+endif()
+
 # Add compiler-specific options.
 if (CMAKE_COMPILER_IS_GNUCXX)
   if (RSOCKET_ASAN)
@@ -182,15 +192,6 @@ ExternalProject_Add(
     "-DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}" /
     "-DCMAKE_EXE_LINKER_FLAGS=${CXX_LINKER_FLAGS}"
 )
-
-string(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_LOWER)
-
-if(APPLE)
-  set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl")
-  if("${BUILD_TYPE_LOWER}" MATCHES "debug")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,integer -fno-sanitize=unsigned-integer-overflow")
-  endif()
-endif()
 
 set(CMAKE_CXX_STANDARD 14)
 
