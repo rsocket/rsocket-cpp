@@ -56,7 +56,9 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
       return;
     }
 
-    stats_->bytesWritten(element->computeChainDataLength());
+    if (stats_) {
+      stats_->bytesWritten(element->computeChainDataLength());
+    }
     socket_->writeChain(this, std::move(element));
   }
 
@@ -104,7 +106,9 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
 
   void readDataAvailable(size_t len) noexcept override {
     readBuffer_.postallocate(len);
-    stats_->bytesRead(len);
+    if (stats_) {
+      stats_->bytesRead(len);
+    }
 
     if (inputSubscriber_) {
       readBufferAvailable(readBuffer_.split(len));
@@ -211,11 +215,15 @@ TcpDuplexConnection::TcpDuplexConnection(
           std::make_shared<TcpReaderWriter>(std::move(socket), stats)),
       stats_(stats),
       executor_(executor) {
-  stats_->duplexConnectionCreated("tcp", this);
+  if (stats_) {
+    stats_->duplexConnectionCreated("tcp", this);
+  }
 }
 
 TcpDuplexConnection::~TcpDuplexConnection() {
-  stats_->duplexConnectionClosed("tcp", this);
+  if (stats_) {
+    stats_->duplexConnectionClosed("tcp", this);
+  }
   tcpReaderWriter_->close();
 }
 
