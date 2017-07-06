@@ -11,6 +11,24 @@ TEST(RSocketClientServer, StartAndShutdown) {
   auto client = makeClient(*server->listeningPort());
 }
 
+TEST(RSocketClientServer, InvalidPort) {
+  // Port 1 should always be invalid.
+  TcpConnectionAcceptor::Options opts;
+  opts.port = 1;
+
+  auto rs = RSocket::createServer(
+      std::make_unique<TcpConnectionAcceptor>(std::move(opts)));
+
+  try {
+    rs->start([](auto& setup) {
+      setup.createRSocket(std::make_shared<HelloStreamRequestHandler>());
+    });
+    FAIL();
+  } catch (const std::exception& exn) {
+    LOG(INFO) << "Caught error: " << exn.what();
+  }
+}
+
 TEST(RSocketClientServer, ConnectOne) {
   auto server = makeServer(std::make_shared<HelloStreamRequestHandler>());
   auto client = makeClient(*server->listeningPort());
