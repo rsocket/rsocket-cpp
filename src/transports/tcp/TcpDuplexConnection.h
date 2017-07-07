@@ -3,7 +3,8 @@
 #pragma once
 
 #include <folly/io/async/AsyncSocket.h>
-#include <src/RSocketStats.h>
+
+#include "src/RSocketStats.h"
 #include "src/DuplexConnection.h"
 #include "src/internal/ReactiveStreamsCompat.h"
 
@@ -13,7 +14,7 @@ class TcpReaderWriter;
 
 class TcpDuplexConnection : public DuplexConnection {
  public:
-  explicit TcpDuplexConnection(
+  TcpDuplexConnection(
       folly::AsyncSocket::UniquePtr&& socket,
       folly::Executor& executor,
       std::shared_ptr<RSocketStats> stats = RSocketStats::noop());
@@ -36,4 +37,4 @@ class TcpDuplexConnection : public DuplexConnection {
   std::shared_ptr<RSocketStats> stats_;
   folly::Executor& executor_;
 };
-} // reactivesocket
+} // rsocket

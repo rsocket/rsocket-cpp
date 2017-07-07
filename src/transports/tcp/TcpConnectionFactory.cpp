@@ -80,12 +80,4 @@ void TcpConnectionFactory::connect(OnDuplexConnectionConnect cb) {
       });
 }
 
-std::unique_ptr<DuplexConnection>
-TcpConnectionFactory::createDuplexConnectionFromSocket(
-    folly::AsyncSocket::UniquePtr socket,
-    folly::EventBase& eventBase,
-    std::shared_ptr<RSocketStats> stats) {
-  return std::make_unique<TcpDuplexConnection>(std::move(socket), eventBase, std::move(stats));
-}
-
 } // namespace rsocket
