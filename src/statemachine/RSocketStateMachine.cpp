@@ -62,14 +62,15 @@ RSocketStateMachine::~RSocketStateMachine() {
 
 void RSocketStateMachine::setResumable(bool resumable) {
   debugCheckCorrectExecutor();
-  DCHECK(isDisconnectedOrClosed()); // we allow to set this flag before we are
-  // connected
+  // We should set this flag before we are connected
+  DCHECK(isDisconnectedOrClosed()); 
   remoteResumeable_ = isResumable_ = resumable;
 }
 
 bool RSocketStateMachine::connectServer(
     std::shared_ptr<FrameTransport> frameTransport,
     const SetupParameters& setupParams) {
+  setResumable(setupParams.resumable);
   return connect(std::move(frameTransport), true, setupParams.protocolVersion);
 }
 
