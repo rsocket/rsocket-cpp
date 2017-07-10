@@ -80,6 +80,7 @@ class RSocketServer {
 
   void acceptConnection(
       std::unique_ptr<DuplexConnection> connection,
+      bool isFramedConnection,
       folly::EventBase & eventBase,
       OnRSocketSetup onRSocketSetup);
 

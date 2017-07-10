@@ -67,20 +67,17 @@ void RSocketServer::start(OnRSocketSetup onRSocketSetup) {
           std::unique_ptr<DuplexConnection> connection,
           bool isFramedConnection,
           folly::EventBase& eventBase) {
-        std::unique_ptr<DuplexConnection> framedConnection;
-        if (isFramedConnection) {
-          framedConnection = std::move(connection);
-        } else {
-          framedConnection = std::make_unique<FramedDuplexConnection>(
-              std::move(connection), ProtocolVersion::Unknown);
-        }
         acceptConnection(
-            std::move(framedConnection), eventBase, onRSocketSetup);
+            std::move(connection),
+            isFramedConnection,
+            eventBase,
+            onRSocketSetup);
       });
 }
 
 void RSocketServer::acceptConnection(
     std::unique_ptr<DuplexConnection> connection,
+    bool isFramedConnection,
     folly::EventBase&,
     OnRSocketSetup onRSocketSetup) {
   if (isShutdown_) {
@@ -88,12 +85,20 @@ void RSocketServer::acceptConnection(
     return;
   }
 
+  std::unique_ptr<DuplexConnection> framedConnection;
+  if (isFramedConnection) {
+    framedConnection = std::move(connection);
+  } else {
+    framedConnection = std::make_unique<FramedDuplexConnection>(
+        std::move(connection), ProtocolVersion::Unknown);
+  }
+
   auto* acceptor = setupResumeAcceptors_.get();
 
   VLOG(2) << "Going to accept duplex connection";
 
   acceptor->accept(
-      std::move(connection),
+      std::move(framedConnection),
       std::bind(
           &RSocketServer::onRSocketSetup,
           this,
