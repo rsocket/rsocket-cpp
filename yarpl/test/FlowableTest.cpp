@@ -3,17 +3,18 @@
 #include <type_traits>
 #include <vector>
 #include <gtest/gtest.h>
+
 #include "yarpl/Flowable.h"
+#include "yarpl/flowable/TestSubscriber.h"
 #include "yarpl/utils/ExceptionString.h"
 
 namespace yarpl {
 namespace flowable {
 namespace {
 
-void unreachable() {
-  EXPECT_TRUE(false);
-}
-
+/*
+ * Used in place of TestSubscriber where we have move-only types.
+ */
 template <typename T>
 class CollectingSubscriber : public Subscriber<T> {
  public:
@@ -44,11 +45,11 @@ class CollectingSubscriber : public Subscriber<T> {
     return values_;
   }
 
-  bool complete() const {
+  bool isComplete() const {
     return complete_;
   }
 
-  bool error() const {
+  bool isError() const {
     return error_;
   }
 
@@ -68,16 +69,16 @@ class CollectingSubscriber : public Subscriber<T> {
   int64_t requestCount_;
 };
 
-/// Construct a pipeline with a collecting subscriber against the supplied
+/// Construct a pipeline with a test subscriber against the supplied
 /// flowable.  Return the items that were sent to the subscriber.  If some
 /// exception was sent, the exception is thrown.
 template <typename T>
 std::vector<T> run(
     Reference<Flowable<T>> flowable,
-    uint64_t requestCount = 100) {
-  auto collector = make_ref<CollectingSubscriber<T>>(requestCount);
-  flowable->subscribe(collector);
-  return std::move(collector->values());
+    int64_t requestCount = 100) {
+  auto subscriber = make_ref<TestSubscriber<T>>(requestCount);
+  flowable->subscribe(subscriber);
+  return std::move(subscriber->values());
 }
 
 } // namespace
@@ -93,14 +94,15 @@ TEST(FlowableTest, SingleMovableFlowable) {
   auto flowable = Flowables::justOnce(std::move(value));
   EXPECT_EQ(std::size_t{1}, flowable->count());
 
-  auto values = run(std::move(flowable));
-  EXPECT_EQ(
-      values.size(),
-      size_t(1));
+  size_t received = 0;
+  auto subscriber =
+      Subscribers::create<std::unique_ptr<int>>([&](std::unique_ptr<int> p) {
+        EXPECT_EQ(*p, 123456);
+        received++;
+      });
 
-  EXPECT_EQ(
-      *values[0],
-      123456);
+  flowable->subscribe(std::move(subscriber));
+  EXPECT_EQ(received, 1u);
 }
 
 TEST(FlowableTest, JustFlowable) {
@@ -187,11 +189,11 @@ TEST(FlowableTest, RangeWithReduceOneItem) {
 TEST(FlowableTest, RangeWithReduceNoItem) {
   auto flowable = Flowables::range(0, 0)
     ->reduce([](int64_t acc, int64_t v) { return acc + v; });
-  auto collector = make_ref<CollectingSubscriber<int64_t>>(100);
-  flowable->subscribe(collector);
-  EXPECT_EQ(collector->error(), false);
-  EXPECT_EQ(
-    collector->values(), std::vector<int64_t>({}));
+  auto subscriber = make_ref<TestSubscriber<int64_t>>(100);
+  flowable->subscribe(subscriber);
+
+  EXPECT_TRUE(subscriber->isComplete());
+  EXPECT_EQ(subscriber->values(), std::vector<int64_t>({}));
 }
 
 TEST(FlowableTest, RangeWithFilterAndReduce) {
@@ -263,12 +265,12 @@ TEST(FlowableTest, OverflowSkip) {
 }
 
 TEST(FlowableTest, SkipPartial) {
-  auto collector = make_ref<CollectingSubscriber<int64_t>>(2);
+  auto subscriber = make_ref<TestSubscriber<int64_t>>(2);
   auto flowable = Flowables::range(0, 10)->skip(5);
-  flowable->subscribe(collector);
+  flowable->subscribe(subscriber);
 
-  EXPECT_EQ(collector->values(), std::vector<int64_t>({5, 6}));
-  collector->cancelSubscription();
+  EXPECT_EQ(subscriber->values(), std::vector<int64_t>({5, 6}));
+  subscriber->cancel();
 }
 
 TEST(FlowableTest, IgnoreElements) {
@@ -279,75 +281,78 @@ TEST(FlowableTest, IgnoreElements) {
 }
 
 TEST(FlowableTest, IgnoreElementsPartial) {
-  auto collector = make_ref<CollectingSubscriber<int64_t>>(5);
+  auto subscriber = make_ref<TestSubscriber<int64_t>>(5);
   auto flowable = Flowables::range(0, 10)->ignoreElements();
-  flowable->subscribe(collector);
+  flowable->subscribe(subscriber);
 
-  EXPECT_EQ(
-      collector->values(),
-      std::vector<int64_t>({}));
-  EXPECT_EQ(collector->complete(), false);
-  collector->cancelSubscription();
+  EXPECT_EQ(subscriber->values(), std::vector<int64_t>({}));
+  EXPECT_FALSE(subscriber->isComplete());
+  EXPECT_FALSE(subscriber->isError());
 
-  flowable.reset();
-  collector.reset();
+  subscriber->cancel();
 }
 
 TEST(FlowableTest, IgnoreElementsError) {
-  auto collector = make_ref<CollectingSubscriber<int>>();
-  auto flowable = Flowables::error<int>(std::runtime_error("Failure"));
-  flowable->subscribe(collector);
-  EXPECT_EQ(collector->error(), true);
-  EXPECT_EQ(collector->errorMsg(), "Failure");
+  constexpr auto kMsg = "Failure";
+
+  auto subscriber = make_ref<TestSubscriber<int>>();
+  auto flowable = Flowables::error<int>(std::runtime_error(kMsg));
+  flowable->subscribe(subscriber);
+
+  EXPECT_TRUE(subscriber->isError());
+  EXPECT_EQ(subscriber->getErrorMsg(), kMsg);
 }
 
 TEST(FlowableTest, FlowableError) {
-  auto flowable = Flowables::error<int>(std::runtime_error("something broke!"));
-  auto collector = make_ref<CollectingSubscriber<int>>();
-  flowable->subscribe(collector);
+  constexpr auto kMsg = "something broke!";
 
-  EXPECT_EQ(collector->complete(), false);
-  EXPECT_EQ(collector->error(), true);
-  EXPECT_EQ(collector->errorMsg(), "something broke!");
+  auto flowable = Flowables::error<int>(std::runtime_error(kMsg));
+  auto subscriber = make_ref<TestSubscriber<int>>();
+  flowable->subscribe(subscriber);
+
+  EXPECT_FALSE(subscriber->isComplete());
+  EXPECT_TRUE(subscriber->isError());
+  EXPECT_EQ(subscriber->getErrorMsg(), kMsg);
 }
 
 TEST(FlowableTest, FlowableErrorPtr) {
-  auto flowable = Flowables::error<int>(
-      std::make_exception_ptr(std::runtime_error("something broke!")));
-  auto collector = make_ref<CollectingSubscriber<int>>();
-  flowable->subscribe(collector);
+  constexpr auto kMsg = "something broke!";
 
-  EXPECT_EQ(collector->complete(), false);
-  EXPECT_EQ(collector->error(), true);
-  EXPECT_EQ(collector->errorMsg(), "something broke!");
+  auto flowable = Flowables::error<int>(
+      std::make_exception_ptr(std::runtime_error(kMsg)));
+  auto subscriber = make_ref<TestSubscriber<int>>();
+  flowable->subscribe(subscriber);
+
+  EXPECT_FALSE(subscriber->isComplete());
+  EXPECT_TRUE(subscriber->isError());
+  EXPECT_EQ(subscriber->getErrorMsg(), kMsg);
 }
 
 TEST(FlowableTest, FlowableEmpty) {
   auto flowable = Flowables::empty<int>();
-  auto collector = make_ref<CollectingSubscriber<int>>();
-  flowable->subscribe(collector);
+  auto subscriber = make_ref<TestSubscriber<int>>();
+  flowable->subscribe(subscriber);
 
-  EXPECT_EQ(collector->complete(), true);
-  EXPECT_EQ(collector->error(), false);
+  EXPECT_TRUE(subscriber->isComplete());
+  EXPECT_FALSE(subscriber->isError());
 }
 
 TEST(FlowableTest, FlowableFromGenerator) {
   auto flowable = Flowables::fromGenerator<std::unique_ptr<int>>(
-      [] {return std::unique_ptr<int>();}
-  );
+      [] { return std::unique_ptr<int>(); });
 
-  auto collector = make_ref<CollectingSubscriber<std::unique_ptr<int>>>(10);
-  flowable->subscribe(collector);
+  auto subscriber = make_ref<CollectingSubscriber<std::unique_ptr<int>>>(10);
+  flowable->subscribe(subscriber);
 
-  EXPECT_EQ(collector->complete(), false);
-  EXPECT_EQ(collector->error(), false);
-  EXPECT_EQ(std::size_t{10}, collector->values().size());
+  EXPECT_FALSE(subscriber->isComplete());
+  EXPECT_FALSE(subscriber->isError());
+  EXPECT_EQ(std::size_t{10}, subscriber->values().size());
 
-  collector->cancelSubscription();
+  subscriber->cancelSubscription();
 }
 
 TEST(FlowableTest, FlowableFromGeneratorException) {
-  constexpr const char* errorMsg = "error from generator";
+  constexpr auto errorMsg = "error from generator";
   int count = 5;
   auto flowable = Flowables::fromGenerator<std::unique_ptr<int>>(
   [&] {
@@ -355,40 +360,27 @@ TEST(FlowableTest, FlowableFromGeneratorException) {
     throw std::runtime_error(errorMsg);
   });
 
-  auto collector = make_ref<CollectingSubscriber<std::unique_ptr<int>>>(10);
-  flowable->subscribe(collector);
+  auto subscriber = make_ref<CollectingSubscriber<std::unique_ptr<int>>>(10);
+  flowable->subscribe(subscriber);
 
-  EXPECT_EQ(collector->complete(), false);
-  EXPECT_EQ(collector->error(), true);
-  EXPECT_EQ(collector->errorMsg(), errorMsg);
-  EXPECT_EQ(std::size_t{5}, collector->values().size());
+  EXPECT_FALSE(subscriber->isComplete());
+  EXPECT_TRUE(subscriber->isError());
+  EXPECT_EQ(subscriber->errorMsg(), errorMsg);
+  EXPECT_EQ(std::size_t{5}, subscriber->values().size());
 }
 
 TEST(FlowableTest, SubscribersComplete) {
   auto flowable = Flowables::empty<int>();
-
-  bool completed = false;
-
   auto subscriber = Subscribers::create<int>(
-      [](int) { unreachable(); },
-      [](std::exception_ptr) { unreachable(); },
-      [&] { completed = true; });
-
+      [](int) { FAIL(); }, [](std::exception_ptr) { FAIL(); }, [&] {});
   flowable->subscribe(std::move(subscriber));
-  EXPECT_TRUE(completed);
 }
 
 TEST(FlowableTest, SubscribersError) {
   auto flowable = Flowables::error<int>(std::runtime_error("Whoops"));
-  bool errored = false;
-
   auto subscriber = Subscribers::create<int>(
-      [](int) { unreachable(); },
-      [&](std::exception_ptr) { errored = true; },
-      [] { unreachable(); });
-
+      [](int) { FAIL(); }, [&](std::exception_ptr) {}, [] { FAIL(); });
   flowable->subscribe(std::move(subscriber));
-  EXPECT_TRUE(errored);
 }
 
 TEST(FlowableTest, FlowableCompleteInTheMiddle) {
@@ -400,12 +392,12 @@ TEST(FlowableTest, FlowableCompleteInTheMiddle) {
         return std::make_tuple(int64_t(1), true);
       })->map([](int v) { return std::to_string(v); });
 
-  auto collector = make_ref<CollectingSubscriber<std::string>>(10);
-  flowable->subscribe(collector);
+  auto subscriber = make_ref<TestSubscriber<std::string>>(10);
+  flowable->subscribe(subscriber);
 
-  EXPECT_EQ(collector->complete(), true);
-  EXPECT_EQ(collector->error(), false);
-  EXPECT_EQ(std::size_t{1}, collector->values().size());
+  EXPECT_TRUE(subscriber->isComplete());
+  EXPECT_FALSE(subscriber->isError());
+  EXPECT_EQ(std::size_t{1}, subscriber->values().size());
 }
 
 } // flowable

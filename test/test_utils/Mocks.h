@@ -3,10 +3,14 @@
 #pragma once
 
 #include <cassert>
+#include <condition_variable>
 #include <exception>
 
+#include <folly/ExceptionWrapper.h>
 #include <gmock/gmock.h>
 
+#include "src/framing/FrameProcessor.h"
+#include "src/internal/Common.h"
 #include "yarpl/flowable/Flowable.h"
 
 namespace rsocket {
@@ -33,41 +37,77 @@ template <typename T>
 class MockSubscriber : public Subscriber<T> {
  public:
   MOCK_METHOD1(onSubscribe_, void(yarpl::Reference<Subscription> subscription));
-  MOCK_METHOD1_T(onNext_, void(T& value));
+  MOCK_METHOD1_T(onNext_, void(const T& value));
   MOCK_METHOD0(onComplete_, void());
   MOCK_METHOD1_T(onError_, void(std::exception_ptr ex));
 
-  void onSubscribe(
-      yarpl::Reference<Subscription> subscription) override {
+  explicit MockSubscriber(int64_t initial = kMaxRequestN) : initial_(initial) {}
+
+  void onSubscribe(yarpl::Reference<Subscription> subscription) override {
     subscription_ = subscription;
-    // We allow registering the same subscriber with multiple Publishers.
-    EXPECT_CALL(checkpoint_, Call());
     onSubscribe_(subscription);
+
+    if (initial_ > 0) {
+      subscription_->request(initial_);
+    }
   }
 
   void onNext(T element) override {
     onNext_(element);
+
+    --waitedFrameCount_;
+    framesEventCV_.notify_one();
   }
 
   void onComplete() override {
     onComplete_();
-    checkpoint_.Call();
-    subscription_ = nullptr;
+    subscription_.reset();
+    terminated_ = true;
+    terminalEventCV_.notify_all();
   }
 
   void onError(std::exception_ptr ex) override {
     onError_(ex);
-    checkpoint_.Call();
-    subscription_ = nullptr;
+    terminated_ = true;
+    terminalEventCV_.notify_all();
   }
 
   Subscription* subscription() const {
-    return subscription_.get();
+    return subscription_.operator->();
   }
 
- private:
+  /**
+   * Block the current thread until either onSuccess or onError is called.
+   */
+  void awaitTerminalEvent() {
+    // now block this thread
+    std::unique_lock<std::mutex> lk(m_);
+    // if shutdown gets implemented this would then be released by it
+    terminalEventCV_.wait(lk, [this] { return terminated_; });
+  }
+
+  /**
+   * Block the current thread until onNext is called 'count' times.
+   */
+  void awaitFrames(uint64_t count) {
+    waitedFrameCount_ += count;
+    std::unique_lock<std::mutex> lk(mFrame_);
+    if (waitedFrameCount_ > 0) {
+      framesEventCV_.wait(lk, [this] { return waitedFrameCount_ <= 0; });
+    }
+  }
+
+ protected:
+  // As the 'subscription_' member in the parent class is private,
+  // we define it here again.
   yarpl::Reference<Subscription> subscription_;
-  testing::MockFunction<void()> checkpoint_;
+
+  int64_t initial_{kMaxRequestN};
+
+  bool terminated_{false};
+  mutable std::mutex m_, mFrame_;
+  mutable std::condition_variable terminalEventCV_, framesEventCV_;
+  mutable std::atomic<int> waitedFrameCount_{0};
 };
 
 /// GoogleMock-compatible Subscriber implementation for fast prototyping.
@@ -92,7 +132,7 @@ class MockSubscription : public Subscription {
     checkpoint_.Call();
   }
 
- private:
+ protected:
   bool requested_{false};
   testing::MockFunction<void()> checkpoint_;
 };

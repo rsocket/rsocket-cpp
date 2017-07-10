@@ -9,6 +9,7 @@
 
 #include "Flowable.h"
 #include "Subscriber.h"
+#include "yarpl/utils/ExceptionString.h"
 #include "yarpl/utils/credits.h"
 
 namespace yarpl {
@@ -24,20 +25,23 @@ namespace flowable {
  * flowable->subscribe(to);
  * ts->awaitTerminalEvent();
  * ts->assert...
- *
- * @tparam T
  */
 template <typename T>
 class TestSubscriber : public Subscriber<T> {
  public:
+  static_assert(
+      std::is_copy_constructible<T>::value,
+      "Requires copyable types in case of a delegate subscriber");
+
+  constexpr static auto kCanceled = credits::kCanceled;
+  constexpr static auto kNoFlowControl = credits::kNoFlowControl;
+
   /**
    * Create a TestSubscriber that will subscribe and store the value it
    * receives.
-   *
-   * @return
    */
-  static Reference<TestSubscriber<T>> create() {
-    return make_ref<TestSubscriber<T>>();
+  static Reference<TestSubscriber<T>> create(int64_t initial = kNoFlowControl) {
+    return make_ref<TestSubscriber<T>>(initial);
   }
 
   /**
@@ -45,17 +49,20 @@ class TestSubscriber : public Subscriber<T> {
    * to the provided Subscriber.
    *
    * This will store the value it receives to allow assertions.
-   * @return
    */
   static Reference<TestSubscriber<T>> create(
-      Reference<Subscriber<T>> delegate) {
-    return make_ref<TestSubscriber<T>>(std::move(delegate));
+      Reference<Subscriber<T>> delegate,
+      int64_t initial = kNoFlowControl) {
+    return make_ref<TestSubscriber<T>>(std::move(delegate), initial);
   }
 
-  TestSubscriber() : delegate_(nullptr) {}
+  explicit TestSubscriber(int64_t initial = kNoFlowControl)
+      : TestSubscriber(Reference<Subscriber<T>>{}, initial) {}
 
-  explicit TestSubscriber(Reference<Subscriber<T>> delegate)
-      : delegate_(std::move(delegate)) {}
+  explicit TestSubscriber(
+      Reference<Subscriber<T>> delegate,
+      int64_t initial = kNoFlowControl)
+      : delegate_(std::move(delegate)), initial_{initial} {}
 
   void onSubscribe(Reference<Subscription> subscription) override {
     if (delegate_) {
@@ -64,7 +71,7 @@ class TestSubscriber : public Subscriber<T> {
     } else {
       subscription_ = std::move(subscription);
     }
-    subscription_->request(credits::kNoFlowControl);
+    subscription_->request(initial_);
   }
 
   void onNext(T t) override {
@@ -117,13 +124,32 @@ class TestSubscriber : public Subscriber<T> {
     return values_.size();
   }
 
-  T& getValueAt(size_t index) {
-    return values_[index];
+  std::vector<T>& values() {
+    return values_;
+  }
+
+  const std::vector<T>& values() const {
+    return values_;
+  }
+
+  bool isComplete() const {
+    return terminated_ && !e_;
+  }
+
+  bool isError() const {
+    return terminated_ && e_;
+  }
+
+  std::string getErrorMsg() const {
+    if (e_ == nullptr) {
+      return "";
+    }
+    return exceptionStr(e_);
   }
 
   void assertValueAt(int64_t index, T expected) {
     if (index < getValueCount()) {
-      T& v = getValueAt(index);
+      auto& v = values_[index];
       if (expected != v) {
         std::stringstream ss;
         ss << "Expected: " << expected << " Actual: " << v;
@@ -183,6 +209,7 @@ class TestSubscriber : public Subscriber<T> {
   Reference<Subscriber<T>> delegate_;
   std::vector<T> values_;
   std::exception_ptr e_;
+  int64_t initial_{kNoFlowControl};
   bool terminated_{false};
   std::mutex m_;
   std::condition_variable terminalEventCV_;
