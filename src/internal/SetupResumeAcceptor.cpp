@@ -76,7 +76,7 @@ void SetupResumeAcceptor::processFrame(
   DCHECK(eventBase_->isInEventBaseThread());
 
   if (closed_) {
-    transport->close(std::runtime_error("shut down"));
+    transport->closeErr(std::runtime_error("shut down"));
     return;
   }
 
@@ -221,7 +221,11 @@ SetupResumeAcceptor::getOrAutodetectFrameSerializer(
 void SetupResumeAcceptor::closeAndRemoveConnection(
     const yarpl::Reference<FrameTransport>& transport,
     folly::exception_wrapper ex) {
-  transport->close(ex);
+  if (ex) {
+    transport->closeErr(ex);
+  } else {
+    transport->close();
+  }
   connections_.erase(transport);
 }
 
@@ -246,7 +250,7 @@ folly::Future<folly::Unit> SetupResumeAcceptor::close() {
 void SetupResumeAcceptor::closeAllConnections() {
   closed_ = true;
   for(auto& connection : connections_) {
-    connection->close(std::runtime_error("shutting down"));
+    connection->closeErr(std::runtime_error("shutting down"));
   }
 }
 

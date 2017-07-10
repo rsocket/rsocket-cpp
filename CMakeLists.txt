@@ -352,23 +352,25 @@ enable_testing()
 
 add_executable(
   tests
-  test/Test.cpp
-  test/RSocketClientServerTest.cpp
+  test/MocksTest.cpp
   test/PayloadTest.cpp
-  test/handlers/HelloStreamRequestHandler.h
-  test/handlers/HelloStreamRequestHandler.cpp
+  test/RSocketClientServerTest.cpp
+  test/RSocketTests.h
+  test/RequestChannelTest.cpp
+  test/RequestResponseTest.cpp
+  test/RequestStreamTest.cpp
+  test/Test.cpp
   test/framing/FrameTest.cpp
+  test/framing/FrameTransportTest.cpp
+  test/handlers/HelloStreamRequestHandler.cpp
+  test/handlers/HelloStreamRequestHandler.h
+  test/internal/AllowanceSemaphoreTest.cpp
+  test/internal/FollyKeepaliveTimerTest.cpp
+  test/test_utils/MockDuplexConnection.h
   test/test_utils/MockKeepaliveTimer.h
   test/test_utils/MockRequestHandler.h
   test/test_utils/MockStats.h
-  test/internal/FollyKeepaliveTimerTest.cpp
-  test/internal/AllowanceSemaphoreTest.cpp
-  test/RSocketTests.h
-  test/RequestResponseTest.cpp
-  test/RequestStreamTest.cpp
-  test/RequestChannelTest.cpp
   test/test_utils/Mocks.h
-  test/MocksTest.cpp
 )
 
 target_link_libraries(

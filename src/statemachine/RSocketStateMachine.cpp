@@ -63,7 +63,7 @@ RSocketStateMachine::~RSocketStateMachine() {
 void RSocketStateMachine::setResumable(bool resumable) {
   debugCheckCorrectExecutor();
   // We should set this flag before we are connected
-  DCHECK(isDisconnectedOrClosed()); 
+  DCHECK(isDisconnectedOrClosed());
   remoteResumeable_ = isResumable_ = resumable;
 }
 
@@ -86,7 +86,8 @@ bool RSocketStateMachine::connect(
     if (frameSerializer_) {
       if (frameSerializer_->protocolVersion() != protocolVersion) {
         DCHECK(false);
-        frameTransport->close(std::runtime_error("protocol version mismatch"));
+        std::runtime_error exn("Protocol version mismatch");
+        frameTransport->closeErr(std::move(exn));
         return false;
       }
     } else {
@@ -94,7 +95,8 @@ bool RSocketStateMachine::connect(
           FrameSerializer::createFrameSerializer(protocolVersion);
       if (!frameSerializer_) {
         DCHECK(false);
-        frameTransport->close(std::runtime_error("invaid protocol version"));
+        std::runtime_error exn("Invalid protocol version");
+        frameTransport->closeErr(std::move(exn));
         return false;
       }
     }
@@ -199,14 +201,15 @@ void RSocketStateMachine::closeFrameTransport(
     resumeCallback_.reset();
   }
 
-  // echo the exception to the frameTransport only if the frameTransport started
-  // closing with error
-  // otherwise we sent some error frame over the wire and we are closing
-  // transport cleanly
-  frameTransport_->close(
-      signal == StreamCompletionSignal::CONNECTION_ERROR
-          ? std::move(ex)
-          : folly::exception_wrapper());
+  // Echo the exception to the frameTransport only if the frameTransport started
+  // closing with error.  Otherwise we sent some error frame over the wire and
+  // we are closing the transport cleanly.
+  if (signal == StreamCompletionSignal::CONNECTION_ERROR) {
+    frameTransport_->closeErr(std::move(ex));
+  } else {
+    frameTransport_->close();
+  }
+
   frameTransport_ = nullptr;
 }
 
