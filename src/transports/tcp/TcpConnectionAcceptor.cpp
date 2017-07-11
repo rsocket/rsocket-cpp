@@ -27,7 +27,7 @@ class TcpConnectionAcceptor::SocketCallback
 
     auto connection = std::make_unique<TcpDuplexConnection>(
         std::move(socket));
-    onAccept_(std::move(connection), false, *eventBase());
+    onAccept_(std::move(connection), *eventBase());
   }
 
   void acceptError(const std::exception& ex) noexcept override {

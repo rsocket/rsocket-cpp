@@ -25,6 +25,10 @@ class FramedDuplexConnection : public virtual DuplexConnection {
   void setInput(yarpl::Reference<yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>
                     framesSink) override;
 
+  bool isFramed() override {
+    return true;
+  }
+
  private:
   std::unique_ptr<DuplexConnection> inner_;
   yarpl::Reference<FramedReader> inputReader_;

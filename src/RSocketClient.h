@@ -54,7 +54,6 @@ class RSocketClient {
 
   std::unique_ptr<RSocketRequester> fromConnection(
       std::unique_ptr<DuplexConnection> connection,
-      bool isFramedConnection,
       folly::EventBase& eventBase,
       SetupParameters setupParameters = SetupParameters(),
       std::shared_ptr<RSocketResponder> responder = std::shared_ptr<RSocketResponder>(),

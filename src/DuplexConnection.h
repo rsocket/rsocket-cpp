@@ -46,5 +46,10 @@ class DuplexConnection {
   /// connection MUST manage the lifetime of provided Subscriber.
   virtual yarpl::Reference<yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>
   getOutput() = 0;
+
+  /// property telling whether the duplex connection respects frame boundaries
+  virtual bool isFramed() {
+    return false;
+  }
 };
 }

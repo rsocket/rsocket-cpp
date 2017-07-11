@@ -31,7 +31,6 @@ makeSingleClientServer(
   auto server = std::make_unique<TcpConnectionAcceptor>(options);
   server->start([&serverPromise, &serverConnection, &serverEvb](
                  std::unique_ptr<DuplexConnection> connection,
-                 bool /*framedConnection*/,
                  EventBase& eventBase) {
         serverConnection = std::move(connection);
         *serverEvb = &eventBase;
@@ -43,7 +42,6 @@ makeSingleClientServer(
   auto client = std::make_unique<TcpConnectionFactory>(SocketAddress("localhost", port, true));
   client->connect([&clientPromise, &clientConnection, &clientEvb](
                      std::unique_ptr<DuplexConnection> connection,
-                     bool /*framedConnection*/,
                      EventBase& eventBase) {
     clientConnection = std::move(connection);
     *clientEvb = &eventBase;

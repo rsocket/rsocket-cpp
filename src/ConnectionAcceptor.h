@@ -14,7 +14,6 @@ namespace rsocket {
 
 using OnDuplexConnectionAccept = std::function<void(
     std::unique_ptr<rsocket::DuplexConnection>,
-    bool framedConnection,
     folly::EventBase&)>;
 
 /**

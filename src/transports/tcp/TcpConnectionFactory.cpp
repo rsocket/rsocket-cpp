@@ -46,7 +46,7 @@ class ConnectCallback : public folly::AsyncSocket::ConnectCallback {
         std::move(socket_), RSocketStats::noop());
     auto evb = folly::EventBaseManager::get()->getExistingEventBase();
     CHECK(evb);
-    onConnect_(std::move(connection), false, *evb);
+    onConnect_(std::move(connection), *evb);
   }
 
   void connectErr(const folly::AsyncSocketException& ex) noexcept override {
