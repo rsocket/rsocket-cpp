@@ -814,11 +814,6 @@ bool RSocketStateMachine::isClosed() const {
   return isClosed_;
 }
 
-DuplexConnection* RSocketStateMachine::duplexConnection() const {
-  debugCheckCorrectExecutor();
-  return frameTransport_ ? frameTransport_->duplexConnection() : nullptr;
-}
-
 void RSocketStateMachine::debugCheckCorrectExecutor() const {
   DCHECK(
       !dynamic_cast<folly::EventBase*>(&executor_) ||

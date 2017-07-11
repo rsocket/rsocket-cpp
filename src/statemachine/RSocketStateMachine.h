@@ -179,7 +179,6 @@ class RSocketStateMachine final
   bool isDisconnectedOrClosed() const;
   bool isClosed() const;
 
-  DuplexConnection* duplexConnection() const;
   StreamsFactory& streamsFactory() {
     return streamsFactory_;
   }
