@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cassert>
+#include <chrono>
 #include <condition_variable>
 #include <exception>
 
@@ -79,21 +80,31 @@ class MockSubscriber : public Subscriber<T> {
   /**
    * Block the current thread until either onSuccess or onError is called.
    */
-  void awaitTerminalEvent() {
+  void awaitTerminalEvent(
+      std::chrono::milliseconds timeout = std::chrono::seconds(1)) {
     // now block this thread
     std::unique_lock<std::mutex> lk(m_);
     // if shutdown gets implemented this would then be released by it
-    terminalEventCV_.wait(lk, [this] { return terminated_; });
+    bool result = terminalEventCV_.wait_for(
+        lk, timeout, [this] {
+          return terminated_;
+        });
+    EXPECT_TRUE(result) << "Timed out";
   }
 
   /**
    * Block the current thread until onNext is called 'count' times.
    */
-  void awaitFrames(uint64_t count) {
+  void awaitFrames(uint64_t count,
+       std::chrono::milliseconds timeout = std::chrono::seconds(1)) {
     waitedFrameCount_ += count;
     std::unique_lock<std::mutex> lk(mFrame_);
     if (waitedFrameCount_ > 0) {
-      framesEventCV_.wait(lk, [this] { return waitedFrameCount_ <= 0; });
+      bool result = framesEventCV_.wait_for(
+          lk, timeout, [this] {
+            return waitedFrameCount_ <= 0;
+          });
+      EXPECT_TRUE(result) << "Timed out";
     }
   }
 
