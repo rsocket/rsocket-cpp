@@ -70,18 +70,17 @@ void FrameTransport::setFrameProcessor(
 }
 
 void FrameTransport::close() {
-  closeImpl<false>(folly::exception_wrapper());
+  closeImpl(folly::exception_wrapper());
 }
 
-void FrameTransport::closeErr(folly::exception_wrapper ew) {
+void FrameTransport::closeWithError(folly::exception_wrapper ew) {
   if (!ew) {
-    VLOG(1) << "FrameTransport::closeErr() called with empty exception";
+    VLOG(1) << "FrameTransport::closeWithError() called with empty exception";
     ew = std::runtime_error("Undefined error");
   }
-  closeImpl<true>(std::move(ew));
+  closeImpl(std::move(ew));
 }
 
-template <bool isErr>
 void FrameTransport::closeImpl(folly::exception_wrapper ew) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
 
@@ -98,8 +97,7 @@ void FrameTransport::closeImpl(folly::exception_wrapper ew) {
   // tearing it down.  We must do this per DuplexConnection specification (see
   // interface definition).
   if (auto subscriber = std::move(connectionOutput_)) {
-    if (isErr) {
-      DCHECK(ew);
+    if (ew) {
       subscriber->onError(ew.to_exception_ptr());
     } else {
       subscriber->onComplete();

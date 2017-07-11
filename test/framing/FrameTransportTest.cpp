@@ -27,7 +27,7 @@ TEST(FrameTransport, Close) {
   transport->close();
 }
 
-TEST(FrameTransport, CloseErr) {
+TEST(FrameTransport, CloseWithError) {
   auto connection = std::make_unique<StrictMock<MockDuplexConnection>>();
 
   EXPECT_CALL(*connection, setInput_(_));
@@ -42,5 +42,5 @@ TEST(FrameTransport, CloseErr) {
   auto transport = yarpl::make_ref<FrameTransport>(std::move(connection));
   transport->setFrameProcessor(
       std::make_shared<StrictMock<MockFrameProcessor>>());
-  transport->closeErr(std::runtime_error("Uh oh"));
+  transport->closeWithError(std::runtime_error("Uh oh"));
 }

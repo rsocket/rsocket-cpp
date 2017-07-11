@@ -26,7 +26,7 @@ RSocketSetup::~RSocketSetup() {
   if (frameTransport_) {
     // this instance was ignored and no RSocket instance was created from it
     // we will just close the transport
-    frameTransport_->closeErr(std::runtime_error("ignored connection"));
+    frameTransport_->closeWithError(std::runtime_error("ignored connection"));
   }
 }
 
@@ -76,7 +76,7 @@ std::shared_ptr<RSocketStateMachine> RSocketSetup::createRSocketStateMachine(
 
 void RSocketSetup::error(const RSocketError& error) {
   // TODO emit ERROR ... but how do I do that here?
-  frameTransport_->closeErr(std::runtime_error(error.what()));
+  frameTransport_->closeWithError(std::runtime_error(error.what()));
   frameTransport_ = nullptr;
 }
 

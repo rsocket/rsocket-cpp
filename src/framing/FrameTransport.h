@@ -43,7 +43,7 @@ class FrameTransport :
 
   /// Cancel the input, error the output, and close the underlying connection.
   /// This must be closed with a non-empty exception_wrapper.
-  void closeErr(folly::exception_wrapper);
+  void closeWithError(folly::exception_wrapper);
 
   bool isClosed() const {
     return !connection_;
@@ -70,7 +70,6 @@ class FrameTransport :
 
   void terminateFrameProcessor(folly::exception_wrapper);
 
-  template <bool isErr>
   void closeImpl(folly::exception_wrapper);
 
   // TODO(t15924567): Recursive locks are evil! This should instead use a

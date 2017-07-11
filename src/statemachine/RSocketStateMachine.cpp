@@ -87,7 +87,7 @@ bool RSocketStateMachine::connect(
       if (frameSerializer_->protocolVersion() != protocolVersion) {
         DCHECK(false);
         std::runtime_error exn("Protocol version mismatch");
-        frameTransport->closeErr(std::move(exn));
+        frameTransport->closeWithError(std::move(exn));
         return false;
       }
     } else {
@@ -96,7 +96,7 @@ bool RSocketStateMachine::connect(
       if (!frameSerializer_) {
         DCHECK(false);
         std::runtime_error exn("Invalid protocol version");
-        frameTransport->closeErr(std::move(exn));
+        frameTransport->closeWithError(std::move(exn));
         return false;
       }
     }
@@ -205,7 +205,7 @@ void RSocketStateMachine::closeFrameTransport(
   // closing with error.  Otherwise we sent some error frame over the wire and
   // we are closing the transport cleanly.
   if (signal == StreamCompletionSignal::CONNECTION_ERROR) {
-    frameTransport_->closeErr(std::move(ex));
+    frameTransport_->closeWithError(std::move(ex));
   } else {
     frameTransport_->close();
   }
