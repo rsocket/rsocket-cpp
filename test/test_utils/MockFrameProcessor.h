@@ -1,5 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
+#pragma once
+
 #include <gmock/gmock.h>
 
 #include <folly/io/IOBuf.h>
