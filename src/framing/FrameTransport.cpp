@@ -149,9 +149,15 @@ void FrameTransport::onComplete() {
   terminateProcessor(folly::exception_wrapper());
 }
 
-void FrameTransport::onError(std::exception_ptr ex) {
-  VLOG(6) << "onError" << folly::exceptionStr(ex);
-  terminateProcessor(folly::exception_wrapper(std::move(ex)));
+void FrameTransport::onError(std::exception_ptr eptr) {
+  VLOG(6) << "onError" << folly::exceptionStr(eptr);
+
+  try {
+    std::rethrow_exception(eptr);
+  } catch (const std::exception& exn) {
+    folly::exception_wrapper ew{std::move(eptr), exn};
+    terminateProcessor(std::move(ew));
+  }
 }
 
 void FrameTransport::request(int64_t n) {

@@ -103,3 +103,27 @@ TEST(FrameTransport, SimpleNoQueue) {
 
   transport->close();
 }
+
+TEST(FrameTransport, InputSendsError) {
+  auto connection = makeConnection([](auto& subscriber) {
+    EXPECT_CALL(*subscriber, onSubscribe_(_));
+    EXPECT_CALL(*subscriber, onComplete_());
+  });
+
+  ON_CALL(*connection, setInput_(_)).WillByDefault(Invoke([](auto& subscriber) {
+    auto subscription = yarpl::make_ref<StrictMock<MockSubscription>>();
+    EXPECT_CALL(*subscription, request_(_));
+    EXPECT_CALL(*subscription, cancel_());
+
+    subscriber->onSubscribe(std::move(subscription));
+    subscriber->onError(std::make_exception_ptr(std::runtime_error("Oops")));
+  }));
+
+  auto transport = yarpl::make_ref<FrameTransport>(std::move(connection));
+
+  auto processor = std::make_shared<StrictMock<MockFrameProcessor>>();
+  EXPECT_CALL(*processor, onTerminal_(_));
+
+  transport->setFrameProcessor(std::move(processor));
+  transport->close();
+}
