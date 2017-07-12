@@ -361,6 +361,7 @@ add_executable(
   test/handlers/HelloStreamRequestHandler.h
   test/internal/AllowanceSemaphoreTest.cpp
   test/internal/FollyKeepaliveTimerTest.cpp
+  test/internal/SetupResumeAcceptorTest.cpp
   test/test_utils/MockDuplexConnection.h
   test/test_utils/MockKeepaliveTimer.h
   test/test_utils/MockRequestHandler.h
