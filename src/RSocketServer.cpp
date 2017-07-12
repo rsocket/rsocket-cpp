@@ -62,21 +62,15 @@ void RSocketServer::start(OnRSocketSetup onRSocketSetup) {
 
   LOG(INFO) << "Starting RSocketServer";
 
-  duplexConnectionAcceptor_
-      ->start([ this, onRSocketSetup = std::move(onRSocketSetup) ](
+  duplexConnectionAcceptor_->start(
+      [ this, onRSocketSetup = std::move(onRSocketSetup) ](
           std::unique_ptr<DuplexConnection> connection,
-          bool isFramedConnection,
           folly::EventBase& eventBase) {
-        std::unique_ptr<DuplexConnection> framedConnection;
-        if (isFramedConnection) {
-          framedConnection = std::move(connection);
-        } else {
-          framedConnection = std::make_unique<FramedDuplexConnection>(
-              std::move(connection), ProtocolVersion::Unknown, eventBase);
-        }
-        acceptConnection(std::move(framedConnection), eventBase, onRSocketSetup);
-      })
-      .get(); // block until finished and return or throw
+        acceptConnection(
+            std::move(connection),
+            eventBase,
+            onRSocketSetup);
+      });
 }
 
 void RSocketServer::acceptConnection(
@@ -88,12 +82,20 @@ void RSocketServer::acceptConnection(
     return;
   }
 
+  std::unique_ptr<DuplexConnection> framedConnection;
+  if (connection->isFramed()) {
+    framedConnection = std::move(connection);
+  } else {
+    framedConnection = std::make_unique<FramedDuplexConnection>(
+        std::move(connection), ProtocolVersion::Unknown);
+  }
+
   auto* acceptor = setupResumeAcceptors_.get();
 
   VLOG(2) << "Going to accept duplex connection";
 
   acceptor->accept(
-      std::move(connection),
+      std::move(framedConnection),
       std::bind(
           &RSocketServer::onRSocketSetup,
           this,
@@ -110,7 +112,7 @@ void RSocketServer::acceptConnection(
 
 void RSocketServer::onRSocketSetup(
     OnRSocketSetup onRSocketSetup,
-    std::shared_ptr<FrameTransport> frameTransport,
+    yarpl::Reference<FrameTransport> frameTransport,
     SetupParameters setupParams) {
   // we don't need to check for isShutdown_ here since all callbacks are
   // processed by this time
@@ -129,7 +131,7 @@ void RSocketServer::onRSocketSetup(
 
 bool RSocketServer::onRSocketResume(
     OnRSocketResume,
-    std::shared_ptr<FrameTransport>,
+    yarpl::Reference<FrameTransport>,
     ResumeParameters) {
   return false;
 }

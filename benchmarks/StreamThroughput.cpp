@@ -2,7 +2,6 @@
 
 #include <benchmark/benchmark.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
-#include <src/temporary_home/SubscriptionBase.h>
 #include <src/transports/tcp/TcpConnectionAcceptor.h>
 #include <condition_variable>
 #include <iostream>
@@ -74,7 +73,7 @@ class BM_Subscriber : public yarpl::flowable::Subscriber<Payload> {
     LOG(INFO) << "BM_Subscriber destroy " << this;
   }
 
-  BM_Subscriber(int initialRequest)
+  explicit BM_Subscriber(int initialRequest)
       : initialRequest_(initialRequest),
         thresholdForRequest_(initialRequest * 0.75),
         received_(0) {

@@ -3,11 +3,13 @@
 #include "src/transports/tcp/TcpDuplexConnection.h"
 #include <folly/ExceptionWrapper.h>
 #include <folly/io/IOBufQueue.h>
-#include "src/temporary_home/SubscriberBase.h"
-#include "src/temporary_home/SubscriptionBase.h"
+#include "src/internal/Common.h"
+#include "yarpl/flowable/Subscription.h"
 
 namespace rsocket {
+
 using namespace ::folly;
+using namespace yarpl::flowable;
 
 class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
                         public ::folly::AsyncTransportWrapper::ReadCallback,
@@ -24,10 +26,15 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
   }
 
   void setInput(
-      std::shared_ptr<rsocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
+      yarpl::Reference<rsocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
           inputSubscriber) {
-    if (isClosed()) {
+    if (inputSubscriber && isClosed()) {
       inputSubscriber->onComplete();
+      return;
+    }
+
+    if(!inputSubscriber) {
+      inputSubscriber_ = nullptr;
       return;
     }
 
@@ -36,11 +43,16 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
 
     self_ = shared_from_this();
 
-    // Safe to call repeatedly.
+    // safe to call repeatedly
     socket_->setReadCB(this);
   }
 
-  void setOutputSubscription(std::shared_ptr<Subscription> subscription) {
+  void setOutputSubscription(yarpl::Reference<Subscription> subscription) {
+    if (!subscription) {
+      outputSubscription_ = nullptr;
+      return;
+    }
+
     if (isClosed()) {
       subscription->cancel();
       return;
@@ -56,7 +68,9 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
       return;
     }
 
-    stats_->bytesWritten(element->computeChainDataLength());
+    if (stats_) {
+      stats_->bytesWritten(element->computeChainDataLength());
+    }
     socket_->writeChain(this, std::move(element));
   }
 
@@ -64,11 +78,11 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
     if (auto socket = std::move(socket_)) {
       socket->close();
     }
+    if (auto outputSubscription = std::move(outputSubscription_)) {
+      outputSubscription->cancel();
+    }
     if (auto subscriber = std::move(inputSubscriber_)) {
       subscriber->onComplete();
-    }
-    if (auto subscription = std::move(outputSubscription_)) {
-      subscription->cancel();
     }
   }
 
@@ -76,11 +90,11 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
     if (auto socket = std::move(socket_)) {
       socket->close();
     }
-    if (auto subscriber = std::move(inputSubscriber_)) {
-      subscriber->onError(std::move(ew));
-    }
     if (auto subscription = std::move(outputSubscription_)) {
       subscription->cancel();
+    }
+    if (auto subscriber = std::move(inputSubscriber_)) {
+      subscriber->onError(ew.to_exception_ptr());
     }
   }
 
@@ -104,7 +118,9 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
 
   void readDataAvailable(size_t len) noexcept override {
     readBuffer_.postallocate(len);
-    stats_->bytesRead(len);
+    if (stats_) {
+      stats_->bytesRead(len);
+    }
 
     if (inputSubscriber_) {
       readBufferAvailable(readBuffer_.split(len));
@@ -127,6 +143,7 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
 
   void readBufferAvailable(
       std::unique_ptr<folly::IOBuf> readBuf) noexcept override {
+    CHECK(inputSubscriber_);
     inputSubscriber_->onNext(std::move(readBuf));
   }
 
@@ -134,69 +151,72 @@ class TcpReaderWriter : public ::folly::AsyncTransportWrapper::WriteCallback,
   folly::AsyncSocket::UniquePtr socket_;
   const std::shared_ptr<RSocketStats> stats_;
 
-  std::shared_ptr<rsocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
+  yarpl::Reference<Subscriber<std::unique_ptr<folly::IOBuf>>>
       inputSubscriber_;
-  std::shared_ptr<Subscription> outputSubscription_;
+  yarpl::Reference<Subscription> outputSubscription_;
 
-  // Used to hold the reference the AsyncSocket callbacks have on us.
+  // self reference is used to keep the instance alive for the AsyncSocket
+  // callbacks even after DuplexConnection releases references to this
   std::shared_ptr<TcpReaderWriter> self_;
 };
 
 class TcpOutputSubscriber
-    : public SubscriberBaseT<std::unique_ptr<folly::IOBuf>> {
+    : public Subscriber<std::unique_ptr<folly::IOBuf>> {
  public:
-  TcpOutputSubscriber(
-      std::shared_ptr<TcpReaderWriter> tcpReaderWriter,
-      folly::Executor& executor)
-      : ExecutorBase(executor), tcpReaderWriter_(std::move(tcpReaderWriter)) {}
+  explicit TcpOutputSubscriber(
+      std::shared_ptr<TcpReaderWriter> tcpReaderWriter)
+      : tcpReaderWriter_(std::move(tcpReaderWriter)) {
+    CHECK(tcpReaderWriter_);
+  }
 
-  void onSubscribeImpl(
-      std::shared_ptr<Subscription> subscription) noexcept override {
+  void onSubscribe(
+      yarpl::Reference<Subscription> subscription) noexcept override {
+    CHECK(subscription);
     if (!tcpReaderWriter_) {
       LOG(ERROR) << "trying to resubscribe on a closed subscriber";
       subscription->cancel();
       return;
     }
-
     tcpReaderWriter_->setOutputSubscription(std::move(subscription));
   }
 
-  void onNextImpl(std::unique_ptr<folly::IOBuf> element) noexcept override {
+  void onNext(std::unique_ptr<folly::IOBuf> element) noexcept override {
     CHECK(tcpReaderWriter_);
     tcpReaderWriter_->send(std::move(element));
   }
 
-  void onCompleteImpl() noexcept override {
+  void onComplete() noexcept override {
     CHECK(tcpReaderWriter_);
-    auto tcpReaderWriter = std::move(tcpReaderWriter_);
-    tcpReaderWriter->close();
+    tcpReaderWriter_->setOutputSubscription(nullptr);
   }
 
-  void onErrorImpl(folly::exception_wrapper ew) noexcept override {
+  void onError(std::exception_ptr ex) noexcept override {
     CHECK(tcpReaderWriter_);
     auto tcpReaderWriter = std::move(tcpReaderWriter_);
-    tcpReaderWriter->closeErr(std::move(ew));
+    tcpReaderWriter->closeErr(folly::exception_wrapper(std::move(ex)));
   }
 
  private:
   std::shared_ptr<TcpReaderWriter> tcpReaderWriter_;
 };
 
-class TcpInputSubscription : public SubscriptionBase {
+class TcpInputSubscription : public Subscription {
  public:
-  TcpInputSubscription(
-      std::shared_ptr<TcpReaderWriter> tcpReaderWriter,
-      folly::Executor& executor)
-      : ExecutorBase(executor), tcpReaderWriter_(std::move(tcpReaderWriter)) {
+  explicit TcpInputSubscription(
+      std::shared_ptr<TcpReaderWriter> tcpReaderWriter)
+      : tcpReaderWriter_(std::move(tcpReaderWriter)) {
     CHECK(tcpReaderWriter_);
   }
 
-  void requestImpl(size_t) noexcept override {
-    // TcpDuplexConnection doesn't support proper flow control.
+  void request(int64_t n) noexcept override {
+    DCHECK(tcpReaderWriter_);
+    DCHECK(n == kMaxRequestN)
+        << "TcpDuplexConnection doesnt support proper flow control";
   }
 
-  void cancelImpl() noexcept override {
-    tcpReaderWriter_->close();
+  void cancel() noexcept override {
+    tcpReaderWriter_->setInput(nullptr);
+    tcpReaderWriter_ = nullptr;
   }
 
  private:
@@ -205,30 +225,33 @@ class TcpInputSubscription : public SubscriptionBase {
 
 TcpDuplexConnection::TcpDuplexConnection(
     folly::AsyncSocket::UniquePtr&& socket,
-    folly::Executor& executor,
     std::shared_ptr<RSocketStats> stats)
     : tcpReaderWriter_(
           std::make_shared<TcpReaderWriter>(std::move(socket), stats)),
-      stats_(stats),
-      executor_(executor) {
-  stats_->duplexConnectionCreated("tcp", this);
+      stats_(stats) {
+  if (stats_) {
+    stats_->duplexConnectionCreated("tcp", this);
+  }
 }
 
 TcpDuplexConnection::~TcpDuplexConnection() {
-  stats_->duplexConnectionClosed("tcp", this);
+  if (stats_) {
+    stats_->duplexConnectionClosed("tcp", this);
+  }
   tcpReaderWriter_->close();
 }
 
-std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>>
+yarpl::Reference<Subscriber<std::unique_ptr<folly::IOBuf>>>
 TcpDuplexConnection::getOutput() {
-  return std::make_shared<TcpOutputSubscriber>(tcpReaderWriter_, executor_);
+  return yarpl::make_ref<TcpOutputSubscriber>(tcpReaderWriter_);
 }
 
 void TcpDuplexConnection::setInput(
-    std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>>
+    yarpl::Reference<Subscriber<std::unique_ptr<folly::IOBuf>>>
         inputSubscriber) {
+  // we don't care if the subscriber will call request synchronously
   inputSubscriber->onSubscribe(
-      std::make_shared<TcpInputSubscription>(tcpReaderWriter_, executor_));
+      yarpl::make_ref<TcpInputSubscription>(tcpReaderWriter_));
   tcpReaderWriter_->setInput(std::move(inputSubscriber));
 }
 

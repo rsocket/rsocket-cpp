@@ -6,7 +6,6 @@
 
 #include "src/Payload.h"
 #include "src/RSocketRequester.h"
-#include "src/internal/ReactiveStreamsCompat.h"
 
 #include "tck-test/BaseSubscriber.h"
 #include "tck-test/TestSuite.h"

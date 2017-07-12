@@ -5,7 +5,7 @@
 #include <folly/io/async/AsyncSocket.h>
 #include <src/RSocketStats.h>
 #include "src/DuplexConnection.h"
-#include "src/internal/ReactiveStreamsCompat.h"
+#include "yarpl/flowable/Subscriber.h"
 
 namespace rsocket {
 
@@ -15,7 +15,6 @@ class TcpDuplexConnection : public DuplexConnection {
  public:
   explicit TcpDuplexConnection(
       folly::AsyncSocket::UniquePtr&& socket,
-      folly::Executor& executor,
       std::shared_ptr<RSocketStats> stats = RSocketStats::noop());
   ~TcpDuplexConnection();
 
@@ -25,15 +24,14 @@ class TcpDuplexConnection : public DuplexConnection {
   // the latest input/output will be used
   //
 
-  std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>> getOutput()
-      override;
+  yarpl::Reference<yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>
+  getOutput() override;
 
-  void setInput(std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>>
-                    framesSink) override;
+  void setInput(yarpl::Reference<yarpl::flowable::Subscriber<
+                    std::unique_ptr<folly::IOBuf>>> framesSink) override;
 
  private:
   std::shared_ptr<TcpReaderWriter> tcpReaderWriter_;
   std::shared_ptr<RSocketStats> stats_;
-  folly::Executor& executor_;
 };
-} // reactivesocket
+} // namespace rsocket

@@ -5,9 +5,9 @@
 #include <memory>
 #include <unordered_set>
 #include <folly/futures/Future.h>
-
 #include "src/RSocketParameters.h"
 #include "src/internal/Common.h"
+#include "yarpl/Refcounted.h"
 
 namespace folly {
 class EventBase;
@@ -27,9 +27,9 @@ class FrameTransport;
 class SetupResumeAcceptor final {
  public:
   using OnSetup =
-      std::function<void(std::shared_ptr<FrameTransport>, SetupParameters)>;
+      std::function<void(yarpl::Reference<FrameTransport>, SetupParameters)>;
   using OnResume =
-      std::function<bool(std::shared_ptr<FrameTransport>, ResumeParameters)>;
+      std::function<bool(yarpl::Reference<FrameTransport>, ResumeParameters)>;
 
   explicit SetupResumeAcceptor(
       ProtocolVersion defaultProtocolVersion,
@@ -48,22 +48,22 @@ private:
   friend class OneFrameProcessor;
 
   void processFrame(
-      std::shared_ptr<FrameTransport> transport,
+      yarpl::Reference<FrameTransport> transport,
       std::unique_ptr<folly::IOBuf> frame,
       OnSetup onSetup,
       OnResume onResume);
 
   void closeAndRemoveConnection(
-      const std::shared_ptr<FrameTransport>& transport,
+      const yarpl::Reference<FrameTransport>& transport,
       folly::exception_wrapper ex);
-  void removeConnection(const std::shared_ptr<FrameTransport>& transport);
+  void removeConnection(const yarpl::Reference<FrameTransport>& transport);
 
   void closeAllConnections();
 
   std::shared_ptr<FrameSerializer> getOrAutodetectFrameSerializer(
       const folly::IOBuf& firstFrame);
 
-  std::unordered_set<std::shared_ptr<FrameTransport>> connections_;
+  std::unordered_set<yarpl::Reference<FrameTransport>> connections_;
   bool closed_{false};
 
   std::shared_ptr<FrameSerializer> defaultFrameSerializer_;

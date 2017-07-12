@@ -2,46 +2,41 @@
 
 #pragma once
 
-#include <folly/ExceptionWrapper.h>
 #include <folly/io/IOBufQueue.h>
 #include "src/internal/AllowanceSemaphore.h"
-#include "src/internal/ReactiveStreamsCompat.h"
-#include "src/temporary_home/SubscriberBase.h"
-#include "src/temporary_home/SubscriptionBase.h"
+#include "yarpl/flowable/Subscriber.h"
+#include "yarpl/flowable/Subscription.h"
 
 namespace rsocket {
 
 struct ProtocolVersion;
 
-class FramedReader : public SubscriberBaseT<std::unique_ptr<folly::IOBuf>>,
-                     public SubscriptionBase,
-                     public EnableSharedFromThisBase<FramedReader> {
+class FramedReader : public yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>,
+                     public yarpl::flowable::Subscription {
+ using SubscriberBase = yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>;
+
  public:
-  explicit FramedReader(
-      std::shared_ptr<rsocket::Subscriber<std::unique_ptr<folly::IOBuf>>>
-          frames,
-      folly::Executor& executor,
-      std::shared_ptr<ProtocolVersion> protocolVersion)
-      : ExecutorBase(executor),
-        frames_(std::move(frames)),
-        payloadQueue_(folly::IOBufQueue::cacheChainLength()),
+  explicit FramedReader(std::shared_ptr<ProtocolVersion> protocolVersion)
+      : payloadQueue_(folly::IOBufQueue::cacheChainLength()),
         protocolVersion_(std::move(protocolVersion)) {}
+
+  void setInput(yarpl::Reference<yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>
+                frames);
 
  private:
   // Subscriber methods
-  void onSubscribeImpl(
-      std::shared_ptr<Subscription> subscription) noexcept override;
-  void onNextImpl(std::unique_ptr<folly::IOBuf> element) noexcept override;
-  void onCompleteImpl() noexcept override;
-  void onErrorImpl(folly::exception_wrapper ex) noexcept override;
+  void onSubscribe(
+      yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept override;
+  void onNext(std::unique_ptr<folly::IOBuf> element) noexcept override;
+  void onComplete() noexcept override;
+  void onError(std::exception_ptr ex) noexcept override;
 
   // Subscription methods
-  void requestImpl(size_t n) noexcept override;
-  void cancelImpl() noexcept override;
+  void request(int64_t n) noexcept override;
+  void cancel() noexcept override;
 
+  void error(std::string errorMsg);
   void parseFrames();
-  void requestStream();
-
   bool ensureOrAutodetectProtocolVersion();
 
   size_t getFrameSizeFieldLength() const;
@@ -50,14 +45,11 @@ class FramedReader : public SubscriberBaseT<std::unique_ptr<folly::IOBuf>>,
   size_t getPayloadSize(size_t frameSize) const;
   size_t readFrameLength() const;
 
-  using EnableSharedFromThisBase<FramedReader>::shared_from_this;
-
-  std::shared_ptr<rsocket::Subscriber<std::unique_ptr<folly::IOBuf>>> frames_;
-  std::shared_ptr<Subscription> streamSubscription_;
+  yarpl::Reference<yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>> frames_;
 
   AllowanceSemaphore allowance_{0};
 
-  bool streamRequested_{false};
+  bool completed_{false};
   bool dispatchingFrames_{false};
 
   folly::IOBufQueue payloadQueue_;

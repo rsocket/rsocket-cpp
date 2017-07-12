@@ -2,7 +2,6 @@
 
 #include <benchmark/benchmark.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
-#include <src/temporary_home/SubscriptionBase.h>
 #include <src/transports/tcp/TcpConnectionAcceptor.h>
 #include <condition_variable>
 #include <iostream>
@@ -11,11 +10,14 @@
 #include "src/RSocket.h"
 #include "src/transports/tcp/TcpConnectionFactory.h"
 #include "yarpl/Flowable.h"
+#include "yarpl/flowable/Subscriber.h"
+#include "yarpl/flowable/Subscription.h"
 #include "yarpl/utils/ExceptionString.h"
 
 using namespace ::folly;
 using namespace ::rsocket;
 using namespace yarpl;
+using namespace yarpl::flowable;
 
 #define MAX_REQUESTS (64)
 #define MESSAGE_LENGTH (32)
@@ -23,18 +25,17 @@ using namespace yarpl;
 DEFINE_string(host, "localhost", "host to connect to");
 DEFINE_int32(port, 9898, "host:port to connect to");
 
-class BM_Subscription : public SubscriptionBase {
+class BM_Subscription : public Subscription {
  public:
   explicit BM_Subscription(
-      std::shared_ptr<Subscriber<Payload>> subscriber,
+      Reference<Subscriber<Payload>> subscriber,
       size_t length)
-      : ExecutorBase(defaultExecutor()),
-        subscriber_(std::move(subscriber)),
+      : subscriber_(std::move(subscriber)),
         data_(length, 'a'),
         cancelled_(false) {}
 
  private:
-  void requestImpl(size_t n) noexcept override {
+  void request(int64_t n) noexcept override {
     LOG(INFO) << "requested=" << n;
 
     if (cancelled_) {
@@ -46,12 +47,12 @@ class BM_Subscription : public SubscriptionBase {
     subscriber_->onComplete();
   }
 
-  void cancelImpl() noexcept override {
+  void cancel() noexcept override {
     LOG(INFO) << "cancellation received";
     cancelled_ = true;
   }
 
-  std::shared_ptr<Subscriber<Payload>> subscriber_;
+  Reference<Subscriber<Payload>> subscriber_;
   std::string data_;
   std::atomic_bool cancelled_;
 };

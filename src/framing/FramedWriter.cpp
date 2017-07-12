@@ -6,6 +6,8 @@
 
 namespace rsocket {
 
+using namespace yarpl::flowable;
+
 constexpr static const auto kMaxFrameLength = 0xFFFFFF; // 24bit max value
 
 template <typename TWriter>
@@ -45,11 +47,10 @@ size_t FramedWriter::getPayloadLength(size_t payloadLength) const {
   }
 }
 
-void FramedWriter::onSubscribeImpl(
-    std::shared_ptr<Subscription> subscription) noexcept {
-  CHECK(!writerSubscription_);
-  writerSubscription_ = std::move(subscription);
-  stream_->onSubscribe(shared_from_this());
+void FramedWriter::onSubscribe(
+    yarpl::Reference<Subscription> subscription) {
+  SubscriberBase::onSubscribe(subscription);
+  stream_->onSubscribe(std::move(subscription));
 }
 
 std::unique_ptr<folly::IOBuf> FramedWriter::appendSize(
@@ -83,11 +84,10 @@ std::unique_ptr<folly::IOBuf> FramedWriter::appendSize(
   }
 }
 
-void FramedWriter::onNextImpl(std::unique_ptr<folly::IOBuf> payload) noexcept {
+void FramedWriter::onNext(std::unique_ptr<folly::IOBuf> payload) {
   auto sizedPayload = appendSize(std::move(payload));
   if (!sizedPayload) {
-    VLOG(1) << "payload too big";
-    cancel();
+    error("payload too big");
     return;
   }
   stream_->onNext(std::move(sizedPayload));
@@ -100,8 +100,7 @@ void FramedWriter::onNextMultiple(
   for (auto& payload : payloads) {
     auto sizedPayload = appendSize(std::move(payload));
     if (!sizedPayload) {
-      VLOG(1) << "payload too big";
-      cancel();
+      error("payload too big");
       return;
     }
     payloadQueue.append(std::move(sizedPayload));
@@ -109,39 +108,22 @@ void FramedWriter::onNextMultiple(
   stream_->onNext(payloadQueue.move());
 }
 
-void FramedWriter::onCompleteImpl() noexcept {
-  if (auto subscriber = std::move(stream_)) {
-    subscriber->onComplete();
-  }
-  if (auto subscription = std::move(writerSubscription_)) {
-    subscription->cancel();
-  }
+void FramedWriter::error(std::string errorMsg) {
+  VLOG(1) << "error: " << errorMsg;
+  onError(std::make_exception_ptr(std::runtime_error(std::move(errorMsg))));
+  SubscriberBase::subscription()->cancel();
 }
 
-void FramedWriter::onErrorImpl(folly::exception_wrapper ex) noexcept {
-  if (auto subscriber = std::move(stream_)) {
-    subscriber->onError(std::move(ex));
-  }
-  if (auto subscription = std::move(writerSubscription_)) {
-    subscription->cancel();
-  }
+void FramedWriter::onComplete() {
+  SubscriberBase::onComplete();
+  stream_->onComplete();
+  stream_ = nullptr;
 }
 
-void FramedWriter::requestImpl(size_t n) noexcept {
-  // it is possible to receive requestImpl after on{Complete,Error}
-  // because it is a different interface and can be hooked up somewhere else
-  if (writerSubscription_) {
-    writerSubscription_->request(n);
-  }
-}
-
-void FramedWriter::cancelImpl() noexcept {
-  if (auto subscription = std::move(writerSubscription_)) {
-    subscription->cancel();
-  }
-  if (auto subscriber = std::move(stream_)) {
-    subscriber->onComplete();
-  }
+void FramedWriter::onError(std::exception_ptr ex) {
+  SubscriberBase::onError(ex);
+  stream_->onError(std::move(ex));
+  stream_ = nullptr;
 }
 
 } // reactivesocket

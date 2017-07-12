@@ -6,6 +6,9 @@
 #include "FrameSerializer_v1_0.h"
 
 namespace rsocket {
+
+using namespace yarpl::flowable;
+
 namespace {
 constexpr auto kFrameLengthFieldLengthV0_1 = sizeof(int32_t);
 constexpr auto kFrameLengthFieldLengthV1_0 = 3; // bytes
@@ -66,27 +69,23 @@ size_t FramedReader::readFrameLength() const {
   return frameLength;
 }
 
-void FramedReader::onSubscribeImpl(
-    std::shared_ptr<Subscription> subscription) noexcept {
-  CHECK(!streamSubscription_);
-  streamSubscription_ = std::move(subscription);
-  frames_->onSubscribe(shared_from_this());
+void FramedReader::onSubscribe(
+    yarpl::Reference<Subscription> subscription) noexcept {
+  SubscriberBase::onSubscribe(subscription);
+  subscription->request(kMaxRequestN);
 }
 
-void FramedReader::onNextImpl(std::unique_ptr<folly::IOBuf> payload) noexcept {
-  streamRequested_ = false;
-
+void FramedReader::onNext(std::unique_ptr<folly::IOBuf> payload) noexcept {
   if (payload) {
     VLOG(4) << "incoming bytes length=" << payload->length() << std::endl
             << hexDump(payload->clone()->moveToFbString());
     payloadQueue_.append(std::move(payload));
     parseFrames();
   }
-  requestStream();
 }
 
 void FramedReader::parseFrames() {
-  if (!allowance_.canAcquire() || dispatchingFrames_) {
+  if (dispatchingFrames_) {
     return;
   }
 
@@ -94,7 +93,7 @@ void FramedReader::parseFrames() {
 
   while (allowance_.canAcquire() && frames_) {
     if (!ensureOrAutodetectProtocolVersion()) {
-      // at this point we dont have enough bytes onthe wire
+      // at this point we dont have enough bytes on the wire
       // or we errored out
       break;
     }
@@ -108,7 +107,7 @@ void FramedReader::parseFrames() {
 
     // so if the size value is less than minimal frame length something is wrong
     if (nextFrameSize < getFrameMinimalLength()) {
-      onErrorImpl(std::runtime_error("invalid data stream"));
+      error("invalid data stream");
       break;
     }
 
@@ -134,47 +133,38 @@ void FramedReader::parseFrames() {
   dispatchingFrames_ = false;
 }
 
-void FramedReader::onCompleteImpl() noexcept {
+void FramedReader::onComplete() noexcept {
+  completed_ = true;
   payloadQueue_.move(); // equivalent to clear(), releases the buffers
   if (auto subscriber = std::move(frames_)) {
     subscriber->onComplete();
   }
-  if (auto subscription = std::move(streamSubscription_)) {
-    subscription->cancel();
-  }
 }
 
-void FramedReader::onErrorImpl(folly::exception_wrapper ex) noexcept {
+void FramedReader::onError(std::exception_ptr ex) noexcept {
+  completed_ = true;
   payloadQueue_.move(); // equivalent to clear(), releases the buffers
   if (auto subscriber = std::move(frames_)) {
     subscriber->onError(std::move(ex));
   }
-  if (auto subscription = std::move(streamSubscription_)) {
-    subscription->cancel();
-  }
 }
 
-void FramedReader::requestImpl(size_t n) noexcept {
+void FramedReader::request(int64_t n) noexcept {
   allowance_.release(n);
   parseFrames();
-  requestStream();
 }
 
-void FramedReader::requestStream() {
-  if (streamSubscription_ && allowance_.canAcquire()) {
-    streamRequested_ = true;
-    streamSubscription_->request(1);
-  }
+void FramedReader::cancel() noexcept {
+  allowance_.drain();
+  frames_ = nullptr;
 }
 
-void FramedReader::cancelImpl() noexcept {
-  payloadQueue_.move(); // equivalent to clear(), releases the buffers
-  if (auto subscription = std::move(streamSubscription_)) {
-    subscription->cancel();
-  }
-  if (auto subscriber = std::move(frames_)) {
-    subscriber->onComplete();
-  }
+void FramedReader::setInput(
+    yarpl::Reference<Subscriber<std::unique_ptr<folly::IOBuf>>> frames) {
+  CHECK(!frames_)
+      << "FrameReader should be closed before setting another input.";
+  frames_ = std::move(frames);
+  frames_->onSubscribe(yarpl::get_ref(this));
 }
 
 bool FramedReader::ensureOrAutodetectProtocolVersion() {
@@ -209,9 +199,14 @@ bool FramedReader::ensureOrAutodetectProtocolVersion() {
     return true;
   }
 
-  onErrorImpl(
-      std::runtime_error("could not detect protocol version from framing"));
+  error("could not detect protocol version from framing");
   return false;
 }
 
-} // reactivesocket
+void FramedReader::error(std::string errorMsg) {
+  VLOG(1) << "error: " << errorMsg;
+  onError(std::make_exception_ptr(std::runtime_error(std::move(errorMsg))));
+  SubscriberBase::subscription()->cancel();
+}
+
+} // namespace rsocket

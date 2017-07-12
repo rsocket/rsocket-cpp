@@ -13,7 +13,6 @@ namespace rsocket {
 
 using OnDuplexConnectionConnect = folly::Function<void(
     std::unique_ptr<rsocket::DuplexConnection>,
-    bool framedConnection,
     folly::EventBase&)>;
 
 /**

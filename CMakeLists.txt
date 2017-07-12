@@ -46,6 +46,16 @@ if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build" FORCE)
 endif(NOT CMAKE_BUILD_TYPE)
 
+string(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_LOWER)
+
+# Enable ASAN by default on debug macOS builds.
+if (APPLE)
+  set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl")
+  if ("${BUILD_TYPE_LOWER}" MATCHES "debug")
+    set(RSOCKET_ASAN 1)
+  endif()
+endif()
+
 # Add compiler-specific options.
 if (CMAKE_COMPILER_IS_GNUCXX)
   if (RSOCKET_ASAN)
@@ -183,15 +193,6 @@ ExternalProject_Add(
     "-DCMAKE_EXE_LINKER_FLAGS=${CXX_LINKER_FLAGS}"
 )
 
-string(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_LOWER)
-
-if(APPLE)
-  set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl")
-  if("${BUILD_TYPE_LOWER}" MATCHES "debug")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,integer -fno-sanitize=unsigned-integer-overflow")
-  endif()
-endif()
-
 set(CMAKE_CXX_STANDARD 14)
 
 # Common configuration for all build modes.
@@ -289,9 +290,6 @@ add_library(
   src/statemachine/RSocketStateMachine.cpp
   src/statemachine/RSocketStateMachine.h
   src/DuplexConnection.h
-  src/internal/EnableSharedFromThis.h
-  src/temporary_home/Executor.cpp
-  src/temporary_home/Executor.h
   src/internal/FollyKeepaliveTimer.cpp
   src/internal/FollyKeepaliveTimer.h
   src/framing/Frame.cpp
@@ -309,15 +307,12 @@ add_library(
   src/framing/FrameTransport.h
   src/Payload.cpp
   src/Payload.h
-  src/internal/ReactiveStreamsCompat.h
   src/internal/ResumeCache.cpp
   src/internal/ResumeCache.h
   src/internal/SetupResumeAcceptor.cpp
   src/internal/SetupResumeAcceptor.h
   src/RSocketStats.cpp
   src/RSocketStats.h
-  src/temporary_home/SubscriberBase.h
-  src/temporary_home/SubscriptionBase.h
   src/transports/tcp/TcpDuplexConnection.cpp
   src/transports/tcp/TcpDuplexConnection.h
   src/framing/FrameSerializer_v0.cpp
@@ -357,24 +352,28 @@ enable_testing()
 
 add_executable(
   tests
-  test/Test.cpp
-  test/RSocketClientServerTest.cpp
+  test/MocksTest.cpp
   test/PayloadTest.cpp
-  test/handlers/HelloStreamRequestHandler.h
-  test/handlers/HelloStreamRequestHandler.cpp
+  test/RSocketClientServerTest.cpp
+  test/RSocketTests.h
+  test/RequestChannelTest.cpp
+  test/RequestResponseTest.cpp
+  test/RequestStreamTest.cpp
+  test/Test.cpp
   test/framing/FrameTest.cpp
+  test/framing/FrameTransportTest.cpp
+  test/handlers/HelloStreamRequestHandler.cpp
+  test/handlers/HelloStreamRequestHandler.h
+  test/internal/AllowanceSemaphoreTest.cpp
+  test/internal/FollyKeepaliveTimerTest.cpp
+  test/test_utils/MockDuplexConnection.h
   test/test_utils/MockKeepaliveTimer.h
   test/test_utils/MockRequestHandler.h
   test/test_utils/MockStats.h
-  test/internal/FollyKeepaliveTimerTest.cpp
-  test/internal/AllowanceSemaphoreTest.cpp
-  test/RSocketTests.h
-  test/RequestResponseTest.cpp
-  test/RequestStreamTest.cpp
-  test/RequestChannelTest.cpp
   test/test_utils/Mocks.h
-  test/MocksTest.cpp
-)
+  test/transport/TcpDuplexConnectionTest.cpp
+  test/transport/DuplexConnectionTest.h
+  test/transport/DuplexConnectionTest.cpp)
 
 target_link_libraries(
   tests

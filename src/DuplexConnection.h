@@ -3,7 +3,7 @@
 #pragma once
 
 #include <memory>
-#include "src/internal/ReactiveStreamsCompat.h"
+#include "yarpl/flowable/Subscriber.h"
 
 namespace folly {
 class IOBuf;
@@ -36,7 +36,7 @@ class DuplexConnection {
   /// lifetime of the connection. The connection MUST NOT assume an ownership of
   /// provided Subscriber.
   virtual void setInput(
-      std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>>
+      yarpl::Reference<yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>
           framesSink) = 0;
 
   /// Obtains a Subscriber that should be fed with frames to send (a writer).
@@ -44,7 +44,12 @@ class DuplexConnection {
   /// This method is invoked by ReactiveSocket
   /// implementation once in an entire lifetime of the connection. The
   /// connection MUST manage the lifetime of provided Subscriber.
-  virtual std::shared_ptr<Subscriber<std::unique_ptr<folly::IOBuf>>>
+  virtual yarpl::Reference<yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>
   getOutput() = 0;
+
+  /// property telling whether the duplex connection respects frame boundaries
+  virtual bool isFramed() {
+    return false;
+  }
 };
 }

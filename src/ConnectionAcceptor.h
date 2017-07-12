@@ -3,16 +3,17 @@
 #pragma once
 
 #include <folly/Optional.h>
-#include <folly/futures/Future.h>
-#include <folly/io/async/EventBase.h>
 
 #include "src/DuplexConnection.h"
+
+namespace folly {
+class EventBase;
+}
 
 namespace rsocket {
 
 using OnDuplexConnectionAccept = std::function<void(
     std::unique_ptr<rsocket::DuplexConnection>,
-    bool framedConnection,
     folly::EventBase&)>;
 
 /**
@@ -39,15 +40,11 @@ class ConnectionAcceptor {
 
   /**
    * Allocate/start required resources (threads, sockets, etc) and begin
-   * listening for new connections.
-   *
-   * Will return an empty future on success, otherwise the future will contain
-   * the error.
+   * listening for new connections.  Must be synchronous.
    *
    * This can only be called once.
    */
-  virtual folly::Future<folly::Unit> start(
-      OnDuplexConnectionAccept onAccept) = 0;
+  virtual void start(OnDuplexConnectionAccept) = 0;
 
   /**
    * Stop listening for new connections.

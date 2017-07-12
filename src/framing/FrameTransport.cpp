@@ -3,9 +3,10 @@
 #include "FrameTransport.h"
 #include <folly/ExceptionWrapper.h>
 #include "src/DuplexConnection.h"
-#include "src/framing/Frame.h"
 
 namespace rsocket {
+
+using namespace yarpl::flowable;
 
 FrameTransport::FrameTransport(std::unique_ptr<DuplexConnection> connection)
     : connection_(std::move(connection)) {
@@ -27,7 +28,7 @@ void FrameTransport::connect() {
   }
 
   connectionOutput_ = connection_->getOutput();
-  connectionOutput_->onSubscribe(shared_from_this());
+  connectionOutput_->onSubscribe(yarpl::get_ref(this));
 
   // the onSubscribe call on the previous line may have called the terminating
   // signal which would call disconnect/close
@@ -40,7 +41,7 @@ void FrameTransport::connect() {
     // We will create a hard reference for that case and keep the object alive
     // until setInput method returns
     auto connectionCopy = connection_;
-    connectionCopy->setInput(shared_from_this());
+    connectionCopy->setInput(yarpl::get_ref(this));
   }
 }
 
@@ -68,10 +69,22 @@ void FrameTransport::setFrameProcessor(
   }
 }
 
-void FrameTransport::close(folly::exception_wrapper ex) {
+void FrameTransport::close() {
+  closeImpl(folly::exception_wrapper());
+}
+
+void FrameTransport::closeWithError(folly::exception_wrapper ew) {
+  if (!ew) {
+    VLOG(1) << "FrameTransport::closeWithError() called with empty exception";
+    ew = std::runtime_error("Undefined error");
+  }
+  closeImpl(std::move(ew));
+}
+
+void FrameTransport::closeImpl(folly::exception_wrapper ew) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
 
-  // just making sure we will never try to call back onto the processor
+  // Make sure we never try to call back into the processor.
   frameProcessor_ = nullptr;
 
   if (!connection_) {
@@ -81,11 +94,11 @@ void FrameTransport::close(folly::exception_wrapper ex) {
   auto oldConnection = std::move(connection_);
 
   // Send terminal signals to the DuplexConnection's input and output before
-  // tearing it down. We must do this per DuplexConnection specification (see
+  // tearing it down.  We must do this per DuplexConnection specification (see
   // interface definition).
   if (auto subscriber = std::move(connectionOutput_)) {
-    if (ex) {
-      subscriber->onError(std::move(ex));
+    if (ew) {
+      subscriber->onError(ew.to_exception_ptr());
     } else {
       subscriber->onComplete();
     }
@@ -96,7 +109,7 @@ void FrameTransport::close(folly::exception_wrapper ex) {
 }
 
 void FrameTransport::onSubscribe(
-    std::shared_ptr<Subscription> subscription) noexcept {
+    yarpl::Reference<Subscription> subscription) noexcept {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
 
   if (!connection_) {
@@ -106,7 +119,7 @@ void FrameTransport::onSubscribe(
   CHECK(!connectionInputSub_);
   CHECK(frameProcessor_);
   connectionInputSub_ = std::move(subscription);
-  connectionInputSub_->request(std::numeric_limits<size_t>::max());
+  connectionInputSub_->request(kMaxRequestN);
 }
 
 void FrameTransport::onNext(std::unique_ptr<folly::IOBuf> frame) noexcept {
@@ -143,12 +156,12 @@ void FrameTransport::onComplete() noexcept {
   terminateFrameProcessor(folly::exception_wrapper());
 }
 
-void FrameTransport::onError(folly::exception_wrapper ex) noexcept {
-  VLOG(6) << "onError" << ex.what();
-  terminateFrameProcessor(std::move(ex));
+void FrameTransport::onError(std::exception_ptr ex) noexcept {
+  VLOG(6) << "onError" << folly::exceptionStr(ex);
+  terminateFrameProcessor(folly::exception_wrapper(std::move(ex)));
 }
 
-void FrameTransport::request(size_t n) noexcept {
+void FrameTransport::request(int64_t n) noexcept {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
 
   if (!connection_) {
@@ -220,4 +233,4 @@ DuplexConnection* FrameTransport::duplexConnection() const {
   return connection_.get();
 }
 
-} // reactivesocket
+} // namespace rsocket

@@ -10,7 +10,6 @@
 #include "src/Payload.h"
 #include "src/framing/FrameProcessor.h"
 #include "src/internal/Common.h"
-#include "src/temporary_home/Executor.h"
 #include "src/RSocketParameters.h"
 
 namespace rsocket {
@@ -55,7 +54,6 @@ class FrameSink {
 class RSocketStateMachine final
     : public FrameSink,
       public FrameProcessor,
-      ExecutorBase,
       public StreamsWriter,
       public std::enable_shared_from_this<RSocketStateMachine> {
  public:
@@ -75,7 +73,7 @@ class RSocketStateMachine final
   /// May result, depending on the implementation of the DuplexConnection, in
   /// processing of one or more frames.
   bool connectServer(
-      std::shared_ptr<FrameTransport>,
+      yarpl::Reference<FrameTransport>,
       const SetupParameters& setupParams);
 
   /// Disconnects DuplexConnection from the stateMachine.
@@ -88,11 +86,9 @@ class RSocketStateMachine final
   /// StreamAutomatonBase attached to this ConnectionAutomaton.
   void close(folly::exception_wrapper, StreamCompletionSignal);
 
-  std::shared_ptr<FrameTransport> detachFrameTransport();
-
   /// Terminate underlying connection and connect new connection
   void reconnect(
-      std::shared_ptr<FrameTransport>,
+      yarpl::Reference<FrameTransport>,
       std::unique_ptr<ClientResumeStatusCallback>);
 
   ~RSocketStateMachine();
@@ -196,7 +192,7 @@ class RSocketStateMachine final
 
   void tryClientResume(
       const ResumeIdentificationToken& token,
-      std::shared_ptr<FrameTransport> frameTransport,
+      yarpl::Reference<FrameTransport> frameTransport,
       std::unique_ptr<ClientResumeStatusCallback> resumeCallback);
 
   void setFrameSerializer(std::unique_ptr<FrameSerializer>);
@@ -212,7 +208,7 @@ class RSocketStateMachine final
  private:
 
   bool connect(
-      std::shared_ptr<FrameTransport>,
+      yarpl::Reference<FrameTransport>,
       bool sendingPendingFrames,
       ProtocolVersion protocolVersion);
 
@@ -286,7 +282,7 @@ class RSocketStateMachine final
   std::shared_ptr<ResumeCache> resumeCache_;
   std::shared_ptr<StreamState> streamState_;
   std::shared_ptr<RSocketResponder> requestResponder_;
-  std::shared_ptr<FrameTransport> frameTransport_;
+  yarpl::Reference<FrameTransport> frameTransport_;
   std::unique_ptr<FrameSerializer> frameSerializer_;
 
   const std::unique_ptr<KeepaliveTimer> keepaliveTimer_;
@@ -297,5 +293,6 @@ class RSocketStateMachine final
 
   const std::shared_ptr<RSocketStats> stats_;
   std::shared_ptr<RSocketNetworkStats> networkStats_;
+  folly::Executor& executor_;
 };
 }
