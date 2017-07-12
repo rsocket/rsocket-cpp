@@ -62,34 +62,12 @@ class FlowableOperator : public Flowable<D> {
 
     /// Terminates both ends of an operator normally.
     void terminate() {
-      if (isTerminated()) {
-        return;
-      }
-
-      if (auto upstream = std::move(upstream_)) {
-        upstream->cancel();
-      }
-      if (auto subscriber = std::move(subscriber_)) {
-        subscriber->onComplete();
-      }
-
-      Refcounted::decRef(*this);
+      terminateImpl(TerminateState::Both());
     }
 
     /// Terminates both ends of an operator with an error.
     void terminateErr(std::exception_ptr eptr) {
-      if (isTerminated()) {
-        return;
-      }
-
-      if (auto upstream = std::move(upstream_)) {
-        upstream->cancel();
-      }
-      if (auto subscriber = std::move(subscriber_)) {
-        subscriber->onError(std::move(eptr));
-      }
-
-      Refcounted::decRef(*this);
+      terminateImpl(TerminateState::Both(), std::move(eptr));
     }
 
     // Subscription.
@@ -101,17 +79,7 @@ class FlowableOperator : public Flowable<D> {
     }
 
     void cancel() override {
-      if (isTerminated()) {
-        return;
-      }
-
-      if (auto upstream = std::move(upstream_)) {
-        upstream->cancel();
-      }
-
-      subscriber_.reset();
-
-      Refcounted::decRef(*this);
+      terminateImpl(TerminateState::Up());
     }
 
     // Subscriber.
@@ -128,35 +96,61 @@ class FlowableOperator : public Flowable<D> {
     }
 
     void onComplete() override {
-      if (isTerminated()) {
-        return;
-      }
-
-      upstream_.reset();
-
-      if (auto subscriber = std::move(subscriber_)) {
-        subscriber->onComplete();
-      }
-
-      Refcounted::decRef(*this);
+      terminateImpl(TerminateState::Down());
     }
 
     void onError(std::exception_ptr eptr) override {
+      terminateImpl(TerminateState::Down(), std::move(eptr));
+    }
+
+   private:
+    struct TerminateState {
+      static TerminateState Down() {
+        return {false, true};
+      }
+
+      static TerminateState Up() {
+        return {true, false};
+      }
+
+      static TerminateState Both() {
+        return {true, true};
+      }
+
+      const bool up{false};
+      const bool down{false};
+    };
+
+    bool isTerminated() const {
+      return !upstream_ && !subscriber_;
+    }
+
+    /// Terminates an operator, sending cancel() and on{Complete,Error}()
+    /// signals as necessary.
+    void terminateImpl(
+        TerminateState state,
+        std::exception_ptr eptr = nullptr) {
       if (isTerminated()) {
         return;
       }
 
-      upstream_.reset();
+      if (auto upstream = std::move(upstream_)) {
+        if (state.up) {
+          upstream->cancel();
+        }
+      }
 
-      subscriber_->onError(std::move(eptr));
-      subscriber_.reset();
+      if (auto subscriber = std::move(subscriber_)) {
+        if (state.down) {
+          if (eptr) {
+            subscriber->onError(std::move(eptr));
+          } else {
+            subscriber->onComplete();
+          }
+        }
+      }
 
       Refcounted::decRef(*this);
-    }
-
-   private:
-    bool isTerminated() const {
-      return !upstream_ && !subscriber_;
     }
 
     /// The Flowable has the lambda, and other creation parameters.
