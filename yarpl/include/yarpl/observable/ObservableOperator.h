@@ -99,15 +99,15 @@ class ObservableOperator : public Observable<D> {
   private:
     struct TerminateState {
       static TerminateState Down() {
-        return {false, true};
+        return TerminateState{false, true};
       }
 
       static TerminateState Up() {
-        return {true, false};
+        return TerminateState{true, false};
       }
 
       static TerminateState Both() {
-        return {true, true};
+        return TerminateState{true, true};
       }
 
       const bool up{false};
