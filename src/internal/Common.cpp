@@ -1,6 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "Common.h"
+#include "src/internal/Common.h"
+
 #include <folly/Random.h>
 #include <folly/String.h>
 #include <folly/io/IOBuf.h>

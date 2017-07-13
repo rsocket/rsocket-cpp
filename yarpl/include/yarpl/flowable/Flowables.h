@@ -5,8 +5,10 @@
 #include <algorithm>
 #include <limits>
 #include <vector>
+
 #include <glog/logging.h>
-#include "Flowable.h"
+
+#include "yarpl/flowable/Flowable.h"
 
 namespace yarpl {
 namespace flowable {

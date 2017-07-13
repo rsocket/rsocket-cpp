@@ -6,6 +6,7 @@
 #include <mutex>
 #include <sstream>
 #include <vector>
+
 #include "yarpl/Observable.h"
 
 namespace yarpl {

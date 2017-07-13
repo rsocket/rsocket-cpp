@@ -4,9 +4,9 @@
 
 #include <utility>
 
-#include "Single.h"
-#include "SingleObserver.h"
-#include "SingleSubscription.h"
+#include "yarpl/single/Single.h"
+#include "yarpl/single/SingleObserver.h"
+#include "yarpl/single/SingleSubscription.h"
 
 namespace yarpl {
 namespace single {

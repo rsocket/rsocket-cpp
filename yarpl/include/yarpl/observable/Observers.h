@@ -5,7 +5,7 @@
 #include <exception>
 #include <limits>
 
-#include "Observer.h"
+#include "yarpl/observable/Observer.h"
 #include "yarpl/utils/type_traits.h"
 
 namespace yarpl {

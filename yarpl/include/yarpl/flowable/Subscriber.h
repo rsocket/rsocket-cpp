@@ -4,8 +4,8 @@
 
 #include <stdexcept>
 
-#include "../Refcounted.h"
-#include "Subscription.h"
+#include "yarpl/Refcounted.h"
+#include "yarpl/flowable/Subscription.h"
 
 namespace yarpl {
 namespace flowable {

@@ -4,7 +4,7 @@
 
 #include <limits>
 
-#include "Observable.h"
+#include "yarpl/observable/Observable.h"
 
 namespace yarpl {
 namespace observable {

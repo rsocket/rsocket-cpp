@@ -4,11 +4,12 @@
 
 #include <stdexcept>
 
-#include "../Refcounted.h"
-#include "SingleSubscription.h"
+#include "yarpl/Refcounted.h"
+#include "yarpl/single/SingleSubscription.h"
 
 namespace yarpl {
 namespace single {
+
 template <typename T>
 class SingleObserver : public virtual Refcounted {
  public:

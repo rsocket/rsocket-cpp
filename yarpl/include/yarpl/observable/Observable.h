@@ -12,13 +12,13 @@
 #include "yarpl/Scheduler.h"
 #include "yarpl/utils/type_traits.h"
 
-#include "../Refcounted.h"
-#include "Observer.h"
-#include "Observers.h"
-#include "Subscription.h"
+#include "yarpl/Refcounted.h"
+#include "yarpl/observable/Observer.h"
+#include "yarpl/observable/Observers.h"
+#include "yarpl/observable/Subscription.h"
 
-#include "../Flowable.h"
-#include "yarpl/flowable/sources/Flowable_FromObservable.h"
+#include "yarpl/Flowable.h"
+#include "yarpl/flowable/Flowable_FromObservable.h"
 
 namespace yarpl {
 namespace observable {
@@ -102,7 +102,7 @@ class Observable : public virtual Refcounted {
 } // observable
 } // yarpl
 
-#include "ObservableOperator.h"
+#include "yarpl/observable/ObservableOperator.h"
 
 namespace yarpl {
 namespace observable {
