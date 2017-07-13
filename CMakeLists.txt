@@ -347,8 +347,17 @@ target_compile_options(
 
 enable_testing()
 
-# EXCLUDE_FROM_ALL so 'make install' doesn't attempt installation of googletest
-#add_subdirectory(external/googletest EXCLUDE_FROM_ALL)
+# Install libReactiveSocket.a and yarpl headers normally.
+install(TARGETS ReactiveSocket DESTINATION lib)
+install(DIRECTORY yarpl/include/yarpl DESTINATION include FILES_MATCHING PATTERN "*.h")
+
+# RSocket headers get installed in $INSTALL_DIR/src/Foo.h initially, because
+# they use #includes of the form "src/RSocketServer.h".  We also need them to be
+# $INSTALL_DIR/rsocket/Foo.h.
+install(DIRECTORY src DESTINATION include FILES_MATCHING PATTERN "*.h")
+install(CODE "execute_process(COMMAND rm -r ${CMAKE_INSTALL_PREFIX}/include/rsocket)")
+install(CODE "execute_process(COMMAND cp -r ${CMAKE_INSTALL_PREFIX}/include/src ${CMAKE_INSTALL_PREFIX}/include/rsocket)")
+install(CODE "message(\"Copied ${CMAKE_INSTALL_PREFIX}/include/src to ${CMAKE_INSTALL_PREFIX}/include/rsocket\")")
 
 add_executable(
   tests
