@@ -52,7 +52,7 @@ string(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_LOWER)
 if (APPLE)
   set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl")
   if ("${BUILD_TYPE_LOWER}" MATCHES "debug")
-    set(RSOCKET_ASAN 1)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,integer -fno-sanitize=unsigned-integer-overflow")
   endif()
 endif()
 

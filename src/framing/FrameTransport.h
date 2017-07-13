@@ -9,8 +9,6 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/Optional.h>
 
-#include "src/Payload.h"
-#include "src/framing/FrameProcessor.h"
 #include "src/internal/AllowanceSemaphore.h"
 #include "src/internal/Common.h"
 #include "yarpl/flowable/Subscriber.h"
@@ -19,8 +17,9 @@
 namespace rsocket {
 
 class DuplexConnection;
+class FrameProcessor;
 
-class FrameTransport :
+class FrameTransport final :
     /// Registered as an input in the DuplexConnection.
     public yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>,
     /// Receives signals about connection writability.
@@ -35,7 +34,7 @@ class FrameTransport :
   /// Enqueuing a terminal frame does not end the stream.
   ///
   /// This signal corresponds to Subscriber::onNext.
-  virtual void outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf> frame);
+  void outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf>);
 
   /// Cancel the input, complete the output, and close the underlying
   /// connection.
@@ -53,32 +52,48 @@ class FrameTransport :
     return pendingWrites_.empty();
   }
 
-  DuplexConnection* duplexConnection() const;
-
  private:
-  void connect();
-
-  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>) noexcept override;
-  void onNext(std::unique_ptr<folly::IOBuf>) noexcept override;
-  void onComplete() noexcept override;
-  void onError(std::exception_ptr) noexcept override;
-
-  void request(int64_t) noexcept override;
-  void cancel() noexcept override;
-
-  void drainOutputFramesQueue();
-
-  void terminateFrameProcessor(folly::exception_wrapper);
-
-  void closeImpl(folly::exception_wrapper);
-
   // TODO(t15924567): Recursive locks are evil! This should instead use a
   // synchronization abstraction which preserves FIFO ordering. However, this is
   // incrementally better than the race conditions which existed here before.
   //
   // Further reading:
   // https://groups.google.com/forum/?hl=en#!topic/comp.programming.threads/tcrTKnfP8HI%5B1-25%5D
-  mutable std::recursive_mutex mutex_;
+  using Mutex = std::recursive_mutex;
+  using Lock = std::lock_guard<Mutex>;
+
+  void connect();
+
+  // Subscriber.
+
+  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>) override;
+  void onNext(std::unique_ptr<folly::IOBuf>) override;
+  void onComplete() override;
+  void onError(std::exception_ptr) override;
+
+  // Subscription.
+
+  void request(int64_t) override;
+  void cancel() override;
+
+  /// Drain all pending reads and any pending terminal signal into the
+  /// FrameProcessor.
+  ///
+  /// TODO: This always sends the payloads first and then follows with the
+  /// terminal signal, regardless if terminal signal was sent before the
+  /// payloads.  Not clear if that is desirable.
+  void drainReads(const Lock&);
+
+  /// Drain all pending writes into the output subscriber.
+  void drainWrites(const Lock&);
+
+  /// Terminates the FrameProcessor.  Will queue up the exception if no
+  /// processor is set, overwriting any previously queued exception.
+  void terminateProcessor(folly::exception_wrapper);
+
+  void closeImpl(folly::exception_wrapper);
+
+  mutable Mutex mutex_;
 
   std::shared_ptr<FrameProcessor> frameProcessor_;
 
@@ -93,4 +108,4 @@ class FrameTransport :
   std::deque<std::unique_ptr<folly::IOBuf>> pendingReads_;
   folly::Optional<folly::exception_wrapper> pendingTerminal_;
 };
-} // reactivesocket
+}
