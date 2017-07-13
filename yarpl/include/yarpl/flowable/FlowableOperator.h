@@ -105,6 +105,8 @@ class FlowableOperator : public Flowable<D> {
 
    private:
     struct TerminateState {
+      TerminateState(bool u, bool d) : up{u}, down{d} {}
+
       static TerminateState Down() {
         return TerminateState{false, true};
       }
