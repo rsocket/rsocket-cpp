@@ -320,6 +320,8 @@ add_library(
   rsocket/internal/ScheduledSingleSubscription.h
   rsocket/internal/RSocketConnectionManager.cpp
   rsocket/internal/RSocketConnectionManager.h
+  rsocket/internal/SwappableEventBase.cpp
+  rsocket/internal/SwappableEventBase.h
   rsocket/RSocketSetup.cpp
   rsocket/RSocketSetup.h
   rsocket/ResumeManager.h
@@ -361,6 +363,7 @@ add_executable(
   test/handlers/HelloStreamRequestHandler.h
   test/internal/AllowanceSemaphoreTest.cpp
   test/internal/FollyKeepaliveTimerTest.cpp
+  test/internal/SwappableEventBaseTest.cpp
   test/test_utils/MockDuplexConnection.h
   test/test_utils/MockKeepaliveTimer.h
   test/test_utils/MockRequestHandler.h
