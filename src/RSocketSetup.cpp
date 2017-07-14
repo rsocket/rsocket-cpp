@@ -34,15 +34,23 @@ std::unique_ptr<RSocketRequester> RSocketSetup::createRSocketRequester(
     std::shared_ptr<RSocketResponder> requestResponder,
     std::shared_ptr<RSocketStats> stats,
     std::shared_ptr<RSocketNetworkStats> networkStats) {
-  auto rs = createRSocketStateMachine(std::move(requestResponder), std::move(stats), std::move(networkStats));
+  auto rs = createRSocketStateMachine(
+      std::move(requestResponder), std::move(stats), std::move(networkStats));
+  connectionManager_.manageConnection(rs, eventBase_, setupParams_.token);
+  rs->connectServer(std::move(frameTransport_), setupParams_);
   return std::make_unique<RSocketRequester>(std::move(rs), eventBase_);
 }
 
 void RSocketSetup::createRSocket(
     std::shared_ptr<RSocketResponder> requestResponder,
+    ServerOptions serverOptions,
     std::shared_ptr<RSocketStats> stats,
     std::shared_ptr<RSocketNetworkStats> networkStats) {
-  createRSocketStateMachine(std::move(requestResponder), std::move(stats), std::move(networkStats));
+  auto rs = createRSocketStateMachine(
+      std::move(requestResponder), std::move(stats), std::move(networkStats));
+  rs->setResumable(serverOptions.resumable);
+  connectionManager_.manageConnection(rs, eventBase_, setupParams_.token);
+  rs->connectServer(std::move(frameTransport_), setupParams_);
 }
 
 std::shared_ptr<RSocketStateMachine> RSocketSetup::createRSocketStateMachine(
@@ -61,17 +69,13 @@ std::shared_ptr<RSocketStateMachine> RSocketSetup::createRSocketStateMachine(
     stats = RSocketStats::noop();
   }
 
-  auto rs = std::make_shared<RSocketStateMachine>(
+  return std::make_shared<RSocketStateMachine>(
       eventBase_,
       std::move(requestResponder),
       nullptr,
       ReactiveSocketMode::SERVER,
       std::move(stats),
       std::move(networkStats));
-
-  connectionManager_.manageConnection(rs, eventBase_);
-  rs->connectServer(std::move(frameTransport_), setupParams_);
-  return rs;
 }
 
 void RSocketSetup::error(const RSocketError& error) {

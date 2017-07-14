@@ -7,6 +7,7 @@
 #include "src/framing/FrameTransport.h"
 #include "src/framing/FramedDuplexConnection.h"
 #include "src/internal/RSocketConnectionManager.h"
+#include "src/statemachine/RSocketStateMachine.h"
 
 namespace rsocket {
 
@@ -131,8 +132,14 @@ void RSocketServer::onRSocketSetup(
 
 bool RSocketServer::onRSocketResume(
     OnRSocketResume,
-    yarpl::Reference<FrameTransport>,
-    ResumeParameters) {
+    yarpl::Reference<FrameTransport> frameTransport,
+    ResumeParameters resumeParams) {
+  auto rsocketStateMachine =
+      connectionManager_->getConnection(resumeParams.token);
+  if (rsocketStateMachine) {
+    return rsocketStateMachine->resumeServer(
+        std::move(frameTransport), std::move(resumeParams));
+  }
   return false;
 }
 

@@ -634,6 +634,34 @@ target_link_libraries(
   ${GFLAGS_LIBRARY}
   ${GLOG_LIBRARY})
 
+# warm-resumption
+
+add_executable(
+  example_warm-resumption-server
+  examples/warm-resumption/WarmResumption_Server.cpp
+)
+
+target_link_libraries(
+  example_warm-resumption-server
+  ReactiveSocket
+  reactivesocket_examples_util
+  yarpl
+  ${GFLAGS_LIBRARY}
+  ${GLOG_LIBRARY})
+
+add_executable(
+  example_warm-resumption-client
+  examples/warm-resumption/WarmResumption_Client.cpp
+)
+
+target_link_libraries(
+  example_warm-resumption-client
+  ReactiveSocket
+  reactivesocket_examples_util
+  yarpl
+  ${GFLAGS_LIBRARY}
+  ${GLOG_LIBRARY})
+
 
 ########################################
 # End Examples

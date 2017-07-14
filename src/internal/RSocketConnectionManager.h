@@ -8,6 +8,8 @@
 #include <folly/Optional.h>
 #include <folly/Synchronized.h>
 
+#include "Common.h"
+
 namespace folly {
 class EventBase;
 }
@@ -22,7 +24,11 @@ class RSocketConnectionManager {
 
   void manageConnection(
       std::shared_ptr<rsocket::RSocketStateMachine>,
-      folly::EventBase&);
+      folly::EventBase&,
+      ResumeIdentificationToken);
+
+  std::shared_ptr<rsocket::RSocketStateMachine> getConnection(
+      ResumeIdentificationToken) const;
 
  private:
   void removeConnection(const std::shared_ptr<rsocket::RSocketStateMachine>&);
@@ -31,7 +37,7 @@ class RSocketConnectionManager {
   folly::Synchronized<
       std::unordered_map<
           std::shared_ptr<rsocket::RSocketStateMachine>,
-          folly::EventBase&>,
+          std::pair<folly::EventBase&, ResumeIdentificationToken>>,
       std::mutex>
       sockets_;
 

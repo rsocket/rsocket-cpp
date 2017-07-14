@@ -61,8 +61,17 @@ class RSocketClient {
       std::shared_ptr<RSocketStats> stats = std::shared_ptr<RSocketStats>(),
       std::shared_ptr<RSocketNetworkStats> networkStats = std::shared_ptr<RSocketNetworkStats>());
 
+  folly::Future<folly::Unit> resume();
+
+  void disconnect(folly::exception_wrapper ex);
+
  private:
   std::unique_ptr<ConnectionFactory> connectionFactory_;
   std::unique_ptr<RSocketConnectionManager> connectionManager_;
+
+  std::shared_ptr<RSocketStateMachine> stateMachine_;
+  folly::EventBase* evb_;
+  ProtocolVersion protocolVersion_;
+  ResumeIdentificationToken resumeToken_;
 };
 }
