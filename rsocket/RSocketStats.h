@@ -2,8 +2,11 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
+#include <memory>
 #include <string>
+
+#include "rsocket/framing/FrameType.h"
 #include "rsocket/internal/Common.h"
 
 namespace rsocket {

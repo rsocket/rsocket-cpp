@@ -6,11 +6,14 @@
 #include <iosfwd>
 #include <limits>
 
-/// Needed for inline d'tors of frames.
 #include <folly/io/IOBuf.h>
 #include <folly/io/IOBufQueue.h>
 
 #include "rsocket/Payload.h"
+#include "rsocket/framing/ErrorCode.h"
+#include "rsocket/framing/FrameFlags.h"
+#include "rsocket/framing/FrameType.h"
+#include "rsocket/internal/Common.h"
 
 namespace folly {
 template <typename V>
@@ -22,115 +25,6 @@ class QueueAppender;
 }
 
 namespace rsocket {
-
-/// A unique identifier of a stream.
-// TODO(stupaq): strong typedef and forward declarations all around
-using StreamId = uint32_t;
-
-enum class FrameType : uint8_t {
-  RESERVED = 0x00,
-  SETUP = 0x01,
-  LEASE = 0x02,
-  KEEPALIVE = 0x03,
-  REQUEST_RESPONSE = 0x04,
-  REQUEST_FNF = 0x05,
-  REQUEST_STREAM = 0x06,
-  REQUEST_CHANNEL = 0x07,
-  REQUEST_N = 0x08,
-  CANCEL = 0x09,
-  PAYLOAD = 0x0A,
-  ERROR = 0x0B,
-  METADATA_PUSH = 0x0C,
-  RESUME = 0x0D,
-  RESUME_OK = 0x0E,
-  EXT = 0x3F,
-};
-std::string to_string(FrameType);
-std::ostream& operator<<(std::ostream&, FrameType);
-
-enum class ErrorCode : uint32_t {
-  RESERVED = 0x00000000,
-  // The Setup frame is invalid for the server (it could be that the client is
-  // too recent for the old server). Stream ID MUST be 0.
-  INVALID_SETUP = 0x00000001,
-  // Some (or all) of the parameters specified by the client are unsupported by
-  // the server. Stream ID MUST be 0.
-  UNSUPPORTED_SETUP = 0x00000002,
-  // The server rejected the setup, it can specify the reason in the payload.
-  // Stream ID MUST be 0.
-  REJECTED_SETUP = 0x00000003,
-  // The server rejected the resume, it can specify the reason in the payload.
-  // Stream ID MUST be 0.
-  REJECTED_RESUME = 0x00000004,
-  // The connection is being terminated. Stream ID MUST be 0.
-  CONNECTION_ERROR = 0x00000101,
-  // Application layer logic generating a Reactive Streams onError event.
-  // Stream ID MUST be non-0.
-  APPLICATION_ERROR = 0x00000201,
-  // Despite being a valid request, the Responder decided to reject it. The
-  // Responder guarantees that it didn't process the request. The reason for the
-  // rejection is explained in the metadata section. Stream ID MUST be non-0.
-  REJECTED = 0x00000202,
-  // The responder canceled the request but potentially have started processing
-  // it (almost identical to REJECTED but doesn't garantee that no side-effect
-  // have been started). Stream ID MUST be non-0.
-  CANCELED = 0x00000203,
-  // The request is invalid. Stream ID MUST be non-0.
-  INVALID = 0x00000204,
-  // EXT = 0xFFFFFFFF,
-};
-std::ostream& operator<<(std::ostream&, ErrorCode);
-
-enum class FrameFlags : uint16_t {
-  EMPTY = 0x000,
-  IGNORE = 0x200,
-  METADATA = 0x100,
-
-  // SETUP frame
-  RESUME_ENABLE = 0x80,
-  LEASE = 0x40,
-
-  // KEEPALIVE frame
-  KEEPALIVE_RESPOND = 0x80,
-
-  // REQUEST_RESPONSE, REQUEST_FNF, REQUEST_STREAM, REQUEST_CHANNEL,
-  // PAYLOAD frame
-  FOLLOWS = 0x80,
-
-  // REQUEST_CHANNEL, PAYLOAD frame
-  COMPLETE = 0x40,
-
-  // PAYLOAD frame
-  NEXT = 0x20,
-};
-
-std::ostream& operator<<(std::ostream&, FrameFlags);
-
-constexpr inline FrameFlags operator|(FrameFlags a, FrameFlags b) {
-  return static_cast<FrameFlags>(
-      static_cast<uint16_t>(a) | static_cast<uint16_t>(b));
-}
-
-constexpr inline FrameFlags operator&(FrameFlags a, FrameFlags b) {
-  return static_cast<FrameFlags>(
-      static_cast<uint16_t>(a) & static_cast<uint16_t>(b));
-}
-
-inline FrameFlags& operator|=(FrameFlags& a, FrameFlags b) {
-  return a = (a | b);
-}
-
-inline FrameFlags& operator&=(FrameFlags& a, FrameFlags b) {
-  return a = (a & b);
-}
-
-constexpr inline bool operator!(FrameFlags a) {
-  return !static_cast<uint16_t>(a);
-}
-
-constexpr inline FrameFlags operator~(FrameFlags a) {
-  return static_cast<FrameFlags>(~static_cast<uint16_t>(a));
-}
 
 class FrameHeader {
  public:

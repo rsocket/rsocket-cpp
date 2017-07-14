@@ -27,11 +27,7 @@ namespace rsocket {
 
 constexpr int64_t kMaxRequestN = std::numeric_limits<int32_t>::max();
 
-enum class FrameType : uint8_t;
-
-std::string to_string(FrameType);
-std::ostream& operator<<(std::ostream&, FrameType);
-
+/// A unique identifier of a stream.
 using StreamId = uint32_t;
 
 using ResumePosition = int64_t;

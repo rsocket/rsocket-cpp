@@ -3,6 +3,7 @@
 #pragma once
 
 #include "rsocket/Payload.h"
+#include "rsocket/internal/Common.h"
 #include "yarpl/Flowable.h"
 #include "yarpl/Single.h"
 

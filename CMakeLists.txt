@@ -292,19 +292,27 @@ add_library(
   rsocket/DuplexConnection.h
   rsocket/internal/FollyKeepaliveTimer.cpp
   rsocket/internal/FollyKeepaliveTimer.h
+  rsocket/framing/ErrorCode.cpp
+  rsocket/framing/ErrorCode.h
   rsocket/framing/Frame.cpp
   rsocket/framing/Frame.h
+  rsocket/framing/FrameFlags.cpp
+  rsocket/framing/FrameFlags.h
+  rsocket/framing/FrameProcessor.h
+  rsocket/framing/FrameSerializer.cpp
+  rsocket/framing/FrameSerializer.h
+  rsocket/framing/FrameTransport.cpp
+  rsocket/framing/FrameTransport.h
+  rsocket/framing/FrameType.cpp
+  rsocket/framing/FrameType.cpp
+  rsocket/framing/FrameType.h
+  rsocket/framing/FrameType.h
   rsocket/framing/FramedDuplexConnection.cpp
   rsocket/framing/FramedDuplexConnection.h
   rsocket/framing/FramedReader.cpp
   rsocket/framing/FramedReader.h
   rsocket/framing/FramedWriter.cpp
   rsocket/framing/FramedWriter.h
-  rsocket/framing/FrameProcessor.h
-  rsocket/framing/FrameSerializer.cpp
-  rsocket/framing/FrameSerializer.h
-  rsocket/framing/FrameTransport.cpp
-  rsocket/framing/FrameTransport.h
   rsocket/Payload.cpp
   rsocket/Payload.h
   rsocket/internal/ResumeCache.cpp

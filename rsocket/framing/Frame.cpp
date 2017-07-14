@@ -1,12 +1,13 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "rsocket/framing/Frame.h"
+
 #include <folly/Memory.h>
 #include <folly/Optional.h>
 #include <folly/io/Cursor.h>
-#include <bitset>
 #include <map>
 #include <sstream>
+
 #include "rsocket/RSocketParameters.h"
 
 namespace rsocket {
@@ -27,75 +28,6 @@ std::unique_ptr<folly::IOBuf> FrameBufferAllocator::allocate(size_t size) {
 std::unique_ptr<folly::IOBuf> FrameBufferAllocator::allocateBuffer(
     size_t size) {
   return folly::IOBuf::createCombined(size);
-}
-
-std::string to_string(FrameType type) {
-  switch (type) {
-    case FrameType::REQUEST_STREAM:
-      return "REQUEST_STREAM";
-    case FrameType::REQUEST_CHANNEL:
-      return "REQUEST_CHANNEL";
-    case FrameType::REQUEST_N:
-      return "REQUEST_N";
-    case FrameType::REQUEST_RESPONSE:
-      return "REQUEST_RESPONSE";
-    case FrameType::REQUEST_FNF:
-      return "REQUEST_FNF";
-    case FrameType::CANCEL:
-      return "CANCEL";
-    case FrameType::PAYLOAD:
-      return "PAYLOAD";
-    case FrameType::ERROR:
-      return "ERROR";
-    case FrameType::RESERVED:
-      return "RESERVED";
-    case FrameType::KEEPALIVE:
-      return "KEEPALIVE";
-    case FrameType::SETUP:
-      return "SETUP";
-    case FrameType::LEASE:
-      return "LEASE";
-    case FrameType::METADATA_PUSH:
-      return "METADATA_PUSH";
-    case FrameType::RESUME:
-      return "RESUME";
-    case FrameType::RESUME_OK:
-      return "RESUME_OK";
-    case FrameType::EXT:
-      return "EXT";
-  }
-  // this should be never hit because the switch is over all cases
-  LOG(FATAL) << "unknown FrameType=" << static_cast<int>(type);
-}
-
-std::ostream& operator<<(std::ostream& os, FrameType type) {
-  return os << to_string(type);
-}
-
-std::ostream& operator<<(std::ostream& os, ErrorCode errorCode) {
-  switch (errorCode) {
-    case ErrorCode::RESERVED:
-      return os << "RESERVED";
-    case ErrorCode::APPLICATION_ERROR:
-      return os << "APPLICATION_ERROR";
-    case ErrorCode::REJECTED:
-      return os << "REJECTED";
-    case ErrorCode::CANCELED:
-      return os << "CANCELED";
-    case ErrorCode::INVALID:
-      return os << "INVALID";
-    case ErrorCode::INVALID_SETUP:
-      return os << "INVALID_SETUP";
-    case ErrorCode::REJECTED_SETUP:
-      return os << "REJECTED_SETUP";
-    case ErrorCode::UNSUPPORTED_SETUP:
-      return os << "UNSUPPORTED_SETUP";
-    case ErrorCode::CONNECTION_ERROR:
-      return os << "CONNECTION_ERROR";
-    case ErrorCode::REJECTED_RESUME:
-      return os << "REJECTED_RESUME";
-  }
-  return os << "ErrorCode(" << static_cast<uint32_t>(errorCode) << ")";
 }
 
 std::ostream&
@@ -163,11 +95,6 @@ writeFlags(std::ostream& os, FrameFlags frameFlags, FrameType frameType) {
     os << kEmpty;
   }
   return os;
-}
-
-std::ostream& operator<<(std::ostream& os, FrameFlags frameFlags) {
-  std::bitset<16> flags(static_cast<uint16_t>(frameFlags));
-  return os << flags;
 }
 
 std::ostream& operator<<(std::ostream& os, const FrameHeader& header) {
