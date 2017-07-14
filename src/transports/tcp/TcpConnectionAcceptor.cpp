@@ -84,7 +84,7 @@ void TcpConnectionAcceptor::start(OnDuplexConnectionAccept onAccept) {
 
   // The AsyncServerSocket needs to be accessed from the listener thread only.
   // This will propagate out any exceptions the listener throws.
-  folly::via(
+  auto future = folly::via(
       serverThread_->getEventBase(),
       [this] {
         folly::SocketAddress addr;
@@ -103,8 +103,12 @@ void TcpConnectionAcceptor::start(OnDuplexConnectionAccept onAccept) {
         for (auto& i : serverSocket_->getAddresses()) {
           LOG(INFO) << "Listening on " << i.describe();
         }
-      })
-      .get();
+      });
+
+  // XXX: Ideally we'd just do `future.get()`.  I can't explain why, but that
+  // consistently hits an asan-stack-overflow error in the exceptional case when
+  // built with gcc on Linux.  Doing `wait().getTry()` magically works.
+  future.wait().getTry().throwIfFailed();
 }
 
 void TcpConnectionAcceptor::stop() {
