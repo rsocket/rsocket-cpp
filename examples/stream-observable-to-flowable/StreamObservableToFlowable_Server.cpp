@@ -7,8 +7,8 @@
 #include <folly/init/Init.h>
 #include <folly/portability/GFlags.h>
 
-#include "src/RSocket.h"
-#include "src/transports/tcp/TcpConnectionAcceptor.h"
+#include "rsocket/RSocket.h"
+#include "rsocket/transports/tcp/TcpConnectionAcceptor.h"
 #include "yarpl/Observable.h"
 #include "yarpl/schedulers/ThreadScheduler.h"
 

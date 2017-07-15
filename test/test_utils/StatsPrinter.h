@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include <src/DuplexConnection.h>
-#include <src/RSocketStats.h>
+#include "rsocket/DuplexConnection.h"
+#include "rsocket/RSocketStats.h"
 
 namespace rsocket {
 class StatsPrinter : public RSocketStats {

@@ -3,7 +3,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/statemachine/StreamState.h"
+#include "rsocket/statemachine/StreamState.h"
 #include "test/test_utils/MockStats.h"
 
 using namespace rsocket;

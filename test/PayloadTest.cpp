@@ -3,9 +3,9 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <gtest/gtest.h>
-#include "src/Payload.h"
-#include "src/framing/Frame.h"
-#include "src/framing/FrameSerializer_v0_1.h"
+#include "rsocket/Payload.h"
+#include "rsocket/framing/Frame.h"
+#include "rsocket/framing/FrameSerializer_v0_1.h"
 
 using namespace ::testing;
 using namespace ::rsocket;

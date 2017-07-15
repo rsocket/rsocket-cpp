@@ -6,9 +6,9 @@
 
 #include <gtest/gtest.h>
 
-#include "src/RSocket.h"
-#include "src/transports/tcp/TcpConnectionAcceptor.h"
-#include "src/transports/tcp/TcpConnectionFactory.h"
+#include "rsocket/RSocket.h"
+#include "rsocket/transports/tcp/TcpConnectionAcceptor.h"
+#include "rsocket/transports/tcp/TcpConnectionFactory.h"
 #include "test/handlers/HelloStreamRequestHandler.h"
 
 namespace rsocket {

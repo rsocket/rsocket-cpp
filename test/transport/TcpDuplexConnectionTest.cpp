@@ -4,8 +4,8 @@
 #include <folly/io/async/AsyncSocket.h>
 #include <gtest/gtest.h>
 
-#include "src/transports/tcp/TcpConnectionAcceptor.h"
-#include "src/transports/tcp/TcpConnectionFactory.h"
+#include "rsocket/transports/tcp/TcpConnectionAcceptor.h"
+#include "rsocket/transports/tcp/TcpConnectionFactory.h"
 #include "test/transport/DuplexConnectionTest.h"
 
 namespace rsocket {

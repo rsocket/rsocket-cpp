@@ -4,7 +4,7 @@
 
 #include <folly/io/async/EventBase.h>
 
-#include "src/DuplexConnection.h"
+#include "rsocket/DuplexConnection.h"
 
 namespace rsocket {
 namespace tests {
