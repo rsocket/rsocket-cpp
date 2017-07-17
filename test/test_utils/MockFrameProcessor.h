@@ -7,7 +7,7 @@
 #include <folly/io/IOBuf.h>
 #include <folly/ExceptionWrapper.h>
 
-#include "src/framing/FrameProcessor.h"
+#include "rsocket/framing/FrameProcessor.h"
 
 namespace rsocket {
 

@@ -4,7 +4,7 @@
 
 #include <gmock/gmock.h>
 
-#include "src/DuplexConnection.h"
+#include "rsocket/DuplexConnection.h"
 #include "test/test_utils/Mocks.h"
 
 namespace rsocket {

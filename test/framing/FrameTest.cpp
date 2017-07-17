@@ -5,8 +5,8 @@
 #include <folly/io/IOBuf.h>
 #include <gmock/gmock.h>
 
-#include "src/framing/Frame.h"
-#include "src/framing/FrameSerializer.h"
+#include "rsocket/framing/Frame.h"
+#include "rsocket/framing/FrameSerializer.h"
 
 using namespace ::testing;
 using namespace ::rsocket;

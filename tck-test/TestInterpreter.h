@@ -4,8 +4,8 @@
 
 #include <map>
 
-#include "src/Payload.h"
-#include "src/RSocketRequester.h"
+#include "rsocket/Payload.h"
+#include "rsocket/RSocketRequester.h"
 
 #include "tck-test/BaseSubscriber.h"
 #include "tck-test/TestSuite.h"

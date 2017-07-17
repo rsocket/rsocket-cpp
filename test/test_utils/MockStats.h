@@ -5,10 +5,10 @@
 #include <memory>
 
 #include <gmock/gmock.h>
-#include <src/RSocketStats.h>
-#include <src/transports/tcp/TcpDuplexConnection.h>
+#include "rsocket/RSocketStats.h>
+#include "rsocket/transports/tcp/TcpDuplexConnection.h>
 
-#include "src/Payload.h"
+#include "rsocket/Payload.h"
 
 namespace rsocket {
 

@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/framing/FrameTransport.h"
+#include "rsocket/framing/FrameTransport.h"
 #include "test/test_utils/MockDuplexConnection.h"
 #include "test/test_utils/MockFrameProcessor.h"
 

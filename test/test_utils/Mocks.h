@@ -10,8 +10,8 @@
 #include <folly/ExceptionWrapper.h>
 #include <gmock/gmock.h>
 
-#include "src/framing/FrameProcessor.h"
-#include "src/internal/Common.h"
+#include "rsocket/framing/FrameProcessor.h"
+#include "rsocket/internal/Common.h"
 #include "yarpl/flowable/Flowable.h"
 
 namespace rsocket {
