@@ -347,17 +347,13 @@ target_compile_options(
 
 enable_testing()
 
-# Install libReactiveSocket.a and yarpl headers normally.
 install(TARGETS ReactiveSocket DESTINATION lib)
-install(DIRECTORY yarpl/include/yarpl DESTINATION include FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY rsocket DESTINATION include FILES_MATCHING PATTERN "*.h")
 
-# RSocket headers get installed in $INSTALL_DIR/src/Foo.h initially, because
-# they use #includes of the form "src/RSocketServer.h".  We also need them to be
-# $INSTALL_DIR/rsocket/Foo.h.
-install(DIRECTORY src DESTINATION include FILES_MATCHING PATTERN "*.h")
-install(CODE "execute_process(COMMAND rm -r ${CMAKE_INSTALL_PREFIX}/include/rsocket)")
-install(CODE "execute_process(COMMAND cp -r ${CMAKE_INSTALL_PREFIX}/include/src ${CMAKE_INSTALL_PREFIX}/include/rsocket)")
-install(CODE "message(\"Copied ${CMAKE_INSTALL_PREFIX}/include/src to ${CMAKE_INSTALL_PREFIX}/include/rsocket\")")
+# CMake doesn't seem to support "transitive" installing, and I can't access the
+# "yarpl" target from this file, so just grab the library file directly.
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/yarpl/libyarpl.a" DESTINATION lib)
+install(DIRECTORY yarpl/include/yarpl DESTINATION include FILES_MATCHING PATTERN "*.h")
 
 add_executable(
   tests
