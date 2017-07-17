@@ -355,8 +355,13 @@ target_compile_options(
 
 enable_testing()
 
-# EXCLUDE_FROM_ALL so 'make install' doesn't attempt installation of googletest
-#add_subdirectory(external/googletest EXCLUDE_FROM_ALL)
+install(TARGETS ReactiveSocket DESTINATION lib)
+install(DIRECTORY rsocket DESTINATION include FILES_MATCHING PATTERN "*.h")
+
+# CMake doesn't seem to support "transitive" installing, and I can't access the
+# "yarpl" target from this file, so just grab the library file directly.
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/yarpl/libyarpl.a" DESTINATION lib)
+install(DIRECTORY yarpl/include/yarpl DESTINATION include FILES_MATCHING PATTERN "*.h")
 
 add_executable(
   tests

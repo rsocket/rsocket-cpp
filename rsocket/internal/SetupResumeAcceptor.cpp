@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "SetupResumeAcceptor.h"
+#include "rsocket/internal/SetupResumeAcceptor.h"
 
 #include <folly/ExceptionWrapper.h>
 #include <folly/io/async/EventBaseManager.h>

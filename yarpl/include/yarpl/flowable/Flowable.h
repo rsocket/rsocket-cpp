@@ -10,10 +10,10 @@
 #include <type_traits>
 #include <utility>
 
-#include "../Refcounted.h"
-#include "Subscriber.h"
-#include "Subscribers.h"
+#include "yarpl/Refcounted.h"
 #include "yarpl/Scheduler.h"
+#include "yarpl/flowable/Subscriber.h"
+#include "yarpl/flowable/Subscribers.h"
 #include "yarpl/utils/credits.h"
 #include "yarpl/utils/type_traits.h"
 
@@ -307,7 +307,7 @@ class Flowable : public virtual Refcounted {
 } // flowable
 } // yarpl
 
-#include "FlowableOperator.h"
+#include "yarpl/flowable/FlowableOperator.h"
 
 namespace yarpl {
 namespace flowable {

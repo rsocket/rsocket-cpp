@@ -7,8 +7,8 @@
 #include <sstream>
 #include <vector>
 
-#include "Flowable.h"
-#include "Subscriber.h"
+#include "yarpl/flowable/Flowable.h"
+#include "yarpl/flowable/Subscriber.h"
 #include "yarpl/utils/ExceptionString.h"
 #include "yarpl/utils/credits.h"
 

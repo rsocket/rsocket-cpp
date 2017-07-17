@@ -5,7 +5,7 @@
 #include <exception>
 #include <limits>
 
-#include "Subscriber.h"
+#include "yarpl/flowable/Subscriber.h"
 #include "yarpl/utils/credits.h"
 #include "yarpl/utils/type_traits.h"
 

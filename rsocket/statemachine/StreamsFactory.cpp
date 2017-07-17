@@ -1,6 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "StreamsFactory.h"
+#include "rsocket/statemachine/StreamsFactory.h"
+
 #include "rsocket/statemachine/ChannelRequester.h"
 #include "rsocket/statemachine/ChannelResponder.h"
 #include "rsocket/statemachine/RSocketStateMachine.h"

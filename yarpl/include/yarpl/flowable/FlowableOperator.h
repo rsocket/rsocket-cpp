@@ -5,9 +5,9 @@
 #include <cassert>
 #include <utility>
 
-#include "Flowable.h"
-#include "Subscriber.h"
-#include "Subscription.h"
+#include "yarpl/flowable/Flowable.h"
+#include "yarpl/flowable/Subscriber.h"
+#include "yarpl/flowable/Subscription.h"
 #include "yarpl/utils/credits.h"
 
 namespace yarpl {

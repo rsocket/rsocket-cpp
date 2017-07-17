@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "TcpConnectionAcceptor.h"
+#include "rsocket/transports/tcp/TcpConnectionAcceptor.h"
 
 #include <folly/ThreadName.h>
 #include <folly/futures/Future.h>

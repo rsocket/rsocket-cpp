@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "ResumeCache.h"
+#include "rsocket/internal/ResumeCache.h"
 
 #include <algorithm>
 

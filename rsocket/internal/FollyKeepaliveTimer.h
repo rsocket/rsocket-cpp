@@ -3,9 +3,11 @@
 #pragma once
 
 #include <folly/io/async/EventBase.h>
+
 #include "rsocket/statemachine/RSocketStateMachine.h"
 
 namespace rsocket {
+
 class FollyKeepaliveTimer : public KeepaliveTimer {
  public:
   FollyKeepaliveTimer(

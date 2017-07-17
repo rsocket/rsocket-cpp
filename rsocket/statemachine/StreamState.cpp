@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "StreamState.h"
+#include "rsocket/statemachine/StreamState.h"
 
 #include "rsocket/RSocketStats.h"
 

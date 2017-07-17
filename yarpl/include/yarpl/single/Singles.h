@@ -4,7 +4,7 @@
 
 #include "yarpl/utils/type_traits.h"
 
-#include "Single.h"
+#include "yarpl/single/Single.h"
 
 namespace yarpl {
 namespace single {

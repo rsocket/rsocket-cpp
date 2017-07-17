@@ -3,10 +3,11 @@
 #pragma once
 
 #include <folly/Baton.h>
-#include "../Refcounted.h"
-#include "SingleObserver.h"
-#include "SingleObservers.h"
-#include "SingleSubscription.h"
+
+#include "yarpl/Refcounted.h"
+#include "yarpl/single/SingleObserver.h"
+#include "yarpl/single/SingleObservers.h"
+#include "yarpl/single/SingleSubscription.h"
 #include "yarpl/utils/type_traits.h"
 
 namespace yarpl {
@@ -171,7 +172,7 @@ class SingleVoidFromPublisherOperator : public Single<void> {
 } // observable
 } // yarpl
 
-#include "SingleOperator.h"
+#include "yarpl/single/SingleOperator.h"
 
 namespace yarpl {
 namespace single {

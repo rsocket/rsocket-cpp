@@ -53,13 +53,14 @@ add_library(
         # Flowable public API
         include/yarpl/Flowable.h
         include/yarpl/flowable/Flowable.h
-        include/yarpl/flowable/Flowables.h
         include/yarpl/flowable/FlowableOperator.h
+        include/yarpl/flowable/Flowable_FromObservable.h
+        include/yarpl/flowable/Flowables.h
         include/yarpl/flowable/Subscriber.h
         include/yarpl/flowable/Subscribers.h
         include/yarpl/flowable/Subscription.h
-        src/yarpl/flowable/sources/Subscription.cpp
         include/yarpl/flowable/TestSubscriber.h
+        src/yarpl/flowable/sources/Subscription.cpp
         # Observable public API
         include/yarpl/Observable.h
         include/yarpl/observable/Observable.h
@@ -81,8 +82,6 @@ add_library(
         include/yarpl/single/SingleSubscription.h
         include/yarpl/single/SingleSubscriptions.h
         include/yarpl/single/SingleTestObserver.h
-        # Flowable private
-        src/yarpl/flowable/sources/Flowable_FromObservable.h
         # utils
         include/yarpl/utils/type_traits.h
         include/yarpl/utils/credits.h

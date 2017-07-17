@@ -4,9 +4,9 @@
 
 #include <utility>
 
-#include "../Observable.h"
-#include "Observer.h"
-#include "Subscription.h"
+#include "yarpl/Observable.h"
+#include "yarpl/observable/Observer.h"
+#include "yarpl/observable/Subscription.h"
 
 namespace yarpl {
 namespace observable {

@@ -6,8 +6,8 @@
 #include <functional>
 #include <mutex>
 
-#include "../Refcounted.h"
-#include "SingleSubscription.h"
+#include "yarpl/Refcounted.h"
+#include "yarpl/single/SingleSubscription.h"
 
 namespace yarpl {
 namespace single {

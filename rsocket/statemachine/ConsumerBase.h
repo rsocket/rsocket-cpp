@@ -5,11 +5,12 @@
 #include <folly/ExceptionWrapper.h>
 #include <cstddef>
 #include <iostream>
-#include "RSocketStateMachine.h"
-#include "StreamStateMachineBase.h"
+
 #include "rsocket/Payload.h"
 #include "rsocket/internal/AllowanceSemaphore.h"
 #include "rsocket/internal/Common.h"
+#include "rsocket/statemachine/RSocketStateMachine.h"
+#include "rsocket/statemachine/StreamStateMachineBase.h"
 #include "yarpl/flowable/Subscription.h"
 
 namespace rsocket {

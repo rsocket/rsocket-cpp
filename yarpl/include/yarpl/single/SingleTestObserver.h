@@ -7,9 +7,10 @@
 #include <mutex>
 #include <sstream>
 #include <vector>
-#include "Single.h"
-#include "SingleSubscriptions.h"
-#include "SingleObserver.h"
+
+#include "yarpl/single/Single.h"
+#include "yarpl/single/SingleObserver.h"
+#include "yarpl/single/SingleSubscriptions.h"
 
 namespace yarpl {
 namespace single {

@@ -1,6 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "RSocketParameters.h"
+#include "rsocket/RSocketParameters.h"
+
 #include <folly/String.h>
 
 namespace rsocket {

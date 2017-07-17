@@ -7,8 +7,8 @@
 #include <iostream>
 #include <memory>
 
-#include "../Refcounted.h"
-#include "Subscription.h"
+#include "yarpl/Refcounted.h"
+#include "yarpl/observable/Subscription.h"
 
 namespace yarpl {
 namespace observable {

@@ -1,11 +1,13 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "FrameSerializer.h"
+#include "rsocket/framing/FrameSerializer.h"
+
 #include <folly/Conv.h>
 #include <folly/portability/GFlags.h>
-#include "FrameSerializer_v0.h"
-#include "FrameSerializer_v0_1.h"
-#include "FrameSerializer_v1_0.h"
+
+#include "rsocket/framing/FrameSerializer_v0.h"
+#include "rsocket/framing/FrameSerializer_v0_1.h"
+#include "rsocket/framing/FrameSerializer_v1_0.h"
 
 DEFINE_string(
     rs_use_protocol_version,

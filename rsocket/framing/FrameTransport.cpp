@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "FrameTransport.h"
+#include "rsocket/framing/FrameTransport.h"
 
 #include <folly/ExceptionWrapper.h>
 #include <folly/io/IOBuf.h>

@@ -4,11 +4,12 @@
 
 #include <stdexcept>
 
-#include "../Refcounted.h"
-#include "Subscription.h"
+#include "yarpl/Refcounted.h"
+#include "yarpl/observable/Subscription.h"
 
 namespace yarpl {
 namespace observable {
+
 template <typename T>
 class Observer : public virtual Refcounted {
  public:

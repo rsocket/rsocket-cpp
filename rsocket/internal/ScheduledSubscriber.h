@@ -2,9 +2,11 @@
 
 #pragma once
 
-#include "ScheduledSubscription.h"
-#include "yarpl/flowable/Subscriber.h"
+#include "rsocket/internal/ScheduledSubscription.h"
+
 #include <folly/io/async/EventBase.h>
+
+#include "yarpl/flowable/Subscriber.h"
 
 namespace rsocket {
 
