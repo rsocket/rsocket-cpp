@@ -10,6 +10,7 @@
 
 namespace yarpl {
 namespace observable {
+
 /**
  * Base (helper) class for operators.  Operators are templated on two types:
  * D (downstream) and U (upstream).  Operators are created by method calls on
@@ -24,8 +25,7 @@ class ObservableOperator : public Observable<D> {
       : upstream_(std::move(upstream)) {}
 
  protected:
-  ///
-  /// \brief An Operator's subscription.
+  /// An Operator's subscription.
   ///
   /// When a pipeline chain is active, each Observable has a corresponding
   /// subscription.  Except for the first one, the subscriptions are created
@@ -41,10 +41,11 @@ class ObservableOperator : public Observable<D> {
         : observable_(std::move(observable)), observer_(std::move(observer)) {
       assert(observable_);
       assert(observer_);
-    }
 
-    ~Subscription() {
-      observer_.reset();
+      // We expect to be heap-allocated; until this subscription finishes (is
+      // canceled; completes; error's out), hold a reference so we are not
+      // deallocated (by the subscriber).
+      Refcounted::incRef(*this);
     }
 
     template<typename TOperator>
@@ -52,38 +53,99 @@ class ObservableOperator : public Observable<D> {
       return static_cast<TOperator*>(observable_.get());
     }
 
-    // this method should be used to terminate the operators
-    void terminate() {
-      observer_->onComplete(); // should break the cycle to this
-      upstream_->cancel(); // should break the cycle to this
-    }
-
     void observerOnNext(D value) {
-      observer_->onNext(std::move(value));
+      if (observer_) {
+        observer_->onNext(std::move(value));
+      }
     }
 
-   protected:
+    /// Terminates both ends of an operator normally.
+    void terminate() {
+      terminateImpl(TerminateState::Both());
+    }
+
+    /// Terminates both ends of an operator with an error.
+    void terminateErr(std::exception_ptr eptr) {
+      terminateImpl(TerminateState::Both(), std::move(eptr));
+    }
+
+    // Subscription.
+
+    void cancel() override {
+      terminateImpl(TerminateState::Up());
+    }
+
+    // Observer.
+
+    void onSubscribe(
+        Reference<yarpl::observable::Subscription> subscription) override {
+      if (upstream_) {
+        subscription->cancel();
+        return;
+      }
+
+      upstream_ = std::move(subscription);
+      observer_->onSubscribe(Reference<yarpl::observable::Subscription>(this));
+    }
+
     void onComplete() override {
-      observer_->onComplete();
-      upstream_.reset(); // breaking the cycle
+      terminateImpl(TerminateState::Down());
+    }
+
+    void onError(std::exception_ptr eptr) override {
+      terminateImpl(TerminateState::Down(), std::move(eptr));
     }
 
   private:
-    void onSubscribe(
-        Reference<::yarpl::observable::Subscription> subscription) override {
-      upstream_ = std::move(subscription);
-      observer_->onSubscribe(
-          Reference<::yarpl::observable::Subscription>(this));
+    struct TerminateState {
+      TerminateState(bool u, bool d) : up{u}, down{d} {}
+
+      static TerminateState Down() {
+        return TerminateState{false, true};
+      }
+
+      static TerminateState Up() {
+        return TerminateState{true, false};
+      }
+
+      static TerminateState Both() {
+        return TerminateState{true, true};
+      }
+
+      const bool up{false};
+      const bool down{false};
+    };
+
+    bool isTerminated() const {
+      return !upstream_ && !observer_;
     }
 
-    void onError(std::exception_ptr error) override {
-      observer_->onError(error);
-      upstream_.reset(); // breaking the cycle
-    }
+    /// Terminates an operator, sending cancel() and on{Complete,Error}()
+    /// signals as necessary.
+    void terminateImpl(
+        TerminateState state,
+        std::exception_ptr eptr = nullptr) {
+      if (isTerminated()) {
+        return;
+      }
 
-    void cancel() override {
-      upstream_->cancel();
-      observer_.reset(); // breaking the cycle
+      if (auto upstream = std::move(upstream_)) {
+        if (state.up) {
+          upstream->cancel();
+        }
+      }
+
+      if (auto observer = std::move(observer_)) {
+        if (state.down) {
+          if (eptr) {
+            observer->onError(std::move(eptr));
+          } else {
+            observer->onComplete();
+          }
+        }
+      }
+
+      Refcounted::decRef(*this);
     }
 
     /// The Observable has the lambda, and other creation parameters.

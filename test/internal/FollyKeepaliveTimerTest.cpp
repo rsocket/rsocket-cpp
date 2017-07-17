@@ -7,9 +7,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include <src/framing/Frame.h>
-#include <src/internal/FollyKeepaliveTimer.h>
-#include "src/framing/FramedDuplexConnection.h"
+#include "rsocket/framing/Frame.h"
+#include "rsocket/framing/FramedDuplexConnection.h"
+#include "rsocket/internal/FollyKeepaliveTimer.h"
 
 using namespace ::testing;
 using namespace ::rsocket;

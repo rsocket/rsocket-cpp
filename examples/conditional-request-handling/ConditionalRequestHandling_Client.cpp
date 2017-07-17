@@ -6,8 +6,8 @@
 #include <iostream>
 
 #include "examples/util/ExampleSubscriber.h"
-#include "src/RSocket.h"
-#include "src/transports/tcp/TcpConnectionFactory.h"
+#include "rsocket/RSocket.h"
+#include "rsocket/transports/tcp/TcpConnectionFactory.h"
 #include "yarpl/Flowable.h"
 
 using namespace ::folly;

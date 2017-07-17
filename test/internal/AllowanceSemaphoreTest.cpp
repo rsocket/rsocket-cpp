@@ -2,7 +2,7 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include "src/internal/AllowanceSemaphore.h"
+#include "rsocket/internal/AllowanceSemaphore.h"
 
 using namespace ::testing;
 using namespace ::rsocket;

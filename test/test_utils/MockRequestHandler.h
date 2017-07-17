@@ -6,8 +6,8 @@
 
 #include <gmock/gmock.h>
 
-#include "src/Payload.h"
-#include "src/temporary_home/RequestHandler.h"
+#include "rsocket/Payload.h"
+#include "rsocket/temporary_home/RequestHandler.h"
 
 namespace rsocket {
 

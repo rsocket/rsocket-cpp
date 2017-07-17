@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/framing/FrameTransport.h"
+#include "rsocket/framing/FrameTransport.h"
 #include "test/test_utils/MockDuplexConnection.h"
 #include "test/test_utils/MockFrameProcessor.h"
 
@@ -110,7 +110,7 @@ TEST(FrameTransport, InputSendsError) {
     EXPECT_CALL(*subscriber, onComplete_());
   });
 
-  ON_CALL(*connection, setInput_(_)).WillByDefault(Invoke([](auto& subscriber) {
+  ON_CALL(*connection, setInput_(_)).WillByDefault(Invoke([](auto subscriber) {
     auto subscription = yarpl::make_ref<StrictMock<MockSubscription>>();
     EXPECT_CALL(*subscription, request_(_));
     EXPECT_CALL(*subscription, cancel_());

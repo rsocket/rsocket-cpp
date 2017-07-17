@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "src/RSocketResponder.h"
+#include "rsocket/RSocketResponder.h"
 #include "yarpl/Flowable.h"
 
 namespace rsocket {

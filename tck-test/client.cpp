@@ -6,12 +6,12 @@
 #include <folly/init/Init.h>
 #include <folly/portability/GFlags.h>
 
-#include "src/RSocket.h"
+#include "rsocket/RSocket.h"
 
 #include "tck-test/TestFileParser.h"
 #include "tck-test/TestInterpreter.h"
 
-#include "src/transports/tcp/TcpConnectionFactory.h"
+#include "rsocket/transports/tcp/TcpConnectionFactory.h"
 
 DEFINE_string(ip, "127.0.0.1", "IP to connect to");
 DEFINE_int32(port, 9898, "port to connect to");

@@ -7,7 +7,7 @@
 
 #include <gmock/gmock.h>
 
-#include "src/statemachine/RSocketStateMachine.h"
+#include "rsocket/statemachine/RSocketStateMachine.h"
 #include "test/deprecated/ReactiveSocket.h"
 
 namespace rsocket {

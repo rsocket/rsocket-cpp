@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include "src/Payload.h"
-#include "src/RSocket.h"
+#include "rsocket/Payload.h"
+#include "rsocket/RSocket.h"
 
 class TextRequestResponder : public rsocket::RSocketResponder {
  public:

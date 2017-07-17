@@ -6,9 +6,9 @@
 
 #include "JsonRequestHandler.h"
 #include "TextRequestHandler.h"
-#include "src/RSocket.h"
-#include "src/RSocketErrors.h"
-#include "src/transports/tcp/TcpConnectionAcceptor.h"
+#include "rsocket/RSocket.h"
+#include "rsocket/RSocketErrors.h"
+#include "rsocket/transports/tcp/TcpConnectionAcceptor.h"
 
 using namespace ::folly;
 using namespace ::rsocket;
