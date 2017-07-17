@@ -3,7 +3,6 @@
 #include <gtest/gtest.h>
 #include <chrono>
 #include <thread>
-#include "reactivestreams/ReactiveStreams.h"
 #include "yarpl/Flowable.h"
 #include "yarpl/Flowable_Subscriber.h"
 #include "yarpl/Flowable_TestSubscriber.h"

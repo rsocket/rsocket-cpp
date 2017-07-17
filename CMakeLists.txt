@@ -91,11 +91,6 @@ endif ()
 
 add_custom_target(coverage DEPENDS ${COVERAGE_INFO})
 
-# default is to use ReactiveStreams location from github directly
-if(NOT REACTIVE_STREAMS_GIT_URL)
-  set(REACTIVE_STREAMS_GIT_URL "https://github.com/ReactiveSocket/reactive-streams-cpp.git" CACHE STRING "Location of the ReactiveStreams C++ git repo" FORCE)
-endif(NOT REACTIVE_STREAMS_GIT_URL)
-
 option(BUILD_BENCHMARKS "Build benchmarks" ON)
 
 enable_testing()
@@ -181,17 +176,6 @@ set(GMOCK_LIBS
   ${GMOCK_BINARY_DIR}/${CMAKE_CFG_INTDIR}/googlemock/${CMAKE_STATIC_LIBRARY_PREFIX}gmock${CMAKE_STATIC_LIBRARY_SUFFIX}
   ${GMOCK_BINARY_DIR}/${CMAKE_CFG_INTDIR}/googlemock/${CMAKE_STATIC_LIBRARY_PREFIX}gmock_main${CMAKE_STATIC_LIBRARY_SUFFIX}
   )
-
-# ReactiveStreams C++
-ExternalProject_Add(
-  ReactiveStreams
-  GIT_REPOSITORY ${REACTIVE_STREAMS_GIT_URL}
-  GIT_TAG d2fd61252b51a57a2916ee52fcd54b7f5d563591
-  CMAKE_ARGS "-DCMAKE_BUILD_TYPE=Debug" /
-    "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/reactivestreams" /
-    "-DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}" /
-    "-DCMAKE_EXE_LINKER_FLAGS=${CXX_LINKER_FLAGS}"
-)
 
 set(CMAKE_CXX_STANDARD 14)
 
@@ -338,8 +322,6 @@ target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/in
 target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/src")
 
 target_link_libraries(ReactiveSocket yarpl ${GFLAGS_LIBRARY} ${GLOG_LIBRARY})
-
-add_dependencies(ReactiveSocket ReactiveStreams)
 
 target_compile_options(
   ReactiveSocket
@@ -677,7 +659,6 @@ if(BUILD_BENCHMARKS)
           ${GLOG_LIBRARY})
       add_dependencies(
           ${name}
-          ReactiveStreams
           google_benchmark)
   endfunction()
 

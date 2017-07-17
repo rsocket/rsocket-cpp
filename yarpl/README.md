@@ -8,18 +8,6 @@ NOTE: This is a work in progress. It is not feature complete.
 
 no automated builds yet
 
-# Dependencies
-
-Install `reactive-streams/ReactiveStreams.h`: https://github.com/ReactiveSocket/reactive-streams-cpp#build--install
-
-After first checkout, initialize and update submodules:
-
-```
-# inside root ./yarpl
-git submodule init
-git submodule update --recursive
-```
-
 # Building and running tests
 
 After installing dependencies as above, you can build and run tests with:
