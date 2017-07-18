@@ -35,28 +35,44 @@ folly::Future<std::unique_ptr<RSocketRequester>> RSocketClient::connect(
   folly::Promise<std::unique_ptr<RSocketRequester>> promise;
   auto future = promise.getFuture();
 
-  connectionFactory_->connect([
-    this,
-    setupParameters = std::move(setupParameters),
-    responder = std::move(responder),
-    keepaliveTimer = std::move(keepaliveTimer),
-    stats = std::move(stats),
-    networkStats = std::move(networkStats),
-    promise = std::move(promise)](
-      std::unique_ptr<DuplexConnection> connection,
-      folly::EventBase& eventBase) mutable {
-    VLOG(3) << "onConnect received DuplexConnection";
+  connectionFactory_->connect()
+      .then([
+        this,
+        setupParameters = std::move(setupParameters),
+        responder = std::move(responder),
+        keepaliveTimer = std::move(keepaliveTimer),
+        stats = std::move(stats),
+        networkStats = std::move(networkStats),
+        promise = std::move(promise)
+      ](ConnectionResult connResult) mutable {
+        VLOG(3) << "onConnect received DuplexConnection";
+        // Ensure we create the RSocketStateMachine in the right evb.
+        connResult.evb.runImmediatelyOrRunInEventBaseThreadAndWait([
+          this,
+          setupParameters = std::move(setupParameters),
+          responder = std::move(responder),
+          keepaliveTimer = std::move(keepaliveTimer),
+          stats = std::move(stats),
+          networkStats = std::move(networkStats),
+          promise = std::move(promise),
+          connResult = std::move(connResult)
+        ]() mutable {
+          auto rsocket = fromConnection(
+              std::move(connResult.connection),
+              connResult.evb,
+              std::move(setupParameters),
+              std::move(responder),
+              std::move(keepaliveTimer),
+              std::move(stats),
+              std::move(networkStats));
 
-    auto rsocket = fromConnection(
-        std::move(connection),
-        eventBase,
-        std::move(setupParameters),
-        std::move(responder),
-        std::move(keepaliveTimer),
-        std::move(stats),
-        std::move(networkStats));
-    promise.setValue(std::move(rsocket));
-  });
+          promise.setValue(std::move(rsocket));
+
+        });
+
+      })
+      .onError([promise = std::move(promise)](
+          folly::exception_wrapper ex) mutable { promise.setException(ex); });
 
   return future;
 }
