@@ -321,7 +321,9 @@ add_library(
   rsocket/internal/RSocketConnectionManager.cpp
   rsocket/internal/RSocketConnectionManager.h
   rsocket/RSocketSetup.cpp
-  rsocket/RSocketSetup.h)
+  rsocket/RSocketSetup.h
+  rsocket/ResumeManager.h
+  rsocket/ColdResumeHandler.h)
 
 target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/include")
 target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/src")

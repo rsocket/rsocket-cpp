@@ -40,12 +40,20 @@ int main(int argc, char* argv[]) {
 
   LOG(INFO) << "Creating client to connect to " << address.describe();
 
-  // create a client which can then make connections below
-  auto rsf = RSocket::createClient(
-      std::make_unique<TcpConnectionFactory>(std::move(address)));
+  std::unique_ptr<RSocketClient> client;
 
-  // connect and wait for connection
-  auto rs = rsf->connect().get();
+  RSocket::createConnectedClient(
+      std::make_unique<TcpConnectionFactory>(std::move(address)))
+      .then([&client](std::unique_ptr<RSocketClient> cl) mutable {
+        LOG(INFO) << "Connected";
+        client = std::move(cl);
+      })
+      .onError([](folly::exception_wrapper ex) {
+        LOG(INFO) << "Exception received " << ex;
+      })
+      .get();
+
+  std::shared_ptr<RSocketRequester> rs = client->getRequester();
 
   TestFileParser testFileParser(FLAGS_test_file);
   TestSuite testSuite = testFileParser.parse();

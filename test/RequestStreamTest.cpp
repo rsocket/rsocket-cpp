@@ -34,7 +34,7 @@ class TestHandlerSync : public rsocket::RSocketResponder {
 TEST(RequestStreamTest, HelloSync) {
   auto server = makeServer(std::make_shared<TestHandlerSync>());
   auto client = makeClient(*server->listeningPort());
-  auto requester = client->connect().get();
+  auto requester = client->getRequester();
   auto ts = TestSubscriber<std::string>::create();
   requester->requestStream(Payload("Bob"))
       ->map([](auto p) { return p.moveDataToString(); })
@@ -78,7 +78,7 @@ class TestHandlerAsync : public rsocket::RSocketResponder {
 TEST(RequestStreamTest, HelloAsync) {
   auto server = makeServer(std::make_shared<TestHandlerAsync>());
   auto client = makeClient(*server->listeningPort());
-  auto requester = client->connect().get();
+  auto requester = client->getRequester();
   auto ts = TestSubscriber<std::string>::create();
   requester->requestStream(Payload("Bob"))
       ->map([](auto p) { return p.moveDataToString(); })

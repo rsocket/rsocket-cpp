@@ -33,8 +33,9 @@ inline std::unique_ptr<RSocketServer> makeServer(
 inline std::unique_ptr<RSocketClient> makeClient(uint16_t port) {
   folly::SocketAddress address;
   address.setFromHostPort("localhost", port);
-  return RSocket::createClient(
-      std::make_unique<TcpConnectionFactory>(std::move(address)));
+  return RSocket::createConnectedClient(
+             std::make_unique<TcpConnectionFactory>(std::move(address)))
+      .get();
 }
 }
 }

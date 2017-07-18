@@ -18,7 +18,6 @@ namespace rsocket {
 class RSocketConnectionManager;
 
 using OnRSocketSetup = std::function<void(RSocketSetup&)>;
-using OnRSocketResume = std::function<void(ResumeParameters&)>;
 
 /**
  * API for starting an RSocket server. Returned from RSocket::createServer.

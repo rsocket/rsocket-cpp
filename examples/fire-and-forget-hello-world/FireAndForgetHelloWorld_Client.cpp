@@ -28,17 +28,20 @@ int main(int argc, char* argv[]) {
   folly::SocketAddress address;
   address.setFromHostPort(FLAGS_host, FLAGS_port);
 
-  // create a client which can then make connections below
-  auto rsf = RSocket::createClient(
-      std::make_unique<TcpConnectionFactory>(std::move(address)));
+  std::unique_ptr<RSocketClient> client;
 
-  // connect and wait for connection
-  auto rs = rsf->connect().get();
-
-  // perform request on connected RSocket
-  rs->fireAndForget(Payload("Hello World!"))->subscribe([] {
-    std::cout << "wrote to network" << std::endl;
-  });
+  RSocket::createConnectedClient(
+      std::make_unique<TcpConnectionFactory>(std::move(address)))
+      .then([&client](std::unique_ptr<RSocketClient> cl) mutable {
+        LOG(INFO) << "Connected";
+        client = std::move(cl);
+        client->getRequester()
+            ->fireAndForget(Payload("Hello World!"))
+            ->subscribe([] { std::cout << "wrote to network" << std::endl; });
+      })
+      .onError([](folly::exception_wrapper ex) {
+        LOG(INFO) << "Exception received " << ex;
+      });
 
   // Wait for a newline on the console to terminate the client.
   std::getchar();

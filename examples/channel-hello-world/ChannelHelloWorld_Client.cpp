@@ -27,20 +27,24 @@ int main(int argc, char* argv[]) {
   folly::SocketAddress address;
   address.setFromHostPort(FLAGS_host, FLAGS_port);
 
-  // create a client which can then make connections below
-  auto rsf = RSocket::createClient(
-      std::make_unique<TcpConnectionFactory>(std::move(address)));
+  std::unique_ptr<RSocketClient> client;
 
-  auto rs = rsf->connect().get();
-
-  // send stream of strings to the server
-  rs->requestChannel(Flowables::justN({"initialPayload", "Bob", "Jane"})
-                         ->map([](std::string v) {
-                           std::cout << "Sending: " << v << std::endl;
-                           return Payload(v);
-                         }))
-      ->subscribe([](Payload p) {
-        std::cout << "Received: " << p.moveDataToString() << std::endl;
+  RSocket::createConnectedClient(
+      std::make_unique<TcpConnectionFactory>(std::move(address)))
+      .then([&client](std::unique_ptr<RSocketClient> cl) mutable {
+        client = std::move(cl);
+        client->getRequester()
+            ->requestChannel(Flowables::justN({"initialPayload", "Bob", "Jane"})
+                                 ->map([](std::string v) {
+                                   std::cout << "Sending: " << v << std::endl;
+                                   return Payload(v);
+                                 }))
+            ->subscribe([](Payload p) {
+              std::cout << "Received: " << p.moveDataToString() << std::endl;
+            });
+      })
+      .onError([](folly::exception_wrapper ex) {
+        LOG(INFO) << "Exception received " << ex;
       });
 
   // Wait for a newline on the console to terminate the server.

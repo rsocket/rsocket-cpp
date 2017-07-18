@@ -27,20 +27,27 @@ int main(int argc, char* argv[]) {
   folly::SocketAddress address;
   address.setFromHostPort(FLAGS_host, FLAGS_port);
 
-  // create a client which can then make connections below
-  auto rsf = RSocket::createClient(
-      std::make_unique<TcpConnectionFactory>(std::move(address)));
+  std::unique_ptr<RSocketClient> client;
 
-  auto rs = rsf->connect().get();
-  rs->requestStream(Payload("TopicX"))
-      ->take(10)
-      ->subscribe(
-          [](Payload p) {
-            std::cout << p.cloneDataToString() << std::endl;
-            // simulate slow consumer
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-          },
-          3 /* request batch size */);
+  RSocket::createConnectedClient(
+      std::make_unique<TcpConnectionFactory>(std::move(address)))
+      .then([&client](std::unique_ptr<RSocketClient> cl) mutable {
+        LOG(INFO) << "Connected";
+        client = std::move(cl);
+        client->getRequester()
+            ->requestStream(Payload("TopicX"))
+            ->take(10)
+            ->subscribe(
+                [](Payload p) {
+                  std::cout << p.cloneDataToString() << std::endl;
+                  // simulate slow consumer
+                  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                },
+                3 /* request batch size */);
+      })
+      .onError([](folly::exception_wrapper ex) {
+        LOG(INFO) << "Exception received " << ex;
+      });
 
   // Wait for a newline on the console to terminate the server.
   std::getchar();

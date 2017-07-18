@@ -34,7 +34,7 @@ class TestHandlerHello : public rsocket::RSocketResponder {
 TEST(RequestResponseTest, Hello) {
   auto server = makeServer(std::make_shared<TestHandlerHello>());
   auto client = makeClient(*server->listeningPort());
-  auto requester = client->connect().get();
+  auto requester = client->getRequester();
 
   auto to = SingleTestObserver<std::string>::create();
   requester->requestResponse(Payload("Jane"))
@@ -100,7 +100,7 @@ TEST(RequestResponseTest, Cancel) {
   auto server =
       makeServer(std::make_shared<TestHandlerCancel>(onCancel, onSubscribe));
   auto client = makeClient(*server->listeningPort());
-  auto requester = client->connect().get();
+  auto requester = client->getRequester();
 
   auto to = SingleTestObserver<std::string>::create();
   requester->requestResponse(Payload("Jane"))
