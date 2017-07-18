@@ -8,50 +8,43 @@
 
 namespace rsocket {
 
-namespace {
-
-const char* toString(FrameType type) {
+std::ostream& operator<<(std::ostream& os, FrameType type) {
   switch (type) {
     case FrameType::RESERVED:
-      return "RESERVED";
+      return os << "RESERVED";
     case FrameType::SETUP:
-      return "SETUP";
+      return os << "SETUP";
     case FrameType::LEASE:
-      return "LEASE";
+      return os << "LEASE";
     case FrameType::KEEPALIVE:
-      return "KEEPALIVE";
+      return os << "KEEPALIVE";
     case FrameType::REQUEST_RESPONSE:
-      return "REQUEST_RESPONSE";
+      return os << "REQUEST_RESPONSE";
     case FrameType::REQUEST_FNF:
-      return "REQUEST_FNF";
+      return os << "REQUEST_FNF";
     case FrameType::REQUEST_STREAM:
-      return "REQUEST_STREAM";
+      return os << "REQUEST_STREAM";
     case FrameType::REQUEST_CHANNEL:
-      return "REQUEST_CHANNEL";
+      return os << "REQUEST_CHANNEL";
     case FrameType::REQUEST_N:
-      return "REQUEST_N";
+      return os << "REQUEST_N";
     case FrameType::CANCEL:
-      return "CANCEL";
+      return os << "CANCEL";
     case FrameType::PAYLOAD:
-      return "PAYLOAD";
+      return os << "PAYLOAD";
     case FrameType::ERROR:
-      return "ERROR";
+      return os << "ERROR";
     case FrameType::METADATA_PUSH:
-      return "METADATA_PUSH";
+      return os << "METADATA_PUSH";
     case FrameType::RESUME:
-      return "RESUME";
+      return os << "RESUME";
     case FrameType::RESUME_OK:
-      return "RESUME_OK";
+      return os << "RESUME_OK";
     case FrameType::EXT:
-      return "EXT";
+      return os << "EXT";
     default:
       break;
   }
-  LOG(FATAL) << "Unknown FrameType[" << static_cast<int>(type) << "]";
-}
-}
-
-std::ostream& operator<<(std::ostream& os, FrameType type) {
-  return os << toString(type);
+  return os << "Unknown FrameType[" << static_cast<int>(type) << "]";
 }
 }
