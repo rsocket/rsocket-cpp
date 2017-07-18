@@ -26,22 +26,17 @@ if(APPLE)
   add_compile_options("-fno-sanitize=address,undefined")
 endif()
 
-# Configuration for Debug build mode.
-#set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
-
+# Using NDEBUG in Release builds.
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG")
 
-# Find glog and gflags libraries specifically
+# Find glog and libraries specifically.
 find_path(GLOG_INCLUDE_DIR glog/logging.h)
-
 find_library(GLOG_LIBRARY glog)
 
 message("glog include_dir <${GLOG_INCLUDE_DIR}> lib <${GLOG_LIBRARY}>")
 
 include_directories(SYSTEM ${GLOG_INCLUDE_DIR})
 include_directories(${CMAKE_SOURCE_DIR})
-
 
 # library source
 add_library(
@@ -97,7 +92,10 @@ target_include_directories(
         PUBLIC "${PROJECT_SOURCE_DIR}/src" # allow include paths such as "yarpl/flowable/FlowableRange.h"
         )
 
-target_link_libraries(yarpl folly)
+target_link_libraries(
+  yarpl
+  folly
+  ${GLOG_LIBRARY})
 
 # Executable for Experimenting
 add_executable(
