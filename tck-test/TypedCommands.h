@@ -23,7 +23,7 @@ class SubscribeCommand : public TypedTestCommand {
   using TypedTestCommand::TypedTestCommand;
 
   const std::string& type() const {
-    return command_.params().at(1);
+    return command_.params().at(2);
   }
 
   bool isRequestResponseType() const {
@@ -35,15 +35,17 @@ class SubscribeCommand : public TypedTestCommand {
   bool isFireAndForgetType() const {
     return type() == "fnf";
   }
-
-  const std::string& id() const {
-    return command_.params().at(2);
+  const std::string& clientId() const {
+    return command_.params().at(0);
   }
-  const std::string& payloadData() const {
+  const std::string& id() const {
     return command_.params().at(3);
   }
-  const std::string& payloadMetadata() const {
+  const std::string& payloadData() const {
     return command_.params().at(4);
+  }
+  const std::string& payloadMetadata() const {
+    return command_.params().at(5);
   }
 };
 
@@ -52,10 +54,13 @@ class RequestCommand : public TypedTestCommand {
   using TypedTestCommand::TypedTestCommand;
 
   int n() const {
-    return folly::to<int>(command_.params().at(1));
+    return folly::to<int>(command_.params().at(2));
+  }
+  const std::string& clientId() const {
+    return command_.params().at(0);
   }
   const std::string& id() const {
-    return command_.params().at(2);
+    return command_.params().at(3);
   }
 };
 
@@ -63,8 +68,11 @@ class CancelCommand : public TypedTestCommand {
  public:
   using TypedTestCommand::TypedTestCommand;
 
+  const std::string& clientId() const {
+    return command_.params().at(0);
+  }
   const std::string& id() const {
-    return command_.params().at(1);
+    return command_.params().at(2);
   }
 };
 
@@ -73,7 +81,7 @@ class AwaitCommand : public TypedTestCommand {
   using TypedTestCommand::TypedTestCommand;
 
   const std::string& type() const {
-    return command_.params().at(1);
+    return command_.params().at(2);
   }
   bool isTerminalType() const {
     return type() == "terminal";
@@ -84,15 +92,17 @@ class AwaitCommand : public TypedTestCommand {
   bool isNoEventsType() const {
     return type() == "no_events";
   }
-
+  const std::string& clientId() const {
+    return command_.params().at(0);
+  }
   const std::string& id() const {
-    return command_.params().at(2);
+    return command_.params().at(3);
   }
   int numElements() const {
-    return folly::to<int>(command_.params().at(3));
+    return folly::to<int>(command_.params().at(4));
   }
   int waitTime() const {
-    return folly::to<int>(command_.params().at(3));
+    return folly::to<int>(command_.params().at(4));
   }
 };
 
@@ -101,7 +111,7 @@ class AssertCommand : public TypedTestCommand {
   using TypedTestCommand::TypedTestCommand;
 
   const std::string& assertion() const {
-    return command_.params().at(1);
+    return command_.params().at(2);
   }
   bool isNoErrorAssert() const {
     return assertion() == "no_error";
@@ -128,12 +138,15 @@ class AssertCommand : public TypedTestCommand {
     return assertion() == "canceled";
   }
 
+  const std::string& clientId() const {
+    return command_.params().at(0);
+  }
   const std::string& id() const {
-    return command_.params().at(2);
+    return command_.params().at(3);
   }
 
   std::vector<std::pair<std::string, std::string>> values() const {
-    const auto& valuesStr = command_.params().at(3);
+    const auto& valuesStr = command_.params().at(4);
     std::vector<std::string> items;
     folly::split("&&", valuesStr, items);
 
@@ -152,9 +165,9 @@ class AssertCommand : public TypedTestCommand {
   }
 
   size_t valueCount() const {
-    return folly::to<size_t>(command_.params().at(3));
+    return folly::to<size_t>(command_.params().at(4));
   }
 };
 
-} // tck
-} // reactivesocket
+} // namespace tck
+} // namespace rsocket
