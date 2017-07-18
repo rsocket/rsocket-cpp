@@ -43,11 +43,11 @@ makeSingleClientServer(
 
   auto client = std::make_unique<TcpConnectionFactory>(
       SocketAddress("localhost", port, true));
-  client->connect(
+  client->connect().then(
       [&clientPromise, &clientConnection, &clientEvb](
-          std::unique_ptr<DuplexConnection> connection, EventBase& eventBase) {
-        clientConnection = std::move(connection);
-        *clientEvb = &eventBase;
+          ConnectionResult connResult) {
+        clientConnection = std::move(connResult.connection_);
+        *clientEvb = &connResult.evb_;
         clientPromise.setValue();
       });
 
