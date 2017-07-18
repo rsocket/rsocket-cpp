@@ -99,54 +99,36 @@ target_include_directories(
 
 target_link_libraries(yarpl folly)
 
-# Executable for Experimenting
+# Executable for experimenting.
 add_executable(
-        yarpl-playground
-        examples/yarpl-playground.cpp
-#        examples/ObservableExamples.cpp
-        examples/FlowableExamples.cpp
-        examples/FlowableExamples.h
-)
+  yarpl-playground
+  examples/yarpl-playground.cpp
+  examples/FlowableExamples.cpp
+  examples/FlowableExamples.h)
+
+target_link_libraries(yarpl-playground yarpl)
+
+# Unit tests.
+add_executable(
+  yarpl-tests
+  test/FlowableTest.cpp
+  test/Observable_test.cpp
+  test/RefcountedTest.cpp
+  test/ReferenceTest.cpp
+  test/Scheduler_test.cpp
+  test/Single_test.cpp
+  test/Tuple.cpp
+  test/Tuple.h
+  test/credits-test.cpp
+  test/yarpl-tests.cpp)
 
 target_link_libraries(
-        yarpl-playground
-        yarpl)
+  yarpl-tests
+  yarpl
+  ${GLOG_LIBRARY}
 
-target_include_directories(
-        yarpl-playground
-        PUBLIC "${PROJECT_SOURCE_DIR}/include" # allow include paths such as "yarpl/observable.h" can be used
-)
-
-# unit tests
-add_executable(
-        yarpl-tests
-        test/yarpl-tests.cpp
-        test/Observable_test.cpp
-        test/Single_test.cpp
-#        test/FlowableCreateSubscribe_test.cpp
-#        test/Observable_Subscription_test.cpp
-#        test/Flowable_range_test.cpp
-#        test/Flowable_lifecycle.cpp
-#        test/FlowableChaining_test.cpp
-        test/FlowableTest.cpp
-        test/RefcountedTest.cpp
-        test/ReferenceTest.cpp
-        test/Scheduler_test.cpp
-        test/Tuple.cpp
-        test/Tuple.h
-        test/credits-test.cpp
-)
-
-target_link_libraries(
-        yarpl-tests
-        yarpl
-        ${GMOCK_LIBS} # inherited from rsocket-cpp CMake
-        ${GLOG_LIBRARY})
-
-target_include_directories(
-        yarpl-tests
-        PUBLIC "${PROJECT_SOURCE_DIR}/include" # allow include paths such as "yarpl/observable.h" can be used
-)
+  # Inherited from rsocket-cpp CMake.
+  ${GMOCK_LIBS})
 
 add_dependencies(yarpl-tests gmock)
 
