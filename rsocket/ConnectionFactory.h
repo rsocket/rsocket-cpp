@@ -14,8 +14,8 @@ class EventBase;
 namespace rsocket {
 
 struct ConnectionResult {
-  std::unique_ptr<rsocket::DuplexConnection> connection_;
-  folly::EventBase &evb_;
+  std::unique_ptr<rsocket::DuplexConnection> connection;
+  folly::EventBase &evb;
 };
 
 /**

@@ -26,7 +26,7 @@ makeSingleClientServer(
     EventBase** serverEvb,
     std::unique_ptr<DuplexConnection>& clientConnection,
     EventBase** clientEvb) {
-  Promise<Unit> serverPromise, clientPromise;
+  Promise<Unit> serverPromise;
 
   TcpConnectionAcceptor::Options options(
       0 /*port*/, 1 /*threads*/, 0 /*backlog*/);
@@ -44,15 +44,13 @@ makeSingleClientServer(
   auto client = std::make_unique<TcpConnectionFactory>(
       SocketAddress("localhost", port, true));
   client->connect().then(
-      [&clientPromise, &clientConnection, &clientEvb](
+      [&clientConnection, &clientEvb](
           ConnectionResult connResult) {
-        clientConnection = std::move(connResult.connection_);
-        *clientEvb = &connResult.evb_;
-        clientPromise.setValue();
-      });
+        clientConnection = std::move(connResult.connection);
+        *clientEvb = &connResult.evb;
+      }).wait();
 
   serverPromise.getFuture().wait();
-  clientPromise.getFuture().wait();
   return std::make_pair(std::move(server), std::move(client));
 }
 
