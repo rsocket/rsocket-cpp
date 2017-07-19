@@ -40,26 +40,20 @@ int main(int argc, char* argv[]) {
   folly::SocketAddress address;
   address.setFromHostPort(FLAGS_host, FLAGS_port);
 
-  std::shared_ptr<RSocketClient> client;
+  auto client = RSocket::createConnectedClient(
+                    std::make_unique<TcpConnectionFactory>(std::move(address)),
+                    SetupParameters("application/json", "application/json"),
+                    std::make_shared<RSocketResponder>(),
+                    nullptr,
+                    RSocketStats::noop(),
+                    std::make_shared<RSocketNetworkStatsLog>())
+                    .get();
 
-  RSocket::createConnectedClient(
-      std::make_unique<TcpConnectionFactory>(std::move(address)),
-      SetupParameters("application/json", "application/json"),
-      std::make_shared<RSocketResponder>(),
-      nullptr,
-      RSocketStats::noop(),
-      std::make_shared<RSocketNetworkStatsLog>())
-      .then([&client](std::shared_ptr<RSocketClient> cl) mutable {
-        client = std::move(cl);
-        client->getRequester()
-            ->requestStream(Payload("Bob"))
-            ->take(5)
-            ->subscribe([](Payload p) {
-              std::cout << "Received: " << p.moveDataToString() << std::endl;
-            });
-      })
-      .onError([](folly::exception_wrapper ex) {
-        LOG(INFO) << "Exception received " << ex;
+  client->getRequester()
+      ->requestStream(Payload("Bob"))
+      ->take(5)
+      ->subscribe([](Payload p) {
+        std::cout << "Received: " << p.moveDataToString() << std::endl;
       });
 
   // Wait for a newline on the console to terminate the server.

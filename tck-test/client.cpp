@@ -40,18 +40,9 @@ int main(int argc, char* argv[]) {
 
   LOG(INFO) << "Creating client to connect to " << address.describe();
 
-  std::shared_ptr<RSocketClient> client;
-
-  RSocket::createConnectedClient(
-      std::make_unique<TcpConnectionFactory>(std::move(address)))
-      .then([&client](std::shared_ptr<RSocketClient> cl) mutable {
-        LOG(INFO) << "Connected";
-        client = std::move(cl);
-      })
-      .onError([](folly::exception_wrapper ex) {
-        LOG(INFO) << "Exception received " << ex;
-      })
-      .get();
+  auto client = RSocket::createConnectedClient(
+                    std::make_unique<TcpConnectionFactory>(std::move(address)))
+                    .get();
 
   std::shared_ptr<RSocketRequester> rs = client->getRequester();
 

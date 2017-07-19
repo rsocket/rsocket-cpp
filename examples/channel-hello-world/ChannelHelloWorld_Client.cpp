@@ -27,24 +27,18 @@ int main(int argc, char* argv[]) {
   folly::SocketAddress address;
   address.setFromHostPort(FLAGS_host, FLAGS_port);
 
-  std::shared_ptr<RSocketClient> client;
+  auto client = RSocket::createConnectedClient(
+                    std::make_unique<TcpConnectionFactory>(std::move(address)))
+                    .get();
 
-  RSocket::createConnectedClient(
-      std::make_unique<TcpConnectionFactory>(std::move(address)))
-      .then([&client](std::shared_ptr<RSocketClient> cl) mutable {
-        client = std::move(cl);
-        client->getRequester()
-            ->requestChannel(Flowables::justN({"initialPayload", "Bob", "Jane"})
-                                 ->map([](std::string v) {
-                                   std::cout << "Sending: " << v << std::endl;
-                                   return Payload(v);
-                                 }))
-            ->subscribe([](Payload p) {
-              std::cout << "Received: " << p.moveDataToString() << std::endl;
-            });
-      })
-      .onError([](folly::exception_wrapper ex) {
-        LOG(INFO) << "Exception received " << ex;
+  client->getRequester()
+      ->requestChannel(Flowables::justN({"initialPayload", "Bob", "Jane"})
+                           ->map([](std::string v) {
+                             std::cout << "Sending: " << v << std::endl;
+                             return Payload(v);
+                           }))
+      ->subscribe([](Payload p) {
+        std::cout << "Received: " << p.moveDataToString() << std::endl;
       });
 
   // Wait for a newline on the console to terminate the server.
