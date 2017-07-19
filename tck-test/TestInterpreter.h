@@ -31,13 +31,13 @@ class AssertCommand;
 class TestInterpreter {
   class TestClient {
    public:
-    TestClient(std::shared_ptr<RSocketClient> client)
-        : client_(std::move(client)) {
-      auto rs = client_->connect().get();
-      requester_ = std::move(rs);
+    TestClient(std::shared_ptr<RSocketClient> c)
+        : client(std::move(c)) {
+      auto rs = client->connect().get();
+      requester = std::move(rs);
     }
-    std::shared_ptr<RSocketClient> client_;
-    std::shared_ptr<RSocketRequester> requester_;
+    std::shared_ptr<RSocketClient> client;
+    std::shared_ptr<RSocketRequester> requester;
   };
 
  public:

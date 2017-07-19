@@ -68,12 +68,12 @@ bool TestInterpreter::run() {
 void TestInterpreter::handleSubscribe(const SubscribeCommand& command) {
   // If client does not exist, create a new client.
   if (testClient_.find(command.clientId()) == testClient_.end()) {
-    auto rsf = RSocket::createClient(
+    auto requester = RSocket::createClient(
         std::make_unique<TcpConnectionFactory>(std::move(address_)));
-    testClient_[command.clientId()] = std::make_shared<TestClient>(move(rsf));
+    testClient_[command.clientId()] =
+        std::make_shared<TestClient>(move(requester));
   }
 
-  interactionIdToType_[command.clientId() + command.id()] = command.type();
   CHECK(
       testSubscribers_.find(command.clientId() + command.id()) ==
       testSubscribers_.end());
@@ -82,7 +82,7 @@ void TestInterpreter::handleSubscribe(const SubscribeCommand& command) {
     auto testSubscriber = make_ref<SingleSubscriber>();
     testSubscribers_[command.clientId() + command.id()] = testSubscriber;
     testClient_[command.clientId()]
-        ->requester_
+        ->requester
         ->requestResponse(
             Payload(command.payloadData(), command.payloadMetadata()))
         ->subscribe(std::move(testSubscriber));
@@ -90,7 +90,7 @@ void TestInterpreter::handleSubscribe(const SubscribeCommand& command) {
     auto testSubscriber = make_ref<FlowableSubscriber>();
     testSubscribers_[command.clientId() + command.id()] = testSubscriber;
     testClient_[command.clientId()]
-        ->requester_
+        ->requester
         ->requestStream(
             Payload(command.payloadData(), command.payloadMetadata()))
         ->subscribe(std::move(testSubscriber));

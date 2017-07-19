@@ -14,6 +14,10 @@ class TypedTestCommand {
  public:
   explicit TypedTestCommand(const TestCommand& command) : command_(command) {}
 
+  const std::string& clientId() const {
+    return command_.params().at(0);
+  }
+
  protected:
   const TestCommand& command_;
 };
@@ -35,9 +39,6 @@ class SubscribeCommand : public TypedTestCommand {
   bool isFireAndForgetType() const {
     return type() == "fnf";
   }
-  const std::string& clientId() const {
-    return command_.params().at(0);
-  }
   const std::string& id() const {
     return command_.params().at(3);
   }
@@ -56,9 +57,6 @@ class RequestCommand : public TypedTestCommand {
   int n() const {
     return folly::to<int>(command_.params().at(2));
   }
-  const std::string& clientId() const {
-    return command_.params().at(0);
-  }
   const std::string& id() const {
     return command_.params().at(3);
   }
@@ -68,9 +66,6 @@ class CancelCommand : public TypedTestCommand {
  public:
   using TypedTestCommand::TypedTestCommand;
 
-  const std::string& clientId() const {
-    return command_.params().at(0);
-  }
   const std::string& id() const {
     return command_.params().at(2);
   }
@@ -91,9 +86,6 @@ class AwaitCommand : public TypedTestCommand {
   }
   bool isNoEventsType() const {
     return type() == "no_events";
-  }
-  const std::string& clientId() const {
-    return command_.params().at(0);
   }
   const std::string& id() const {
     return command_.params().at(3);
@@ -136,10 +128,6 @@ class AssertCommand : public TypedTestCommand {
   }
   bool isCanceledAssert() const {
     return assertion() == "canceled";
-  }
-
-  const std::string& clientId() const {
-    return command_.params().at(0);
   }
   const std::string& id() const {
     return command_.params().at(3);
