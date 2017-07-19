@@ -29,7 +29,6 @@ endif()
 # Using NDEBUG in Release builds.
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG")
 
-# Find glog and libraries specifically.
 find_path(GLOG_INCLUDE_DIR glog/logging.h)
 find_library(GLOG_LIBRARY glog)
 
