@@ -37,7 +37,9 @@ class RSocketClient {
 
   // Resumes the connection.  If a stateMachine already exists,
   // it provides a warm-resumption.  If a stateMachine does not exist,
-  // it does a cold-resumption.
+  // it does a cold-resumption.  The returned future resolves on successful
+  // resumption.  Else either a ConnectionException or a ResumptionException
+  // is raised.
   folly::Future<folly::Unit> resume();
 
  private:

@@ -195,6 +195,10 @@ BENCHMARK_DEFINE_F(BM_RsFixture, BM_Stream_Throughput)
         client->getRequester()
             ->requestStream(Payload("BM_Stream"))
             ->subscribe(std::move(s));
+      })
+      .onError([](folly::exception_wrapper ex) {
+        LOG(INFO) << "Exception received " << ex;
+        return;
       });
 
   while (state.KeepRunning()) {

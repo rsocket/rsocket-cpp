@@ -63,7 +63,7 @@ folly::Future<folly::Unit> RSocketClient::connect() {
     }
     stateMachine_->connectClientSendSetup(
         std::move(framedConnection), std::move(setupParameters_));
-    promise.setValue(folly::Unit());
+    promise.setValue();
   });
 
   return future;
@@ -92,13 +92,13 @@ folly::Future<folly::Unit> RSocketClient::resume() {
           : promise_(std::move(promise)) {}
 
       void onResumeOk() noexcept override {
-        promise_.setValue(folly::Unit());
+        promise_.setValue();
       }
 
       void onResumeError(folly::exception_wrapper ex) noexcept override {
         promise_.setException(ex);
       }
-
+     private:
       folly::Promise<folly::Unit> promise_;
     };
 
