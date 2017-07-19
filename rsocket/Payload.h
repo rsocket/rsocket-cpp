@@ -14,10 +14,14 @@ namespace rsocket {
 /// MUST manage the lifetime of the underlying buffer.
 struct Payload {
   Payload() = default;
-  Payload(
+
+  explicit Payload(
       std::unique_ptr<folly::IOBuf> data,
       std::unique_ptr<folly::IOBuf> metadata = std::unique_ptr<folly::IOBuf>());
-  Payload(const std::string& data, const std::string& metadata = std::string());
+
+  explicit Payload(
+      const std::string& data,
+      const std::string& metadata = std::string());
 
   explicit operator bool() const {
     return data != nullptr || metadata != nullptr;
