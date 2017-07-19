@@ -40,11 +40,11 @@ int main(int argc, char* argv[]) {
 
   LOG(INFO) << "Creating client to connect to " << address.describe();
 
-  std::unique_ptr<RSocketClient> client;
+  std::shared_ptr<RSocketClient> client;
 
   RSocket::createConnectedClient(
       std::make_unique<TcpConnectionFactory>(std::move(address)))
-      .then([&client](std::unique_ptr<RSocketClient> cl) mutable {
+      .then([&client](std::shared_ptr<RSocketClient> cl) mutable {
         LOG(INFO) << "Connected";
         client = std::move(cl);
       })

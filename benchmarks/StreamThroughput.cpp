@@ -184,12 +184,12 @@ BENCHMARK_DEFINE_F(BM_RsFixture, BM_Stream_Throughput)
 
   auto s = make_ref<BM_Subscriber>(state.range(0));
 
-  std::unique_ptr<RSocketClient> client;
+  std::shared_ptr<RSocketClient> client;
 
   RSocket::createConnectedClient(
       std::make_unique<TcpConnectionFactory>(std::move(address)))
       .then([&client, s = std::move(s) ](
-          std::unique_ptr<RSocketClient> cl) mutable {
+          std::shared_ptr<RSocketClient> cl) mutable {
         LOG(INFO) << "Connected";
         client = std::move(cl);
         client->getRequester()

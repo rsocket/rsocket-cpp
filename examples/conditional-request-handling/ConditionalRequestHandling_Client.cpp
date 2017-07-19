@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
   folly::SocketAddress address;
   address.setFromHostPort(FLAGS_host, FLAGS_port);
 
-  std::unique_ptr<RSocketClient> client;
+  std::shared_ptr<RSocketClient> client;
 
   RSocket::createConnectedClient(
       std::make_unique<TcpConnectionFactory>(std::move(address)),
@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
       nullptr,
       RSocketStats::noop(),
       std::make_shared<RSocketNetworkStatsLog>())
-      .then([&client](std::unique_ptr<RSocketClient> cl) mutable {
+      .then([&client](std::shared_ptr<RSocketClient> cl) mutable {
         client = std::move(cl);
         client->getRequester()
             ->requestStream(Payload("Bob"))

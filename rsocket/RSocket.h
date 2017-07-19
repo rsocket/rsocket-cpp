@@ -13,7 +13,7 @@ namespace rsocket {
 class RSocket {
  public:
   // Creates a RSocketClient which is connected to the remoteside.
-  static folly::Future<std::unique_ptr<RSocketClient>> createConnectedClient(
+  static folly::Future<std::shared_ptr<RSocketClient>> createConnectedClient(
       std::unique_ptr<ConnectionFactory>,
       SetupParameters setupParameters = SetupParameters(),
       std::shared_ptr<RSocketResponder> responder =
@@ -31,7 +31,7 @@ class RSocket {
           [](std::vector<StreamId>, std::vector<StreamId>) { return false; });
 
   // Creates a RSocketClient which cold-resumes from the provided state
-  static folly::Future<std::unique_ptr<RSocketClient>> createResumedClient(
+  static folly::Future<std::shared_ptr<RSocketClient>> createResumedClient(
       std::unique_ptr<ConnectionFactory>,
       SetupParameters setupParameters,
       std::shared_ptr<ResumeManager> resumeManager,

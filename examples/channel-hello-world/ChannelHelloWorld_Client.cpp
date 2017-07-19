@@ -27,11 +27,11 @@ int main(int argc, char* argv[]) {
   folly::SocketAddress address;
   address.setFromHostPort(FLAGS_host, FLAGS_port);
 
-  std::unique_ptr<RSocketClient> client;
+  std::shared_ptr<RSocketClient> client;
 
   RSocket::createConnectedClient(
       std::make_unique<TcpConnectionFactory>(std::move(address)))
-      .then([&client](std::unique_ptr<RSocketClient> cl) mutable {
+      .then([&client](std::shared_ptr<RSocketClient> cl) mutable {
         client = std::move(cl);
         client->getRequester()
             ->requestChannel(Flowables::justN({"initialPayload", "Bob", "Jane"})

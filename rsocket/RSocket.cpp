@@ -6,7 +6,7 @@
 
 namespace rsocket {
 
-folly::Future<std::unique_ptr<RSocketClient>> RSocket::createConnectedClient(
+folly::Future<std::shared_ptr<RSocketClient>> RSocket::createConnectedClient(
     std::unique_ptr<ConnectionFactory> connectionFactory,
     SetupParameters setupParameters,
     std::shared_ptr<RSocketResponder> responder,
@@ -16,7 +16,7 @@ folly::Future<std::unique_ptr<RSocketClient>> RSocket::createConnectedClient(
     std::shared_ptr<ResumeManager> resumeManager,
     std::shared_ptr<ColdResumeHandler> coldResumeHandler,
     OnRSocketResume) {
-  auto c = std::unique_ptr<RSocketClient>(new RSocketClient(
+  auto c = std::shared_ptr<RSocketClient>(new RSocketClient(
       std::move(connectionFactory),
       std::move(setupParameters),
       std::move(responder),
@@ -26,12 +26,10 @@ folly::Future<std::unique_ptr<RSocketClient>> RSocket::createConnectedClient(
       std::move(resumeManager),
       std::move(coldResumeHandler)));
 
-  return c->connect().then([c = std::move(c)]() mutable {
-    return std::move(c);
-  });
+  return c->connect().then([c]() mutable { return c; });
 }
 
-folly::Future<std::unique_ptr<RSocketClient>> RSocket::createResumedClient(
+folly::Future<std::shared_ptr<RSocketClient>> RSocket::createResumedClient(
     std::unique_ptr<ConnectionFactory> connectionFactory,
     SetupParameters setupParameters,
     std::shared_ptr<ResumeManager> resumeManager,
@@ -41,7 +39,7 @@ folly::Future<std::unique_ptr<RSocketClient>> RSocket::createResumedClient(
     std::unique_ptr<KeepaliveTimer> keepaliveTimer,
     std::shared_ptr<RSocketStats> stats,
     std::shared_ptr<RSocketNetworkStats> networkStats) {
-  auto c = std::unique_ptr<RSocketClient>(new RSocketClient(
+  auto c = std::shared_ptr<RSocketClient>(new RSocketClient(
       std::move(connectionFactory),
       std::move(setupParameters),
       std::move(responder),
@@ -51,9 +49,7 @@ folly::Future<std::unique_ptr<RSocketClient>> RSocket::createResumedClient(
       std::move(resumeManager),
       std::move(coldResumeHandler)));
 
-  return c->resume().then([c = std::move(c)]() mutable {
-    return std::move(c);
-  });
+  return c->resume().then([c]() mutable { return c; });
 }
 
 std::unique_ptr<RSocketServer> RSocket::createServer(
