@@ -186,20 +186,17 @@ BENCHMARK_DEFINE_F(BM_RsFixture, BM_Stream_Throughput)
 
   std::shared_ptr<RSocketClient> client;
 
-  RSocket::createConnectedClient(
-      std::make_unique<TcpConnectionFactory>(std::move(address)))
-      .then([&client, s = std::move(s) ](
-          std::shared_ptr<RSocketClient> cl) mutable {
-        LOG(INFO) << "Connected";
-        client = std::move(cl);
-        client->getRequester()
-            ->requestStream(Payload("BM_Stream"))
-            ->subscribe(std::move(s));
-      })
-      .onError([](folly::exception_wrapper ex) {
-        LOG(INFO) << "Exception received " << ex;
-        return;
-      });
+  try {
+    client = RSocket::createConnectedClient(
+                 std::make_unique<TcpConnectionFactory>(std::move(address)))
+                 .get();
+    client->getRequester()
+        ->requestStream(Payload("BM_Stream"))
+        ->subscribe(std::move(s));
+  } catch (const std::exception& ex) {
+    LOG(INFO) << "Exception received " << ex;
+    return;
+  }
 
   while (state.KeepRunning()) {
     std::this_thread::yield();
