@@ -95,9 +95,6 @@ option(BUILD_BENCHMARKS "Build benchmarks" ON)
 
 enable_testing()
 
-# Add a OSS macro.  This is mainly to get gflags working with travis.
-add_definitions(-DOSS)
-
 include(ExternalProject)
 include(CTest)
 
@@ -366,9 +363,9 @@ add_executable(
   test/test_utils/MockRequestHandler.h
   test/test_utils/MockStats.h
   test/test_utils/Mocks.h
-  test/transport/TcpDuplexConnectionTest.cpp
+  test/transport/DuplexConnectionTest.cpp
   test/transport/DuplexConnectionTest.h
-  test/transport/DuplexConnectionTest.cpp)
+  test/transport/TcpDuplexConnectionTest.cpp)
 
 target_link_libraries(
   tests
