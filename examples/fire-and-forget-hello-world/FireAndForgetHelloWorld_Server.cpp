@@ -37,13 +37,12 @@ int main(int argc, char* argv[]) {
   auto rs = RSocket::createServer(
       std::make_unique<TcpConnectionAcceptor>(std::move(opts)));
 
-  // global request responder
-  auto responder = std::make_shared<HelloFireAndForgetRequestResponder>();
-
   auto rawRs = rs.get();
   auto serverThread = std::thread([=] {
     // start accepting connections
-    rawRs->startAndPark([responder](auto& setup) { setup.createRSocket(responder); });
+    rawRs->startAndPark([](const rsocket::SetupParameters&) {
+      return std::make_shared<HelloFireAndForgetRequestResponder>();
+    });
   });
 
   // Wait for a newline on the console to terminate the server.

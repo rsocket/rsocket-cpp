@@ -2,6 +2,7 @@
 
 #include "rsocket/RSocketServer.h"
 #include <folly/io/async/EventBaseManager.h>
+#include <rsocket/internal/ScheduledRSocketResponder.h>
 #include "rsocket/RSocketErrors.h"
 #include "rsocket/RSocketStats.h"
 #include "rsocket/framing/FrameTransport.h"
@@ -51,7 +52,8 @@ void RSocketServer::shutdownAndWait() {
   // All requests are fully finished, worker threads can be safely killed off.
 }
 
-void RSocketServer::start(OnRSocketSetup onRSocketSetup) {
+void RSocketServer::start(
+    std::shared_ptr<RSocketServiceHandler> serviceHandler) {
   CHECK(duplexConnectionAcceptor_); // RSocketServer has to be initialized with
                                     // the acceptor
 
@@ -62,21 +64,25 @@ void RSocketServer::start(OnRSocketSetup onRSocketSetup) {
 
   LOG(INFO) << "Starting RSocketServer";
 
-  duplexConnectionAcceptor_->start(
-      [ this, onRSocketSetup = std::move(onRSocketSetup) ](
-          std::unique_ptr<DuplexConnection> connection,
-          folly::EventBase& eventBase) {
-        acceptConnection(
-            std::move(connection),
-            eventBase,
-            onRSocketSetup);
-      });
+  duplexConnectionAcceptor_->start([this, serviceHandler](
+      std::unique_ptr<DuplexConnection> connection,
+      folly::EventBase& eventBase) {
+    acceptConnection(std::move(connection), eventBase, serviceHandler);
+  });
+}
+
+void RSocketServer::start(OnNewSetupFn onNewSetupFn) {
+  start(RSocketServiceHandler::create(std::move(onNewSetupFn)));
+}
+
+void RSocketServer::startAndPark(OnNewSetupFn onNewSetupFn) {
+  startAndPark(RSocketServiceHandler::create(std::move(onNewSetupFn)));
 }
 
 void RSocketServer::acceptConnection(
     std::unique_ptr<DuplexConnection> connection,
     folly::EventBase&,
-    OnRSocketSetup onRSocketSetup) {
+    std::shared_ptr<RSocketServiceHandler> serviceHandler) {
   if (isShutdown_) {
     // connection is getting out of scope and terminated
     return;
@@ -99,45 +105,66 @@ void RSocketServer::acceptConnection(
       std::bind(
           &RSocketServer::onRSocketSetup,
           this,
-          std::move(onRSocketSetup),
+          serviceHandler,
           std::placeholders::_1,
           std::placeholders::_2),
       std::bind(
           &RSocketServer::onRSocketResume,
           this,
-          OnRSocketResume(),
+          serviceHandler,
           std::placeholders::_1,
           std::placeholders::_2));
 }
 
 void RSocketServer::onRSocketSetup(
-    OnRSocketSetup onRSocketSetup,
+    std::shared_ptr<RSocketServiceHandler> serviceHandler,
     yarpl::Reference<FrameTransport> frameTransport,
     SetupParameters setupParams) {
-  // we don't need to check for isShutdown_ here since all callbacks are
-  // processed by this time
   VLOG(1) << "Received new setup payload";
-
   auto* eventBase = folly::EventBaseManager::get()->getExistingEventBase();
   CHECK(eventBase);
-
-  RSocketSetup setup(
-      std::move(frameTransport),
-      std::move(setupParams),
+  auto result = serviceHandler->onNewSetup(setupParams);
+  if (result.hasError()) {
+    VLOG(3) << "Terminating SETUP attempt from client.  No Responder";
+    throw result.error();
+  }
+  auto connectionParams = result.value();
+  CHECK(connectionParams.responder);
+  auto responder = std::make_shared<ScheduledRSocketResponder>(
+      std::move(connectionParams.responder), *eventBase);
+  auto rs = std::make_shared<RSocketStateMachine>(
       *eventBase,
-      *connectionManager_);
-  onRSocketSetup(setup);
+      std::move(responder),
+      nullptr,
+      ReactiveSocketMode::SERVER,
+      std::move(connectionParams.stats),
+      std::move(connectionParams.networkStats));
+  connectionManager_->manageConnection(rs, *eventBase);
+  auto requester = std::make_shared<RSocketRequester>(rs, *eventBase);
+  auto serverState = std::shared_ptr<RSocketServerState>(
+      new RSocketServerState(rs, requester));
+  serviceHandler->onNewRSocketState(std::move(serverState), setupParams.token);
+  rs->connectServer(std::move(frameTransport), std::move(setupParams));
 }
 
-bool RSocketServer::onRSocketResume(
-    OnRSocketResume,
-    yarpl::Reference<FrameTransport>,
-    ResumeParameters) {
-  return false;
+void RSocketServer::onRSocketResume(
+    std::shared_ptr<RSocketServiceHandler> serviceHandler,
+    yarpl::Reference<FrameTransport> frameTransport,
+    ResumeParameters resumeParams) {
+  auto result = serviceHandler->onResume(resumeParams.token);
+  if (result.hasError()) {
+    VLOG(3) << "Terminating RESUME attempt from client.  No ServerState found";
+    throw result.error();
+  }
+  auto serverState = std::move(result.value());
+  CHECK(serverState);
+  serverState->rSocketStateMachine_->resumeServer(
+      std::move(frameTransport), resumeParams);
 }
 
-void RSocketServer::startAndPark(OnRSocketSetup onRSocketSetup) {
-  start(std::move(onRSocketSetup));
+void RSocketServer::startAndPark(
+    std::shared_ptr<RSocketServiceHandler> serviceHandler) {
+  start(std::move(serviceHandler));
   waiting_.wait();
 }
 

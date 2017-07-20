@@ -35,7 +35,7 @@ class SetupResumeAcceptor final {
   using OnSetup =
       folly::Function<void(yarpl::Reference<FrameTransport>, SetupParameters)>;
   using OnResume =
-      folly::Function<bool(yarpl::Reference<FrameTransport>, ResumeParameters)>;
+      folly::Function<void(yarpl::Reference<FrameTransport>, ResumeParameters)>;
 
   SetupResumeAcceptor(ProtocolVersion, folly::EventBase*);
   ~SetupResumeAcceptor();

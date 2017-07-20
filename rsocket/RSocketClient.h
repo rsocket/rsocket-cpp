@@ -42,6 +42,9 @@ class RSocketClient {
   // is raised.
   folly::Future<folly::Unit> resume();
 
+  // Disconnect the underlying transport
+  void disconnect(folly::exception_wrapper);
+
  private:
   // Private constructor.  RSocket class should be used to create instances
   // of RSocketClient.
@@ -84,5 +87,8 @@ class RSocketClient {
   // Remember the evb on which the client was created.  Ensure warme-resume()
   // operations are done on the same evb.
   folly::EventBase* evb_;
+
+  ProtocolVersion protocolVersion_;
+  ResumeIdentificationToken token_;
 };
 }

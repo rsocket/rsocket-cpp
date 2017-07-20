@@ -159,10 +159,11 @@ class BM_RsFixture : public benchmark::Fixture {
       : host_(FLAGS_host),
         port_(static_cast<uint16_t>(FLAGS_port)),
         serverRs_(RSocket::createServer(std::make_unique<TcpConnectionAcceptor>(
-            TcpConnectionAcceptor::Options(port_)))),
-        handler_(std::make_shared<BM_RequestHandler>()) {
+            TcpConnectionAcceptor::Options(port_)))) {
     FLAGS_minloglevel = 100;
-    serverRs_->start([this](auto&) { return handler_; });
+    serverRs_->start([](const SetupParameters&) {
+      return std::make_shared<BM_RequestHandler>();
+    });
   }
 
   virtual ~BM_RsFixture() {}
@@ -174,7 +175,6 @@ class BM_RsFixture : public benchmark::Fixture {
   std::string host_;
   uint16_t port_;
   std::unique_ptr<RSocketServer> serverRs_;
-  std::shared_ptr<BM_RequestHandler> handler_;
 };
 
 BENCHMARK_DEFINE_F(BM_RsFixture, BM_Stream_Throughput)

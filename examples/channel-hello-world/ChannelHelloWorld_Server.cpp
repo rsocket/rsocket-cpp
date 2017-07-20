@@ -49,13 +49,12 @@ int main(int argc, char* argv[]) {
   auto rs = RSocket::createServer(
       std::make_unique<TcpConnectionAcceptor>(std::move(opts)));
 
-  // global request responder
-  auto responder = std::make_shared<HelloChannelRequestResponder>();
-
   auto* rawRs = rs.get();
-  auto serverThread = std::thread([rawRs, responder] {
+  auto serverThread = std::thread([rawRs] {
     // start accepting connections
-    rawRs->startAndPark([responder](RSocketSetup& setup) { setup.createRSocket(responder); });
+    rawRs->startAndPark([](const rsocket::SetupParameters&) {
+      return std::make_shared<HelloChannelRequestResponder>();
+    });
   });
 
   // Wait for a newline on the console to terminate the server.

@@ -154,6 +154,10 @@ Frame_ERROR Frame_ERROR::badSetupFrame(const std::string& message) {
   return Frame_ERROR(0, ErrorCode::INVALID_SETUP, Payload(message));
 }
 
+Frame_ERROR Frame_ERROR::rejectedSetup(const std::string& message) {
+  return Frame_ERROR(0, ErrorCode::REJECTED_SETUP, Payload(message));
+}
+
 Frame_ERROR Frame_ERROR::connectionError(const std::string& message) {
   return Frame_ERROR(0, ErrorCode::CONNECTION_ERROR, Payload(message));
 }

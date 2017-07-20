@@ -77,6 +77,10 @@ class RSocketStateMachine final
       yarpl::Reference<FrameTransport>,
       const SetupParameters& setupParams);
 
+  bool resumeServer(
+      yarpl::Reference<FrameTransport>,
+      const ResumeParameters& resumeParams);
+
   /// Disconnects DuplexConnection from the stateMachine.
   /// Existing streams will stay intact.
   void disconnect(folly::exception_wrapper ex);

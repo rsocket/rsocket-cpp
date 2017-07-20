@@ -106,6 +106,8 @@ void SetupResumeAcceptor::processFrame(
         break;
       }
 
+      VLOG(3) << "In: " << frame;
+
       SetupParameters params;
       frame.moveToSetupPayload(params);
 
@@ -124,7 +126,7 @@ void SetupResumeAcceptor::processFrame(
         onSetup(transport, std::move(params));
       } catch (const std::exception& exn) {
         folly::exception_wrapper ew{std::current_exception(), exn};
-        auto errFrame = Frame_ERROR::badSetupFrame(ew.what().toStdString());
+        auto errFrame = Frame_ERROR::rejectedSetup(ew.what().toStdString());
         transport->outputFrameOrEnqueue(
             serializer->serializeOut(std::move(errFrame)));
         close(std::move(transport), std::move(ew));
@@ -141,6 +143,8 @@ void SetupResumeAcceptor::processFrame(
         break;
       }
 
+      VLOG(3) << "In: " << frame;
+
       ResumeParameters params(
           std::move(frame.token_),
           frame.lastReceivedServerPosition_,
@@ -156,17 +160,17 @@ void SetupResumeAcceptor::processFrame(
         break;
       }
 
-      if (onResume(transport, std::move(params))) {
-        connections_.erase(transport);
-        return;
+      remove(transport);
+
+      try {
+        onResume(transport, std::move(params));
+      } catch (const std::exception& exn) {
+        folly::exception_wrapper ew{std::current_exception(), exn};
+        auto errFrame = Frame_ERROR::rejectedResume(ew.what().toStdString());
+        transport->outputFrameOrEnqueue(
+            serializer->serializeOut(std::move(errFrame)));
+        close(std::move(transport), std::move(ew));
       }
-
-      constexpr folly::StringPiece message{"Resumption failure"};
-
-      transport->outputFrameOrEnqueue(
-          serializer->serializeOut(Frame_ERROR::rejectedResume(message.str())));
-
-      close(std::move(transport), error(message));
       break;
     }
 

@@ -25,7 +25,7 @@ inline std::unique_ptr<RSocketServer> makeServer(
   auto rs = RSocket::createServer(
       std::make_unique<TcpConnectionAcceptor>(std::move(opts)));
 
-  rs->start([responder](auto& setup) { setup.createRSocket(responder); });
+  rs->start([r = std::move(responder)](const SetupParameters&) { return r; });
 
   return rs;
 }

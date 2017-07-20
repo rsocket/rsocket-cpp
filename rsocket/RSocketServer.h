@@ -7,17 +7,15 @@
 #include <folly/Baton.h>
 #include <folly/Synchronized.h>
 #include <folly/ThreadLocal.h>
+#include "RSocketServiceHandler.h"
 #include "rsocket/ConnectionAcceptor.h"
 #include "rsocket/RSocketParameters.h"
 #include "rsocket/RSocketResponder.h"
-#include "rsocket/RSocketSetup.h"
 #include "rsocket/internal/SetupResumeAcceptor.h"
 
 namespace rsocket {
 
 class RSocketConnectionManager;
-
-using OnRSocketSetup = std::function<void(RSocketSetup&)>;
 
 /**
  * API for starting an RSocket server. Returned from RSocket::createServer.
@@ -25,9 +23,6 @@ using OnRSocketSetup = std::function<void(RSocketSetup&)>;
  * This listens for connections using a transport from the provided
  * ConnectionAcceptor.
  *
- * TODO: Resumability
- *
- * TODO: Concurrency (number of threads)
  */
 class RSocketServer {
  public:
@@ -36,7 +31,6 @@ class RSocketServer {
 
   RSocketServer(const RSocketServer&) = delete;
   RSocketServer(RSocketServer&&) = delete;
-
   RSocketServer& operator=(const RSocketServer&) = delete;
   RSocketServer& operator=(RSocketServer&&) = delete;
 
@@ -48,7 +42,8 @@ class RSocketServer {
    *
    * This method assumes it will be called only once.
    */
-  void start(OnRSocketSetup);
+  void start(std::shared_ptr<RSocketServiceHandler> serviceHandler);
+  void start(OnNewSetupFn onNewSetupFn);
 
   /**
    * Start the ConnectionAcceptor and begin handling connections.
@@ -56,9 +51,14 @@ class RSocketServer {
    * This method will block the calling thread as long as the server is running.
    * It will throw an exception if a failure occurs on startup.
    *
+   * The provided RSocketServiceHandler will be used to handle all connections
+   * to this server. If you wish to use different RSocketServiceHandler for
+   * each connection, then refer to acceptConnection()
+   *
    * This method assumes it will be called only once.
    */
-  void startAndPark(OnRSocketSetup);
+  void startAndPark(std::shared_ptr<RSocketServiceHandler> serviceHandler);
+  void startAndPark(OnNewSetupFn onNewSetupFn);
 
   /**
    * Unblock the server if it has called startAndPark().  Can only be called
@@ -66,21 +66,14 @@ class RSocketServer {
    */
   void unpark();
 
-  // TODO version supporting RESUME
-  //  void start(
-  //      std::function<std::shared_ptr<RequestHandler>(
-  //          std::unique_ptr<ConnectionSetupRequest>)>,
-  //      // TODO what should a ResumeRequest return?
-  //      std::function<std::shared_ptr<RequestHandler>(
-  //          std::unique_ptr<ConnectionResumeRequest>)>);
-
-  // TODO version supporting RSocketStats and other params
-  // RSocketServer::start(OnRSocketSetup onRSocketSetup, ServerSetup setupParams)
-
+  /**
+   * Accept RSocket connection over the provided DuplexConnection.  The
+   * provided RSocketServiceHandler will be used to handle the connection.
+   */
   void acceptConnection(
       std::unique_ptr<DuplexConnection> connection,
-      folly::EventBase & eventBase,
-      OnRSocketSetup onRSocketSetup);
+      folly::EventBase& eventBase,
+      std::shared_ptr<RSocketServiceHandler> serviceHandler);
 
   void shutdownAndWait();
 
@@ -91,13 +84,12 @@ class RSocketServer {
   folly::Optional<uint16_t> listeningPort() const;
 
  private:
-
   void onRSocketSetup(
-      OnRSocketSetup onRSocketSetup,
+      std::shared_ptr<RSocketServiceHandler> serviceHandler,
       yarpl::Reference<rsocket::FrameTransport> frameTransport,
       rsocket::SetupParameters setupPayload);
-  bool onRSocketResume(
-      OnRSocketResume onRSocketResume,
+  void onRSocketResume(
+      std::shared_ptr<RSocketServiceHandler> serviceHandler,
       yarpl::Reference<rsocket::FrameTransport> frameTransport,
       rsocket::ResumeParameters setupPayload);
 

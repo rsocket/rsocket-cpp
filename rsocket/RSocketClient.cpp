@@ -40,7 +40,9 @@ RSocketClient::RSocketClient(
       stats_(stats),
       networkStats_(networkStats),
       resumeManager_(resumeManager),
-      coldResumeHandler_(coldResumeHandler) {}
+      coldResumeHandler_(coldResumeHandler),
+      protocolVersion_(setupParameters_.protocolVersion),
+      token_(setupParameters_.token) {}
 
 folly::Future<folly::Unit> RSocketClient::connect() {
   VLOG(2) << "Starting connection";
@@ -59,7 +61,7 @@ folly::Future<folly::Unit> RSocketClient::connect() {
       framedConnection = std::move(connection);
     } else {
       framedConnection = std::make_unique<FramedDuplexConnection>(
-          std::move(connection), setupParameters_.protocolVersion);
+          std::move(connection), protocolVersion_);
     }
     stateMachine_->connectClientSendSetup(
         std::move(framedConnection), std::move(setupParameters_));
@@ -108,7 +110,7 @@ folly::Future<folly::Unit> RSocketClient::resume() {
       framedConnection = std::move(connection);
     } else {
       framedConnection = std::make_unique<FramedDuplexConnection>(
-          std::move(connection), setupParameters_.protocolVersion);
+          std::move(connection), protocolVersion_);
     }
     auto frameTransport =
         yarpl::make_ref<FrameTransport>(std::move(framedConnection));
@@ -118,14 +120,18 @@ folly::Future<folly::Unit> RSocketClient::resume() {
     }
 
     stateMachine_->tryClientResume(
-        setupParameters_.token,
-        std::move(frameTransport),
-        std::move(resumeCallback));
-    promise.setValue(folly::Unit());
-
+        token_, std::move(frameTransport), std::move(resumeCallback));
   });
 
   return future;
+}
+
+void RSocketClient::disconnect(folly::exception_wrapper ex) {
+  CHECK(stateMachine_);
+  evb_->runInEventBaseThread([ this, ex = std::move(ex) ] {
+    VLOG(2) << "Disconnecting RSocketStateMachine on EventBase";
+    stateMachine_->disconnect(std::move(ex));
+  });
 }
 
 void RSocketClient::createState(folly::EventBase& eventBase) {

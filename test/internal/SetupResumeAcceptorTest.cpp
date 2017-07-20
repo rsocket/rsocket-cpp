@@ -228,7 +228,7 @@ TEST(SetupResumeAcceptor, RejectedSetup) {
           auto serializer = FrameSerializer::createCurrentVersion();
           Frame_ERROR frame;
           EXPECT_TRUE(serializer->deserializeFrom(frame, buf->clone()));
-          EXPECT_EQ(frame.errorCode_, ErrorCode::INVALID_SETUP);
+          EXPECT_EQ(frame.errorCode_, ErrorCode::REJECTED_SETUP);
         }));
         EXPECT_CALL(*output, onError_(_));
       });
@@ -272,7 +272,7 @@ TEST(SetupResumeAcceptor, RejectedResume) {
 
   acceptor.accept(std::move(connection), setupFail, [&](auto, auto) {
     resumeCalled = true;
-    return false;
+    throw std::runtime_error("Cant resume");
   });
 
   evb.loop();

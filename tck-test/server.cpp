@@ -143,13 +143,11 @@ int main(int argc, char* argv[]) {
   auto rs = RSocket::createServer(
       std::make_unique<TcpConnectionAcceptor>(std::move(opts)));
 
-  // global request handler
-  auto responder = std::make_shared<ServerResponder>();
-
   auto rawRs = rs.get();
   auto serverThread = std::thread([=] {
-    // start accepting connections
-    rawRs->startAndPark([responder](auto& setup) { setup.createRSocket(responder); });
+    rawRs->startAndPark([](const SetupParameters&) {
+      return std::make_shared<ServerResponder>();
+    });
   });
 
   terminate.get_future().wait();

@@ -320,11 +320,12 @@ add_library(
   rsocket/internal/ScheduledSingleSubscription.h
   rsocket/internal/RSocketConnectionManager.cpp
   rsocket/internal/RSocketConnectionManager.h
-  rsocket/RSocketSetup.cpp
-  rsocket/RSocketSetup.h
   rsocket/ResumeManager.h
   rsocket/ColdResumeHandler.h
-  rsocket/Exception.h)
+  rsocket/RSocketServiceHandler.cpp
+  rsocket/RSocketServiceHandler.h
+  rsocket/RSocketServerState.h
+  rsocket/RSocketException.h)
 
 target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/include")
 target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/src")
@@ -624,6 +625,34 @@ add_executable(
 
 target_link_libraries(
   example_conditional-request-handling-client
+  ReactiveSocket
+  reactivesocket_examples_util
+  yarpl
+  ${GFLAGS_LIBRARY}
+  ${GLOG_LIBRARY})
+
+# warm-resumption
+
+add_executable(
+  example_warm-resumption-server
+  examples/warm-resumption/WarmResumption_Server.cpp
+)
+
+target_link_libraries(
+  example_warm-resumption-server
+  ReactiveSocket
+  reactivesocket_examples_util
+  yarpl
+  ${GFLAGS_LIBRARY}
+  ${GLOG_LIBRARY})
+
+add_executable(
+  example_warm-resumption-client
+  examples/warm-resumption/WarmResumption_Client.cpp
+)
+
+target_link_libraries(
+  example_warm-resumption-client
   ReactiveSocket
   reactivesocket_examples_util
   yarpl

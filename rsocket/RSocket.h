@@ -44,11 +44,8 @@ class RSocket {
       std::shared_ptr<RSocketStats> stats = RSocketStats::noop(),
       std::shared_ptr<RSocketNetworkStats> networkStats =
           std::shared_ptr<RSocketNetworkStats>());
-  /**
-   * Create an RSocketServer that will accept connections.  Takes an acceptor of
-   * DuplexConnections on the desired transport, such as
-   * TcpServerConnectionAcceptor
-   */
+
+  // A convenience function to create RSocketServer
   static std::unique_ptr<RSocketServer> createServer(
       std::unique_ptr<ConnectionAcceptor>);
 

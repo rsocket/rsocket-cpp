@@ -283,6 +283,7 @@ class Frame_ERROR {
   static Frame_ERROR unexpectedFrame();
   static Frame_ERROR invalidFrame();
   static Frame_ERROR badSetupFrame(const std::string& message);
+  static Frame_ERROR rejectedSetup(const std::string& message);
   static Frame_ERROR connectionError(const std::string& message);
   static Frame_ERROR rejectedResume(const std::string& message);
   static Frame_ERROR error(StreamId streamId, Payload&& payload);

@@ -26,22 +26,17 @@ int main(int argc, char* argv[]) {
   // RSocket server accepting on TCP
   auto rs = RSocket::createServer(
       std::make_unique<TcpConnectionAcceptor>(std::move(opts)));
-  // global request responders
-  auto textResponder = std::make_shared<TextRequestResponder>();
-  auto jsonResponder = std::make_shared<JsonRequestResponder>();
-  // start accepting connections
+
   rs->startAndPark(
-      [textResponder, jsonResponder](auto& setup) {
-            if (setup.params().dataMimeType == "text/plain") {
-              LOG(INFO) << "Connection Request => text/plain MimeType";
-              setup.createRSocket(textResponder);
-            } else if (setup.params().dataMimeType == "application/json") {
-              LOG(INFO) << "Connection Request => application/json MimeType";
-              setup.createRSocket(jsonResponder);
-            } else {
-              LOG(INFO) << "Connection Request => Unsupported MimeType"
-                        << setup.params().dataMimeType;
-              setup.error(UnsupportedSetupError("Unknown MimeType"));
-            }
-          });
+      [](const rsocket::SetupParameters& params)
+          -> std::shared_ptr<RSocketResponder> {
+        LOG(INFO) << "Connection Request; MimeType : " << params.dataMimeType;
+        if (params.dataMimeType == "text/plain") {
+          return std::make_shared<TextRequestResponder>();
+        } else if (params.dataMimeType == "application/json") {
+          return std::make_shared<JsonRequestResponder>();
+        } else {
+          throw RSocketException("Unknown MimeType");
+        }
+      });
 }
