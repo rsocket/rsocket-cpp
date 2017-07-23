@@ -41,8 +41,8 @@ if [ ! -s ./build/tckclient ] && [ "$client_lang" = cpp ]; then
     exit 1
 fi
 
-java_server="java -cp reactivesocket-tck-drivers-0.9-SNAPSHOT.jar io/reactivesocket/tckdrivers/main/Main --server --host localhost --port 9898 --file tck-test/servertest.txt"
-java_client="java -cp reactivesocket-tck-drivers-0.9-SNAPSHOT.jar io/reactivesocket/tckdrivers/main/Main --client --host localhost --port 9898 --file tck-test/clienttest.txt"
+java_server="java -cp rsocket-tck-drivers-0.9-SNAPSHOT.jar io/rsocket/tckdrivers/main/Main --server --host localhost --port 9898 --file tck-test/servertest.txt"
+java_client="java -cp rsocket-tck-drivers-0.9-SNAPSHOT.jar io/rsocket/tckdrivers/main/Main --client --host localhost --port 9898 --file tck-test/clienttest.txt"
 
 cpp_server="./build/tckserver -test_file tck-test/servertest.txt -rs_use_protocol_version 1.0"
 cpp_client="./build/tckclient -test_file tck-test/clienttest.txt -rs_use_protocol_version 1.0"
