@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
   folly::init(&argc, &argv);
 
   TcpConnectionAcceptor::Options opts;
-  opts.port = FLAGS_port;
+  opts.socketAddress = folly::SocketAddress("::", FLAGS_port);
 
   // RSocket server accepting on TCP
   auto rs = RSocket::createServer(

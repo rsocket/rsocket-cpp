@@ -19,7 +19,7 @@ inline std::unique_ptr<RSocketServer> makeServer(
     std::shared_ptr<rsocket::RSocketResponder> responder) {
   TcpConnectionAcceptor::Options opts;
   opts.threads = 2;
-  opts.port = 0;
+  opts.socketAddress = folly::SocketAddress("::", 0);
 
   // RSocket server accepting on TCP.
   auto rs = RSocket::createServer(
