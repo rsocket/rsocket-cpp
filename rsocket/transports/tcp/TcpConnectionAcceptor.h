@@ -24,6 +24,9 @@ class TcpConnectionAcceptor : public ConnectionAcceptor {
                      int backlog_ = 10) : port(port_), threads(threads_),
                                           backlog(backlog_) {}
 
+    /// IP address to listen on for TCP requests.
+    folly::IPAddress ipAddress{folly::IPAddress("::")};
+
     /// Port to listen on for TCP requests.
     uint16_t port;
 

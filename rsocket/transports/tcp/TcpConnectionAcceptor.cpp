@@ -88,7 +88,7 @@ void TcpConnectionAcceptor::start(OnDuplexConnectionAccept onAccept) {
       serverThread_->getEventBase(),
       [this] {
         folly::SocketAddress addr;
-        addr.setFromLocalPort(options_.port);
+        addr.setFromIpAddrPort(options_.ipAddress, options_.port);
 
         serverSocket_->bind(addr);
 
