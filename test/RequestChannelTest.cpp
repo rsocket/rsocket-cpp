@@ -38,7 +38,7 @@ class TestHandlerHello : public rsocket::RSocketResponder {
 TEST(RequestChannelTest, Hello) {
   auto server = makeServer(std::make_shared<TestHandlerHello>());
   auto client = makeClient(*server->listeningPort());
-  auto requester = client->connect().get();
+  auto requester = client->getRequester();
 
   auto ts = TestSubscriber<std::string>::create();
   requester

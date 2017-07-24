@@ -60,8 +60,8 @@ class BM_Subscription : public yarpl::flowable::Subscription {
 class BM_RequestHandler : public RSocketResponder {
  public:
   yarpl::Reference<yarpl::flowable::Flowable<Payload>> handleRequestStream(
-      Payload request,
-      StreamId streamId) override {
+      Payload,
+      StreamId) override {
     CHECK(false) << "not implemented";
     // TODO(lehecka) need to implement new operator fromGenerator
     // return yarpl::flowable::Flowables::fromGenerator<  Payload>(
@@ -162,14 +162,14 @@ class BM_RsFixture : public benchmark::Fixture {
             TcpConnectionAcceptor::Options(port_)))),
         handler_(std::make_shared<BM_RequestHandler>()) {
     FLAGS_minloglevel = 100;
-    serverRs_->start([this](auto& setupParams) { return handler_; });
+    serverRs_->start([this](auto&) { return handler_; });
   }
 
   virtual ~BM_RsFixture() {}
 
-  void SetUp(const benchmark::State& state) noexcept override {}
+  void SetUp(const benchmark::State&) noexcept override {}
 
-  void TearDown(const benchmark::State& state) noexcept override {}
+  void TearDown(const benchmark::State&) noexcept override {}
 
   std::string host_;
   uint16_t port_;
@@ -182,14 +182,21 @@ BENCHMARK_DEFINE_F(BM_RsFixture, BM_Stream_Throughput)
   folly::SocketAddress address;
   address.setFromHostPort(host_, port_);
 
-  auto clientRs = RSocket::createClient(
-      std::make_unique<TcpConnectionFactory>(std::move(address)));
-
   auto s = make_ref<BM_Subscriber>(state.range(0));
 
-  clientRs->connect().then([s](std::shared_ptr<RSocketRequester> rs) {
-    rs->requestStream(Payload("BM_Stream"))->subscribe(std::move(s));
-  });
+  std::shared_ptr<RSocketClient> client;
+
+  try {
+    client = RSocket::createConnectedClient(
+                 std::make_unique<TcpConnectionFactory>(std::move(address)))
+                 .get();
+    client->getRequester()
+        ->requestStream(Payload("BM_Stream"))
+        ->subscribe(std::move(s));
+  } catch (const std::exception& ex) {
+    LOG(INFO) << "Exception received " << ex;
+    return;
+  }
 
   while (state.KeepRunning()) {
     std::this_thread::yield();

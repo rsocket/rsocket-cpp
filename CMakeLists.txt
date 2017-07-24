@@ -95,9 +95,6 @@ option(BUILD_BENCHMARKS "Build benchmarks" ON)
 
 enable_testing()
 
-# Add a OSS macro.  This is mainly to get gflags working with travis.
-add_definitions(-DOSS)
-
 include(ExternalProject)
 include(CTest)
 
@@ -106,7 +103,7 @@ if (NOT FOLLY_INSTALL_DIR)
 endif ()
 
 # Check if the correct version of folly is already installed.
-set(FOLLY_VERSION v2017.06.19.00)
+set(FOLLY_VERSION v2017.07.10.00)
 set(FOLLY_VERSION_FILE ${FOLLY_INSTALL_DIR}/${FOLLY_VERSION})
 if (RSOCKET_INSTALL_DEPS)
   if (NOT EXISTS ${FOLLY_VERSION_FILE})
@@ -324,7 +321,10 @@ add_library(
   rsocket/internal/RSocketConnectionManager.cpp
   rsocket/internal/RSocketConnectionManager.h
   rsocket/RSocketSetup.cpp
-  rsocket/RSocketSetup.h)
+  rsocket/RSocketSetup.h
+  rsocket/ResumeManager.h
+  rsocket/ColdResumeHandler.h
+  rsocket/Exception.h)
 
 target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/include")
 target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/src")
@@ -366,9 +366,9 @@ add_executable(
   test/test_utils/MockRequestHandler.h
   test/test_utils/MockStats.h
   test/test_utils/Mocks.h
-  test/transport/TcpDuplexConnectionTest.cpp
+  test/transport/DuplexConnectionTest.cpp
   test/transport/DuplexConnectionTest.h
-  test/transport/DuplexConnectionTest.cpp)
+  test/transport/TcpDuplexConnectionTest.cpp)
 
 target_link_libraries(
   tests

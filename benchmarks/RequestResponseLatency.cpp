@@ -59,8 +59,8 @@ class BM_RequestHandler : public RSocketResponder {
  public:
   // TODO(lehecka): enable when we have support for request-response
   yarpl::Reference<yarpl::flowable::Flowable<Payload>> handleRequestStream(
-      Payload request,
-      StreamId streamId) override {
+      Payload,
+      StreamId) override {
     CHECK(false) << "not implemented";
   }
 
@@ -166,14 +166,14 @@ class BM_RsFixture : public benchmark::Fixture {
         handler_(std::make_shared<BM_RequestHandler>()) {
     FLAGS_v = 0;
     FLAGS_minloglevel = 6;
-    serverRs_->start([this](auto& setupParams) { return handler_; });
+    serverRs_->start([this](auto&) { return handler_; });
   }
 
   virtual ~BM_RsFixture() {}
 
-  void SetUp(const benchmark::State& state) noexcept override {}
+  void SetUp(const benchmark::State&) noexcept override {}
 
-  void TearDown(const benchmark::State& state) noexcept override {}
+  void TearDown(const benchmark::State&) noexcept override {}
 
   std::string host_;
   uint16_t port_;
@@ -181,7 +181,7 @@ class BM_RsFixture : public benchmark::Fixture {
   std::shared_ptr<BM_RequestHandler> handler_;
 };
 
-BENCHMARK_F(BM_RsFixture, BM_RequestResponse_Latency)(benchmark::State& state) {
+BENCHMARK_F(BM_RsFixture, BM_RequestResponse_Latency)(benchmark::State&) {
   // TODO(lehecka): enable test
   //    folly::SocketAddress address;
   //    address.setFromHostPort(host_, port_);

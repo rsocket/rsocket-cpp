@@ -6,6 +6,7 @@
 #include "rsocket/RSocketStats.h"
 #include "rsocket/framing/FrameTransport.h"
 #include "rsocket/framing/FramedDuplexConnection.h"
+#include "rsocket/internal/ClientResumeStatusCallback.h"
 #include "rsocket/internal/FollyKeepaliveTimer.h"
 #include "rsocket/internal/RSocketConnectionManager.h"
 
@@ -13,97 +14,139 @@ using namespace folly;
 
 namespace rsocket {
 
-RSocketClient::RSocketClient(
-    std::unique_ptr<ConnectionFactory> connectionFactory)
-    : connectionFactory_(std::move(connectionFactory)),
-      connectionManager_(std::make_unique<RSocketConnectionManager>()) {
-  VLOG(1) << "Constructing RSocketClient";
-}
-
 RSocketClient::~RSocketClient() {
-  VLOG(1) << "Destroying RSocketClient";
+  VLOG(4) << "RSocketClient destroyed ..";
 }
 
-folly::Future<std::unique_ptr<RSocketRequester>> RSocketClient::connect(
+std::shared_ptr<RSocketRequester> RSocketClient::getRequester() const {
+  return requester_;
+}
+
+RSocketClient::RSocketClient(
+    std::unique_ptr<ConnectionFactory> connectionFactory,
     SetupParameters setupParameters,
     std::shared_ptr<RSocketResponder> responder,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer,
     std::shared_ptr<RSocketStats> stats,
-    std::shared_ptr<RSocketNetworkStats> networkStats) {
+    std::shared_ptr<RSocketNetworkStats> networkStats,
+    std::shared_ptr<ResumeManager> resumeManager,
+    std::shared_ptr<ColdResumeHandler> coldResumeHandler,
+    OnRSocketResume)
+    : connectionFactory_(std::move(connectionFactory)),
+      connectionManager_(std::make_unique<RSocketConnectionManager>()),
+      setupParameters_(std::move(setupParameters)),
+      responder_(std::move(responder)),
+      keepaliveTimer_(std::move(keepaliveTimer)),
+      stats_(stats),
+      networkStats_(networkStats),
+      resumeManager_(resumeManager),
+      coldResumeHandler_(coldResumeHandler) {}
+
+folly::Future<folly::Unit> RSocketClient::connect() {
   VLOG(2) << "Starting connection";
 
-  folly::Promise<std::unique_ptr<RSocketRequester>> promise;
+  folly::Promise<folly::Unit> promise;
   auto future = promise.getFuture();
 
-  connectionFactory_->connect([
-    this,
-    setupParameters = std::move(setupParameters),
-    responder = std::move(responder),
-    keepaliveTimer = std::move(keepaliveTimer),
-    stats = std::move(stats),
-    networkStats = std::move(networkStats),
-    promise = std::move(promise)](
+  connectionFactory_->connect([ this, promise = std::move(promise) ](
       std::unique_ptr<DuplexConnection> connection,
-      folly::EventBase& eventBase) mutable {
+      folly::EventBase & eventBase) mutable {
     VLOG(3) << "onConnect received DuplexConnection";
-
-    auto rsocket = fromConnection(
-        std::move(connection),
-        eventBase,
-        std::move(setupParameters),
-        std::move(responder),
-        std::move(keepaliveTimer),
-        std::move(stats),
-        std::move(networkStats));
-    promise.setValue(std::move(rsocket));
+    evb_ = &eventBase;
+    createState(eventBase);
+    std::unique_ptr<DuplexConnection> framedConnection;
+    if (connection->isFramed()) {
+      framedConnection = std::move(connection);
+    } else {
+      framedConnection = std::make_unique<FramedDuplexConnection>(
+          std::move(connection), setupParameters_.protocolVersion);
+    }
+    stateMachine_->connectClientSendSetup(
+        std::move(framedConnection), std::move(setupParameters_));
+    promise.setValue();
   });
 
   return future;
 }
 
-std::unique_ptr<RSocketRequester> RSocketClient::fromConnection(
-    std::unique_ptr<DuplexConnection> connection,
-    folly::EventBase& eventBase,
-    SetupParameters setupParameters,
-    std::shared_ptr<RSocketResponder> responder,
-    std::unique_ptr<KeepaliveTimer> keepaliveTimer,
-    std::shared_ptr<RSocketStats> stats,
-    std::shared_ptr<RSocketNetworkStats> networkStats) {
+folly::Future<folly::Unit> RSocketClient::resume() {
+  VLOG(2) << "Resuming connection";
+
+  // TODO: CHECK whether the underlying transport is closed before attempting
+  // resumption.
+  //
+  folly::Promise<folly::Unit> promise;
+  auto future = promise.getFuture();
+
+  connectionFactory_->connect([ this, promise = std::move(promise) ](
+      std::unique_ptr<DuplexConnection> connection,
+      folly::EventBase & eventBase) mutable {
+
+    CHECK(
+        !evb_ /* cold-resumption */ ||
+        evb_ == &eventBase /* warm-resumption */);
+
+    class ResumeCallback : public ClientResumeStatusCallback {
+     public:
+      explicit ResumeCallback(folly::Promise<folly::Unit> promise)
+          : promise_(std::move(promise)) {}
+
+      void onResumeOk() noexcept override {
+        promise_.setValue();
+      }
+
+      void onResumeError(folly::exception_wrapper ex) noexcept override {
+        promise_.setException(ex);
+      }
+     private:
+      folly::Promise<folly::Unit> promise_;
+    };
+
+    auto resumeCallback = std::make_unique<ResumeCallback>(std::move(promise));
+    std::unique_ptr<DuplexConnection> framedConnection;
+    if (connection->isFramed()) {
+      framedConnection = std::move(connection);
+    } else {
+      framedConnection = std::make_unique<FramedDuplexConnection>(
+          std::move(connection), setupParameters_.protocolVersion);
+    }
+    auto frameTransport =
+        yarpl::make_ref<FrameTransport>(std::move(framedConnection));
+
+    if (!stateMachine_) {
+      createState(eventBase);
+    }
+
+    stateMachine_->tryClientResume(
+        setupParameters_.token,
+        std::move(frameTransport),
+        std::move(resumeCallback));
+    promise.setValue(folly::Unit());
+
+  });
+
+  return future;
+}
+
+void RSocketClient::createState(folly::EventBase& eventBase) {
   CHECK(eventBase.isInEventBaseThread());
 
-  if (!responder) {
-    responder = std::make_shared<RSocketResponder>();
-  }
+  // Creation of state is permitted only once for each RSocketClient.
+  // When evb is removed from RSocketStateMachine, the state can be
+  // created in constructor
+  CHECK(!stateMachine_);
 
-  if (!keepaliveTimer) {
-    keepaliveTimer = std::make_unique<FollyKeepaliveTimer>(
-        eventBase, std::chrono::milliseconds(5000));
-  }
-
-  if (!stats) {
-    stats = RSocketStats::noop();
-  }
-
-  auto rs = std::make_shared<RSocketStateMachine>(
+  stateMachine_ = std::make_shared<RSocketStateMachine>(
       eventBase,
-      std::move(responder),
-      std::move(keepaliveTimer),
+      responder_,
+      std::move(keepaliveTimer_),
       ReactiveSocketMode::CLIENT,
-      std::move(stats),
-      std::move(networkStats));
+      stats_,
+      networkStats_);
 
-  connectionManager_->manageConnection(rs, eventBase);
+  requester_ = std::make_shared<RSocketRequester>(stateMachine_, eventBase);
 
-  std::unique_ptr<DuplexConnection> framedConnection;
-  if (connection->isFramed()) {
-    framedConnection = std::move(connection);
-  } else {
-    framedConnection = std::make_unique<FramedDuplexConnection>(
-        std::move(connection), setupParameters.protocolVersion);
-  }
-
-  rs->connectClientSendSetup(std::move(framedConnection), std::move(setupParameters));
-  return std::make_unique<RSocketRequester>(std::move(rs), eventBase);
+  connectionManager_->manageConnection(stateMachine_, eventBase);
 }
 
 } // namespace rsocket

@@ -53,7 +53,7 @@ RSocketStateMachine::~RSocketStateMachine() {
   // automatons destroyed on different threads can be the last ones referencing
   // this.
 
-  VLOG(6) << "RSocketStateMachine";
+  VLOG(6) << "~RSocketStateMachine";
   // We rely on SubscriptionPtr and SubscriberPtr to dispatch appropriate
   // terminal signals.
   DCHECK(!resumeCallback_);
@@ -170,7 +170,7 @@ void RSocketStateMachine::close(
 
   if (resumeCallback_) {
     resumeCallback_->onResumeError(
-        std::runtime_error(ex ? ex.what().c_str() : "RS closing"));
+        ConnectionException(ex ? ex.what().c_str() : "RS closing"));
     resumeCallback_.reset();
   }
 
@@ -197,8 +197,8 @@ void RSocketStateMachine::closeFrameTransport(
   }
 
   if (resumeCallback_) {
-    resumeCallback_->onConnectionError(
-        std::runtime_error(ex ? ex.what().c_str() : "connection closing"));
+    resumeCallback_->onResumeError(
+        ConnectionException(ex ? ex.what().c_str() : "connection closing"));
     resumeCallback_.reset();
   }
 
@@ -491,7 +491,7 @@ void RSocketStateMachine::handleConnectionFrame(
            frame.errorCode_ == ErrorCode::REJECTED_RESUME) &&
           resumeCallback_) {
         resumeCallback_->onResumeError(
-            std::runtime_error(frame.payload_.moveDataToString()));
+            ResumptionException(frame.payload_.moveDataToString()));
         resumeCallback_.reset();
         // fall through
       }

@@ -18,13 +18,13 @@ void StatsPrinter::socketDisconnected() {
 
 void StatsPrinter::duplexConnectionCreated(
     const std::string& type,
-    rsocket::DuplexConnection* connection) {
+    rsocket::DuplexConnection*) {
   LOG(INFO) << "connectionCreated " << type;
 }
 
 void StatsPrinter::duplexConnectionClosed(
     const std::string& type,
-    rsocket::DuplexConnection* connection) {
+    rsocket::DuplexConnection*) {
   LOG(INFO) << "connectionClosed " << type;
 }
 

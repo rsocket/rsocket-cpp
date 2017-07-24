@@ -10,6 +10,9 @@
 
 namespace rsocket {
 
+using OnRSocketResume =
+    std::function<bool(std::vector<StreamId>, std::vector<StreamId>)>;
+
 class RSocketParameters {
  public:
   RSocketParameters(bool _resumable, ProtocolVersion _protocolVersion)

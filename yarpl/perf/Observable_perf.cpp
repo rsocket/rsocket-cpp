@@ -25,7 +25,7 @@ static void Observable_OnNextOne_SubscribeOnly(benchmark::State& state) {
     obs->onComplete();
   });
   while (state.KeepRunning()) {
-    a->subscribe(Observers::create<int>([](int value) { /* do nothing */ }));
+    a->subscribe(Observers::create<int>([](int /* value */) {}));
   }
 }
 BENCHMARK(Observable_OnNextOne_SubscribeOnly);
@@ -40,7 +40,7 @@ static void Observable_OnNextN(benchmark::State& state) {
         obs->onComplete();
       });
   while (state.KeepRunning()) {
-    a->subscribe(Observers::create<int>([](int value) {}));
+    a->subscribe(Observers::create<int>([](int /* value */) {}));
   }
 }
 

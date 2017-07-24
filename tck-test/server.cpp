@@ -76,7 +76,7 @@ class ServerResponder : public RSocketResponder {
 
   yarpl::Reference<Flowable<Payload>> handleRequestStream(
       Payload request,
-      StreamId streamId) override {
+      StreamId) override {
     LOG(INFO) << "handleRequestStream " << request;
     std::string data = request.data->moveToFbString().toStdString();
     std::string metadata = request.metadata->moveToFbString().toStdString();
@@ -97,7 +97,7 @@ class ServerResponder : public RSocketResponder {
 
   yarpl::Reference<Single<Payload>> handleRequestResponse(
       Payload request,
-      StreamId streamId) override {
+      StreamId) override {
     LOG(INFO) << "handleRequestResponse " << request;
     std::string data = request.data->moveToFbString().toStdString();
     std::string metadata = request.metadata->moveToFbString().toStdString();

@@ -40,18 +40,21 @@ int main(int argc, char* argv[]) {
   folly::SocketAddress address;
   address.setFromHostPort(FLAGS_host, FLAGS_port);
 
-  auto rsf = RSocket::createClient(
-      std::make_unique<TcpConnectionFactory>(std::move(address)));
-  auto rs = rsf->connect(
-      SetupParameters("application/json", "application/json"),
-      nullptr,
-      nullptr,
-      nullptr,
-      std::make_shared<RSocketNetworkStatsLog>()).get();
+  auto client = RSocket::createConnectedClient(
+                    std::make_unique<TcpConnectionFactory>(std::move(address)),
+                    SetupParameters("application/json", "application/json"),
+                    std::make_shared<RSocketResponder>(),
+                    nullptr,
+                    RSocketStats::noop(),
+                    std::make_shared<RSocketNetworkStatsLog>())
+                    .get();
 
-  rs->requestStream(Payload("Bob"))->take(5)->subscribe([](Payload p) {
-    std::cout << "Received: " << p.moveDataToString() << std::endl;
-  });
+  client->getRequester()
+      ->requestStream(Payload("Bob"))
+      ->take(5)
+      ->subscribe([](Payload p) {
+        std::cout << "Received: " << p.moveDataToString() << std::endl;
+      });
 
   // Wait for a newline on the console to terminate the server.
   std::getchar();

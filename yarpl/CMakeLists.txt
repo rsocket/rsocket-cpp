@@ -26,22 +26,16 @@ if(APPLE)
   add_compile_options("-fno-sanitize=address,undefined")
 endif()
 
-# Configuration for Debug build mode.
-#set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
-
+# Using NDEBUG in Release builds.
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG")
 
-# Find glog and gflags libraries specifically
 find_path(GLOG_INCLUDE_DIR glog/logging.h)
-
 find_library(GLOG_LIBRARY glog)
 
 message("glog include_dir <${GLOG_INCLUDE_DIR}> lib <${GLOG_LIBRARY}>")
 
 include_directories(SYSTEM ${GLOG_INCLUDE_DIR})
 include_directories(${CMAKE_SOURCE_DIR})
-
 
 # library source
 add_library(
@@ -97,56 +91,41 @@ target_include_directories(
         PUBLIC "${PROJECT_SOURCE_DIR}/src" # allow include paths such as "yarpl/flowable/FlowableRange.h"
         )
 
-target_link_libraries(yarpl folly)
+target_link_libraries(
+  yarpl
+  folly
+  ${GLOG_LIBRARY})
 
-# Executable for Experimenting
+# Executable for experimenting.
 add_executable(
-        yarpl-playground
-        examples/yarpl-playground.cpp
-#        examples/ObservableExamples.cpp
-        examples/FlowableExamples.cpp
-        examples/FlowableExamples.h
-)
+  yarpl-playground
+  examples/yarpl-playground.cpp
+  examples/FlowableExamples.cpp
+  examples/FlowableExamples.h)
+
+target_link_libraries(yarpl-playground yarpl)
+
+# Unit tests.
+add_executable(
+  yarpl-tests
+  test/FlowableTest.cpp
+  test/Observable_test.cpp
+  test/RefcountedTest.cpp
+  test/ReferenceTest.cpp
+  test/Scheduler_test.cpp
+  test/Single_test.cpp
+  test/Tuple.cpp
+  test/Tuple.h
+  test/credits-test.cpp
+  test/yarpl-tests.cpp)
 
 target_link_libraries(
-        yarpl-playground
-        yarpl)
+  yarpl-tests
+  yarpl
+  ${GLOG_LIBRARY}
 
-target_include_directories(
-        yarpl-playground
-        PUBLIC "${PROJECT_SOURCE_DIR}/include" # allow include paths such as "yarpl/observable.h" can be used
-)
-
-# unit tests
-add_executable(
-        yarpl-tests
-        test/yarpl-tests.cpp
-        test/Observable_test.cpp
-        test/Single_test.cpp
-#        test/FlowableCreateSubscribe_test.cpp
-#        test/Observable_Subscription_test.cpp
-#        test/Flowable_range_test.cpp
-#        test/Flowable_lifecycle.cpp
-#        test/FlowableChaining_test.cpp
-        test/FlowableTest.cpp
-        test/RefcountedTest.cpp
-        test/ReferenceTest.cpp
-        test/Scheduler_test.cpp
-        test/Tuple.cpp
-        test/Tuple.h
-        test/credits-test.cpp
-)
-
-target_link_libraries(
-        yarpl-tests
-        yarpl
-        ${GMOCK_LIBS} # inherited from rsocket-cpp CMake
-        ${GLOG_LIBRARY})
-
-target_include_directories(
-        yarpl-tests
-        PUBLIC "${PROJECT_SOURCE_DIR}/include" # allow include paths such as "yarpl/observable.h" can be used
-)
+  # Inherited from rsocket-cpp CMake.
+  ${GMOCK_LIBS})
 
 add_dependencies(yarpl-tests gmock)
 

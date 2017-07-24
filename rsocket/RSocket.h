@@ -12,17 +12,38 @@ namespace rsocket {
  */
 class RSocket {
  public:
-  /**
-   * Create an RSocketClient that can be used to open RSocket connections.
-   * Takes a factory of DuplexConnections on the desired transport, such as
-   * TcpClientConnectionFactory.
-   */
-  static std::unique_ptr<RSocketClient> createClient(
-      std::unique_ptr<ConnectionFactory>);
+  // Creates a RSocketClient which is connected to the remoteside.
+  static folly::Future<std::shared_ptr<RSocketClient>> createConnectedClient(
+      std::unique_ptr<ConnectionFactory>,
+      SetupParameters setupParameters = SetupParameters(),
+      std::shared_ptr<RSocketResponder> responder =
+          std::make_shared<RSocketResponder>(),
+      std::unique_ptr<KeepaliveTimer> keepaliveTimer =
+          std::unique_ptr<KeepaliveTimer>(),
+      std::shared_ptr<RSocketStats> stats = RSocketStats::noop(),
+      std::shared_ptr<RSocketNetworkStats> networkStats =
+          std::shared_ptr<RSocketNetworkStats>(),
+      std::shared_ptr<ResumeManager> resumeManager =
+          std::shared_ptr<ResumeManager>(),
+      std::shared_ptr<ColdResumeHandler> coldResumeHandler =
+          std::shared_ptr<ColdResumeHandler>(),
+      OnRSocketResume onRSocketResume =
+          [](std::vector<StreamId>, std::vector<StreamId>) { return false; });
 
-  // TODO duplex client that takes a requestHandler
-  // TODO ConnectionSetupPayload arguments such as MimeTypes, Keepalive, etc
-
+  // Creates a RSocketClient which cold-resumes from the provided state
+  static folly::Future<std::shared_ptr<RSocketClient>> createResumedClient(
+      std::unique_ptr<ConnectionFactory>,
+      SetupParameters setupParameters,
+      std::shared_ptr<ResumeManager> resumeManager,
+      std::shared_ptr<ColdResumeHandler> coldResumeHandler,
+      OnRSocketResume onRSocketResume,
+      std::shared_ptr<RSocketResponder> responder =
+          std::make_shared<RSocketResponder>(),
+      std::unique_ptr<KeepaliveTimer> keepaliveTimer =
+          std::unique_ptr<KeepaliveTimer>(),
+      std::shared_ptr<RSocketStats> stats = RSocketStats::noop(),
+      std::shared_ptr<RSocketNetworkStats> networkStats =
+          std::shared_ptr<RSocketNetworkStats>());
   /**
    * Create an RSocketServer that will accept connections.  Takes an acceptor of
    * DuplexConnections on the desired transport, such as
@@ -31,14 +52,14 @@ class RSocket {
   static std::unique_ptr<RSocketServer> createServer(
       std::unique_ptr<ConnectionAcceptor>);
 
-  // TODO createResumeServer
-
   RSocket() = delete;
 
   RSocket(const RSocket&) = delete;
+
   RSocket(RSocket&&) = delete;
 
   RSocket& operator=(const RSocket&) = delete;
+
   RSocket& operator=(RSocket&&) = delete;
 };
 }

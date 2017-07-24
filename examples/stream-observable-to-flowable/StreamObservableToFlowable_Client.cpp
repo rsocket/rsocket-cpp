@@ -27,12 +27,12 @@ int main(int argc, char* argv[]) {
   folly::SocketAddress address;
   address.setFromHostPort(FLAGS_host, FLAGS_port);
 
-  // create a client which can then make connections below
-  auto rsf = RSocket::createClient(
-      std::make_unique<TcpConnectionFactory>(std::move(address)));
+  auto client = RSocket::createConnectedClient(
+                    std::make_unique<TcpConnectionFactory>(std::move(address)))
+                    .get();
 
-  auto rs = rsf->connect().get();
-  rs->requestStream(Payload("TopicX"))
+  client->getRequester()
+      ->requestStream(Payload("TopicX"))
       ->take(10)
       ->subscribe(
           [](Payload p) {
