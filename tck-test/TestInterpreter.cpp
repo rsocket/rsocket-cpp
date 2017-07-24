@@ -68,10 +68,11 @@ bool TestInterpreter::run() {
 void TestInterpreter::handleSubscribe(const SubscribeCommand& command) {
   // If client does not exist, create a new client.
   if (testClient_.find(command.clientId()) == testClient_.end()) {
-    auto requester = RSocket::createClient(
-        std::make_unique<TcpConnectionFactory>(std::move(address_)));
+    auto client = RSocket::createConnectedClient(
+                  std::make_unique<TcpConnectionFactory>(std::move(address_)))
+                  .get();
     testClient_[command.clientId()] =
-        std::make_shared<TestClient>(move(requester));
+        std::make_shared<TestClient>(move(client));
   }
 
   CHECK(

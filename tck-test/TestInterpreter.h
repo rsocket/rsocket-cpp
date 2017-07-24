@@ -33,7 +33,7 @@ class TestInterpreter {
    public:
     TestClient(std::shared_ptr<RSocketClient> c)
         : client(std::move(c)) {
-      auto rs = client->connect().get();
+      auto rs = client->getRequester();
       requester = std::move(rs);
     }
     std::shared_ptr<RSocketClient> client;
