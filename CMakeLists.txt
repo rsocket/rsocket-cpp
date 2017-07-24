@@ -432,10 +432,10 @@ target_link_libraries(
   ${DOUBLE-CONVERSION})
 
 # Download the latest TCK drivers JAR.
-set(TCK_DRIVERS_JAR reactivesocket-tck-drivers-0.9-SNAPSHOT.jar)
+set(TCK_DRIVERS_JAR rsocket-tck-drivers-0.9-SNAPSHOT.jar)
 join(TCK_DRIVERS_URL
-  "https://oss.jfrog.org/libs-snapshot/io/reactivesocket/"
-  "reactivesocket-tck-drivers/0.9-SNAPSHOT/${TCK_DRIVERS_JAR}")
+  "https://oss.jfrog.org/libs-snapshot/io/rsocket/"
+  "rsocket-tck-drivers/0.9-SNAPSHOT/${TCK_DRIVERS_JAR}")
 message(STATUS "Downloading ${TCK_DRIVERS_URL}")
 file(DOWNLOAD ${TCK_DRIVERS_URL} ${CMAKE_SOURCE_DIR}/${TCK_DRIVERS_JAR})
 
