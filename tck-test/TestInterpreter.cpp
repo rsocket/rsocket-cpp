@@ -98,7 +98,7 @@ void TestInterpreter::handleSubscribe(const SubscribeCommand& command) {
   } else {
     throw std::runtime_error("unsupported interaction type");
   }
-} // namespace tck
+} 
 
 void TestInterpreter::handleRequest(const RequestCommand& command) {
   getSubscriber(command.clientId() + command.id())->request(command.n());
