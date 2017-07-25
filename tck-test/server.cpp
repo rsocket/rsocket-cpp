@@ -136,7 +136,7 @@ int main(int argc, char* argv[]) {
   signal(SIGTERM, signal_handler);
 
   TcpConnectionAcceptor::Options opts;
-  opts.port = FLAGS_port;
+  opts.address = folly::SocketAddress("::", FLAGS_port);
   opts.threads = 2;
 
   // RSocket server accepting on TCP

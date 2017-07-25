@@ -21,11 +21,11 @@ class TcpConnectionAcceptor : public ConnectionAcceptor {
  public:
   struct Options {
     explicit Options(uint16_t port_ = 8080, size_t threads_ = 2,
-                     int backlog_ = 10) : socketAddress("::", port_), threads(threads_),
+                     int backlog_ = 10) : address("::", port_), threads(threads_),
                                           backlog(backlog_) {}
 
     /// Address to listen on
-    folly::SocketAddress socketAddress;
+    folly::SocketAddress address;
 
     /// Number of worker threads processing requests.
     size_t threads;
