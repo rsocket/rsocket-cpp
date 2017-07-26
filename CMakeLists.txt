@@ -56,6 +56,9 @@ if (APPLE)
   endif()
 endif()
 
+# disable coverage mode by default
+option(RSOCKET_BUILD_WITH_COVERAGE "Build with --coverage (gcov)" OFF)
+
 # Add compiler-specific options.
 if (CMAKE_COMPILER_IS_GNUCXX)
   if (RSOCKET_ASAN)
@@ -63,19 +66,21 @@ if (CMAKE_COMPILER_IS_GNUCXX)
   endif ()
   set(EXTRA_LINK_FLAGS ${EXTRA_LINK_FLAGS} -fuse-ld=gold)
 
-  # Enable code coverage.
-  add_compile_options(--coverage)
-  set(EXTRA_LINK_FLAGS ${EXTRA_LINK_FLAGS} --coverage)
-  set(COVERAGE_INFO coverage.info)
-  add_custom_command(
-    OUTPUT ${COVERAGE_INFO}
-    # Capture coverage info.
-    COMMAND lcov --directory . --capture --output-file ${COVERAGE_INFO}
-    # Filter out system and test code.
-    COMMAND lcov --remove ${COVERAGE_INFO} 'tests/*' 'test/*' 'tck-test/*' '/usr/*' 'gmock/*' 'folly/*' --output-file
-                 ${COVERAGE_INFO}
-    # Debug before upload.
-    COMMAND lcov --list ${COVERAGE_INFO})
+  if (RSOCKET_BUILD_WITH_COVERAGE)
+    # Enable code coverage.
+    add_compile_options(--coverage)
+    set(EXTRA_LINK_FLAGS ${EXTRA_LINK_FLAGS} --coverage)
+    set(COVERAGE_INFO coverage.info)
+    add_custom_command(
+      OUTPUT ${COVERAGE_INFO}
+      # Capture coverage info.
+      COMMAND lcov --directory . --capture --output-file ${COVERAGE_INFO}
+      # Filter out system and test code.
+      COMMAND lcov --remove ${COVERAGE_INFO} 'tests/*' 'test/*' 'tck-test/*' '/usr/*' 'gmock/*' 'folly/*' --output-file
+                   ${COVERAGE_INFO}
+      # Debug before upload.
+      COMMAND lcov --list ${COVERAGE_INFO})
+  endif()
 elseif (${CMAKE_CXX_COMPILER_ID} MATCHES Clang)
   if (RSOCKET_ASAN)
     set(ASAN_FLAGS
