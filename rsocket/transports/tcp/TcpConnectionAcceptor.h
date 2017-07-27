@@ -64,11 +64,12 @@ class TcpConnectionAcceptor : public ConnectionAcceptor {
   /// The thread driving the AsyncServerSocket.
   std::unique_ptr<folly::ScopedEventBaseThread> serverThread_;
 
+  /// Function to run when a connection is accepted.
+  OnDuplexConnectionAccept onAccept_;
+
   /// The callbacks handling accepted connections.  Each has its own worker
   /// thread.
   std::vector<std::unique_ptr<SocketCallback>> callbacks_;
-
-  OnDuplexConnectionAccept onAccept_;
 
   /// The socket listening for new connections.
   folly::AsyncServerSocket::UniquePtr serverSocket_;

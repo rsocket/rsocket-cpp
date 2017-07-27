@@ -192,10 +192,16 @@ class TcpOutputSubscriber
     tcpReaderWriter_->setOutputSubscription(nullptr);
   }
 
-  void onError(std::exception_ptr ex) noexcept override {
+  void onError(std::exception_ptr eptr) noexcept override {
     CHECK(tcpReaderWriter_);
     auto tcpReaderWriter = std::move(tcpReaderWriter_);
-    tcpReaderWriter->closeErr(folly::exception_wrapper(std::move(ex)));
+
+    try {
+      std::rethrow_exception(eptr);
+    } catch (const std::exception& exn) {
+      folly::exception_wrapper ew{eptr, exn};
+      tcpReaderWriter->closeErr(std::move(ew));
+    }
   }
 
  private:

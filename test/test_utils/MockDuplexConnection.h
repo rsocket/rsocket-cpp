@@ -19,6 +19,23 @@ public:
     }));
   }
 
+  /// Creates a DuplexConnection that always runs `in` on the input
+  /// subscriber and `out` on a default MockSubscriber.
+  template <class InputFn, class OutputFn>
+  MockDuplexConnection(InputFn in, OutputFn out) {
+    EXPECT_CALL(*this, setInput_(testing::_))
+        .WillRepeatedly(testing::Invoke(std::move(in)));
+    EXPECT_CALL(*this, getOutput_())
+        .WillRepeatedly(testing::Invoke([out = std::move(out)] {
+          auto subscriber =
+              yarpl::make_ref<MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
+          out(subscriber);
+          return subscriber;
+        }));
+  }
+
+  // DuplexConnection.
+
   void setInput(yarpl::Reference<Subscriber> in) override {
     setInput_(std::move(in));
   }
@@ -26,6 +43,8 @@ public:
   yarpl::Reference<Subscriber> getOutput() override {
     return getOutput_();
   }
+
+  // Mocks.
 
   MOCK_METHOD1(setInput_, void(yarpl::Reference<Subscriber>));
   MOCK_METHOD0(getOutput_, yarpl::Reference<Subscriber>());

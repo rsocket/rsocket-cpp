@@ -4,7 +4,9 @@
 
 #include <map>
 
+#include <folly/SocketAddress.h>
 #include "rsocket/Payload.h"
+#include "rsocket/RSocket.h"
 #include "rsocket/RSocketRequester.h"
 
 #include "tck-test/BaseSubscriber.h"
@@ -27,10 +29,19 @@ class CancelCommand;
 class AssertCommand;
 
 class TestInterpreter {
+  class TestClient {
+   public:
+    TestClient(std::shared_ptr<RSocketClient> c)
+        : client(std::move(c)) {
+      auto rs = client->getRequester();
+      requester = std::move(rs);
+    }
+    std::shared_ptr<RSocketClient> client;
+    std::shared_ptr<RSocketRequester> requester;
+  };
+
  public:
-  TestInterpreter(
-      const Test& test,
-      RSocketRequester* requester);
+  TestInterpreter(const Test& test, folly::SocketAddress address);
 
   bool run();
 
@@ -43,11 +54,12 @@ class TestInterpreter {
 
   yarpl::Reference<BaseSubscriber> getSubscriber(const std::string& id);
 
-  RSocketRequester* requester_;
+  folly::SocketAddress address_;
   const Test& test_;
   std::map<std::string, std::string> interactionIdToType_;
   std::map<std::string, yarpl::Reference<BaseSubscriber>> testSubscribers_;
+  std::map<std::string, std::shared_ptr<TestClient>> testClient_;
 };
 
-} // tck
-} // reactivesocket
+} // namespace tck
+} // namespace rsocket

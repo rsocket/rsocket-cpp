@@ -14,7 +14,7 @@ class TestCommand {
       : params_(std::move(params)) {}
 
   const std::string& name() const {
-    return params_[0];
+    return params_[1];
   }
 
   template <typename T>
@@ -71,5 +71,5 @@ class TestSuite {
   std::vector<Test> tests_;
 };
 
-} // tck
-} // reactivesocket
+} // namespace tck
+} // namespace rsocket

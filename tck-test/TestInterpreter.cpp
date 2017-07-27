@@ -6,6 +6,8 @@
 #include <folly/String.h>
 #include <folly/io/async/EventBase.h>
 
+#include "rsocket/RSocket.h"
+#include "rsocket/transports/tcp/TcpConnectionFactory.h"
 #include "tck-test/FlowableSubscriber.h"
 #include "tck-test/SingleSubscriber.h"
 #include "tck-test/TypedCommands.h"
@@ -16,10 +18,8 @@ using namespace yarpl;
 namespace rsocket {
 namespace tck {
 
-TestInterpreter::TestInterpreter(
-    const Test& test,
-    RSocketRequester* requester)
-    : requester_(requester), test_(test) {
+TestInterpreter::TestInterpreter(const Test& test, SocketAddress address)
+    : address_(address), test_(test) {
   DCHECK(!test.empty());
 }
 
@@ -66,45 +66,60 @@ bool TestInterpreter::run() {
 }
 
 void TestInterpreter::handleSubscribe(const SubscribeCommand& command) {
-  interactionIdToType_[command.id()] = command.type();
-  CHECK(testSubscribers_.find(command.id()) == testSubscribers_.end());
+  // If client does not exist, create a new client.
+  if (testClient_.find(command.clientId()) == testClient_.end()) {
+    auto client = RSocket::createConnectedClient(
+                  std::make_unique<TcpConnectionFactory>(std::move(address_)))
+                  .get();
+    testClient_[command.clientId()] =
+        std::make_shared<TestClient>(move(client));
+  }
+
+  CHECK(
+      testSubscribers_.find(command.clientId() + command.id()) ==
+      testSubscribers_.end());
+
   if (command.isRequestResponseType()) {
     auto testSubscriber = make_ref<SingleSubscriber>();
-    testSubscribers_[command.id()] = testSubscriber;
-    requester_
+    testSubscribers_[command.clientId() + command.id()] = testSubscriber;
+    testClient_[command.clientId()]
+        ->requester
         ->requestResponse(
             Payload(command.payloadData(), command.payloadMetadata()))
         ->subscribe(std::move(testSubscriber));
   } else if (command.isRequestStreamType()) {
     auto testSubscriber = make_ref<FlowableSubscriber>();
-    testSubscribers_[command.id()] = testSubscriber;
-    requester_
+    testSubscribers_[command.clientId() + command.id()] = testSubscriber;
+    testClient_[command.clientId()]
+        ->requester
         ->requestStream(
             Payload(command.payloadData(), command.payloadMetadata()))
         ->subscribe(std::move(testSubscriber));
   } else {
     throw std::runtime_error("unsupported interaction type");
   }
-}
+} 
 
 void TestInterpreter::handleRequest(const RequestCommand& command) {
-  getSubscriber(command.id())->request(command.n());
+  getSubscriber(command.clientId() + command.id())->request(command.n());
 }
 
 void TestInterpreter::handleCancel(const CancelCommand& command) {
-  getSubscriber(command.id())->cancel();
+  getSubscriber(command.clientId() + command.id())->cancel();
 }
 
 void TestInterpreter::handleAwait(const AwaitCommand& command) {
   if (command.isTerminalType()) {
     LOG(INFO) << "... await: terminal event";
-    getSubscriber(command.id())->awaitTerminalEvent();
+    getSubscriber(command.clientId() + command.id())->awaitTerminalEvent();
   } else if (command.isAtLeastType()) {
     LOG(INFO) << "... await: terminal at least " << command.numElements();
-    getSubscriber(command.id())->awaitAtLeast(command.numElements());
+    getSubscriber(command.clientId() + command.id())
+        ->awaitAtLeast(command.numElements());
   } else if (command.isNoEventsType()) {
     LOG(INFO) << "... await: no events for " << command.waitTime() << "ms";
-    getSubscriber(command.id())->awaitNoEvents(command.waitTime());
+    getSubscriber(command.clientId() + command.id())
+        ->awaitNoEvents(command.waitTime());
   } else {
     throw std::runtime_error("unsupported await type");
   }
@@ -113,28 +128,31 @@ void TestInterpreter::handleAwait(const AwaitCommand& command) {
 void TestInterpreter::handleAssert(const AssertCommand& command) {
   if (command.isNoErrorAssert()) {
     LOG(INFO) << "... assert: no error";
-    getSubscriber(command.id())->assertNoErrors();
+    getSubscriber(command.clientId() + command.id())->assertNoErrors();
   } else if (command.isErrorAssert()) {
     LOG(INFO) << "... assert: error";
-    getSubscriber(command.id())->assertError();
+    getSubscriber(command.clientId() + command.id())->assertError();
   } else if (command.isReceivedAssert()) {
     LOG(INFO) << "... assert: values";
-    getSubscriber(command.id())->assertValues(command.values());
+    getSubscriber(command.clientId() + command.id())
+        ->assertValues(command.values());
   } else if (command.isReceivedNAssert()) {
     LOG(INFO) << "... assert: value count " << command.valueCount();
-    getSubscriber(command.id())->assertValueCount(command.valueCount());
+    getSubscriber(command.clientId() + command.id())
+        ->assertValueCount(command.valueCount());
   } else if (command.isReceivedAtLeastAssert()) {
     LOG(INFO) << "... assert: received at least " << command.valueCount();
-    getSubscriber(command.id())->assertReceivedAtLeast(command.valueCount());
+    getSubscriber(command.clientId() + command.id())
+        ->assertReceivedAtLeast(command.valueCount());
   } else if (command.isCompletedAssert()) {
     LOG(INFO) << "... assert: completed";
-    getSubscriber(command.id())->assertCompleted();
+    getSubscriber(command.clientId() + command.id())->assertCompleted();
   } else if (command.isNotCompletedAssert()) {
     LOG(INFO) << "... assert: not completed";
-    getSubscriber(command.id())->assertNotCompleted();
+    getSubscriber(command.clientId() + command.id())->assertNotCompleted();
   } else if (command.isCanceledAssert()) {
     LOG(INFO) << "... assert: canceled";
-    getSubscriber(command.id())->assertCanceled();
+    getSubscriber(command.clientId() + command.id())->assertCanceled();
   } else {
     throw std::runtime_error("unsupported assert type");
   }
@@ -149,5 +167,5 @@ yarpl::Reference<BaseSubscriber> TestInterpreter::getSubscriber(
   return found->second;
 }
 
-} // tck
-} // reactivesocket
+} // namespace tck
+} // namespace rsocket

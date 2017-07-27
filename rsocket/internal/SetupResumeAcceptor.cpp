@@ -3,16 +3,24 @@
 #include "rsocket/internal/SetupResumeAcceptor.h"
 
 #include <folly/ExceptionWrapper.h>
-#include <folly/io/async/EventBaseManager.h>
+#include <folly/io/async/EventBase.h>
 
 #include "rsocket/DuplexConnection.h"
-#include "rsocket/RSocketStats.h"
 #include "rsocket/framing/Frame.h"
 #include "rsocket/framing/FrameProcessor.h"
 #include "rsocket/framing/FrameSerializer.h"
 #include "rsocket/framing/FrameTransport.h"
 
 namespace rsocket {
+
+namespace {
+
+folly::exception_wrapper error(folly::StringPiece message) {
+  std::runtime_error exn{message.str()};
+  auto eptr = std::make_exception_ptr(exn);
+  return folly::exception_wrapper{std::move(eptr), exn};
+}
+}
 
 class OneFrameProcessor : public FrameProcessor {
  public:
@@ -31,18 +39,20 @@ class OneFrameProcessor : public FrameProcessor {
   }
 
   void processFrame(std::unique_ptr<folly::IOBuf> buf) override {
-    acceptor_.processFrame(std::move(transport_), std::move(buf),
-                           std::move(onSetup_), std::move(onResume_));
-    // no more code here as the instance might be gone by now
+    acceptor_.processFrame(
+        std::move(transport_),
+        std::move(buf),
+        std::move(onSetup_),
+        std::move(onResume_));
+    // No more code here as the instance might be gone by now.
   }
 
-  void onTerminal(folly::exception_wrapper ex) override {
+  void onTerminal(folly::exception_wrapper ew) override {
     onSetup_ = nullptr;
     onResume_ = nullptr;
 
-    acceptor_.closeAndRemoveConnection(
-        std::move(transport_), std::move(ex));
-    // no more code here as the instance might be gone by now
+    acceptor_.close(std::move(transport_), std::move(ew));
+    // No more code here as the instance might be gone by now.
   }
 
  private:
@@ -53,15 +63,15 @@ class OneFrameProcessor : public FrameProcessor {
 };
 
 SetupResumeAcceptor::SetupResumeAcceptor(
-    ProtocolVersion protocolVersion, folly::EventBase* eventBase)
+    ProtocolVersion version,
+    folly::EventBase* eventBase)
     : eventBase_(eventBase) {
-  // if protocolVersion is unknown we will try to autodetect the version
-  // with the first frame
-  if (protocolVersion != ProtocolVersion::Unknown) {
-    defaultFrameSerializer_ =
-        FrameSerializer::createFrameSerializer(protocolVersion);
-  }
   CHECK(eventBase_);
+
+  // If the version is unknown we'll try to autodetect it from the first frame.
+  if (version != ProtocolVersion::Unknown) {
+    defaultSerializer_ = FrameSerializer::createFrameSerializer(version);
+  }
 }
 
 SetupResumeAcceptor::~SetupResumeAcceptor() {
@@ -70,120 +80,101 @@ SetupResumeAcceptor::~SetupResumeAcceptor() {
 
 void SetupResumeAcceptor::processFrame(
     yarpl::Reference<FrameTransport> transport,
-    std::unique_ptr<folly::IOBuf> frame,
+    std::unique_ptr<folly::IOBuf> buf,
     SetupResumeAcceptor::OnSetup onSetup,
     SetupResumeAcceptor::OnResume onResume) {
   DCHECK(eventBase_->isInEventBaseThread());
 
   if (closed_) {
-    transport->closeWithError(std::runtime_error("shut down"));
+    transport->closeWithError(error("SetupResumeAcceptor is shutting down"));
     return;
   }
 
-  auto frameSerializer = getOrAutodetectFrameSerializer(*frame);
-  if (!frameSerializer) {
-    closeAndRemoveConnection(
-        std::move(transport),
-        std::runtime_error("Unable to detect protocol version"));
+  auto serializer = createSerializer(*buf);
+  if (!serializer) {
+    close(std::move(transport), error("Unable to detect protocol version"));
     return;
   }
 
-  switch (frameSerializer->peekFrameType(*frame)) {
+  switch (serializer->peekFrameType(*buf)) {
     case FrameType::SETUP: {
-      Frame_SETUP setupFrame;
-      if (!frameSerializer->deserializeFrom(setupFrame, std::move(frame))) {
+      Frame_SETUP frame;
+      if (!serializer->deserializeFrom(frame, std::move(buf))) {
         transport->outputFrameOrEnqueue(
-            frameSerializer->serializeOut(Frame_ERROR::invalidFrame()));
-        closeAndRemoveConnection(
-            std::move(transport),
-            std::runtime_error("invalid"));
+            serializer->serializeOut(Frame_ERROR::invalidFrame()));
+        close(std::move(transport), error("Cannot decode SETUP frame"));
         break;
       }
 
-      SetupParameters setupPayload;
-      setupFrame.moveToSetupPayload(setupPayload);
+      SetupParameters params;
+      frame.moveToSetupPayload(params);
 
-      if (frameSerializer->protocolVersion() != setupPayload.protocolVersion) {
-        transport->outputFrameOrEnqueue(frameSerializer->serializeOut(
-            Frame_ERROR::badSetupFrame("invalid protocol version")));
-        closeAndRemoveConnection(
-            transport,
-            std::runtime_error("invalid protocol version for resume"));
+      if (serializer->protocolVersion() != params.protocolVersion) {
+        constexpr folly::StringPiece message{
+            "SETUP frame has invalid protocol version"};
+        transport->outputFrameOrEnqueue(serializer->serializeOut(
+            Frame_ERROR::badSetupFrame(message.str())));
+        close(transport, error(message));
         break;
       }
 
-      removeConnection(transport);
-      onSetup(std::move(transport), std::move(setupPayload));
+      remove(transport);
+
+      try {
+        onSetup(transport, std::move(params));
+      } catch (const std::exception& exn) {
+        folly::exception_wrapper ew{std::current_exception(), exn};
+        auto errFrame = Frame_ERROR::badSetupFrame(ew.what().toStdString());
+        transport->outputFrameOrEnqueue(
+            serializer->serializeOut(std::move(errFrame)));
+        close(std::move(transport), std::move(ew));
+      }
       break;
     }
 
     case FrameType::RESUME: {
-      Frame_RESUME resumeFrame;
-      if (!frameSerializer->deserializeFrom(resumeFrame, std::move(frame))) {
+      Frame_RESUME frame;
+      if (!serializer->deserializeFrom(frame, std::move(buf))) {
         transport->outputFrameOrEnqueue(
-            frameSerializer->serializeOut(Frame_ERROR::invalidFrame()));
-        closeAndRemoveConnection(
-            std::move(transport),
-            std::runtime_error("invalid"));
-      }
-
-      ResumeParameters resumeParams(
-          std::move(resumeFrame.token_),
-          resumeFrame.lastReceivedServerPosition_,
-          resumeFrame.clientPosition_,
-          ProtocolVersion(
-              resumeFrame.versionMajor_, resumeFrame.versionMinor_));
-
-      if (frameSerializer->protocolVersion() != resumeParams.protocolVersion) {
-        transport->outputFrameOrEnqueue(frameSerializer->serializeOut(
-            Frame_ERROR::badSetupFrame("invalid protocol version")));
-        closeAndRemoveConnection(
-            std::move(transport),
-            std::runtime_error("invalid protocol version"));
+            serializer->serializeOut(Frame_ERROR::invalidFrame()));
+        close(std::move(transport), error("Cannot decode RESUME frame"));
         break;
       }
 
-      if (!onResume(transport, std::move(resumeParams))) {
-        transport->outputFrameOrEnqueue(frameSerializer->serializeOut(
-            Frame_ERROR::rejectedResume("Resumption Failure")));
-        // We are currently in FrameTransport's callstack where it would
-        // have already acquired a recursive_mutex.  After the following block
-        // of code, FrameTransport goes out of scope and will get destroyed. But
-        // we cant destroy it while holding a recursive_mutex.  So schedule this
-        // block of code to be executed after callstack has unwinded.
-        eventBase_->runInEventBaseThread(
-            [ this, transport = std::move(transport) ] {
-              closeAndRemoveConnection(
-                  std::move(transport),
-                  std::runtime_error("Resumption Failure"));
-            });
-      } else {
-        connections_.erase(transport);
+      ResumeParameters params(
+          std::move(frame.token_),
+          frame.lastReceivedServerPosition_,
+          frame.clientPosition_,
+          ProtocolVersion(frame.versionMajor_, frame.versionMinor_));
+
+      if (serializer->protocolVersion() != params.protocolVersion) {
+        constexpr folly::StringPiece message{
+            "RESUME frame has invalid protocol version"};
+        transport->outputFrameOrEnqueue(serializer->serializeOut(
+            Frame_ERROR::badSetupFrame(message.str())));
+        close(std::move(transport), error(message));
+        break;
       }
 
+      if (onResume(transport, std::move(params))) {
+        connections_.erase(transport);
+        return;
+      }
+
+      constexpr folly::StringPiece message{"Resumption failure"};
+
+      transport->outputFrameOrEnqueue(
+          serializer->serializeOut(Frame_ERROR::rejectedResume(message.str())));
+
+      close(std::move(transport), error(message));
       break;
     }
 
-    case FrameType::CANCEL:
-    case FrameType::ERROR:
-    case FrameType::KEEPALIVE:
-    case FrameType::LEASE:
-    case FrameType::METADATA_PUSH:
-    case FrameType::REQUEST_CHANNEL:
-    case FrameType::REQUEST_FNF:
-    case FrameType::REQUEST_N:
-    case FrameType::REQUEST_RESPONSE:
-    case FrameType::REQUEST_STREAM:
-    case FrameType::RESERVED:
-    case FrameType::PAYLOAD:
-    case FrameType::RESUME_OK:
-    case FrameType::EXT:
     default: {
       transport->outputFrameOrEnqueue(
-          frameSerializer->serializeOut(Frame_ERROR::unexpectedFrame()));
-      closeAndRemoveConnection(
-          std::move(transport),
-          std::runtime_error("invalid"));
+          serializer->serializeOut(Frame_ERROR::unexpectedFrame()));
+      close(
+          std::move(transport), error("Invalid frame, expected SETUP/RESUME"));
       break;
     }
   }
@@ -197,61 +188,66 @@ void SetupResumeAcceptor::accept(
   auto processor = std::make_shared<OneFrameProcessor>(
       *this, transport, std::move(onSetup), std::move(onResume));
   connections_.insert(transport);
-  // transport can receive frames right away
+  // Transport can receive frames right away.
   transport->setFrameProcessor(std::move(processor));
 }
 
-std::shared_ptr<FrameSerializer>
-SetupResumeAcceptor::getOrAutodetectFrameSerializer(
-    const folly::IOBuf& firstFrame) {
-  if (defaultFrameSerializer_) {
-    return defaultFrameSerializer_;
+std::shared_ptr<FrameSerializer> SetupResumeAcceptor::createSerializer(
+    const folly::IOBuf& frame) {
+  if (defaultSerializer_) {
+    return defaultSerializer_;
   }
 
-  auto serializer = FrameSerializer::createAutodetectedSerializer(firstFrame);
+  auto serializer = FrameSerializer::createAutodetectedSerializer(frame);
   if (!serializer) {
-    LOG(ERROR) << "unable to detect protocol version";
+    VLOG(2) << "Unable to detect protocol version";
     return nullptr;
   }
 
-  VLOG(2) << "detected protocol version" << serializer->protocolVersion();
+  VLOG(3) << "Detected protocol version " << serializer->protocolVersion();
   return std::move(serializer);
 }
 
-void SetupResumeAcceptor::closeAndRemoveConnection(
-    const yarpl::Reference<FrameTransport>& transport,
-    folly::exception_wrapper ex) {
-  if (ex) {
-    transport->closeWithError(ex);
-  } else {
-    transport->close();
-  }
-  connections_.erase(transport);
+void SetupResumeAcceptor::close(
+    yarpl::Reference<FrameTransport> tport,
+    folly::exception_wrapper e) {
+  DCHECK(eventBase_->isInEventBaseThread());
+
+  // This method always gets called with a FrameTransport::onNext() stack frame
+  // above it.  Closing the transport too early will destroy it and we'll unwind
+  // back up and try to access it.
+  eventBase_->runInEventBaseThread(
+      [ this, transport = std::move(tport), ew = std::move(e) ]() mutable {
+        if (ew) {
+          transport->closeWithError(std::move(ew));
+        } else {
+          transport->close();
+        }
+        connections_.erase(transport);
+      });
 }
 
-void SetupResumeAcceptor::removeConnection(
+void SetupResumeAcceptor::remove(
     const yarpl::Reference<FrameTransport>& transport) {
   transport->setFrameProcessor(nullptr);
   connections_.erase(transport);
 }
 
 folly::Future<folly::Unit> SetupResumeAcceptor::close() {
-  if(eventBase_->isInEventBaseThread()) {
-    closeAllConnections();
+  if (eventBase_->isInEventBaseThread()) {
+    closeAll();
     return folly::makeFuture();
-  } else {
-    return folly::via(eventBase_).then(
-        [this]() mutable {
-          closeAllConnections();
-        });
   }
+  return folly::via(eventBase_, [this] { closeAll(); });
 }
 
-void SetupResumeAcceptor::closeAllConnections() {
+void SetupResumeAcceptor::closeAll() {
+  DCHECK(eventBase_->isInEventBaseThread());
+
   closed_ = true;
-  for(auto& connection : connections_) {
-    connection->closeWithError(std::runtime_error("shutting down"));
+
+  for (auto& connection : connections_) {
+    connection->closeWithError(error("SetupResumeAcceptor is shutting down"));
   }
 }
-
-} // reactivesocket
+}
