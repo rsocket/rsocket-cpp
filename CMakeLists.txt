@@ -56,6 +56,9 @@ if (APPLE)
   endif()
 endif()
 
+# disable coverage mode by default
+option(RSOCKET_BUILD_WITH_COVERAGE "Build with --coverage (gcov)" OFF)
+
 # Add compiler-specific options.
 if (CMAKE_COMPILER_IS_GNUCXX)
   if (RSOCKET_ASAN)
@@ -63,19 +66,21 @@ if (CMAKE_COMPILER_IS_GNUCXX)
   endif ()
   set(EXTRA_LINK_FLAGS ${EXTRA_LINK_FLAGS} -fuse-ld=gold)
 
-  # Enable code coverage.
-  add_compile_options(--coverage)
-  set(EXTRA_LINK_FLAGS ${EXTRA_LINK_FLAGS} --coverage)
-  set(COVERAGE_INFO coverage.info)
-  add_custom_command(
-    OUTPUT ${COVERAGE_INFO}
-    # Capture coverage info.
-    COMMAND lcov --directory . --capture --output-file ${COVERAGE_INFO}
-    # Filter out system and test code.
-    COMMAND lcov --remove ${COVERAGE_INFO} 'tests/*' 'test/*' 'tck-test/*' '/usr/*' 'gmock/*' 'folly/*' --output-file
-                 ${COVERAGE_INFO}
-    # Debug before upload.
-    COMMAND lcov --list ${COVERAGE_INFO})
+  if (RSOCKET_BUILD_WITH_COVERAGE)
+    # Enable code coverage.
+    add_compile_options(--coverage)
+    set(EXTRA_LINK_FLAGS ${EXTRA_LINK_FLAGS} --coverage)
+    set(COVERAGE_INFO coverage.info)
+    add_custom_command(
+      OUTPUT ${COVERAGE_INFO}
+      # Capture coverage info.
+      COMMAND lcov --directory . --capture --output-file ${COVERAGE_INFO}
+      # Filter out system and test code.
+      COMMAND lcov --remove ${COVERAGE_INFO} 'tests/*' 'test/*' 'tck-test/*' '/usr/*' 'gmock/*' 'folly/*' --output-file
+                   ${COVERAGE_INFO}
+      # Debug before upload.
+      COMMAND lcov --list ${COVERAGE_INFO})
+  endif()
 elseif (${CMAKE_CXX_COMPILER_ID} MATCHES Clang)
   if (RSOCKET_ASAN)
     set(ASAN_FLAGS
@@ -320,6 +325,8 @@ add_library(
   rsocket/internal/ScheduledSingleSubscription.h
   rsocket/internal/RSocketConnectionManager.cpp
   rsocket/internal/RSocketConnectionManager.h
+  rsocket/internal/SwappableEventBase.cpp
+  rsocket/internal/SwappableEventBase.h
   rsocket/ResumeManager.h
   rsocket/ColdResumeHandler.h
   rsocket/RSocketServiceHandler.cpp
@@ -362,6 +369,7 @@ add_executable(
   test/handlers/HelloStreamRequestHandler.h
   test/internal/AllowanceSemaphoreTest.cpp
   test/internal/FollyKeepaliveTimerTest.cpp
+  test/internal/SwappableEventBaseTest.cpp
   test/internal/SetupResumeAcceptorTest.cpp
   test/test_utils/MockDuplexConnection.h
   test/test_utils/MockKeepaliveTimer.h
