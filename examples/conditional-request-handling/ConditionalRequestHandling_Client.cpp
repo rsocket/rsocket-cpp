@@ -18,7 +18,7 @@ using namespace yarpl::flowable;
 DEFINE_string(host, "localhost", "host to connect to");
 DEFINE_int32(port, 9898, "host:port to connect to");
 
-class RSocketNetworkStatsLog : public RSocketNetworkStats {
+class ChannelConnectionEvents : public RSocketConnectionEvents {
  public:
   void onConnected() override {
     LOG(INFO) << "onConnected";
@@ -44,14 +44,14 @@ class RSocketNetworkStatsLog : public RSocketNetworkStats {
 void sendRequest(std::string mimeType) {
   folly::SocketAddress address;
   address.setFromHostPort(FLAGS_host, FLAGS_port);
-  auto nwStatsLog = std::make_shared<RSocketNetworkStatsLog>();
+  auto connectionEvents = std::make_shared<ChannelConnectionEvents>();
   auto client = RSocket::createConnectedClient(
                     std::make_unique<TcpConnectionFactory>(std::move(address)),
                     SetupParameters(mimeType, mimeType),
                     std::make_shared<RSocketResponder>(),
                     nullptr,
                     RSocketStats::noop(),
-                    nwStatsLog)
+                    connectionEvents)
                     .get();
 
   std::atomic<int> rcvdCount{0};
@@ -64,7 +64,7 @@ void sendRequest(std::string mimeType) {
         rcvdCount++;
       });
 
-  while (rcvdCount < 5 && !nwStatsLog->isClosed()) {
+  while (rcvdCount < 5 && !connectionEvents->isClosed()) {
     std::this_thread::yield();
   }
 }

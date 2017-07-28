@@ -6,8 +6,8 @@
 #include <folly/ScopeGuard.h>
 #include <folly/ExceptionWrapper.h>
 
+#include "rsocket/RSocketConnectionEvents.h"
 #include "rsocket/statemachine/RSocketStateMachine.h"
-#include "rsocket/RSocketNetworkStats.h"
 
 namespace rsocket {
 
@@ -43,15 +43,15 @@ RSocketConnectionManager::~RSocketConnectionManager() {
 void RSocketConnectionManager::manageConnection(
     std::shared_ptr<RSocketStateMachine> socket,
     folly::EventBase& eventBase) {
-  class RemoveSocketNetworkStats : public RSocketNetworkStats {
+  class ConnectionEventsWrapper : public RSocketConnectionEvents {
    public:
-    RemoveSocketNetworkStats(
+    ConnectionEventsWrapper(
         RSocketConnectionManager& connectionManager,
         std::shared_ptr<RSocketStateMachine> socket,
         folly::EventBase& eventBase)
-      : connectionManager_(connectionManager),
-        socket_(std::move(socket)),
-        eventBase_(eventBase) {}
+        : connectionManager_(connectionManager),
+          socket_(std::move(socket)),
+          eventBase_(eventBase) {}
 
     void onConnected() override {
       if (inner) {
@@ -82,13 +82,13 @@ void RSocketConnectionManager::manageConnection(
     std::shared_ptr<RSocketStateMachine> socket_;
     folly::EventBase& eventBase_;
 
-    std::shared_ptr<RSocketNetworkStats> inner;
+    std::shared_ptr<RSocketConnectionEvents> inner;
   };
 
-  auto newNetworkStats = std::make_shared<RemoveSocketNetworkStats>(
-      *this, socket, eventBase);
-  newNetworkStats->inner = std::move(socket->networkStats());
-  socket->networkStats() = std::move(newNetworkStats);
+  auto connectionEventsWrapper =
+      std::make_shared<ConnectionEventsWrapper>(*this, socket, eventBase);
+  connectionEventsWrapper->inner = std::move(socket->connectionEvents());
+  socket->connectionEvents() = std::move(connectionEventsWrapper);
 
   sockets_.lock()->insert({std::move(socket), eventBase});
 }

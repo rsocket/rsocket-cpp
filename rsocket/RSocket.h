@@ -21,8 +21,8 @@ class RSocket {
       std::unique_ptr<KeepaliveTimer> keepaliveTimer =
           std::unique_ptr<KeepaliveTimer>(),
       std::shared_ptr<RSocketStats> stats = RSocketStats::noop(),
-      std::shared_ptr<RSocketNetworkStats> networkStats =
-          std::shared_ptr<RSocketNetworkStats>(),
+      std::shared_ptr<RSocketConnectionEvents> connectionEvents =
+          std::shared_ptr<RSocketConnectionEvents>(),
       std::shared_ptr<ResumeManager> resumeManager =
           std::shared_ptr<ResumeManager>(),
       std::shared_ptr<ColdResumeHandler> coldResumeHandler =
@@ -42,8 +42,8 @@ class RSocket {
       std::unique_ptr<KeepaliveTimer> keepaliveTimer =
           std::unique_ptr<KeepaliveTimer>(),
       std::shared_ptr<RSocketStats> stats = RSocketStats::noop(),
-      std::shared_ptr<RSocketNetworkStats> networkStats =
-          std::shared_ptr<RSocketNetworkStats>());
+      std::shared_ptr<RSocketConnectionEvents> connectionEvents =
+          std::shared_ptr<RSocketConnectionEvents>());
 
   // A convenience function to create RSocketServer
   static std::unique_ptr<RSocketServer> createServer(

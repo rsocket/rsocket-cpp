@@ -4,8 +4,8 @@
 
 #include <folly/Expected.h>
 
+#include "rsocket/RSocketConnectionEvents.h"
 #include "rsocket/RSocketException.h"
-#include "rsocket/RSocketNetworkStats.h"
 #include "rsocket/RSocketParameters.h"
 #include "rsocket/RSocketResponder.h"
 #include "rsocket/RSocketServerState.h"
@@ -25,13 +25,13 @@ struct RSocketConnectionParams {
   RSocketConnectionParams(
       std::shared_ptr<RSocketResponder> _responder,
       std::shared_ptr<RSocketStats> _stats = RSocketStats::noop(),
-      std::shared_ptr<RSocketNetworkStats> _networkStats = nullptr)
+      std::shared_ptr<RSocketConnectionEvents> _connectionEvents = nullptr)
       : responder(std::move(_responder)),
         stats(std::move(_stats)),
-        networkStats(std::move(_networkStats)) {}
+        connectionEvents(std::move(_connectionEvents)) {}
   std::shared_ptr<RSocketResponder> responder;
   std::shared_ptr<RSocketStats> stats;
-  std::shared_ptr<RSocketNetworkStats> networkStats;
+  std::shared_ptr<RSocketConnectionEvents> connectionEvents;
 };
 
 

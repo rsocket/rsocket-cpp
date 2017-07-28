@@ -28,7 +28,7 @@ RSocketClient::RSocketClient(
     std::shared_ptr<RSocketResponder> responder,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer,
     std::shared_ptr<RSocketStats> stats,
-    std::shared_ptr<RSocketNetworkStats> networkStats,
+    std::shared_ptr<RSocketConnectionEvents> connectionEvents,
     std::shared_ptr<ResumeManager> resumeManager,
     std::shared_ptr<ColdResumeHandler> coldResumeHandler,
     OnRSocketResume)
@@ -38,7 +38,7 @@ RSocketClient::RSocketClient(
       responder_(std::move(responder)),
       keepaliveTimer_(std::move(keepaliveTimer)),
       stats_(stats),
-      networkStats_(networkStats),
+      connectionEvents_(connectionEvents),
       resumeManager_(resumeManager),
       coldResumeHandler_(coldResumeHandler),
       protocolVersion_(setupParameters_.protocolVersion),
@@ -148,7 +148,7 @@ void RSocketClient::createState(folly::EventBase& eventBase) {
       std::move(keepaliveTimer_),
       ReactiveSocketMode::CLIENT,
       stats_,
-      networkStats_);
+      connectionEvents_);
 
   requester_ = std::make_shared<RSocketRequester>(stateMachine_, eventBase);
 

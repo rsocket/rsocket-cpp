@@ -6,7 +6,7 @@
 
 #include "rsocket/ColdResumeHandler.h"
 #include "rsocket/ConnectionFactory.h"
-#include "rsocket/RSocketNetworkStats.h"
+#include "rsocket/RSocketConnectionEvents.h"
 #include "rsocket/RSocketParameters.h"
 #include "rsocket/RSocketRequester.h"
 #include "rsocket/RSocketStats.h"
@@ -56,8 +56,8 @@ class RSocketClient {
       std::unique_ptr<KeepaliveTimer> keepaliveTimer =
           std::unique_ptr<KeepaliveTimer>(),
       std::shared_ptr<RSocketStats> stats = RSocketStats::noop(),
-      std::shared_ptr<RSocketNetworkStats> networkStats =
-          std::shared_ptr<RSocketNetworkStats>(),
+      std::shared_ptr<RSocketConnectionEvents> connectionEvents =
+          std::shared_ptr<RSocketConnectionEvents>(),
       std::shared_ptr<ResumeManager> resumeManager =
           std::shared_ptr<ResumeManager>(),
       std::shared_ptr<ColdResumeHandler> coldResumeHandler =
@@ -77,7 +77,7 @@ class RSocketClient {
   std::shared_ptr<RSocketResponder> responder_;
   std::unique_ptr<KeepaliveTimer> keepaliveTimer_;
   std::shared_ptr<RSocketStats> stats_;
-  std::shared_ptr<RSocketNetworkStats> networkStats_;
+  std::shared_ptr<RSocketConnectionEvents> connectionEvents_;
   std::shared_ptr<ResumeManager> resumeManager_;
   std::shared_ptr<ColdResumeHandler> coldResumeHandler_;
 

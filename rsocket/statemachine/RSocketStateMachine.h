@@ -22,7 +22,7 @@ class FrameSerializer;
 class FrameTransport;
 class KeepaliveTimer;
 class ResumeCache;
-class RSocketNetworkStats;
+class RSocketConnectionEvents;
 class RSocketParameters;
 class RSocketResponder;
 class RSocketStateMachine;
@@ -64,7 +64,8 @@ class RSocketStateMachine final
       std::unique_ptr<KeepaliveTimer> keepaliveTimer_,
       ReactiveSocketMode mode,
       std::shared_ptr<RSocketStats> stats,
-      std::shared_ptr<RSocketNetworkStats> networkStats = std::shared_ptr<RSocketNetworkStats>());
+      std::shared_ptr<RSocketConnectionEvents> connectionEvents =
+          std::shared_ptr<RSocketConnectionEvents>());
 
   void closeWithError(Frame_ERROR&& error);
   void disconnectOrCloseWithError(Frame_ERROR&& error) override;
@@ -205,8 +206,8 @@ class RSocketStateMachine final
     return *stats_;
   }
 
-  std::shared_ptr<RSocketNetworkStats>& networkStats() {
-    return networkStats_;
+  std::shared_ptr<RSocketConnectionEvents>& connectionEvents() {
+    return connectionEvents_;
   }
 
  private:
@@ -296,7 +297,7 @@ class RSocketStateMachine final
   StreamsFactory streamsFactory_;
 
   const std::shared_ptr<RSocketStats> stats_;
-  std::shared_ptr<RSocketNetworkStats> networkStats_;
+  std::shared_ptr<RSocketConnectionEvents> connectionEvents_;
   folly::Executor& executor_;
 };
 }

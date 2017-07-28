@@ -12,7 +12,7 @@ folly::Future<std::shared_ptr<RSocketClient>> RSocket::createConnectedClient(
     std::shared_ptr<RSocketResponder> responder,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer,
     std::shared_ptr<RSocketStats> stats,
-    std::shared_ptr<RSocketNetworkStats> networkStats,
+    std::shared_ptr<RSocketConnectionEvents> connectionEvents,
     std::shared_ptr<ResumeManager> resumeManager,
     std::shared_ptr<ColdResumeHandler> coldResumeHandler,
     OnRSocketResume) {
@@ -22,7 +22,7 @@ folly::Future<std::shared_ptr<RSocketClient>> RSocket::createConnectedClient(
       std::move(responder),
       std::move(keepaliveTimer),
       std::move(stats),
-      std::move(networkStats),
+      std::move(connectionEvents),
       std::move(resumeManager),
       std::move(coldResumeHandler)));
 
@@ -38,14 +38,14 @@ folly::Future<std::shared_ptr<RSocketClient>> RSocket::createResumedClient(
     std::shared_ptr<RSocketResponder> responder,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer,
     std::shared_ptr<RSocketStats> stats,
-    std::shared_ptr<RSocketNetworkStats> networkStats) {
+    std::shared_ptr<RSocketConnectionEvents> connectionEvents) {
   auto c = std::shared_ptr<RSocketClient>(new RSocketClient(
       std::move(connectionFactory),
       std::move(setupParameters),
       std::move(responder),
       std::move(keepaliveTimer),
       std::move(stats),
-      std::move(networkStats),
+      std::move(connectionEvents),
       std::move(resumeManager),
       std::move(coldResumeHandler)));
 

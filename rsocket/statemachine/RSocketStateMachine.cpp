@@ -8,7 +8,7 @@
 #include <folly/io/async/EventBase.h>
 
 #include "rsocket/DuplexConnection.h"
-#include "rsocket/RSocketNetworkStats.h"
+#include "rsocket/RSocketConnectionEvents.h"
 #include "rsocket/RSocketParameters.h"
 #include "rsocket/RSocketResponder.h"
 #include "rsocket/RSocketStats.h"
@@ -29,7 +29,7 @@ RSocketStateMachine::RSocketStateMachine(
     std::unique_ptr<KeepaliveTimer> keepaliveTimer,
     ReactiveSocketMode mode,
     std::shared_ptr<RSocketStats> stats,
-    std::shared_ptr<RSocketNetworkStats> networkStats)
+    std::shared_ptr<RSocketConnectionEvents> connectionEvents)
     : mode_(mode),
       resumeCache_(std::make_shared<ResumeCache>(stats)),
       streamState_(std::make_shared<StreamState>(*stats)),
@@ -37,7 +37,7 @@ RSocketStateMachine::RSocketStateMachine(
       keepaliveTimer_(std::move(keepaliveTimer)),
       streamsFactory_(*this, mode),
       stats_(stats),
-      networkStats_(networkStats),
+      connectionEvents_(connectionEvents),
       executor_(executor) {
   // We deliberately do not "open" input or output to avoid having c'tor on the
   // stack when processing any signals from the connection. See ::connect and
@@ -114,8 +114,8 @@ bool RSocketStateMachine::connect(
 
   frameTransport_ = std::move(frameTransport);
 
-  if (networkStats_) {
-    networkStats_->onConnected();
+  if (connectionEvents_) {
+    connectionEvents_->onConnected();
   }
 
   // We need to create a hard reference to frameTransport_ to make sure the
@@ -155,8 +155,8 @@ void RSocketStateMachine::disconnect(folly::exception_wrapper ex) {
     return;
   }
 
-  if (networkStats_) {
-    networkStats_->onDisconnected(ex);
+  if (connectionEvents_) {
+    connectionEvents_->onDisconnected(ex);
   }
 
   closeFrameTransport(std::move(ex), StreamCompletionSignal::CONNECTION_END);
@@ -183,9 +183,9 @@ void RSocketStateMachine::close(
     resumeCallback_.reset();
   }
 
-  auto networkStats = std::move(networkStats_);
-  if (networkStats) {
-    networkStats->onClosed(ex);
+  auto connectionEvents = std::move(connectionEvents_);
+  if (connectionEvents) {
+    connectionEvents->onClosed(ex);
   }
 
   closeStreams(signal);

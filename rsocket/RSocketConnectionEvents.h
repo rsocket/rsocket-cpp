@@ -8,9 +8,9 @@ class exception_wrapper;
 
 namespace rsocket {
 
-class RSocketNetworkStats {
+class RSocketConnectionEvents {
  public:
-  virtual ~RSocketNetworkStats() = default;
+  virtual ~RSocketConnectionEvents() = default;
 
   virtual void onConnected() {}
   virtual void onDisconnected(const folly::exception_wrapper&) {}
