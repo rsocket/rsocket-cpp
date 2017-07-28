@@ -30,11 +30,33 @@ inline std::unique_ptr<RSocketServer> makeServer(
   return rs;
 }
 
+inline std::unique_ptr<RSocketServer> makeResumableServer(
+    std::shared_ptr<RSocketServiceHandler> serviceHandler) {
+  TcpConnectionAcceptor::Options opts;
+  opts.threads = 1;
+  opts.address = folly::SocketAddress("::", 0);
+  auto rs = RSocket::createServer(
+      std::make_unique<TcpConnectionAcceptor>(std::move(opts)));
+  rs->start(std::move(serviceHandler));
+  return rs;
+}
+
 inline std::shared_ptr<RSocketClient> makeClient(uint16_t port) {
   folly::SocketAddress address;
   address.setFromHostPort("localhost", port);
   return RSocket::createConnectedClient(
              std::make_unique<TcpConnectionFactory>(std::move(address)))
+      .get();
+}
+
+inline std::shared_ptr<RSocketClient> makeResumableClient(uint16_t port) {
+  folly::SocketAddress address;
+  address.setFromHostPort("localhost", port);
+  SetupParameters setupParameters;
+  setupParameters.resumable = true;
+  return RSocket::createConnectedClient(
+             std::make_unique<TcpConnectionFactory>(std::move(address)),
+             std::move(setupParameters))
       .get();
 }
 }

@@ -205,6 +205,10 @@ class TestSubscriber : public Subscriber<T> {
     subscription_->cancel();
   }
 
+  void request(int64_t n) {
+    subscription_->request(n);
+  }
+
  private:
   Reference<Subscriber<T>> delegate_;
   std::vector<T> values_;

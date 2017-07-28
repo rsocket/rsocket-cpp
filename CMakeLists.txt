@@ -362,6 +362,7 @@ add_executable(
   test/RequestChannelTest.cpp
   test/RequestResponseTest.cpp
   test/RequestStreamTest.cpp
+  test/WarmResumptionTest.cpp
   test/Test.cpp
   test/framing/FrameTest.cpp
   test/framing/FrameTransportTest.cpp

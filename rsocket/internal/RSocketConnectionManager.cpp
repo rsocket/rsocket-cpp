@@ -98,7 +98,7 @@ void RSocketConnectionManager::removeConnection(
   auto locked = sockets_.lock();
   locked->erase(socket);
 
-  VLOG(2) << "Removed ReactiveSocket";
+  VLOG(2) << "Removed RSocketStateMachine";
 
   if (shutdown_ && locked->empty()) {
     shutdown_->post();
