@@ -4,44 +4,14 @@
 
 #include "RSocketTests.h"
 
-#include "rsocket/RSocketServiceHandler.h"
+#include "test/handlers/HelloServiceHandler.h"
+
 #include "yarpl/flowable/TestSubscriber.h"
 
 using namespace rsocket;
+using namespace rsocket::tests;
 using namespace rsocket::tests::client_server;
 using namespace yarpl::flowable;
-
-namespace {
-
-class HelloServiceHandler : public RSocketServiceHandler {
- public:
-  folly::Expected<RSocketConnectionParams, RSocketException> onNewSetup(
-      const SetupParameters&) override {
-    return RSocketConnectionParams(
-        std::make_shared<rsocket::tests::HelloStreamRequestHandler>());
-  }
-
-  void onNewRSocketState(
-      std::shared_ptr<RSocketServerState> state,
-      ResumeIdentificationToken token) override {
-    store_.lock()->insert({token, std::move(state)});
-  }
-
-  folly::Expected<std::shared_ptr<RSocketServerState>, RSocketException>
-  onResume(ResumeIdentificationToken token) override {
-    auto itr = store_->find(token);
-    CHECK(itr != store_->end());
-    return itr->second;
-  };
-
- private:
-  folly::Synchronized<
-      std::map<ResumeIdentificationToken, std::shared_ptr<RSocketServerState>>,
-      std::mutex>
-      store_;
-};
-
-} // anonymous namespace
 
 TEST(WarmResumptionTest, SimpleStream) {
   auto server = makeResumableServer(std::make_shared<HelloServiceHandler>());

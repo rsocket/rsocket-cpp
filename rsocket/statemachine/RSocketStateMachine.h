@@ -259,9 +259,6 @@ class RSocketStateMachine final
 
   void debugCheckCorrectExecutor() const;
 
-  void pauseStreams();
-  void resumeStreams();
-
   void writeNewStream(
       StreamId streamId,
       StreamType streamType,

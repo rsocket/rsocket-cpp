@@ -378,11 +378,14 @@ add_executable(
   test/RequestResponseTest.cpp
   test/RequestStreamTest.cpp
   test/WarmResumptionTest.cpp
+  test/ConnectionEventsTest.cpp
   test/Test.cpp
   test/framing/FrameTest.cpp
   test/framing/FrameTransportTest.cpp
   test/handlers/HelloStreamRequestHandler.cpp
   test/handlers/HelloStreamRequestHandler.h
+  test/handlers/HelloServiceHandler.cpp
+  test/handlers/HelloServiceHandler.h
   test/internal/AllowanceSemaphoreTest.cpp
   test/internal/FollyKeepaliveTimerTest.cpp
   test/internal/SwappableEventBaseTest.cpp

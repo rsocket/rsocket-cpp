@@ -49,16 +49,23 @@ inline std::shared_ptr<RSocketClient> makeClient(uint16_t port) {
       .get();
 }
 
-inline std::shared_ptr<RSocketClient> makeResumableClient(uint16_t port) {
+inline std::shared_ptr<RSocketClient> makeResumableClient(
+    uint16_t port,
+    std::shared_ptr<RSocketConnectionEvents> connectionEvents = nullptr) {
   folly::SocketAddress address;
   address.setFromHostPort("localhost", port);
   SetupParameters setupParameters;
   setupParameters.resumable = true;
   return RSocket::createConnectedClient(
              std::make_unique<TcpConnectionFactory>(std::move(address)),
-             std::move(setupParameters))
+             std::move(setupParameters),
+             std::make_shared<RSocketResponder>(),
+             nullptr,
+             RSocketStats::noop(),
+             std::move(connectionEvents))
       .get();
 }
-}
-}
-} // namespace
+
+} // namespace client_server
+} // namespace tests
+} // namespace rsocket

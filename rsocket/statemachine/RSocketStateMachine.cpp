@@ -53,7 +53,7 @@ RSocketStateMachine::~RSocketStateMachine() {
   // automatons destroyed on different threads can be the last ones referencing
   // this.
 
-  VLOG(6) << "~RSocketStateMachine";
+  VLOG(3) << "~RSocketStateMachine";
   // We rely on SubscriptionPtr and SubscriberPtr to dispatch appropriate
   // terminal signals.
   DCHECK(!resumeCallback_);
@@ -160,7 +160,11 @@ void RSocketStateMachine::disconnect(folly::exception_wrapper ex) {
   }
 
   closeFrameTransport(std::move(ex), StreamCompletionSignal::CONNECTION_END);
-  pauseStreams();
+
+  if (connectionEvents_) {
+    connectionEvents_->onStreamsPaused(ex);
+  }
+
   stats_->socketDisconnected();
 }
 
@@ -348,18 +352,6 @@ void RSocketStateMachine::closeStreams(StreamCompletionSignal signal) {
     assert(result);
     assert(streamState_->streams_.size() == oldSize - 1);
   }
-}
-
-void RSocketStateMachine::pauseStreams() {
-  //  for (auto& streamKV : streamState_->streams_) {
-  //    streamKV.second->pauseStream(*requestHandler_);
-  //  }
-}
-
-void RSocketStateMachine::resumeStreams() {
-  //  for (auto& streamKV : streamState_->streams_) {
-  //    streamKV.second->resumeStream(*requestHandler_);
-  //  }
 }
 
 void RSocketStateMachine::processFrame(std::unique_ptr<folly::IOBuf> frame) {
@@ -760,7 +752,9 @@ void RSocketStateMachine::resumeFromPosition(ResumePosition position) {
   DCHECK(!isDisconnectedOrClosed());
   DCHECK(resumeCache_->isPositionAvailable(position));
 
-  resumeStreams();
+  if (connectionEvents_) {
+    connectionEvents_->onStreamsResumed();
+  }
   resumeCache_->sendFramesFromPosition(position, *frameTransport_);
 
   for (auto& frame : streamState_->moveOutputPendingFrames()) {
