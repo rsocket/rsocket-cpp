@@ -43,6 +43,7 @@ void TestFileParser::parseCommand(const std::string& command) {
 
   if (parameters.size() == 2 && parameters[0] == "name") {
     currentTest_.setName(parameters[1]);
+    currentTest_.setResumption(false);
     return;
   }
 
@@ -51,6 +52,11 @@ void TestFileParser::parseCommand(const std::string& command) {
     LOG(ERROR) << "invalid command on line " << currentLine_ << ": " << command;
     throw std::runtime_error("unknown command in the test");
   } else {
+    // if test contain resumption related command.
+    if ("disconnect" == newCommand.name() || "resume" == newCommand.name()) {
+      currentTest_.setResumption(true);
+    }
+
     currentTest_.addCommand(std::move(newCommand));
   }
 }
@@ -62,5 +68,5 @@ void TestFileParser::addCurrentTest() {
   }
 }
 
-} // tck
-} // reactivesocket
+} // namespace tck
+} // namespace rsocket

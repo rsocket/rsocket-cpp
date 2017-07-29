@@ -42,6 +42,14 @@ class Test {
     name_ = name;
   }
 
+  bool resumption() const {
+    return resumption_;
+  }
+
+  void setResumption(bool resumption) {
+    resumption_ = resumption;
+  }
+
   void addCommand(TestCommand command);
 
   const std::vector<TestCommand>& commands() const {
@@ -54,6 +62,7 @@ class Test {
 
  private:
   std::string name_;
+  bool resumption_{false};
   std::vector<TestCommand> commands_;
 };
 

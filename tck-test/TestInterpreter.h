@@ -27,12 +27,13 @@ class RequestCommand;
 class AwaitCommand;
 class CancelCommand;
 class AssertCommand;
+class ResumeCommand;
+class DisconnectCommand;
 
 class TestInterpreter {
   class TestClient {
    public:
-    TestClient(std::shared_ptr<RSocketClient> c)
-        : client(std::move(c)) {
+    TestClient(std::shared_ptr<RSocketClient> c) : client(std::move(c)) {
       auto rs = client->getRequester();
       requester = std::move(rs);
     }
@@ -51,6 +52,8 @@ class TestInterpreter {
   void handleAwait(const AwaitCommand& command);
   void handleCancel(const CancelCommand& command);
   void handleAssert(const AssertCommand& command);
+  void handleDisconnect(const DisconnectCommand& command);
+  void handleResume(const ResumeCommand& command);
 
   yarpl::Reference<BaseSubscriber> getSubscriber(const std::string& id);
 

@@ -71,6 +71,16 @@ class CancelCommand : public TypedTestCommand {
   }
 };
 
+class ResumeCommand : public TypedTestCommand {
+ public:
+  using TypedTestCommand::TypedTestCommand;
+};
+
+class DisconnectCommand : public TypedTestCommand {
+ public:
+  using TypedTestCommand::TypedTestCommand;
+};
+
 class AwaitCommand : public TypedTestCommand {
  public:
   using TypedTestCommand::TypedTestCommand;

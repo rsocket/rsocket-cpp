@@ -48,6 +48,12 @@ bool TestInterpreter::run() {
       } else if (command.name() == "assert") {
         auto assert = command.as<AssertCommand>();
         handleAssert(assert);
+      } else if (command.name() == "disconnect") {
+        auto disconnect = command.as<DisconnectCommand>();
+        handleDisconnect(disconnect);
+      } else if (command.name() == "resume") {
+        auto resume = command.as<ResumeCommand>();
+        handleResume(resume);
       } else {
         LOG(ERROR) << "unknown command " << command.name();
         throw std::runtime_error("unknown command");
@@ -65,12 +71,33 @@ bool TestInterpreter::run() {
   return true;
 }
 
+void TestInterpreter::handleDisconnect(const DisconnectCommand& command) {
+  if (testClient_.find(command.clientId()) != testClient_.end()) {
+    LOG(INFO) << "Disconnecting the client";
+    testClient_[command.clientId()]->client->disconnect(
+        std::runtime_error("disconnect triggered from client"));
+  }
+}
+
+void TestInterpreter::handleResume(const ResumeCommand& command) {
+  if (testClient_.find(command.clientId()) != testClient_.end()) {
+    LOG(INFO) << "Resuming the client";
+    testClient_[command.clientId()]->client->resume().get();
+  }
+}
+
 void TestInterpreter::handleSubscribe(const SubscribeCommand& command) {
   // If client does not exist, create a new client.
   if (testClient_.find(command.clientId()) == testClient_.end()) {
-    auto client = RSocket::createConnectedClient(
-                  std::make_unique<TcpConnectionFactory>(std::move(address_)))
-                  .get();
+    SetupParameters setupParameters;
+    if (test_.resumption()) {
+      setupParameters.resumable = true;
+    }
+    auto client =
+        RSocket::createConnectedClient(
+            std::make_unique<TcpConnectionFactory>(std::move(address_)),
+            std::move(setupParameters))
+            .get();
     testClient_[command.clientId()] =
         std::make_shared<TestClient>(move(client));
   }
@@ -98,7 +125,7 @@ void TestInterpreter::handleSubscribe(const SubscribeCommand& command) {
   } else {
     throw std::runtime_error("unsupported interaction type");
   }
-} 
+}
 
 void TestInterpreter::handleRequest(const RequestCommand& command) {
   getSubscriber(command.clientId() + command.id())->request(command.n());
