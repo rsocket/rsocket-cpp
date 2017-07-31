@@ -1,6 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include <benchmark/benchmark.h>
+#include <folly/Benchmark.h>
+#include <folly/init/Init.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 
 #include <gflags/gflags.h>
@@ -19,7 +20,7 @@ using namespace rsocket;
 #define MESSAGE_LENGTH (32)
 
 DEFINE_string(host, "localhost", "host to connect to");
-DEFINE_int32(port, 9898, "host:port to connect to");
+DEFINE_int32(port, 0, "host:port to connect to");
 
 class BM_Subscription : public yarpl::flowable::Subscription {
  public:
@@ -32,11 +33,11 @@ class BM_Subscription : public yarpl::flowable::Subscription {
 
  private:
   void request(int64_t n) noexcept override {
-    LOG(INFO) << "requested=" << n << " currentElem=" << currentElem_;
+    VLOG(3) << "requested=" << n << " currentElem=" << currentElem_;
 
     for (int64_t i = 0; i < n; i++) {
       if (cancelled_) {
-        LOG(INFO) << "emission stopped by cancellation";
+        VLOG(3) << "emission stopped by cancellation";
         return;
       }
       subscriber_->onNext(Payload(data_));
@@ -45,7 +46,7 @@ class BM_Subscription : public yarpl::flowable::Subscription {
   }
 
   void cancel() noexcept override {
-    LOG(INFO) << "cancellation received";
+    VLOG(3) << "cancellation received";
     cancelled_ = true;
   }
 
@@ -68,36 +69,36 @@ class BM_RequestHandler : public RSocketResponder {
 class BM_Subscriber : public yarpl::flowable::Subscriber<Payload> {
  public:
   ~BM_Subscriber() {
-    LOG(INFO) << "BM_Subscriber destroy " << this;
+    VLOG(2) << "BM_Subscriber destroy " << this;
   }
 
   explicit BM_Subscriber(int initialRequest)
       : initialRequest_(initialRequest),
         thresholdForRequest_(initialRequest * 0.75),
         received_(0) {
-    LOG(INFO) << "BM_Subscriber " << this << " created with => "
-              << "  Initial Request: " << initialRequest
-              << "  Threshold for re-request: " << thresholdForRequest_;
+    VLOG(2) << "BM_Subscriber " << this << " created with => "
+            << "  Initial Request: " << initialRequest
+            << "  Threshold for re-request: " << thresholdForRequest_;
   }
 
   void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
                        subscription) noexcept override {
-    LOG(INFO) << "BM_Subscriber " << this << " onSubscribe";
+    VLOG(2) << "BM_Subscriber " << this << " onSubscribe";
     subscription_ = std::move(subscription);
     requested_ = initialRequest_;
     subscription_->request(initialRequest_);
   }
 
   void onNext(Payload element) noexcept override {
-    LOG(INFO) << "BM_Subscriber " << this
-              << " onNext as string: " << element.moveDataToString();
+    VLOG(2) << "BM_Subscriber " << this
+            << " onNext as string: " << element.moveDataToString();
 
     received_.store(received_ + 1, std::memory_order_release);
 
     if (--requested_ == thresholdForRequest_) {
       int toRequest = (initialRequest_ - thresholdForRequest_);
-      LOG(INFO) << "BM_Subscriber " << this << " requesting " << toRequest
-                << " more items";
+      VLOG(2) << "BM_Subscriber " << this << " requesting " << toRequest
+              << " more items";
       requested_ += toRequest;
       subscription_->request(toRequest);
     };
@@ -111,25 +112,25 @@ class BM_Subscriber : public yarpl::flowable::Subscriber<Payload> {
   }
 
   void onComplete() noexcept override {
-    LOG(INFO) << "BM_Subscriber " << this << " onComplete";
+    VLOG(2) << "BM_Subscriber " << this << " onComplete";
     terminated_ = true;
     terminalEventCV_.notify_all();
   }
 
   void onError(std::exception_ptr ex) noexcept override {
-    LOG(INFO) << "BM_Subscriber " << this << " onError "
-              << yarpl::exceptionStr(ex);
+    VLOG(2) << "BM_Subscriber " << this << " onError "
+            << yarpl::exceptionStr(ex);
     terminated_ = true;
     terminalEventCV_.notify_all();
   }
 
   void awaitTerminalEvent() {
-    LOG(INFO) << "BM_Subscriber " << this << " block thread";
+    VLOG(2) << "BM_Subscriber " << this << " block thread";
     // now block this thread
     std::unique_lock<std::mutex> lk(m_);
     // if shutdown gets implemented this would then be released by it
     terminalEventCV_.wait(lk, [this] { return terminated_; });
-    LOG(INFO) << "BM_Subscriber " << this << " unblocked";
+    VLOG(2) << "BM_Subscriber " << this << " unblocked";
   }
 
   void cancel() {
@@ -152,69 +153,69 @@ class BM_Subscriber : public yarpl::flowable::Subscriber<Payload> {
   std::atomic<size_t> received_;
 };
 
-class BM_RsFixture : public benchmark::Fixture {
- public:
-  BM_RsFixture()
-      : host_(FLAGS_host),
-        port_(static_cast<uint16_t>(FLAGS_port)),
-        serverRs_(RSocket::createServer(std::make_unique<TcpConnectionAcceptor>(
-            TcpConnectionAcceptor::Options(port_)))) {
-    FLAGS_minloglevel = 100;
-    serverRs_->start([](const SetupParameters&) {
-      return std::make_shared<BM_RequestHandler>();
-    });
-  }
+std::unique_ptr<RSocketServer> makeServer(folly::SocketAddress address) {
+  TcpConnectionAcceptor::Options opts;
+  opts.address = std::move(address);
 
-  virtual ~BM_RsFixture() {}
+  auto acceptor = std::make_unique<TcpConnectionAcceptor>(std::move(opts));
 
-  void SetUp(const benchmark::State&) noexcept override {}
+  auto server = std::make_unique<RSocketServer>(std::move(acceptor));
 
-  void TearDown(const benchmark::State&) noexcept override {}
+  auto responder = std::make_shared<BM_RequestHandler>();
+  server->start([responder](const SetupParameters&) { return responder; });
 
-  std::string host_;
-  uint16_t port_;
-  std::unique_ptr<RSocketServer> serverRs_;
-};
+  return server;
+}
 
-BENCHMARK_DEFINE_F(BM_RsFixture, BM_Stream_Throughput)
-(benchmark::State& state) {
-  folly::SocketAddress address;
-  address.setFromHostPort(host_, port_);
+std::shared_ptr<RSocketClient> makeClient(folly::SocketAddress address) {
+  auto factory = std::make_unique<TcpConnectionFactory>(std::move(address));
+  return RSocket::createConnectedClient(std::move(factory)).get();
+}
 
-  auto s = yarpl::make_ref<BM_Subscriber>(state.range(0));
-
+void streamThroughput(unsigned, size_t items) {
+  std::unique_ptr<RSocketServer> server;
   std::shared_ptr<RSocketClient> client;
+  yarpl::Reference<BM_Subscriber> subscriber;
 
-  try {
-    client = RSocket::createConnectedClient(
-                 std::make_unique<TcpConnectionFactory>(std::move(address)))
-                 .get();
-    client->getRequester()->requestStream(Payload("BM_Stream"))->subscribe(s);
-  } catch (const std::exception& ex) {
-    LOG(INFO) << "Exception received " << ex.what();
-    return;
+  BENCHMARK_SUSPEND {
+    LOG(INFO) << "  Running with " << items << " items";
+
+    folly::SocketAddress address{FLAGS_host, static_cast<uint16_t>(FLAGS_port),
+                                 true /* allowNameLookup */};
+    server = makeServer(std::move(address));
+
+    folly::SocketAddress actual{
+        FLAGS_host, *server->listeningPort(), true /* allowNameLookup */};
+    client = makeClient(std::move(actual));
+
+    subscriber = yarpl::make_ref<BM_Subscriber>(items);
   }
 
-  while (state.KeepRunning()) {
+  client->getRequester()
+      ->requestStream(Payload("BM_Stream"))
+      ->subscribe(subscriber);
+
+  while (subscriber->received() < items) {
     std::this_thread::yield();
   }
 
-  size_t rcved = s->received();
-
-  s->cancel();
-  s->awaitTerminalEvent();
-
-  char label[256];
-
-  std::snprintf(label, sizeof(label), "Message Length: %d", MESSAGE_LENGTH);
-  state.SetLabel(label);
-
-  state.SetItemsProcessed(rcved);
+  BENCHMARK_SUSPEND {
+    subscriber->cancel();
+    subscriber->awaitTerminalEvent();
+  }
 }
 
-BENCHMARK_REGISTER_F(BM_RsFixture, BM_Stream_Throughput)
-    ->Arg(8)
-    ->Arg(32)
-    ->Arg(128);
+BENCHMARK_PARAM(streamThroughput, 10000)
+BENCHMARK_PARAM(streamThroughput, 100000)
+BENCHMARK_PARAM(streamThroughput, 1000000)
 
-BENCHMARK_MAIN()
+int main(int argc, char** argv) {
+  folly::init(&argc, &argv);
+
+  FLAGS_logtostderr = true;
+
+  LOG(INFO) << "Starting benchmarks...";
+  folly::runBenchmarks();
+
+  return 0;
+}
