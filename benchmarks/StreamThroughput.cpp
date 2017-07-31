@@ -3,10 +3,10 @@
 #include <benchmark/benchmark.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 
+#include <gflags/gflags.h>
 #include <condition_variable>
 #include <iostream>
 #include <thread>
-#include <gflags/gflags.h>
 
 #include "rsocket/RSocket.h"
 #include "rsocket/transports/tcp/TcpConnectionAcceptor.h"
@@ -14,9 +14,7 @@
 #include "yarpl/Flowable.h"
 #include "yarpl/utils/ExceptionString.h"
 
-using namespace ::folly;
-using namespace ::rsocket;
-using namespace yarpl;
+using namespace rsocket;
 
 #define MESSAGE_LENGTH (32)
 
@@ -62,10 +60,8 @@ class BM_RequestHandler : public RSocketResponder {
   yarpl::Reference<yarpl::flowable::Flowable<Payload>> handleRequestStream(
       Payload,
       StreamId) override {
-    CHECK(false) << "not implemented";
-    // TODO(lehecka) need to implement new operator fromGenerator
-    // return yarpl::flowable::Flowables::fromGenerator<  Payload>(
-    //     []{return Payload(std::string(MESSAGE_LENGTH, 'a')); });
+    return yarpl::flowable::Flowables::fromGenerator<Payload>(
+        [] { return Payload(std::string(MESSAGE_LENGTH, 'a')); });
   }
 };
 
@@ -108,6 +104,9 @@ class BM_Subscriber : public yarpl::flowable::Subscriber<Payload> {
 
     if (cancel_) {
       subscription_->cancel();
+
+      terminated_ = true;
+      terminalEventCV_.notify_all();
     }
   }
 
@@ -182,7 +181,7 @@ BENCHMARK_DEFINE_F(BM_RsFixture, BM_Stream_Throughput)
   folly::SocketAddress address;
   address.setFromHostPort(host_, port_);
 
-  auto s = make_ref<BM_Subscriber>(state.range(0));
+  auto s = yarpl::make_ref<BM_Subscriber>(state.range(0));
 
   std::shared_ptr<RSocketClient> client;
 
@@ -190,11 +189,9 @@ BENCHMARK_DEFINE_F(BM_RsFixture, BM_Stream_Throughput)
     client = RSocket::createConnectedClient(
                  std::make_unique<TcpConnectionFactory>(std::move(address)))
                  .get();
-    client->getRequester()
-        ->requestStream(Payload("BM_Stream"))
-        ->subscribe(std::move(s));
+    client->getRequester()->requestStream(Payload("BM_Stream"))->subscribe(s);
   } catch (const std::exception& ex) {
-    LOG(INFO) << "Exception received " << ex;
+    LOG(INFO) << "Exception received " << ex.what();
     return;
   }
 
