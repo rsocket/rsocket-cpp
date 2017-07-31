@@ -62,8 +62,6 @@ void RSocketServer::start(
   }
   started = true;
 
-  LOG(INFO) << "Starting RSocketServer";
-
   duplexConnectionAcceptor_->start([this, serviceHandler](
       std::unique_ptr<DuplexConnection> connection,
       folly::EventBase& eventBase) {
