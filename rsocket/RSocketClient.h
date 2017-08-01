@@ -48,7 +48,7 @@ class RSocketClient {
  private:
   // Private constructor.  RSocket class should be used to create instances
   // of RSocketClient.
-  RSocketClient(
+  explicit RSocketClient(
       std::unique_ptr<ConnectionFactory>,
       SetupParameters setupParameters = SetupParameters(),
       std::shared_ptr<RSocketResponder> responder =

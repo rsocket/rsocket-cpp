@@ -1,8 +1,8 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include <folly/io/async/EventBaseManager.h>
-
 #include "rsocket/RSocket.h"
+
+#include <folly/io/async/EventBaseManager.h>
 
 namespace rsocket {
 
