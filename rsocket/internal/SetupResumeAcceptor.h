@@ -37,7 +37,11 @@ class SetupResumeAcceptor final {
   using OnResume =
       folly::Function<void(yarpl::Reference<FrameTransport>, ResumeParameters)>;
 
-  SetupResumeAcceptor(ProtocolVersion, folly::EventBase*);
+  SetupResumeAcceptor(
+      ProtocolVersion,
+      folly::EventBase*,
+      std::thread::id = std::thread::id{});
+
   ~SetupResumeAcceptor();
 
   /// Wait for and process the first frame on a DuplexConnection, calling the
@@ -45,7 +49,8 @@ class SetupResumeAcceptor final {
   void accept(std::unique_ptr<DuplexConnection>, OnSetup, OnResume);
 
   /// Close all open connections, and prevent new ones from being accepted.  Can
-  /// be called from any thread.
+  /// be called from any thread, and also after the EventBase has been
+  /// destroyed, provided we know the ID of the owner thread.
   folly::Future<folly::Unit> close();
 
  private:
@@ -67,6 +72,14 @@ class SetupResumeAcceptor final {
   /// Close all open connections.
   void closeAll();
 
+  /// Whether we're running in the thread that owns this object.  If the ctor
+  /// specified an owner thread ID, then this will not access the EventBase
+  /// pointer.
+  ///
+  /// Useful if the EventBase has been destroyed but we still want to do some
+  /// work within the owner thread.
+  bool inOwnerThread() const;
+
   /// Get the default FrameSerializer if one exists, otherwise try to autodetect
   /// the correct FrameSerializer from the given frame.
   std::shared_ptr<FrameSerializer> createSerializer(const folly::IOBuf&);
@@ -76,5 +89,8 @@ class SetupResumeAcceptor final {
 
   std::shared_ptr<FrameSerializer> defaultSerializer_;
   folly::EventBase* eventBase_;
+
+  /// ID of the thread that owns this object.
+  const std::thread::id owner_;
 };
 }
