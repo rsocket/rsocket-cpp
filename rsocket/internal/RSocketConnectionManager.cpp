@@ -78,9 +78,9 @@ void RSocketConnectionManager::manageConnection(
       }
     }
 
-    void onStreamsPaused(const folly::exception_wrapper& ex) override {
+    void onStreamsPaused() override {
       if (inner) {
-        inner->onStreamsPaused(ex);
+        inner->onStreamsPaused();
       }
     }
 

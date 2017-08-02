@@ -21,7 +21,7 @@ class MockConnEvents : public RSocketConnectionEvents {
  public:
   MOCK_METHOD0(onConnected, void());
   MOCK_METHOD1(onDisconnected, void(const folly::exception_wrapper&));
-  MOCK_METHOD1(onStreamsPaused, void(const folly::exception_wrapper&));
+  MOCK_METHOD0(onStreamsPaused, void());
   MOCK_METHOD0(onStreamsResumed, void());
   MOCK_METHOD1(onClosed, void(const folly::exception_wrapper&));
 };
@@ -55,9 +55,9 @@ TEST(ConnectionEventsTest, SimpleStream) {
 
   // disconnect
   EXPECT_CALL(*clientConnEvents, onDisconnected(_));
-  EXPECT_CALL(*clientConnEvents, onStreamsPaused(_));
+  EXPECT_CALL(*clientConnEvents, onStreamsPaused());
   EXPECT_CALL(*serverConnEvents, onDisconnected(_));
-  EXPECT_CALL(*serverConnEvents, onStreamsPaused(_));
+  EXPECT_CALL(*serverConnEvents, onStreamsPaused());
   client->disconnect(std::runtime_error("Test triggered disconnect"));
 
   // resume
@@ -74,9 +74,9 @@ TEST(ConnectionEventsTest, SimpleStream) {
 
   // disconnect
   EXPECT_CALL(*clientConnEvents, onDisconnected(_));
-  EXPECT_CALL(*clientConnEvents, onStreamsPaused(_));
+  EXPECT_CALL(*clientConnEvents, onStreamsPaused());
   EXPECT_CALL(*serverConnEvents, onDisconnected(_));
-  EXPECT_CALL(*serverConnEvents, onStreamsPaused(_));
+  EXPECT_CALL(*serverConnEvents, onStreamsPaused());
   client->disconnect(std::runtime_error("Test triggered disconnect"));
 
   // relinquish resources

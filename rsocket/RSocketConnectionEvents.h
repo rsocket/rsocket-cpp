@@ -32,7 +32,7 @@ class RSocketConnectionEvents {
   // This gets called when no more frames can be sent over the RSocket streams.
   // This typically happens immediately after onDisconnected(). The streams can
   // be resumed after onStreamsResumed() event.
-  virtual void onStreamsPaused(const folly::exception_wrapper&) {}
+  virtual void onStreamsPaused() {}
 
   // This gets called when the underlying transport has been successfully
   // connected AND the connection can be resumed at the RSocket layer.  This

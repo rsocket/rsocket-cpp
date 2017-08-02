@@ -162,7 +162,7 @@ void RSocketStateMachine::disconnect(folly::exception_wrapper ex) {
   closeFrameTransport(std::move(ex), StreamCompletionSignal::CONNECTION_END);
 
   if (connectionEvents_) {
-    connectionEvents_->onStreamsPaused(ex);
+    connectionEvents_->onStreamsPaused();
   }
 
   stats_->socketDisconnected();
