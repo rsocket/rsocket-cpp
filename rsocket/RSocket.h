@@ -45,6 +45,25 @@ class RSocket {
       std::shared_ptr<RSocketConnectionEvents> connectionEvents =
           std::shared_ptr<RSocketConnectionEvents>());
 
+  // Creates a RSocketClient from an existing DuplexConnection
+  static std::shared_ptr<RSocketClient> createClientFromConnection(
+      std::unique_ptr<DuplexConnection> connection,
+      folly::EventBase& eventBase,
+      SetupParameters setupParameters = SetupParameters(),
+      std::shared_ptr<RSocketResponder> responder =
+          std::make_shared<RSocketResponder>(),
+      std::unique_ptr<KeepaliveTimer> keepaliveTimer =
+          std::unique_ptr<KeepaliveTimer>(),
+      std::shared_ptr<RSocketStats> stats = RSocketStats::noop(),
+      std::shared_ptr<RSocketConnectionEvents> connectionEvents =
+          std::shared_ptr<RSocketConnectionEvents>(),
+      std::shared_ptr<ResumeManager> resumeManager =
+          std::shared_ptr<ResumeManager>(),
+      std::shared_ptr<ColdResumeHandler> coldResumeHandler =
+          std::shared_ptr<ColdResumeHandler>(),
+      OnRSocketResume onRSocketResume =
+          [](std::vector<StreamId>, std::vector<StreamId>) { return false; });
+
   // A convenience function to create RSocketServer
   static std::unique_ptr<RSocketServer> createServer(
       std::unique_ptr<ConnectionAcceptor>);

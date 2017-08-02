@@ -22,7 +22,7 @@ using OnNewSetupFn =
 // This struct holds all the necessary information needed by the RSocketServer
 // to initiate a connection with a client.
 struct RSocketConnectionParams {
-  RSocketConnectionParams(
+  explicit RSocketConnectionParams(
       std::shared_ptr<RSocketResponder> _responder,
       std::shared_ptr<RSocketStats> _stats = RSocketStats::noop(),
       std::shared_ptr<RSocketConnectionEvents> _connectionEvents = nullptr)

@@ -54,17 +54,7 @@ folly::Future<folly::Unit> RSocketClient::connect() {
       std::unique_ptr<DuplexConnection> connection,
       folly::EventBase & eventBase) mutable {
     VLOG(3) << "onConnect received DuplexConnection";
-    evb_ = &eventBase;
-    createState(eventBase);
-    std::unique_ptr<DuplexConnection> framedConnection;
-    if (connection->isFramed()) {
-      framedConnection = std::move(connection);
-    } else {
-      framedConnection = std::make_unique<FramedDuplexConnection>(
-          std::move(connection), protocolVersion_);
-    }
-    stateMachine_->connectClientSendSetup(
-        std::move(framedConnection), std::move(setupParameters_));
+    fromConnection(std::move(connection), eventBase);
     promise.setValue();
   });
 
@@ -73,6 +63,10 @@ folly::Future<folly::Unit> RSocketClient::connect() {
 
 folly::Future<folly::Unit> RSocketClient::resume() {
   VLOG(2) << "Resuming connection";
+
+  CHECK(connectionFactory_)
+      << "The client was likely created without ConnectionFactory. Can't "
+      << "resume";
 
   // TODO: CHECK whether the underlying transport is closed before attempting
   // resumption.
@@ -132,6 +126,22 @@ void RSocketClient::disconnect(folly::exception_wrapper ex) {
     VLOG(2) << "Disconnecting RSocketStateMachine on EventBase";
     stateMachine_->disconnect(std::move(ex));
   });
+}
+
+void RSocketClient::fromConnection(
+    std::unique_ptr<DuplexConnection> connection,
+    folly::EventBase& eventBase) {
+  evb_ = &eventBase;
+  createState(eventBase);
+  std::unique_ptr<DuplexConnection> framedConnection;
+  if (connection->isFramed()) {
+    framedConnection = std::move(connection);
+  } else {
+    framedConnection = std::make_unique<FramedDuplexConnection>(
+        std::move(connection), setupParameters_.protocolVersion);
+  }
+  stateMachine_->connectClientSendSetup(
+      std::move(framedConnection), std::move(setupParameters_));
 }
 
 void RSocketClient::createState(folly::EventBase& eventBase) {

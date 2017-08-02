@@ -7,7 +7,7 @@
 #include <folly/Baton.h>
 #include <folly/Synchronized.h>
 #include <folly/ThreadLocal.h>
-#include "RSocketServiceHandler.h"
+#include "rsocket/RSocketServiceHandler.h"
 #include "rsocket/ConnectionAcceptor.h"
 #include "rsocket/RSocketParameters.h"
 #include "rsocket/RSocketResponder.h"

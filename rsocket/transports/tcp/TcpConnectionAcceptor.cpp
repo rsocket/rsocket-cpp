@@ -20,7 +20,7 @@ class TcpConnectionAcceptor::SocketCallback
   void connectionAccepted(
       int fd,
       const folly::SocketAddress& address) noexcept override {
-    VLOG(1) << "Accepting TCP connection from " << address << " on FD " << fd;
+    VLOG(2) << "Accepting TCP connection from " << address << " on FD " << fd;
 
     folly::AsyncSocket::UniquePtr socket(
         new folly::AsyncSocket(eventBase(), fd));
@@ -31,7 +31,7 @@ class TcpConnectionAcceptor::SocketCallback
   }
 
   void acceptError(const std::exception& ex) noexcept override {
-    VLOG(1) << "TCP error: " << ex.what();
+    VLOG(2) << "TCP error: " << ex.what();
   }
 
   folly::EventBase* eventBase() const {
@@ -76,8 +76,8 @@ void TcpConnectionAcceptor::start(OnDuplexConnectionAccept onAccept) {
         [] { folly::setThreadName("TcpConnectionAcceptor.Worker"); });
   }
 
-  LOG(INFO) << "Starting TCP listener on port " << options_.address.getPort() << " with "
-            << options_.threads << " request threads";
+  VLOG(1) << "Starting TCP listener on port " << options_.address.getPort()
+          << " with " << options_.threads << " request threads";
 
   serverSocket_.reset(
       new folly::AsyncServerSocket(serverThread_->getEventBase()));
@@ -98,14 +98,14 @@ void TcpConnectionAcceptor::start(OnDuplexConnectionAccept onAccept) {
         serverSocket_->startAccepting();
 
         for (auto& i : serverSocket_->getAddresses()) {
-          LOG(INFO) << "Listening on " << i.describe();
+          VLOG(1) << "Listening on " << i.describe();
         }
       })
       .get();
 }
 
 void TcpConnectionAcceptor::stop() {
-  LOG(INFO) << "Shutting down TCP listener";
+  VLOG(1) << "Shutting down TCP listener";
 
   serverThread_->getEventBase()->runInEventBaseThread(
       [this] { serverSocket_.reset(); });

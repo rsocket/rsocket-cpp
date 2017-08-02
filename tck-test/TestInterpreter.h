@@ -33,7 +33,8 @@ class DisconnectCommand;
 class TestInterpreter {
   class TestClient {
    public:
-    TestClient(std::shared_ptr<RSocketClient> c) : client(std::move(c)) {
+    explicit TestClient(std::shared_ptr<RSocketClient> c)
+        : client(std::move(c)) {
       auto rs = client->getRequester();
       requester = std::move(rs);
     }

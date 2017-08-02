@@ -15,9 +15,10 @@ RSocketServer::RSocketServer(
     std::unique_ptr<ConnectionAcceptor> connectionAcceptor)
     : duplexConnectionAcceptor_(std::move(connectionAcceptor)),
       setupResumeAcceptors_([] {
-        return new rsocket::SetupResumeAcceptor(
+        return new rsocket::SetupResumeAcceptor{
             ProtocolVersion::Unknown,
-            folly::EventBaseManager::get()->getExistingEventBase());
+            folly::EventBaseManager::get()->getExistingEventBase(),
+            std::this_thread::get_id()};
       }),
       connectionManager_(std::make_unique<RSocketConnectionManager>()) {}
 
@@ -61,8 +62,6 @@ void RSocketServer::start(
     throw std::runtime_error("RSocketServer::start() already called.");
   }
   started = true;
-
-  LOG(INFO) << "Starting RSocketServer";
 
   duplexConnectionAcceptor_->start([this, serviceHandler](
       std::unique_ptr<DuplexConnection> connection,

@@ -64,8 +64,9 @@ class OneFrameProcessor : public FrameProcessor {
 
 SetupResumeAcceptor::SetupResumeAcceptor(
     ProtocolVersion version,
-    folly::EventBase* eventBase)
-    : eventBase_(eventBase) {
+    folly::EventBase* eventBase,
+    std::thread::id owner)
+    : eventBase_{eventBase}, owner_{owner} {
   CHECK(eventBase_);
 
   // If the version is unknown we'll try to autodetect it from the first frame.
@@ -238,7 +239,7 @@ void SetupResumeAcceptor::remove(
 }
 
 folly::Future<folly::Unit> SetupResumeAcceptor::close() {
-  if (eventBase_->isInEventBaseThread()) {
+  if (inOwnerThread()) {
     closeAll();
     return folly::makeFuture();
   }
@@ -246,7 +247,7 @@ folly::Future<folly::Unit> SetupResumeAcceptor::close() {
 }
 
 void SetupResumeAcceptor::closeAll() {
-  DCHECK(eventBase_->isInEventBaseThread());
+  DCHECK(inOwnerThread());
 
   closed_ = true;
 
@@ -254,4 +255,12 @@ void SetupResumeAcceptor::closeAll() {
     connection->closeWithError(error("SetupResumeAcceptor is shutting down"));
   }
 }
+
+bool SetupResumeAcceptor::inOwnerThread() const {
+  if (owner_ != std::thread::id{}) {
+    return owner_ == std::this_thread::get_id();
+  }
+  return eventBase_->isInEventBaseThread();
+}
+
 }

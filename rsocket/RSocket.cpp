@@ -1,8 +1,8 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include <folly/io/async/EventBaseManager.h>
-
 #include "rsocket/RSocket.h"
+
+#include <folly/io/async/EventBaseManager.h>
 
 namespace rsocket {
 
@@ -50,6 +50,30 @@ folly::Future<std::shared_ptr<RSocketClient>> RSocket::createResumedClient(
       std::move(coldResumeHandler)));
 
   return c->resume().then([c]() mutable { return c; });
+}
+
+std::shared_ptr<RSocketClient> RSocket::createClientFromConnection(
+    std::unique_ptr<DuplexConnection> connection,
+    folly::EventBase& eventBase,
+    SetupParameters setupParameters,
+    std::shared_ptr<RSocketResponder> responder,
+    std::unique_ptr<KeepaliveTimer> keepaliveTimer,
+    std::shared_ptr<RSocketStats> stats,
+    std::shared_ptr<RSocketConnectionEvents> connectionEvents,
+    std::shared_ptr<ResumeManager> resumeManager,
+    std::shared_ptr<ColdResumeHandler> coldResumeHandler,
+    OnRSocketResume) {
+  auto c = std::shared_ptr<RSocketClient>(new RSocketClient(
+      nullptr,
+      std::move(setupParameters),
+      std::move(responder),
+      std::move(keepaliveTimer),
+      std::move(stats),
+      std::move(connectionEvents),
+      std::move(resumeManager),
+      std::move(coldResumeHandler)));
+  c->fromConnection(std::move(connection), eventBase);
+  return c;
 }
 
 std::unique_ptr<RSocketServer> RSocket::createServer(

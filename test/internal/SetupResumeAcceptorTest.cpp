@@ -280,5 +280,13 @@ TEST(SetupResumeAcceptor, RejectedResume) {
   EXPECT_TRUE(resumeCalled);
 }
 
+TEST(SetupResumeAcceptor, EventBaseDisappear) {
+  auto evb = std::make_unique<folly::EventBase>();
+
+  SetupResumeAcceptor acceptor{
+      ProtocolVersion::Latest, evb.get(), std::this_thread::get_id()};
+  evb.reset();
+}
+
 // TODO: Test for whether changing FrameProcessor in on{Resume,Setup} breaks
 // things.
