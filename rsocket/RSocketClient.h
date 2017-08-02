@@ -6,6 +6,7 @@
 
 #include "rsocket/ColdResumeHandler.h"
 #include "rsocket/ConnectionFactory.h"
+#include "rsocket/DuplexConnection.h"
 #include "rsocket/RSocketConnectionEvents.h"
 #include "rsocket/RSocketParameters.h"
 #include "rsocket/RSocketRequester.h"
@@ -67,6 +68,11 @@ class RSocketClient {
 
   // Connects to the remote side and creates state.
   folly::Future<folly::Unit> connect();
+
+  // Create stateMachine with the given DuplexConnection
+  void fromConnection(
+      std::unique_ptr<DuplexConnection> connection,
+      folly::EventBase& eventBase);
 
   // Creates RSocketStateMachine and RSocketRequester
   void createState(folly::EventBase& eventBase);
