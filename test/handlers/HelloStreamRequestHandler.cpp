@@ -15,7 +15,7 @@ Reference<Flowable<rsocket::Payload>>
 HelloStreamRequestHandler::handleRequestStream(
     rsocket::Payload request,
     rsocket::StreamId) {
-  LOG(INFO) << "HelloStreamRequestHandler.handleRequestStream " << request;
+  VLOG(3) << "HelloStreamRequestHandler.handleRequestStream " << request;
 
   // string from payload data
   auto requestString = request.moveDataToString();

@@ -7,6 +7,7 @@
 namespace rsocket {
 
 class RSocketServerState {
+ public:
   void close();
 
   std::shared_ptr<RSocketRequester> getRequester() {

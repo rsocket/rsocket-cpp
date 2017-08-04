@@ -42,6 +42,11 @@ RSocketStateMachine::RSocketStateMachine(
   // We deliberately do not "open" input or output to avoid having c'tor on the
   // stack when processing any signals from the connection. See ::connect and
   // ::onSubscribe.
+
+  if (!stats_) {
+    stats_ = RSocketStats::noop();
+  }
+
   CHECK(streamState_);
   CHECK(requestResponder_);
 

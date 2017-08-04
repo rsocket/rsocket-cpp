@@ -150,14 +150,23 @@ void RSocketClient::createState(folly::EventBase& eventBase) {
   // Creation of state is permitted only once for each RSocketClient.
   // When evb is removed from RSocketStateMachine, the state can be
   // created in constructor
-  CHECK(!stateMachine_);
+  CHECK(!stateMachine_) << "A stateMachine has already been created";
+
+  if (!keepaliveTimer_) {
+    keepaliveTimer_ = std::make_unique<FollyKeepaliveTimer>(
+        eventBase, std::chrono::seconds(5));
+  }
+
+  if (!responder_) {
+    responder_ = std::make_shared<RSocketResponder>();
+  }
 
   stateMachine_ = std::make_shared<RSocketStateMachine>(
       eventBase,
-      responder_,
+      std::move(responder_),
       std::move(keepaliveTimer_),
       ReactiveSocketMode::CLIENT,
-      stats_,
+      std::move(stats_),
       connectionEvents_);
 
   requester_ = std::make_shared<RSocketRequester>(stateMachine_, eventBase);

@@ -128,7 +128,10 @@ void RSocketServer::onRSocketSetup(
     throw result.error();
   }
   auto connectionParams = result.value();
-  CHECK(connectionParams.responder);
+  if (!connectionParams.responder) {
+    LOG(ERROR) << "Received invalid Responder. Dropping connection";
+    throw RSocketException("Received invalid Responder from server");
+  }
   auto responder = std::make_shared<ScheduledRSocketResponder>(
       std::move(connectionParams.responder), *eventBase);
   auto rs = std::make_shared<RSocketStateMachine>(

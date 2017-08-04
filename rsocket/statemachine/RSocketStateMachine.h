@@ -293,7 +293,7 @@ class RSocketStateMachine final
 
   StreamsFactory streamsFactory_;
 
-  const std::shared_ptr<RSocketStats> stats_;
+  std::shared_ptr<RSocketStats> stats_;
   std::shared_ptr<RSocketConnectionEvents> connectionEvents_;
   folly::Executor& executor_;
 };

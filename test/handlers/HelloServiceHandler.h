@@ -11,7 +11,7 @@ namespace tests {
 
 class HelloServiceHandler : public RSocketServiceHandler {
  public:
-  HelloServiceHandler(
+  explicit HelloServiceHandler(
       std::shared_ptr<RSocketConnectionEvents> connEvents = nullptr)
       : connectionEvents_(connEvents) {}
 
