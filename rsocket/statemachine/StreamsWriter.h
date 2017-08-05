@@ -32,7 +32,7 @@ class StreamsWriter {
   virtual void writeCloseStream(
       StreamId streamId,
       StreamCompletionSignal signal,
-      Payload payload) = 0;
+      std::string message) = 0;
 
   virtual void onStreamClosed(
       StreamId streamId,

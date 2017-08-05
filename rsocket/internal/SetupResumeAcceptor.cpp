@@ -101,9 +101,10 @@ void SetupResumeAcceptor::processFrame(
     case FrameType::SETUP: {
       Frame_SETUP frame;
       if (!serializer->deserializeFrom(frame, std::move(buf))) {
-        transport->outputFrameOrEnqueue(
-            serializer->serializeOut(Frame_ERROR::invalidFrame()));
-        close(std::move(transport), error("Cannot decode SETUP frame"));
+        constexpr folly::StringPiece message{"Cannot decode SETUP frame"};
+        transport->outputFrameOrEnqueue(serializer->serializeOut(
+            Frame_ERROR::connectionError(message.str())));
+        close(std::move(transport), error(message));
         break;
       }
 
@@ -115,8 +116,8 @@ void SetupResumeAcceptor::processFrame(
       if (serializer->protocolVersion() != params.protocolVersion) {
         constexpr folly::StringPiece message{
             "SETUP frame has invalid protocol version"};
-        transport->outputFrameOrEnqueue(serializer->serializeOut(
-            Frame_ERROR::badSetupFrame(message.str())));
+        transport->outputFrameOrEnqueue(
+            serializer->serializeOut(Frame_ERROR::invalidSetup(message.str())));
         close(transport, error(message));
         break;
       }
@@ -138,9 +139,10 @@ void SetupResumeAcceptor::processFrame(
     case FrameType::RESUME: {
       Frame_RESUME frame;
       if (!serializer->deserializeFrom(frame, std::move(buf))) {
-        transport->outputFrameOrEnqueue(
-            serializer->serializeOut(Frame_ERROR::invalidFrame()));
-        close(std::move(transport), error("Cannot decode RESUME frame"));
+        constexpr folly::StringPiece message{"Cannot decode RESUME frame"};
+        transport->outputFrameOrEnqueue(serializer->serializeOut(
+            Frame_ERROR::connectionError(message.str())));
+        close(std::move(transport), error(message));
         break;
       }
 
@@ -156,7 +158,7 @@ void SetupResumeAcceptor::processFrame(
         constexpr folly::StringPiece message{
             "RESUME frame has invalid protocol version"};
         transport->outputFrameOrEnqueue(serializer->serializeOut(
-            Frame_ERROR::badSetupFrame(message.str())));
+            Frame_ERROR::rejectedResume(message.str())));
         close(std::move(transport), error(message));
         break;
       }
@@ -176,10 +178,11 @@ void SetupResumeAcceptor::processFrame(
     }
 
     default: {
-      transport->outputFrameOrEnqueue(
-          serializer->serializeOut(Frame_ERROR::unexpectedFrame()));
-      close(
-          std::move(transport), error("Invalid frame, expected SETUP/RESUME"));
+      constexpr folly::StringPiece message{
+          "Invalid frame, expected SETUP/RESUME"};
+      transport->outputFrameOrEnqueue(serializer->serializeOut(
+          Frame_ERROR::connectionError(message.str())));
+      close(std::move(transport), error(message));
       break;
     }
   }
@@ -262,5 +265,4 @@ bool SetupResumeAcceptor::inOwnerThread() const {
   }
   return eventBase_->isInEventBaseThread();
 }
-
 }

@@ -154,27 +154,24 @@ class RSocketStateMachine final
   template <typename TFrame>
   bool deserializeFrameOrError(
       TFrame& frame,
-      std::unique_ptr<folly::IOBuf> payload) {
-    if (frameSerializer_->deserializeFrom(frame, std::move(payload))) {
+      std::unique_ptr<folly::IOBuf> buf) {
+    if (frameSerializer_->deserializeFrom(frame, std::move(buf))) {
       return true;
-    } else {
-      closeWithError(Frame_ERROR::invalidFrame());
-      return false;
     }
+    closeWithError(Frame_ERROR::connectionError("Invalid frame"));
+    return false;
   }
 
   template <typename TFrame>
   bool deserializeFrameOrError(
       bool resumable,
       TFrame& frame,
-      std::unique_ptr<folly::IOBuf> payload) {
-    if (frameSerializer_->deserializeFrom(
-            frame, std::move(payload), resumable)) {
+      std::unique_ptr<folly::IOBuf> buf) {
+    if (frameSerializer_->deserializeFrom(frame, std::move(buf), resumable)) {
       return true;
-    } else {
-      closeWithError(Frame_ERROR::invalidFrame());
-      return false;
     }
+    closeWithError(Frame_ERROR::connectionError("Invalid frame"));
+    return false;
   }
 
   bool resumeFromPositionOrClose(
@@ -270,7 +267,7 @@ class RSocketStateMachine final
   void writeCloseStream(
       StreamId streamId,
       StreamCompletionSignal signal,
-      Payload payload) override;
+      std::string message) override;
   void onStreamClosed(StreamId streamId, StreamCompletionSignal signal)
       override;
 

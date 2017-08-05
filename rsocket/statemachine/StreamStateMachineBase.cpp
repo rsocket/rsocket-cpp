@@ -52,25 +52,23 @@ void StreamStateMachineBase::applicationError(std::string errorPayload) {
   writer_->writeCloseStream(
       streamId_,
       StreamCompletionSignal::APPLICATION_ERROR,
-      Payload(std::move(errorPayload)));
+      std::move(errorPayload));
 }
 
 void StreamStateMachineBase::errorStream(std::string errorPayload) {
   writer_->writeCloseStream(
       streamId_,
       StreamCompletionSignal::ERROR,
-      Payload(std::move(errorPayload)));
+      std::move(errorPayload));
   closeStream(StreamCompletionSignal::ERROR);
 }
 
 void StreamStateMachineBase::cancelStream() {
-  writer_->writeCloseStream(
-      streamId_, StreamCompletionSignal::CANCEL, Payload());
+  writer_->writeCloseStream(streamId_, StreamCompletionSignal::CANCEL, "");
 }
 
 void StreamStateMachineBase::completeStream() {
-  writer_->writeCloseStream(
-      streamId_, StreamCompletionSignal::COMPLETE, Payload());
+  writer_->writeCloseStream(streamId_, StreamCompletionSignal::COMPLETE, "");
 }
 
 void StreamStateMachineBase::closeStream(StreamCompletionSignal signal) {

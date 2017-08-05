@@ -141,92 +141,112 @@ std::ostream& operator<<(std::ostream& os, const Frame_PAYLOAD& frame) {
   return os << frame.header_ << ", " << frame.payload_;
 }
 
-Frame_ERROR Frame_ERROR::unexpectedFrame() {
-  return Frame_ERROR(
-      0, ErrorCode::CONNECTION_ERROR, Payload("unexpected frame"));
+Frame_ERROR Frame_ERROR::invalidSetup(std::string message) {
+  return connectionErr(ErrorCode::INVALID_SETUP, std::move(message));
 }
 
-Frame_ERROR Frame_ERROR::invalidFrame() {
-  return Frame_ERROR(0, ErrorCode::CONNECTION_ERROR, Payload("invalid frame"));
+Frame_ERROR Frame_ERROR::unsupportedSetup(std::string message) {
+  return connectionErr(ErrorCode::UNSUPPORTED_SETUP, std::move(message));
 }
 
-Frame_ERROR Frame_ERROR::badSetupFrame(const std::string& message) {
-  return Frame_ERROR(0, ErrorCode::INVALID_SETUP, Payload(message));
+Frame_ERROR Frame_ERROR::rejectedSetup(std::string message) {
+  return connectionErr(ErrorCode::REJECTED_SETUP, std::move(message));
 }
 
-Frame_ERROR Frame_ERROR::rejectedSetup(const std::string& message) {
-  return Frame_ERROR(0, ErrorCode::REJECTED_SETUP, Payload(message));
+Frame_ERROR Frame_ERROR::rejectedResume(std::string message) {
+  return connectionErr(ErrorCode::REJECTED_RESUME, std::move(message));
 }
 
-Frame_ERROR Frame_ERROR::connectionError(const std::string& message) {
-  return Frame_ERROR(0, ErrorCode::CONNECTION_ERROR, Payload(message));
-}
-
-Frame_ERROR Frame_ERROR::rejectedResume(const std::string& message) {
-  return Frame_ERROR(0, ErrorCode::REJECTED_RESUME, Payload(message));
-}
-
-Frame_ERROR Frame_ERROR::error(StreamId streamId, Payload&& payload) {
-  DCHECK(streamId) << "streamId MUST be non-0";
-  return Frame_ERROR(streamId, ErrorCode::INVALID, std::move(payload));
+Frame_ERROR Frame_ERROR::connectionError(std::string message) {
+  return connectionErr(ErrorCode::CONNECTION_ERROR, std::move(message));
 }
 
 Frame_ERROR Frame_ERROR::applicationError(
-    StreamId streamId,
-    Payload&& payload) {
-  DCHECK(streamId) << "streamId MUST be non-0";
-  return Frame_ERROR(
-      streamId, ErrorCode::APPLICATION_ERROR, std::move(payload));
+    StreamId stream,
+    std::string message) {
+  return streamErr(ErrorCode::APPLICATION_ERROR, std::move(message), stream);
+}
+
+Frame_ERROR Frame_ERROR::rejected(StreamId stream, std::string message) {
+  return streamErr(ErrorCode::REJECTED, std::move(message), stream);
+}
+
+Frame_ERROR Frame_ERROR::canceled(StreamId stream, std::string message) {
+  return streamErr(ErrorCode::CANCELED, std::move(message), stream);
+}
+
+Frame_ERROR Frame_ERROR::invalid(StreamId stream, std::string message) {
+  return streamErr(ErrorCode::INVALID, std::move(message), stream);
+}
+
+Frame_ERROR Frame_ERROR::connectionErr(
+    ErrorCode err,
+    std::string message) {
+  return Frame_ERROR{0, err, Payload{std::move(message)}};
+}
+
+Frame_ERROR Frame_ERROR::streamErr(
+    ErrorCode err,
+    std::string message,
+    StreamId stream) {
+  if (stream == 0) {
+    throw std::invalid_argument{"Can't make stream error for stream zero"};
+  }
+  return Frame_ERROR{stream, err, Payload{std::move(message)}};
 }
 
 std::ostream& operator<<(std::ostream& os, const Frame_ERROR& frame) {
   return os << frame.header_ << ", " << frame.errorCode_ << ", "
             << frame.payload_;
-}
+  }
 
-std::ostream& operator<<(std::ostream& os, const Frame_KEEPALIVE& frame) {
-  return os << frame.header_ << "(<"
-            << (frame.data_ ? frame.data_->computeChainDataLength() : 0)
-            << ">)";
-}
+  std::ostream& operator<<(std::ostream& os, const Frame_KEEPALIVE& frame) {
+    return os << frame.header_ << "(<"
+              << (frame.data_ ? frame.data_->computeChainDataLength() : 0)
+              << ">)";
+  }
 
-std::ostream& operator<<(std::ostream& os, const Frame_SETUP& frame) {
-  return os << frame.header_ << ", Version: " << frame.versionMajor_ << "."
-            << frame.versionMinor_ << ", " << frame.payload_;
-}
+  std::ostream& operator<<(std::ostream& os, const Frame_SETUP& frame) {
+    return os << frame.header_ << ", Version: " << frame.versionMajor_ << "."
+              << frame.versionMinor_ << ", " << frame.payload_;
+  }
 
-void Frame_SETUP::moveToSetupPayload(SetupParameters& setupPayload) {
-  setupPayload.metadataMimeType = std::move(metadataMimeType_);
-  setupPayload.dataMimeType = std::move(dataMimeType_);
-  setupPayload.payload = std::move(payload_);
-  setupPayload.token = std::move(token_);
-  setupPayload.resumable = !!(header_.flags_ & FrameFlags::RESUME_ENABLE);
-  setupPayload.protocolVersion = ProtocolVersion(versionMajor_, versionMinor_);
-}
+  void Frame_SETUP::moveToSetupPayload(SetupParameters & setupPayload) {
+    setupPayload.metadataMimeType = std::move(metadataMimeType_);
+    setupPayload.dataMimeType = std::move(dataMimeType_);
+    setupPayload.payload = std::move(payload_);
+    setupPayload.token = std::move(token_);
+    setupPayload.resumable = !!(header_.flags_ & FrameFlags::RESUME_ENABLE);
+    setupPayload.protocolVersion =
+        ProtocolVersion(versionMajor_, versionMinor_);
+  }
 
-std::ostream& operator<<(std::ostream& os, const Frame_LEASE& frame) {
-  return os << frame.header_ << ", ("
-            << (frame.metadata_ ? frame.metadata_->computeChainDataLength() : 0)
-            << ")";
-}
+  std::ostream& operator<<(std::ostream& os, const Frame_LEASE& frame) {
+    return os << frame.header_ << ", ("
+              << (frame.metadata_ ? frame.metadata_->computeChainDataLength()
+                                  : 0)
+              << ")";
+  }
 
-std::ostream& operator<<(std::ostream& os, const Frame_RESUME& frame) {
-  return os << frame.header_ << ", ("
-            << "token"
-            << ", @server " << frame.lastReceivedServerPosition_ << ", @client "
-            << frame.clientPosition_ << ")";
-}
+  std::ostream& operator<<(std::ostream& os, const Frame_RESUME& frame) {
+    return os << frame.header_ << ", ("
+              << "token"
+              << ", @server " << frame.lastReceivedServerPosition_
+              << ", @client " << frame.clientPosition_ << ")";
+  }
 
-std::ostream& operator<<(std::ostream& os, const Frame_RESUME_OK& frame) {
-  return os << frame.header_ << ", (@" << frame.position_ << ")";
-}
+  std::ostream& operator<<(std::ostream& os, const Frame_RESUME_OK& frame) {
+    return os << frame.header_ << ", (@" << frame.position_ << ")";
+  }
 
-std::ostream& operator<<(std::ostream& os, const Frame_REQUEST_CHANNEL& frame) {
-  return os << frame.header_ << ", " << frame.payload_;
-}
+  std::ostream& operator<<(
+      std::ostream& os, const Frame_REQUEST_CHANNEL& frame) {
+    return os << frame.header_ << ", " << frame.payload_;
+  }
 
-std::ostream& operator<<(std::ostream& os, const Frame_REQUEST_STREAM& frame) {
-  return os << frame.header_ << ", " << frame.payload_;
-}
+  std::ostream& operator<<(
+      std::ostream& os, const Frame_REQUEST_STREAM& frame) {
+    return os << frame.header_ << ", " << frame.payload_;
+  }
 
 } // namespace rsocket

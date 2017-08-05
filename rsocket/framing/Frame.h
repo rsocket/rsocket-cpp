@@ -280,15 +280,24 @@ class Frame_ERROR {
         errorCode_(errorCode),
         payload_(std::move(payload)) {}
 
-  static Frame_ERROR unexpectedFrame();
-  static Frame_ERROR invalidFrame();
-  static Frame_ERROR badSetupFrame(const std::string& message);
-  static Frame_ERROR rejectedSetup(const std::string& message);
-  static Frame_ERROR connectionError(const std::string& message);
-  static Frame_ERROR rejectedResume(const std::string& message);
-  static Frame_ERROR error(StreamId streamId, Payload&& payload);
-  static Frame_ERROR applicationError(StreamId streamId, Payload&& payload);
+  // Connection errors.
+  static Frame_ERROR invalidSetup(std::string);
+  static Frame_ERROR unsupportedSetup(std::string);
+  static Frame_ERROR rejectedSetup(std::string);
+  static Frame_ERROR rejectedResume(std::string);
+  static Frame_ERROR connectionError(std::string);
 
+  // Stream errors.
+  static Frame_ERROR applicationError(StreamId, std::string);
+  static Frame_ERROR rejected(StreamId, std::string);
+  static Frame_ERROR canceled(StreamId, std::string);
+  static Frame_ERROR invalid(StreamId, std::string);
+
+ private:
+  static Frame_ERROR connectionErr(ErrorCode, std::string);
+  static Frame_ERROR streamErr(ErrorCode, std::string, StreamId);
+
+ public:
   FrameHeader header_;
   ErrorCode errorCode_{};
   Payload payload_;
