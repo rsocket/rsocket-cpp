@@ -8,7 +8,6 @@
 
 #include "rsocket/RSocket.h"
 #include "rsocket/transports/tcp/TcpConnectionAcceptor.h"
-#include "yarpl/Single.h"
 
 using namespace rsocket;
 using namespace yarpl;

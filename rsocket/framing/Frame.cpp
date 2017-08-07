@@ -3,7 +3,6 @@
 #include "rsocket/framing/Frame.h"
 
 #include <folly/Memory.h>
-#include <folly/Optional.h>
 #include <folly/io/Cursor.h>
 #include <map>
 #include <sstream>

@@ -122,7 +122,7 @@ TEST(Observable, OnError) {
   });
 
   a->subscribe(Observers::create<int>(
-      [](int value) { /* do nothing */ },
+      [](int) { /* do nothing */ },
       [&errorMessage](std::exception_ptr e) {
         try {
           std::rethrow_exception(e);

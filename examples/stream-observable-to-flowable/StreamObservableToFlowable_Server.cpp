@@ -10,7 +10,6 @@
 #include "rsocket/RSocket.h"
 #include "rsocket/transports/tcp/TcpConnectionAcceptor.h"
 #include "yarpl/Observable.h"
-#include "yarpl/schedulers/ThreadScheduler.h"
 
 using namespace rsocket;
 using namespace yarpl;

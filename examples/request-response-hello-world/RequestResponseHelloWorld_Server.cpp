@@ -16,6 +16,7 @@ using namespace yarpl::single;
 
 DEFINE_int32(port, 9898, "port to connect to");
 
+namespace {
 class HelloRequestResponseResponder : public rsocket::RSocketResponder {
  public:
   Reference<Single<Payload>> handleRequestResponse(Payload request, StreamId)
@@ -37,6 +38,7 @@ class HelloRequestResponseResponder : public rsocket::RSocketResponder {
     });
   }
 };
+}
 
 int main(int argc, char* argv[]) {
   FLAGS_logtostderr = true;

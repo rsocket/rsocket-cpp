@@ -2,8 +2,6 @@
 
 #include "rsocket/framing/FrameType.h"
 
-#include <glog/logging.h>
-
 #include <ostream>
 
 namespace rsocket {

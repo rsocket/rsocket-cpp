@@ -67,7 +67,7 @@ TEST(Single, SingleMap) {
   });
 
   auto to = SingleTestObserver<const char*>::create();
-  a->map([](int v) { return "hello"; })->subscribe(to);
+  a->map([](int) { return "hello"; })->subscribe(to);
   to->awaitTerminalEvent();
   to->assertOnSuccessValue("hello");
 }

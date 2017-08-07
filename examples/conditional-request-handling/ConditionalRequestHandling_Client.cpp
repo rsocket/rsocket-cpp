@@ -18,6 +18,7 @@ using namespace yarpl::flowable;
 DEFINE_string(host, "localhost", "host to connect to");
 DEFINE_int32(port, 9898, "host:port to connect to");
 
+namespace {
 class ChannelConnectionEvents : public RSocketConnectionEvents {
  public:
   void onConnected() override {
@@ -40,6 +41,7 @@ class ChannelConnectionEvents : public RSocketConnectionEvents {
  private:
   std::atomic<bool> closed_{false};
 };
+}
 
 void sendRequest(std::string mimeType) {
   folly::SocketAddress address;

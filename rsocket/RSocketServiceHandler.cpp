@@ -24,7 +24,7 @@ std::shared_ptr<RSocketServiceHandler> RSocketServiceHandler::create(
     OnNewSetupFn onNewSetupFn) {
   class ServiceHandler : public RSocketServiceHandler {
    public:
-    ServiceHandler(OnNewSetupFn fn) : onNewSetupFn_(std::move(fn)) {}
+    explicit ServiceHandler(OnNewSetupFn fn) : onNewSetupFn_(std::move(fn)) {}
     folly::Expected<RSocketConnectionParams, RSocketException> onNewSetup(
         const SetupParameters& setupParameters) override {
       return RSocketConnectionParams(onNewSetupFn_(setupParameters));
