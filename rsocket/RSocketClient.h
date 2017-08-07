@@ -10,6 +10,7 @@
 #include "rsocket/RSocketConnectionEvents.h"
 #include "rsocket/RSocketParameters.h"
 #include "rsocket/RSocketRequester.h"
+#include "rsocket/RSocketResponder.h"
 #include "rsocket/RSocketStats.h"
 #include "rsocket/ResumeManager.h"
 
