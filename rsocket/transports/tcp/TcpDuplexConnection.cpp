@@ -171,8 +171,7 @@ class TcpOutputSubscriber
     CHECK(tcpReaderWriter_);
   }
 
-  void onSubscribe(
-      yarpl::Reference<Subscription> subscription) noexcept override {
+  void onSubscribe(yarpl::Reference<Subscription> subscription) override {
     CHECK(subscription);
     if (!tcpReaderWriter_) {
       LOG(ERROR) << "trying to resubscribe on a closed subscriber";
@@ -182,26 +181,19 @@ class TcpOutputSubscriber
     tcpReaderWriter_->setOutputSubscription(std::move(subscription));
   }
 
-  void onNext(std::unique_ptr<folly::IOBuf> element) noexcept override {
+  void onNext(std::unique_ptr<folly::IOBuf> element) override {
     CHECK(tcpReaderWriter_);
     tcpReaderWriter_->send(std::move(element));
   }
 
-  void onComplete() noexcept override {
+  void onComplete() override {
     CHECK(tcpReaderWriter_);
     tcpReaderWriter_->setOutputSubscription(nullptr);
   }
 
-  void onError(std::exception_ptr eptr) noexcept override {
+  void onError(std::exception_ptr) override {
     CHECK(tcpReaderWriter_);
-    auto tcpReaderWriter = std::move(tcpReaderWriter_);
-
-    try {
-      std::rethrow_exception(eptr);
-    } catch (const std::exception& exn) {
-      folly::exception_wrapper ew{eptr, exn};
-      tcpReaderWriter->closeErr(std::move(ew));
-    }
+    tcpReaderWriter_->setOutputSubscription(nullptr);
   }
 
  private:

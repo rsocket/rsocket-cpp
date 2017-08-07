@@ -19,17 +19,12 @@ class TcpDuplexConnection : public DuplexConnection {
       std::shared_ptr<RSocketStats> stats = RSocketStats::noop());
   ~TcpDuplexConnection();
 
-  //
-  // both getOutput and setOutput are ok to be called multiple times
-  // on a single instance of TcpDuplexConnection
-  // the latest input/output will be used
-  //
-
   yarpl::Reference<yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>
   getOutput() override;
 
-  void setInput(yarpl::Reference<yarpl::flowable::Subscriber<
-                    std::unique_ptr<folly::IOBuf>>> framesSink) override;
+  void setInput(
+      yarpl::Reference<
+          yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>) override;
 
  private:
   std::shared_ptr<TcpReaderWriter> tcpReaderWriter_;

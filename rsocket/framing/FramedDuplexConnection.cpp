@@ -18,7 +18,7 @@ FramedDuplexConnection::FramedDuplexConnection(
       protocolVersion_(std::make_shared<ProtocolVersion>(protocolVersion)) {}
 
 yarpl::Reference<Subscriber<std::unique_ptr<folly::IOBuf>>>
-FramedDuplexConnection::getOutput() noexcept {
+FramedDuplexConnection::getOutput() {
   return yarpl::make_ref<FramedWriter>(
       inner_->getOutput(), protocolVersion_);
 }

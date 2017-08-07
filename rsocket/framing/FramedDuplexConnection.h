@@ -20,12 +20,13 @@ class FramedDuplexConnection : public virtual DuplexConnection {
   ~FramedDuplexConnection();
 
   yarpl::Reference<yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>
-  getOutput() noexcept override;
+  getOutput() override;
 
-  void setInput(yarpl::Reference<yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>
-                    framesSink) override;
+  void setInput(
+      yarpl::Reference<
+          yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>) override;
 
-  bool isFramed() override {
+  bool isFramed() const override {
     return true;
   }
 
