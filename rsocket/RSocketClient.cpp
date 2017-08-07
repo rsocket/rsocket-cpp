@@ -167,7 +167,8 @@ void RSocketClient::createState(folly::EventBase& eventBase) {
       std::move(keepaliveTimer_),
       ReactiveSocketMode::CLIENT,
       std::move(stats_),
-      connectionEvents_);
+      std::move(connectionEvents_),
+      std::move(resumeManager_));
 
   requester_ = std::make_shared<RSocketRequester>(stateMachine_, eventBase);
 

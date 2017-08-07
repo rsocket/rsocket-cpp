@@ -316,8 +316,6 @@ add_library(
   rsocket/framing/FramedWriter.h
   rsocket/Payload.cpp
   rsocket/Payload.h
-  rsocket/internal/ResumeCache.cpp
-  rsocket/internal/ResumeCache.h
   rsocket/internal/SetupResumeAcceptor.cpp
   rsocket/internal/SetupResumeAcceptor.h
   rsocket/RSocketStats.cpp
@@ -330,6 +328,8 @@ add_library(
   rsocket/framing/FrameSerializer_v0_1.h
   rsocket/framing/FrameSerializer_v1_0.cpp
   rsocket/framing/FrameSerializer_v1_0.h
+  rsocket/internal/InMemResumeManager.h
+  rsocket/internal/InMemResumeManager.cpp
   rsocket/internal/ScheduledSubscription.cpp
   rsocket/internal/ScheduledSubscription.h
   rsocket/internal/ScheduledSubscriber.h

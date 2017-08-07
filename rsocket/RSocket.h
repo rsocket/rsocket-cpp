@@ -23,8 +23,7 @@ class RSocket {
       std::shared_ptr<RSocketStats> stats = RSocketStats::noop(),
       std::shared_ptr<RSocketConnectionEvents> connectionEvents =
           std::shared_ptr<RSocketConnectionEvents>(),
-      std::shared_ptr<ResumeManager> resumeManager =
-          std::shared_ptr<ResumeManager>(),
+      std::shared_ptr<ResumeManager> resumeManager = nullptr,
       std::shared_ptr<ColdResumeHandler> coldResumeHandler =
           std::shared_ptr<ColdResumeHandler>(),
       OnRSocketResume onRSocketResume =
@@ -57,8 +56,7 @@ class RSocket {
       std::shared_ptr<RSocketStats> stats = RSocketStats::noop(),
       std::shared_ptr<RSocketConnectionEvents> connectionEvents =
           std::shared_ptr<RSocketConnectionEvents>(),
-      std::shared_ptr<ResumeManager> resumeManager =
-          std::shared_ptr<ResumeManager>(),
+      std::shared_ptr<ResumeManager> resumeManager = nullptr,
       std::shared_ptr<ColdResumeHandler> coldResumeHandler =
           std::shared_ptr<ColdResumeHandler>(),
       OnRSocketResume onRSocketResume =

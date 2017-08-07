@@ -17,9 +17,9 @@ using namespace yarpl::flowable;
 TEST(WarmResumptionTest, SuccessfulResumption) {
   auto server = makeResumableServer(std::make_shared<HelloServiceHandler>());
   auto client = makeResumableClient(*server->listeningPort());
-  auto requester = client->getRequester();
   auto ts = TestSubscriber<std::string>::create(7 /* initialRequestN */);
-  requester->requestStream(Payload("Bob"))
+  client->getRequester()
+      ->requestStream(Payload("Bob"))
       ->map([](auto p) { return p.moveDataToString(); })
       ->subscribe(ts);
   // Wait for a few frames before disconnecting.
@@ -41,9 +41,9 @@ TEST(WarmResumptionTest, FailedResumption1) {
       makeServer(std::make_shared<rsocket::tests::HelloStreamRequestHandler>());
   auto listeningPort = *server->listeningPort();
   auto client = makeResumableClient(listeningPort);
-  auto requester = client->getRequester();
   auto ts = TestSubscriber<std::string>::create(7 /* initialRequestN */);
-  requester->requestStream(Payload("Bob"))
+  client->getRequester()
+      ->requestStream(Payload("Bob"))
       ->map([](auto p) { return p.moveDataToString(); })
       ->subscribe(ts);
   // Wait for a few frames before disconnecting.
@@ -53,8 +53,7 @@ TEST(WarmResumptionTest, FailedResumption1) {
   client->disconnect(std::runtime_error("Test triggered disconnect"));
   client->resume()
       .then([] { FAIL() << "Resumption succeeded when it should not"; })
-      .onError([listeningPort](folly::exception_wrapper ex) {
-        LOG(INFO) << ex.what();
+      .onError([listeningPort](folly::exception_wrapper) {
         auto newClient = makeResumableClient(listeningPort);
         auto newTs =
             TestSubscriber<std::string>::create(6 /* initialRequestN */);
@@ -81,9 +80,9 @@ TEST(WarmResumptionTest, FailedResumption2) {
       makeServer(std::make_shared<rsocket::tests::HelloStreamRequestHandler>());
   auto listeningPort = *server->listeningPort();
   auto client = makeResumableClient(listeningPort);
-  auto requester = client->getRequester();
   auto ts = TestSubscriber<std::string>::create(7 /* initialRequestN */);
-  requester->requestStream(Payload("Bob"))
+  client->getRequester()
+      ->requestStream(Payload("Bob"))
       ->map([](auto p) { return p.moveDataToString(); })
       ->subscribe(ts);
   // Wait for a few frames before disconnecting.
@@ -95,8 +94,7 @@ TEST(WarmResumptionTest, FailedResumption2) {
   std::shared_ptr<RSocketClient> newClient;
   client->resume()
       .then([] { FAIL() << "Resumption succeeded when it should not"; })
-      .onError([listeningPort, newTs, &newClient](folly::exception_wrapper ex) {
-        LOG(INFO) << ex.what();
+      .onError([listeningPort, newTs, &newClient](folly::exception_wrapper) {
         newClient = makeResumableClient(listeningPort);
         newClient->getRequester()
             ->requestStream(Payload("Alice"))

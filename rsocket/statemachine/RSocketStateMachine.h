@@ -10,7 +10,7 @@
 #include "rsocket/RSocketParameters.h"
 #include "rsocket/framing/FrameProcessor.h"
 #include "rsocket/internal/Common.h"
-#include "rsocket/internal/ResumeCache.h"
+#include "rsocket/ResumeManager.h"
 #include "rsocket/statemachine/StreamState.h"
 #include "rsocket/statemachine/StreamsFactory.h"
 #include "rsocket/statemachine/StreamsWriter.h"
@@ -23,7 +23,7 @@ class Frame_ERROR;
 class FrameSerializer;
 class FrameTransport;
 class KeepaliveTimer;
-class ResumeCache;
+class ResumeManager;
 class RSocketConnectionEvents;
 class RSocketParameters;
 class RSocketResponder;
@@ -66,8 +66,8 @@ class RSocketStateMachine final
       std::unique_ptr<KeepaliveTimer> keepaliveTimer_,
       ReactiveSocketMode mode,
       std::shared_ptr<RSocketStats> stats,
-      std::shared_ptr<RSocketConnectionEvents> connectionEvents =
-          std::shared_ptr<RSocketConnectionEvents>());
+      std::shared_ptr<RSocketConnectionEvents> connectionEvents,
+      std::shared_ptr<ResumeManager> resumeManager);
 
   void closeWithError(Frame_ERROR&& error);
   void disconnectOrCloseWithError(Frame_ERROR&& error) override;
@@ -284,11 +284,11 @@ class RSocketStateMachine final
 
   std::shared_ptr<RSocketStats> stats_;
 
-  /// Buffers sent frames and tracking client byte position.
-  std::shared_ptr<ResumeCache> resumeCache_;
-
-  /// Buffers frames to be sent and holds stream state machines.
+  // Per-stream frame buffer between RSocketStateMachine and Transport
   StreamState streamState_;
+
+  // Manages all state needed for warm/cold resumption.
+  std::shared_ptr<ResumeManager> resumeManager_;
 
   std::shared_ptr<RSocketResponder> requestResponder_;
   yarpl::Reference<FrameTransport> frameTransport_;

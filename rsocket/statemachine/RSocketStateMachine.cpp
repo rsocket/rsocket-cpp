@@ -17,7 +17,7 @@
 #include "rsocket/framing/FrameSerializer.h"
 #include "rsocket/framing/FrameTransport.h"
 #include "rsocket/internal/ClientResumeStatusCallback.h"
-#include "rsocket/internal/ResumeCache.h"
+#include "rsocket/internal/InMemResumeManager.h"
 #include "rsocket/statemachine/ChannelResponder.h"
 #include "rsocket/statemachine/StreamState.h"
 #include "rsocket/statemachine/StreamStateMachineBase.h"
@@ -30,11 +30,12 @@ RSocketStateMachine::RSocketStateMachine(
     std::unique_ptr<KeepaliveTimer> keepaliveTimer,
     ReactiveSocketMode mode,
     std::shared_ptr<RSocketStats> stats,
-    std::shared_ptr<RSocketConnectionEvents> connectionEvents)
+    std::shared_ptr<RSocketConnectionEvents> connectionEvents,
+    std::shared_ptr<ResumeManager> resumeManager)
     : mode_(mode),
       stats_(stats ? stats : RSocketStats::noop()),
-      resumeCache_(std::make_shared<ResumeCache>(stats_)),
       streamState_(*stats_),
+      resumeManager_(resumeManager ? resumeManager : std::make_shared<InMemResumeManager>(stats_)),
       requestResponder_(std::move(requestResponder)),
       keepaliveTimer_(std::move(keepaliveTimer)),
       streamsFactory_(*this, mode),
@@ -330,7 +331,7 @@ bool RSocketStateMachine::endStreamInternal(
     return false;
   }
 
-  resumeCache_->onStreamClosed(streamId);
+  resumeManager_->onStreamClosed(streamId);
 
   // Remove from the map before notifying the stateMachine.
   auto stateMachine = std::move(it->second);
@@ -382,7 +383,7 @@ void RSocketStateMachine::processFrameImpl(
   }
 
   auto streamId = *streamIdPtr;
-  resumeCache_->trackReceivedFrame(*frame, frameType, streamId);
+  resumeManager_->trackReceivedFrame(*frame, frameType, streamId);
   if (streamId == 0) {
     handleConnectionFrame(frameType, std::move(frame));
     return;
@@ -431,7 +432,7 @@ void RSocketStateMachine::handleConnectionFrame(
         return;
       }
       VLOG(3) << "In: " << frame;
-      resumeCache_->resetUpToPosition(frame.position_);
+      resumeManager_->resetUpToPosition(frame.position_);
       if (mode_ == ReactiveSocketMode::SERVER) {
         if (!!(frame.header_.flags_ & FrameFlags::KEEPALIVE_RESPOND)) {
           sendKeepalive(FrameFlags::EMPTY, std::move(frame.data_));
@@ -471,7 +472,7 @@ void RSocketStateMachine::handleConnectionFrame(
         return;
       }
 
-      if (!resumeCache_->isPositionAvailable(frame.position_)) {
+      if (!resumeManager_->isPositionAvailable(frame.position_)) {
         auto message = folly::sformat(
             "Client cannot resume, server position {} is not available",
             frame.position_);
@@ -696,7 +697,7 @@ void RSocketStateMachine::sendKeepalive(
     std::unique_ptr<folly::IOBuf> data) {
   debugCheckCorrectExecutor();
   Frame_KEEPALIVE pingFrame(
-      flags, resumeCache_->impliedPosition(), std::move(data));
+      flags, resumeManager_->impliedPosition(), std::move(data));
   VLOG(3) << "Out: " << pingFrame;
   outputFrameOrEnqueue(
       frameSerializer_->serializeOut(std::move(pingFrame), remoteResumeable_));
@@ -708,8 +709,8 @@ void RSocketStateMachine::tryClientResume(
     std::unique_ptr<ClientResumeStatusCallback> resumeCallback) {
   Frame_RESUME resumeFrame(
       token,
-      resumeCache_->impliedPosition(),
-      resumeCache_->lastResetPosition(),
+      resumeManager_->impliedPosition(),
+      resumeManager_->firstSentPosition(),
       frameSerializer_->protocolVersion());
   VLOG(3) << "Out: " << resumeFrame;
   frameTransport->outputFrameOrEnqueue(
@@ -724,7 +725,7 @@ void RSocketStateMachine::tryClientResume(
 
 bool RSocketStateMachine::isPositionAvailable(ResumePosition position) {
   debugCheckCorrectExecutor();
-  return resumeCache_->isPositionAvailable(position);
+  return resumeManager_->isPositionAvailable(position);
 }
 
 bool RSocketStateMachine::resumeFromPositionOrClose(
@@ -736,11 +737,11 @@ bool RSocketStateMachine::resumeFromPositionOrClose(
   DCHECK(mode_ == ReactiveSocketMode::SERVER);
 
   bool clientPositionExist = (clientPosition == kUnspecifiedResumePosition) ||
-      resumeCache_->canResumeFrom(clientPosition);
+      clientPosition <= resumeManager_->impliedPosition();
 
   if (clientPositionExist &&
-      resumeCache_->isPositionAvailable(serverPosition)) {
-    Frame_RESUME_OK resumeOkFrame(resumeCache_->impliedPosition());
+      resumeManager_->isPositionAvailable(serverPosition)) {
+    Frame_RESUME_OK resumeOkFrame(resumeManager_->impliedPosition());
     VLOG(3) << "Out: " << resumeOkFrame;
     frameTransport_->outputFrameOrEnqueue(
         frameSerializer_->serializeOut(std::move(resumeOkFrame)));
@@ -753,7 +754,7 @@ bool RSocketStateMachine::resumeFromPositionOrClose(
         " firstClientPosition=",
         clientPosition,
         " is not available. Last reset position is ",
-        resumeCache_->lastResetPosition())));
+        resumeManager_->firstSentPosition())));
     return false;
   }
 }
@@ -761,12 +762,12 @@ bool RSocketStateMachine::resumeFromPositionOrClose(
 void RSocketStateMachine::resumeFromPosition(ResumePosition position) {
   DCHECK(!resumeCallback_);
   DCHECK(!isDisconnectedOrClosed());
-  DCHECK(resumeCache_->isPositionAvailable(position));
+  DCHECK(resumeManager_->isPositionAvailable(position));
 
   if (connectionEvents_) {
     connectionEvents_->onStreamsResumed();
   }
-  resumeCache_->sendFramesFromPosition(position, *frameTransport_);
+  resumeManager_->sendFramesFromPosition(position, *frameTransport_);
 
   for (auto& frame : streamState_.moveOutputPendingFrames()) {
     outputFrameOrEnqueue(std::move(frame));
@@ -809,7 +810,7 @@ void RSocketStateMachine::outputFrame(std::unique_ptr<folly::IOBuf> frame) {
 
   if (isResumable_) {
     auto streamIdPtr = frameSerializer_->peekStreamId(*frame);
-    resumeCache_->trackSentFrame(*frame, frameType, streamIdPtr);
+    resumeManager_->trackSentFrame(*frame, frameType, streamIdPtr);
   }
   frameTransport_->outputFrameOrEnqueue(std::move(frame));
 }
