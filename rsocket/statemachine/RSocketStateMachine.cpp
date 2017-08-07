@@ -32,23 +32,18 @@ RSocketStateMachine::RSocketStateMachine(
     std::shared_ptr<RSocketStats> stats,
     std::shared_ptr<RSocketConnectionEvents> connectionEvents)
     : mode_(mode),
-      resumeCache_(std::make_shared<ResumeCache>(stats)),
-      streamState_(std::make_shared<StreamState>(*stats)),
+      stats_(stats ? stats : RSocketStats::noop()),
+      resumeCache_(std::make_shared<ResumeCache>(stats_)),
+      streamState_(*stats_),
       requestResponder_(std::move(requestResponder)),
       keepaliveTimer_(std::move(keepaliveTimer)),
       streamsFactory_(*this, mode),
-      stats_(stats),
       connectionEvents_(connectionEvents),
       executor_(executor) {
   // We deliberately do not "open" input or output to avoid having c'tor on the
   // stack when processing any signals from the connection. See ::connect and
   // ::onSubscribe.
 
-  if (!stats_) {
-    stats_ = RSocketStats::noop();
-  }
-
-  CHECK(streamState_);
   CHECK(requestResponder_);
 
   stats_->socketCreated();
@@ -140,7 +135,7 @@ bool RSocketStateMachine::connect(
     // we are free to try to send frames again
     // not all frames might be sent if the connection breaks, the rest of them
     // will queue up again
-    auto outputFrames = streamState_->moveOutputPendingFrames();
+    auto outputFrames = streamState_.moveOutputPendingFrames();
     for (auto& frame : outputFrames) {
       outputFrameOrEnqueue(std::move(frame));
     }
@@ -305,9 +300,8 @@ void RSocketStateMachine::addStream(
     yarpl::Reference<StreamStateMachineBase> stateMachine) {
   debugCheckCorrectExecutor();
   auto result =
-      streamState_->streams_.emplace(streamId, std::move(stateMachine));
-  (void)result;
-  assert(result.second);
+      streamState_.streams_.emplace(streamId, std::move(stateMachine));
+  DCHECK(result.second);
 }
 
 void RSocketStateMachine::endStream(
@@ -330,8 +324,8 @@ bool RSocketStateMachine::endStreamInternal(
     StreamId streamId,
     StreamCompletionSignal signal) {
   VLOG(6) << "endStreamInternal";
-  auto it = streamState_->streams_.find(streamId);
-  if (it == streamState_->streams_.end()) {
+  auto it = streamState_.streams_.find(streamId);
+  if (it == streamState_.streams_.end()) {
     // Unsubscribe handshake initiated by the connection, we're done.
     return false;
   }
@@ -340,23 +334,21 @@ bool RSocketStateMachine::endStreamInternal(
 
   // Remove from the map before notifying the stateMachine.
   auto stateMachine = std::move(it->second);
-  streamState_->streams_.erase(it);
+  streamState_.streams_.erase(it);
   stateMachine->endStream(signal);
   return true;
 }
 
 void RSocketStateMachine::closeStreams(StreamCompletionSignal signal) {
   // Close all streams.
-  while (!streamState_->streams_.empty()) {
-    auto oldSize = streamState_->streams_.size();
+  while (!streamState_.streams_.empty()) {
+    auto oldSize = streamState_.streams_.size();
     auto result =
-        endStreamInternal(streamState_->streams_.begin()->first, signal);
-    (void)oldSize;
-    (void)result;
+        endStreamInternal(streamState_.streams_.begin()->first, signal);
     // TODO(stupaq): what kind of a user action could violate these
     // assertions?
-    assert(result);
-    assert(streamState_->streams_.size() == oldSize - 1);
+    DCHECK(result);
+    DCHECK_EQ(streamState_.streams_.size(), oldSize - 1);
   }
 }
 
@@ -540,8 +532,8 @@ void RSocketStateMachine::handleStreamFrame(
     StreamId streamId,
     FrameType frameType,
     std::unique_ptr<folly::IOBuf> serializedFrame) {
-  auto it = streamState_->streams_.find(streamId);
-  if (it == streamState_->streams_.end()) {
+  auto it = streamState_.streams_.find(streamId);
+  if (it == streamState_.streams_.end()) {
     handleUnknownStream(streamId, frameType, std::move(serializedFrame));
     return;
   }
@@ -776,7 +768,7 @@ void RSocketStateMachine::resumeFromPosition(ResumePosition position) {
   }
   resumeCache_->sendFramesFromPosition(position, *frameTransport_);
 
-  for (auto& frame : streamState_->moveOutputPendingFrames()) {
+  for (auto& frame : streamState_.moveOutputPendingFrames()) {
     outputFrameOrEnqueue(std::move(frame));
   }
 
@@ -792,7 +784,7 @@ void RSocketStateMachine::outputFrameOrEnqueue(
   if (!isDisconnectedOrClosed() && !resumeCallback_) {
     outputFrame(std::move(frame));
   } else {
-    streamState_->enqueueOutputPendingFrame(std::move(frame));
+    streamState_.enqueueOutputPendingFrame(std::move(frame));
   }
 }
 

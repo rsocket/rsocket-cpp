@@ -10,6 +10,8 @@
 #include "rsocket/RSocketParameters.h"
 #include "rsocket/framing/FrameProcessor.h"
 #include "rsocket/internal/Common.h"
+#include "rsocket/internal/ResumeCache.h"
+#include "rsocket/statemachine/StreamState.h"
 #include "rsocket/statemachine/StreamsFactory.h"
 #include "rsocket/statemachine/StreamsWriter.h"
 
@@ -141,7 +143,9 @@ class RSocketStateMachine final
 
   bool isPositionAvailable(ResumePosition position);
 
-  void outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf> frame);
+  /// Send a frame to the output.  Will buffer the frame if the state machine is
+  /// disconnected or in the process of resuming.
+  void outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf>);
 
   template<typename T>
   void outputFrameOrEnqueue(T&& frame) {
@@ -278,8 +282,14 @@ class RSocketStateMachine final
   bool remoteResumeable_{false};
   bool isClosed_{false};
 
+  std::shared_ptr<RSocketStats> stats_;
+
+  /// Buffers sent frames and tracking client byte position.
   std::shared_ptr<ResumeCache> resumeCache_;
-  std::shared_ptr<StreamState> streamState_;
+
+  /// Buffers frames to be sent and holds stream state machines.
+  StreamState streamState_;
+
   std::shared_ptr<RSocketResponder> requestResponder_;
   yarpl::Reference<FrameTransport> frameTransport_;
   std::unique_ptr<FrameSerializer> frameSerializer_;
@@ -290,7 +300,6 @@ class RSocketStateMachine final
 
   StreamsFactory streamsFactory_;
 
-  std::shared_ptr<RSocketStats> stats_;
   std::shared_ptr<RSocketConnectionEvents> connectionEvents_;
   folly::Executor& executor_;
 };
