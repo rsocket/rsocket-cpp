@@ -170,6 +170,7 @@ void SetupResumeAcceptor::processFrame(
       } catch (const std::exception& exn) {
         folly::exception_wrapper ew{std::current_exception(), exn};
         auto errFrame = Frame_ERROR::rejectedResume(ew.what().toStdString());
+        VLOG(3) << "Out: " << errFrame;
         transport->outputFrameOrEnqueue(
             serializer->serializeOut(std::move(errFrame)));
         close(std::move(transport), std::move(ew));

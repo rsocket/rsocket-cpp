@@ -160,6 +160,9 @@ void RSocketServer::onRSocketResume(
   }
   auto serverState = std::move(result.value());
   CHECK(serverState);
+  if (!serverState->rSocketStateMachine_->isInEventBaseThread()) {
+    throw RSocketException("Trying to RESUME in a different worker thread");
+  }
   serverState->rSocketStateMachine_->resumeServer(
       std::move(frameTransport), resumeParams);
 }

@@ -888,6 +888,10 @@ void RSocketStateMachine::connectClientSendSetup(
   connect(std::move(frameTransport), true, ProtocolVersion::Unknown);
 }
 
+bool RSocketStateMachine::isInEventBaseThread() {
+  return dynamic_cast<folly::EventBase*>(&executor_)->isInEventBaseThread();
+}
+
 void RSocketStateMachine::writeNewStream(
     StreamId streamId,
     StreamType streamType,
