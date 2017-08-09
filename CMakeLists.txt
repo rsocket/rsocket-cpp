@@ -661,12 +661,12 @@ target_link_libraries(
 # warm-resumption
 
 add_executable(
-  example_warm-resumption-server
-  examples/warm-resumption/WarmResumption_Server.cpp
+  example_resumption-server
+  examples/resumption/Resumption_Server.cpp
 )
 
 target_link_libraries(
-  example_warm-resumption-server
+  example_resumption-server
   ReactiveSocket
   reactivesocket_examples_util
   yarpl
@@ -675,11 +675,24 @@ target_link_libraries(
 
 add_executable(
   example_warm-resumption-client
-  examples/warm-resumption/WarmResumption_Client.cpp
+  examples/resumption/WarmResumption_Client.cpp
 )
 
 target_link_libraries(
   example_warm-resumption-client
+  ReactiveSocket
+  reactivesocket_examples_util
+  yarpl
+  ${GFLAGS_LIBRARY}
+  ${GLOG_LIBRARY})
+
+add_executable(
+  example_cold-resumption-client
+  examples/resumption/ColdResumption_Client.cpp
+)
+
+target_link_libraries(
+  example_cold-resumption-client
   ReactiveSocket
   reactivesocket_examples_util
   yarpl
