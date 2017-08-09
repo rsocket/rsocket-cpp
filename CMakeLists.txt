@@ -343,6 +343,7 @@ add_library(
   rsocket/internal/SwappableEventBase.cpp
   rsocket/internal/SwappableEventBase.h
   rsocket/ResumeManager.h
+  rsocket/ColdResumeHandler.cpp
   rsocket/ColdResumeHandler.h
   rsocket/RSocketServiceHandler.cpp
   rsocket/RSocketServiceHandler.h

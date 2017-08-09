@@ -32,6 +32,13 @@ bool shouldTrackFrame(const FrameType frameType) {
   }
 }
 
+bool isNewStreamFrame(FrameType frameType) {
+  return frameType == FrameType::REQUEST_CHANNEL ||
+      frameType == FrameType::REQUEST_STREAM ||
+      frameType == FrameType::REQUEST_RESPONSE ||
+      frameType == FrameType::REQUEST_FNF;
+}
+
 } // anonymous
 
 namespace rsocket {
@@ -44,7 +51,9 @@ void InMemResumeManager::trackReceivedFrame(
     const folly::IOBuf& serializedFrame,
     FrameType frameType,
     StreamId streamId) {
-  onStreamOpen(streamId, frameType);
+  if (isNewStreamFrame(frameType)) {
+    onRemoteStreamOpen(streamId, frameType);
+  }
   if (shouldTrackFrame(frameType)) {
     VLOG(6) << "received frame " << frameType;
     // TODO(tmont): this could be expensive, find a better way to get length
@@ -58,7 +67,9 @@ void InMemResumeManager::trackSentFrame(
     folly::Optional<StreamId> streamIdPtr) {
   if (streamIdPtr) {
     const StreamId streamId = *streamIdPtr;
-    onStreamOpen(streamId, frameType);
+    if (isNewStreamFrame(frameType)) {
+      onLocalStreamOpen(streamId, frameType);
+    }
   }
 
   if (shouldTrackFrame(frameType)) {
@@ -178,19 +189,47 @@ void InMemResumeManager::sendFramesFromPosition(
 void InMemResumeManager::onStreamClosed(StreamId streamId) {
   // This is crude. We could try to preserve the stream type in
   // RSocketStateMachine and pass it down explicitly here.
-  activeRequestStreams_.erase(streamId);
-  activeRequestChannels_.erase(streamId);
-  activeRequestResponses_.erase(streamId);
+  requesterRequestStreams_.erase(streamId);
+  requesterRequestChannels_.erase(streamId);
+  requesterRequestResponses_.erase(streamId);
+  responderRequestStreams_.erase(streamId);
+  responderRequestChannels_.erase(streamId);
+  responderRequestResponses_.erase(streamId);
+  publisherAllowance_.erase(streamId);
+  consumerAllowance_.erase(streamId);
+  streamTokens_.erase(streamId);
 }
 
-void InMemResumeManager::onStreamOpen(StreamId streamId, FrameType frameType) {
-  if (frameType == FrameType::REQUEST_STREAM) {
-    activeRequestStreams_.insert(streamId);
-  } else if (frameType == FrameType::REQUEST_CHANNEL) {
-    activeRequestChannels_.insert(streamId);
-  } else if (frameType == FrameType::REQUEST_RESPONSE) {
-    activeRequestResponses_.insert(streamId);
+void InMemResumeManager::onLocalStreamOpen(
+    StreamId streamId,
+    FrameType frameType) {
+  if (streamId > largestUsedStreamId_) {
+    largestUsedStreamId_ = streamId;
   }
+  if (frameType == FrameType::REQUEST_STREAM) {
+    requesterRequestStreams_.insert(streamId);
+  } else if (frameType == FrameType::REQUEST_CHANNEL) {
+    requesterRequestChannels_.insert(streamId);
+  } else if (frameType == FrameType::REQUEST_RESPONSE) {
+    requesterRequestResponses_.insert(streamId);
+  }
+}
+
+void InMemResumeManager::onRemoteStreamOpen(
+    StreamId streamId,
+    FrameType frameType) {
+  if (frameType == FrameType::REQUEST_STREAM) {
+    responderRequestStreams_.insert(streamId);
+  } else if (frameType == FrameType::REQUEST_CHANNEL) {
+    responderRequestChannels_.insert(streamId);
+  } else if (frameType == FrameType::REQUEST_RESPONSE) {
+    responderRequestResponses_.insert(streamId);
+  }
+}
+
+std::unordered_set<StreamId>
+InMemResumeManager::getRequesterRequestStreamIds() {
+  return requesterRequestStreams_;
 }
 
 } // reactivesocket

@@ -60,10 +60,8 @@ class RSocketClient {
       std::shared_ptr<RSocketStats> stats = RSocketStats::noop(),
       std::shared_ptr<RSocketConnectionEvents> connectionEvents =
           std::shared_ptr<RSocketConnectionEvents>(),
-      std::shared_ptr<ResumeManager> resumeManager =
-          std::shared_ptr<ResumeManager>(),
-      std::shared_ptr<ColdResumeHandler> coldResumeHandler =
-          std::shared_ptr<ColdResumeHandler>(),
+      std::shared_ptr<ResumeManager> resumeManager = nullptr,
+      std::shared_ptr<ColdResumeHandler> coldResumeHandler = nullptr,
       OnRSocketResume onRSocketResume =
           [](std::vector<StreamId>, std::vector<StreamId>) { return false; });
 
@@ -93,7 +91,7 @@ class RSocketClient {
 
   // Remember the evb on which the client was created.  Ensure warme-resume()
   // operations are done on the same evb.
-  folly::EventBase* evb_;
+  folly::EventBase* evb_{nullptr};
 
   ProtocolVersion protocolVersion_;
   ResumeIdentificationToken token_;

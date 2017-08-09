@@ -114,7 +114,10 @@ folly::Future<folly::Unit> RSocketClient::resume() {
     }
 
     stateMachine_->tryClientResume(
-        token_, std::move(frameTransport), std::move(resumeCallback));
+        token_,
+        std::move(frameTransport),
+        std::move(resumeCallback),
+        protocolVersion_);
   });
 
   return future;
@@ -168,7 +171,8 @@ void RSocketClient::createState(folly::EventBase& eventBase) {
       ReactiveSocketMode::CLIENT,
       std::move(stats_),
       std::move(connectionEvents_),
-      std::move(resumeManager_));
+      std::move(resumeManager_),
+      std::move(coldResumeHandler_));
 
   requester_ = std::make_shared<RSocketRequester>(stateMachine_, eventBase);
 

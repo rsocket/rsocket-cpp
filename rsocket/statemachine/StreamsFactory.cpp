@@ -47,6 +47,18 @@ void StreamsFactory::createStreamRequester(
   stateMachine->subscribe(std::move(responseSink));
 }
 
+void StreamsFactory::createStreamRequester(
+    Reference<yarpl::flowable::Subscriber<Payload>> responseSink,
+    StreamId streamId,
+    uint32_t n) {
+  StreamRequester::Parameters params(connection_.shared_from_this(), streamId);
+  auto stateMachine = yarpl::make_ref<StreamRequester>(params, Payload());
+  // Set requested to true (since cold resumption)
+  stateMachine->setRequested(n);
+  connection_.addStream(params.streamId, stateMachine);
+  stateMachine->subscribe(std::move(responseSink));
+}
+
 void StreamsFactory::createRequestResponseRequester(
     Payload payload,
     Reference<yarpl::single::SingleObserver<Payload>> responseSink) {
@@ -63,6 +75,10 @@ StreamId StreamsFactory::getNextStreamId() {
   CHECK(streamId <= std::numeric_limits<int32_t>::max() - 2);
   nextStreamId_ += 2;
   return streamId;
+}
+
+void StreamsFactory::setNextStreamId(StreamId streamId) {
+  nextStreamId_ = streamId + 2;
 }
 
 bool StreamsFactory::registerNewPeerStreamId(StreamId streamId) {

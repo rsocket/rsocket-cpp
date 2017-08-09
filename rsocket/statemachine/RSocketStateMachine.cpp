@@ -18,6 +18,7 @@
 #include "rsocket/framing/FrameTransport.h"
 #include "rsocket/internal/ClientResumeStatusCallback.h"
 #include "rsocket/internal/InMemResumeManager.h"
+#include "rsocket/internal/ScheduledSubscriber.h"
 #include "rsocket/statemachine/ChannelResponder.h"
 #include "rsocket/statemachine/StreamState.h"
 #include "rsocket/statemachine/StreamStateMachineBase.h"
@@ -25,22 +26,26 @@
 namespace rsocket {
 
 RSocketStateMachine::RSocketStateMachine(
-    folly::Executor& executor,
+    folly::EventBase& eventBase,
     std::shared_ptr<RSocketResponder> requestResponder,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer,
     ReactiveSocketMode mode,
     std::shared_ptr<RSocketStats> stats,
     std::shared_ptr<RSocketConnectionEvents> connectionEvents,
-    std::shared_ptr<ResumeManager> resumeManager)
+    std::shared_ptr<ResumeManager> resumeManager,
+    std::shared_ptr<ColdResumeHandler> coldResumeHandler)
     : mode_(mode),
       stats_(stats ? stats : RSocketStats::noop()),
       streamState_(*stats_),
-      resumeManager_(resumeManager ? resumeManager : std::make_shared<InMemResumeManager>(stats_)),
+      resumeManager_(
+          resumeManager ? resumeManager
+                        : std::make_shared<InMemResumeManager>(stats_)),
       requestResponder_(std::move(requestResponder)),
       keepaliveTimer_(std::move(keepaliveTimer)),
+      coldResumeHandler_(std::move(coldResumeHandler)),
       streamsFactory_(*this, mode),
       connectionEvents_(connectionEvents),
-      executor_(executor) {
+      eventBase_(eventBase) {
   // We deliberately do not "open" input or output to avoid having c'tor on the
   // stack when processing any signals from the connection. See ::connect and
   // ::onSubscribe.
@@ -48,6 +53,7 @@ RSocketStateMachine::RSocketStateMachine(
   CHECK(requestResponder_);
 
   stats_->socketCreated();
+  VLOG(2) << "Creating RSocketStateMachine";
 }
 
 RSocketStateMachine::~RSocketStateMachine() {
@@ -314,6 +320,7 @@ void RSocketStateMachine::endStream(
   if (!endStreamInternal(streamId, signal)) {
     return;
   }
+  resumeManager_->onStreamClosed(streamId);
   DCHECK(
       signal == StreamCompletionSignal::CANCEL ||
       signal == StreamCompletionSignal::COMPLETE ||
@@ -330,8 +337,6 @@ bool RSocketStateMachine::endStreamInternal(
     // Unsubscribe handshake initiated by the connection, we're done.
     return false;
   }
-
-  resumeManager_->onStreamClosed(streamId);
 
   // Remove from the map before notifying the stateMachine.
   auto stateMachine = std::move(it->second);
@@ -355,7 +360,7 @@ void RSocketStateMachine::closeStreams(StreamCompletionSignal signal) {
 
 void RSocketStateMachine::processFrame(std::unique_ptr<folly::IOBuf> frame) {
   auto thisPtr = this->shared_from_this();
-  executor_.add([ thisPtr, frame = std::move(frame) ]() mutable {
+  eventBase_.add([ thisPtr, frame = std::move(frame) ]() mutable {
     thisPtr->processFrameImpl(std::move(frame));
   });
 }
@@ -406,7 +411,7 @@ void RSocketStateMachine::processFrameImpl(
 
 void RSocketStateMachine::onTerminal(folly::exception_wrapper ex) {
   auto thisPtr = this->shared_from_this();
-  executor_.add([ thisPtr, e = std::move(ex) ]() mutable {
+  eventBase_.add([ thisPtr, e = std::move(ex) ]() mutable {
     thisPtr->onTerminalImpl(std::move(e));
   });
 }
@@ -480,6 +485,26 @@ void RSocketStateMachine::handleConnectionFrame(
         return;
       }
 
+      if (coldResumeInProgress_) {
+        auto streamIds = resumeManager_->getRequesterRequestStreamIds();
+        for (auto streamId : streamIds) {
+          auto consumerAllowance =
+              resumeManager_->getConsumerAllowance(streamId);
+          auto streamToken = resumeManager_->getStreamToken(streamId);
+          auto subscriber = coldResumeHandler_->handleRequesterResumeStream(
+              streamToken, consumerAllowance);
+          streamsFactory().createStreamRequester(
+              yarpl::make_ref<ScheduledSubscriptionSubscriber<Payload>>(
+                  std::move(subscriber), eventBase_),
+              streamId,
+              consumerAllowance);
+        }
+
+        streamsFactory().setNextStreamId(
+            resumeManager_->getLargestUsedStreamId());
+
+        coldResumeInProgress_ = false;
+      }
       resumeCallback_->onResumeOk();
       resumeCallback_.reset();
       resumeFromPosition(frame.position_);
@@ -569,6 +594,7 @@ void RSocketStateMachine::handleStreamFrame(
           std::move(framePayload.payload_),
           framePayload.header_.flagsComplete(),
           framePayload.header_.flagsNext());
+      resumeManager_->decrConsumerAllowance(streamId, 1);
       break;
     }
     case FrameType::ERROR: {
@@ -706,7 +732,22 @@ void RSocketStateMachine::sendKeepalive(
 void RSocketStateMachine::tryClientResume(
     const ResumeIdentificationToken& token,
     yarpl::Reference<FrameTransport> frameTransport,
-    std::unique_ptr<ClientResumeStatusCallback> resumeCallback) {
+    std::unique_ptr<ClientResumeStatusCallback> resumeCallback,
+    ProtocolVersion protocolVersion) {
+  if (frameSerializer_) {
+    // Warm-resumption.  Verify stateMachine has the same
+    // protocolVersion.
+    CHECK(frameSerializer_->protocolVersion() == protocolVersion);
+  } else {
+    // Cold-resumption.  Set the frameSerializer.
+    CHECK(coldResumeHandler_);
+    coldResumeInProgress_ = true;
+    setFrameSerializer(
+        protocolVersion == ProtocolVersion::Unknown
+            ? FrameSerializer::createCurrentVersion()
+            : FrameSerializer::createFrameSerializer(protocolVersion));
+  }
+
   Frame_RESUME resumeFrame(
       token,
       resumeManager_->impliedPosition(),
@@ -831,9 +872,7 @@ bool RSocketStateMachine::isClosed() const {
 }
 
 void RSocketStateMachine::debugCheckCorrectExecutor() const {
-  DCHECK(
-      !dynamic_cast<folly::EventBase*>(&executor_) ||
-      dynamic_cast<folly::EventBase*>(&executor_)->isInEventBaseThread());
+  DCHECK(eventBase_.isInEventBaseThread());
 }
 
 void RSocketStateMachine::setFrameSerializer(
@@ -882,7 +921,7 @@ void RSocketStateMachine::connectClientSendSetup(
 }
 
 bool RSocketStateMachine::isInEventBaseThread() {
-  return dynamic_cast<folly::EventBase*>(&executor_)->isInEventBaseThread();
+  return eventBase_.isInEventBaseThread();
 }
 
 void RSocketStateMachine::writeNewStream(
@@ -891,6 +930,12 @@ void RSocketStateMachine::writeNewStream(
     uint32_t initialRequestN,
     Payload payload,
     bool completed) {
+  if (coldResumeHandler_ && streamType != StreamType::FNF) {
+    auto streamToken =
+        coldResumeHandler_->generateStreamToken(payload, streamId, streamType);
+    resumeManager_->saveStreamToken(streamId, streamToken);
+  }
+
   switch (streamType) {
     case StreamType::CHANNEL:
       outputFrameOrEnqueue(Frame_REQUEST_CHANNEL(
@@ -903,6 +948,7 @@ void RSocketStateMachine::writeNewStream(
     case StreamType::STREAM:
       outputFrameOrEnqueue(Frame_REQUEST_STREAM(
           streamId, FrameFlags::EMPTY, initialRequestN, std::move(payload)));
+      resumeManager_->incrConsumerAllowance(streamId, initialRequestN);
       break;
 
     case StreamType::REQUEST_RESPONSE:
@@ -921,6 +967,7 @@ void RSocketStateMachine::writeNewStream(
 }
 
 void RSocketStateMachine::writeRequestN(StreamId streamId, uint32_t n) {
+  resumeManager_->incrConsumerAllowance(streamId, n);
   outputFrameOrEnqueue(Frame_REQUEST_N(streamId, n));
 }
 
