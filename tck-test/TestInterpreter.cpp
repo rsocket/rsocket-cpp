@@ -95,7 +95,7 @@ void TestInterpreter::handleSubscribe(const SubscribeCommand& command) {
     }
     auto client =
         RSocket::createConnectedClient(
-            std::make_unique<TcpConnectionFactory>(std::move(address_)),
+            std::make_unique<TcpConnectionFactory>(*worker_.getEventBase(), std::move(address_)),
             std::move(setupParameters))
             .get();
     testClient_[command.clientId()] =

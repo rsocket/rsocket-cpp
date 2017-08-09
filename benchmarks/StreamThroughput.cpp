@@ -167,8 +167,10 @@ std::unique_ptr<RSocketServer> makeServer(folly::SocketAddress address) {
   return server;
 }
 
-std::shared_ptr<RSocketClient> makeClient(folly::SocketAddress address) {
-  auto factory = std::make_unique<TcpConnectionFactory>(std::move(address));
+std::shared_ptr<RSocketClient> makeClient(
+    folly::EventBase* eventBase,
+    folly::SocketAddress address) {
+  auto factory = std::make_unique<TcpConnectionFactory>(*eventBase, std::move(address));
   return RSocket::createConnectedClient(std::move(factory)).get();
 }
 
@@ -176,6 +178,8 @@ void streamThroughput(unsigned, size_t items) {
   std::unique_ptr<RSocketServer> server;
   std::shared_ptr<RSocketClient> client;
   yarpl::Reference<BM_Subscriber> subscriber;
+
+  folly::ScopedEventBaseThread worker;
 
   BENCHMARK_SUSPEND {
     LOG(INFO) << "  Running with " << items << " items";
@@ -186,7 +190,7 @@ void streamThroughput(unsigned, size_t items) {
 
     folly::SocketAddress actual{
         FLAGS_host, *server->listeningPort(), true /* allowNameLookup */};
-    client = makeClient(std::move(actual));
+    client = makeClient(worker.getEventBase(), std::move(actual));
 
     subscriber = yarpl::make_ref<BM_Subscriber>(items);
   }

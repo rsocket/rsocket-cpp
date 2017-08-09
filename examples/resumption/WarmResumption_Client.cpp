@@ -68,15 +68,16 @@ class HelloSubscriber : public virtual yarpl::Refcounted,
 }
 
 std::shared_ptr<RSocketClient> getClientAndRequestStream(
+    folly::EventBase* eventBase,
     yarpl::Reference<HelloSubscriber> subscriber) {
   folly::SocketAddress address;
   address.setFromHostPort(FLAGS_host, FLAGS_port);
   SetupParameters setupParameters;
   setupParameters.resumable = true;
   auto client = RSocket::createConnectedClient(
-                    std::make_unique<TcpConnectionFactory>(std::move(address)),
-                    std::move(setupParameters))
-                    .get();
+      std::make_unique<TcpConnectionFactory>(*eventBase, std::move(address)),
+      std::move(setupParameters))
+      .get();
   client->getRequester()->requestStream(Payload("Jane"))->subscribe(subscriber);
   return client;
 }
@@ -86,8 +87,10 @@ int main(int argc, char* argv[]) {
   FLAGS_minloglevel = 0;
   folly::init(&argc, &argv);
 
+  folly::ScopedEventBaseThread worker1;
+
   auto subscriber1 = yarpl::make_ref<HelloSubscriber>();
-  auto client = getClientAndRequestStream(subscriber1);
+  auto client = getClientAndRequestStream(worker1.getEventBase(), subscriber1);
 
   subscriber1->request(7);
 
@@ -96,10 +99,10 @@ int main(int argc, char* argv[]) {
   }
   client->disconnect(std::runtime_error("disconnect triggered from client"));
 
-  folly::ScopedEventBaseThread worker_;
+  folly::ScopedEventBaseThread worker2;
 
   client->resume()
-      .via(worker_.getEventBase())
+      .via(worker2.getEventBase())
       .then([subscriber1] {
         // continue with the old client.
         subscriber1->request(3);
@@ -108,7 +111,7 @@ int main(int argc, char* argv[]) {
         }
         subscriber1->cancel();
       })
-      .onError([](folly::exception_wrapper ex) {
+      .onError([&](folly::exception_wrapper ex) {
         LOG(INFO) << "Resumption Failed: " << ex.what();
         try {
           ex.throw_exception();
@@ -121,7 +124,7 @@ int main(int argc, char* argv[]) {
         }
         // Create a new client
         auto subscriber2 = yarpl::make_ref<HelloSubscriber>();
-        auto client = getClientAndRequestStream(subscriber2);
+        auto client = getClientAndRequestStream(worker1.getEventBase(), subscriber2);
         subscriber2->request(7);
         while (subscriber2->rcvdCount() < 7) {
           std::this_thread::yield();

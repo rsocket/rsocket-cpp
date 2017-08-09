@@ -1,6 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include <folly/Baton.h>
+#include <folly/io/async/ScopedEventBaseThread.h>
 #include <thread>
 
 #include "RSocketTests.h"
@@ -32,8 +33,9 @@ class TestHandlerHello : public rsocket::RSocketResponder {
 }
 
 TEST(RequestResponseTest, Hello) {
+  folly::ScopedEventBaseThread worker;
   auto server = makeServer(std::make_shared<TestHandlerHello>());
-  auto client = makeClient(*server->listeningPort());
+  auto client = makeClient(worker.getEventBase(), *server->listeningPort());
   auto requester = client->getRequester();
 
   auto to = SingleTestObserver<std::string>::create();
@@ -95,11 +97,12 @@ class TestHandlerCancel : public rsocket::RSocketResponder {
 }
 
 TEST(RequestResponseTest, Cancel) {
+  folly::ScopedEventBaseThread worker;
   auto onCancel = std::make_shared<folly::Baton<>>();
   auto onSubscribe = std::make_shared<folly::Baton<>>();
   auto server =
       makeServer(std::make_shared<TestHandlerCancel>(onCancel, onSubscribe));
-  auto client = makeClient(*server->listeningPort());
+  auto client = makeClient(worker.getEventBase(), *server->listeningPort());
   auto requester = client->getRequester();
 
   auto to = SingleTestObserver<std::string>::create();

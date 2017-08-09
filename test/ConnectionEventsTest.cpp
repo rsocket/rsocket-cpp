@@ -2,6 +2,7 @@
 
 #include <gmock/gmock.h>
 #include <thread>
+#include <folly/io/async/ScopedEventBaseThread.h>
 
 #include "RSocketTests.h"
 
@@ -29,6 +30,7 @@ class MockConnEvents : public RSocketConnectionEvents {
 } // anonymous namespace
 
 TEST(ConnectionEventsTest, SimpleStream) {
+  folly::ScopedEventBaseThread worker;
   auto serverConnEvents = std::make_shared<StrictMock<MockConnEvents>>();
   auto clientConnEvents = std::make_shared<StrictMock<MockConnEvents>>();
 
@@ -40,7 +42,7 @@ TEST(ConnectionEventsTest, SimpleStream) {
       std::make_shared<HelloServiceHandler>(serverConnEvents));
 
   // create resumable client
-  auto client = makeResumableClient(*server->listeningPort(), clientConnEvents);
+  auto client = makeResumableClient(worker.getEventBase(), *server->listeningPort(), clientConnEvents);
 
   // request stream
   auto requester = client->getRequester();

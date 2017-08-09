@@ -35,7 +35,7 @@ class RSocketClient {
   friend class RSocket;
 
   // Returns the RSocketRequester associated with the RSocketClient.
-  std::shared_ptr<RSocketRequester> getRequester() const;
+  const std::shared_ptr<RSocketRequester>& getRequester() const;
 
   // Resumes the connection.  If a stateMachine already exists,
   // it provides a warm-resumption.  If a stateMachine does not exist,
@@ -93,7 +93,7 @@ class RSocketClient {
 
   // Remember the evb on which the client was created.  Ensure warme-resume()
   // operations are done on the same evb.
-  folly::EventBase* evb_;
+  folly::EventBase* evb_{nullptr};
 
   ProtocolVersion protocolVersion_;
   ResumeIdentificationToken token_;

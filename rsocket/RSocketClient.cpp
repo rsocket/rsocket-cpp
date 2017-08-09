@@ -18,7 +18,7 @@ RSocketClient::~RSocketClient() {
   VLOG(4) << "RSocketClient destroyed ..";
 }
 
-std::shared_ptr<RSocketRequester> RSocketClient::getRequester() const {
+const std::shared_ptr<RSocketRequester>& RSocketClient::getRequester() const {
   return requester_;
 }
 
@@ -47,18 +47,11 @@ RSocketClient::RSocketClient(
 folly::Future<folly::Unit> RSocketClient::connect() {
   VLOG(2) << "Starting connection";
 
-  folly::Promise<folly::Unit> promise;
-  auto future = promise.getFuture();
-
-  connectionFactory_->connect([ this, promise = std::move(promise) ](
-      std::unique_ptr<DuplexConnection> connection,
-      folly::EventBase & eventBase) mutable {
+  return connectionFactory_->connect().then([this](
+      ConnectionFactory::ConnectedDuplexConnection connection) mutable {
     VLOG(3) << "onConnect received DuplexConnection";
-    fromConnection(std::move(connection), eventBase);
-    promise.setValue();
+    fromConnection(std::move(connection.connection), connection.eventBase);
   });
-
-  return future;
 }
 
 folly::Future<folly::Unit> RSocketClient::resume() {
@@ -71,16 +64,11 @@ folly::Future<folly::Unit> RSocketClient::resume() {
   // TODO: CHECK whether the underlying transport is closed before attempting
   // resumption.
   //
-  folly::Promise<folly::Unit> promise;
-  auto future = promise.getFuture();
-
-  connectionFactory_->connect([ this, promise = std::move(promise) ](
-      std::unique_ptr<DuplexConnection> connection,
-      folly::EventBase & eventBase) mutable {
-
+  return connectionFactory_->connect().then([this](
+      ConnectionFactory::ConnectedDuplexConnection connection) mutable {
     CHECK(
         !evb_ /* cold-resumption */ ||
-        evb_ == &eventBase /* warm-resumption */);
+        evb_ == &connection.eventBase /* warm-resumption */);
 
     class ResumeCallback : public ClientResumeStatusCallback {
      public:
@@ -98,26 +86,28 @@ folly::Future<folly::Unit> RSocketClient::resume() {
       folly::Promise<folly::Unit> promise_;
     };
 
+    folly::Promise<folly::Unit> promise;
+    auto future = promise.getFuture();
+
     auto resumeCallback = std::make_unique<ResumeCallback>(std::move(promise));
     std::unique_ptr<DuplexConnection> framedConnection;
-    if (connection->isFramed()) {
-      framedConnection = std::move(connection);
+    if (connection.connection->isFramed()) {
+      framedConnection = std::move(connection.connection);
     } else {
       framedConnection = std::make_unique<FramedDuplexConnection>(
-          std::move(connection), protocolVersion_);
+          std::move(connection.connection), protocolVersion_);
     }
     auto frameTransport =
         yarpl::make_ref<FrameTransport>(std::move(framedConnection));
 
     if (!stateMachine_) {
-      createState(eventBase);
+      createState(connection.eventBase);
     }
 
     stateMachine_->tryClientResume(
         token_, std::move(frameTransport), std::move(resumeCallback));
+    return future;
   });
-
-  return future;
 }
 
 void RSocketClient::disconnect(folly::exception_wrapper ex) {

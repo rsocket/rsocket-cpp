@@ -18,8 +18,8 @@ class ConnectCallback : public folly::AsyncSocket::ConnectCallback {
  public:
   ConnectCallback(
       folly::SocketAddress address,
-      OnDuplexConnectionConnect onConnect)
-      : address_(address), onConnect_{std::move(onConnect)} {
+      folly::Promise<ConnectionFactory::ConnectedDuplexConnection> connectPromise)
+      : address_(address), connectPromise_{std::move(connectPromise)} {
     VLOG(2) << "Constructing ConnectCallback";
 
     // Set up by ScopedEventBaseThread.
@@ -47,25 +47,30 @@ class ConnectCallback : public folly::AsyncSocket::ConnectCallback {
         std::move(socket_), RSocketStats::noop());
     auto evb = folly::EventBaseManager::get()->getExistingEventBase();
     CHECK(evb);
-    onConnect_(std::move(connection), *evb);
+    connectPromise_.setValue(ConnectionFactory::ConnectedDuplexConnection{
+        std::move(connection), *evb});
   }
 
   void connectErr(const folly::AsyncSocketException& ex) noexcept override {
     std::unique_ptr<ConnectCallback> deleter(this);
 
     VLOG(4) << "connectErr(" << ex.what() << ") on " << address_;
+    connectPromise_.setException(ex);
   }
 
  private:
   folly::SocketAddress address_;
   folly::AsyncSocket::UniquePtr socket_;
-  OnDuplexConnectionConnect onConnect_;
+  folly::Promise<ConnectionFactory::ConnectedDuplexConnection> connectPromise_;
 };
 
 } // namespace
 
-TcpConnectionFactory::TcpConnectionFactory(folly::SocketAddress address)
-    : address_{std::move(address)} {
+TcpConnectionFactory::TcpConnectionFactory(
+    folly::EventBase& eventBase,
+    folly::SocketAddress address)
+    : address_{std::move(address)},
+      eventBase_{&eventBase}{
   VLOG(1) << "Constructing TcpConnectionFactory";
 }
 
@@ -73,11 +78,17 @@ TcpConnectionFactory::~TcpConnectionFactory() {
   VLOG(1) << "Destroying TcpConnectionFactory";
 }
 
-void TcpConnectionFactory::connect(OnDuplexConnectionConnect cb) {
-  worker_.getEventBase()->runInEventBaseThread(
-      [ this, fn = std::move(cb) ]() mutable {
-        new ConnectCallback(address_, std::move(fn));
+folly::Future<ConnectionFactory::ConnectedDuplexConnection>
+TcpConnectionFactory::connect() {
+  folly::Promise<ConnectionFactory::ConnectedDuplexConnection> connectPromise;
+  auto connectFuture = connectPromise.getFuture();
+
+  eventBase_->runInEventBaseThread(
+      [ this, connectPromise = std::move(connectPromise) ]() mutable {
+        new ConnectCallback(address_, std::move(connectPromise));
       });
+
+  return connectFuture;
 }
 
 std::unique_ptr<DuplexConnection>
