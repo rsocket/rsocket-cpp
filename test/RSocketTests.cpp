@@ -2,6 +2,9 @@
 
 #include "test/RSocketTests.h"
 
+#include "rsocket/transports/tcp/TcpConnectionAcceptor.h"
+#include "rsocket/transports/tcp/TcpConnectionFactory.h"
+
 namespace rsocket {
 namespace tests {
 namespace client_server {

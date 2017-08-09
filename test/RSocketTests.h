@@ -4,12 +4,7 @@
 
 #include <utility>
 
-#include <gtest/gtest.h>
-
 #include "rsocket/RSocket.h"
-#include "rsocket/transports/tcp/TcpConnectionAcceptor.h"
-#include "rsocket/transports/tcp/TcpConnectionFactory.h"
-#include "test/handlers/HelloStreamRequestHandler.h"
 
 namespace rsocket {
 namespace tests {

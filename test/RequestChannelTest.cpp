@@ -2,6 +2,7 @@
 
 #include <thread>
 #include <folly/io/async/ScopedEventBaseThread.h>
+#include <gtest/gtest.h>
 
 #include "RSocketTests.h"
 #include "yarpl/Flowable.h"

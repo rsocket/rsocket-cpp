@@ -2,6 +2,7 @@
 
 #include <folly/Baton.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
+#include <gtest/gtest.h>
 #include <thread>
 
 #include "RSocketTests.h"

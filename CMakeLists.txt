@@ -376,6 +376,7 @@ add_executable(
   test/RSocketTests.h
   test/RSocketTests.cpp
   test/RequestChannelTest.cpp
+  test/RSocketClientTest.cpp
   test/RequestResponseTest.cpp
   test/RequestStreamTest.cpp
   test/WarmResumptionTest.cpp
