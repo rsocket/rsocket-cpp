@@ -103,7 +103,7 @@ if (RSOCKET_BUILD_WITH_COVERAGE)
   endif ()
 
   if (CMAKE_COMPILER_IS_GNUCXX)
-    add_compile_options(--coverage -g)
+    add_compile_options(-g -O0 --coverage)
     set(EXTRA_LINK_FLAGS ${EXTRA_LINK_FLAGS} --coverage)
 
   elseif (${CMAKE_CXX_COMPILER_ID} MATCHES Clang)
@@ -415,6 +415,7 @@ add_executable(
   test/internal/FollyKeepaliveTimerTest.cpp
   test/internal/SwappableEventBaseTest.cpp
   test/internal/SetupResumeAcceptorTest.cpp
+  test/test_utils/GenericRequestResponseHandler.h
   test/test_utils/MockDuplexConnection.h
   test/test_utils/MockKeepaliveTimer.h
   test/test_utils/MockRequestHandler.h

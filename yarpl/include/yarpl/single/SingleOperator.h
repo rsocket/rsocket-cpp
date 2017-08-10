@@ -65,6 +65,7 @@ class SingleOperator : public Single<D> {
     void onError(std::exception_ptr error) override {
       observer_->onError(error);
       upstreamSubscription_.reset(); // should break the cycle to this
+      observer_.reset();
     }
 
     void cancel() override {
