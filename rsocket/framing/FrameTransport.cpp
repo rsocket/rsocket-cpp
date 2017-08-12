@@ -112,7 +112,7 @@ void FrameTransport::onSubscribe(yarpl::Reference<Subscription> subscription) {
   CHECK(!connectionInputSub_);
   CHECK(frameProcessor_);
   connectionInputSub_ = std::move(subscription);
-  connectionInputSub_->request(kMaxRequestN);
+  connectionInputSub_->request(std::numeric_limits<int64_t>::max());
 }
 
 void FrameTransport::onNext(std::unique_ptr<folly::IOBuf> frame) {
@@ -161,21 +161,8 @@ void FrameTransport::onError(std::exception_ptr eptr) {
 }
 
 void FrameTransport::request(int64_t n) {
-  Lock lock(mutex_);
-
-  if (!connection_) {
-    // request(n) can be delivered during disconnecting.  We don't care for it
-    // anymore.
-    return;
-  }
-
-  if (writeAllowance_.release(n) > 0) {
-    // There are no pending wfrites or we already have this method on the
-    // stack.
-    return;
-  }
-
-  drainWrites(lock);
+  // we are expecting we can write output withour back pressure
+  CHECK_EQ(n, std::numeric_limits<int64_t>::max());
 }
 
 void FrameTransport::cancel() {
@@ -188,9 +175,9 @@ void FrameTransport::outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf> frame) {
 
   // We allow sending frames even without a frame processor so it's possible to
   // send terminal frames without expecting anything in return.
-  if (connection_) {
+  if (connection_ && connectionOutput_) {
     drainWrites(lock);
-    if (pendingWrites_.empty() && writeAllowance_.tryAcquire()) {
+    if (pendingWrites_.empty()) {
       connectionOutput_->onNext(std::move(frame));
       return;
     }
@@ -219,12 +206,12 @@ void FrameTransport::drainReads(const FrameTransport::Lock&) {
 }
 
 void FrameTransport::drainWrites(const FrameTransport::Lock&) {
-  if (!connection_) {
+  if (!connection_ || !connectionOutput_) {
     return;
   }
 
   // Drain the queue or the allowance.
-  while (!pendingWrites_.empty() && writeAllowance_.tryAcquire()) {
+  while (!pendingWrites_.empty()) {
     auto frame = std::move(pendingWrites_.front());
     pendingWrites_.pop_front();
     connectionOutput_->onNext(std::move(frame));

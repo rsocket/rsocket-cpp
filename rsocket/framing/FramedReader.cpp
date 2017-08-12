@@ -74,7 +74,7 @@ size_t FramedReader::readFrameLength() const {
 void FramedReader::onSubscribe(
     yarpl::Reference<Subscription> subscription) noexcept {
   SubscriberBase::onSubscribe(subscription);
-  subscription->request(kMaxRequestN);
+  subscription->request(std::numeric_limits<int64_t>::max());
 }
 
 void FramedReader::onNext(std::unique_ptr<folly::IOBuf> payload) noexcept {

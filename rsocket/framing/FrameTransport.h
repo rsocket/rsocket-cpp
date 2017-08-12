@@ -97,7 +97,6 @@ class FrameTransport final :
 
   std::shared_ptr<FrameProcessor> frameProcessor_;
 
-  AllowanceSemaphore writeAllowance_;
   std::shared_ptr<DuplexConnection> connection_;
 
   yarpl::Reference<yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>
