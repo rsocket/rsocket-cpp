@@ -73,7 +73,7 @@ size_t FramedReader::readFrameLength() const {
 
 void FramedReader::onSubscribe(
     yarpl::Reference<Subscription> subscription) noexcept {
-  SubscriberBase::onSubscribe(subscription);
+  DuplexConnection::Subscriber::onSubscribe(subscription);
   subscription->request(kMaxRequestN);
 }
 
@@ -162,7 +162,7 @@ void FramedReader::cancel() noexcept {
 }
 
 void FramedReader::setInput(
-    yarpl::Reference<Subscriber<std::unique_ptr<folly::IOBuf>>> frames) {
+    yarpl::Reference<DuplexConnection::Subscriber> frames) {
   CHECK(!frames_)
       << "FrameReader should be closed before setting another input.";
   frames_ = std::move(frames);
@@ -208,7 +208,6 @@ bool FramedReader::ensureOrAutodetectProtocolVersion() {
 void FramedReader::error(std::string errorMsg) {
   VLOG(1) << "error: " << errorMsg;
   onError(std::make_exception_ptr(std::runtime_error(std::move(errorMsg))));
-  SubscriberBase::subscription()->cancel();
+  DuplexConnection::Subscriber::subscription()->cancel();
 }
-
-} // namespace rsocket
+}

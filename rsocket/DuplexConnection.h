@@ -29,23 +29,21 @@ namespace rsocket {
 /// before the connection is destroyed.
 class DuplexConnection {
  public:
+  using Subscriber = yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>;
+
   virtual ~DuplexConnection() = default;
 
   /// Sets a Subscriber that will consume received frames (a reader).
   ///
   /// If setInput() has already been called, then calling setInput() again will
   /// complete the previous subscriber.
-  virtual void setInput(
-      yarpl::Reference<
-          yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>) = 0;
+  virtual void setInput(yarpl::Reference<Subscriber>) = 0;
 
   /// Obtains a Subscriber that should be fed with frames to send (a writer).
   ///
   /// If getOutput() has already been called, it is only safe to call again if
   /// all previous output subscribers have been terminated.
-  virtual yarpl::Reference<
-      yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>
-  getOutput() = 0;
+  virtual yarpl::Reference<Subscriber> getOutput() = 0;
 
   /// Whether the duplex connection respects frame boundaries.
   virtual bool isFramed() const {
