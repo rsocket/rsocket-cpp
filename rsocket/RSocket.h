@@ -35,7 +35,8 @@ class RSocket {
       SetupParameters setupParameters,
       std::shared_ptr<ResumeManager> resumeManager,
       std::shared_ptr<ColdResumeHandler> coldResumeHandler,
-      OnRSocketResume onRSocketResume,
+      OnRSocketResume onRSocketResume =
+          [](std::vector<StreamId>, std::vector<StreamId>) { return false; },
       std::shared_ptr<RSocketResponder> responder =
           std::make_shared<RSocketResponder>(),
       std::unique_ptr<KeepaliveTimer> keepaliveTimer =

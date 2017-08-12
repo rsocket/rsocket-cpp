@@ -19,7 +19,7 @@ FrameTransport::FrameTransport(std::unique_ptr<DuplexConnection> connection)
 }
 
 FrameTransport::~FrameTransport() {
-  VLOG(6) << "~FrameTransport";
+  VLOG(1) << "~FrameTransport";
 }
 
 void FrameTransport::connect() {

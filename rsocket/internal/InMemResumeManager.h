@@ -3,6 +3,7 @@
 #pragma once
 
 #include <deque>
+#include <map>
 #include <set>
 
 #include "rsocket/RSocketStats.h"
@@ -55,13 +56,55 @@ class InMemResumeManager : public ResumeManager {
     return impliedPosition_;
   }
 
-  void onStreamOpen(StreamId streamId, FrameType frameType) override;
-
   void onStreamClosed(StreamId streamId) override;
+
+  std::unordered_set<StreamId> getRequesterRequestStreamIds() override;
+
+  uint32_t getPublisherAllowance(StreamId streamId) override {
+    auto it = consumerAllowance_.find(streamId);
+    return it != consumerAllowance_.end() ? it->second : 0;
+  }
+
+  uint32_t getConsumerAllowance(StreamId streamId) override {
+    auto it = consumerAllowance_.find(streamId);
+    return it != consumerAllowance_.end() ? it->second : 0;
+  }
+
+  void incrPublisherAllowance(StreamId streamId, uint32_t n) override {
+    publisherAllowance_[streamId] += n;
+  }
+
+  void decrPublisherAllowance(StreamId streamId, uint32_t n) override {
+    publisherAllowance_[streamId] -= n;
+  }
+
+  void incrConsumerAllowance(StreamId streamId, uint32_t n) override {
+    consumerAllowance_[streamId] += n;
+  }
+
+  void decrConsumerAllowance(StreamId streamId, uint32_t n) override {
+    consumerAllowance_[streamId] -= n;
+  }
+
+  std::string getStreamToken(StreamId streamId) override {
+    auto it = streamTokens_.find(streamId);
+    return it != streamTokens_.end() ? it->second : "";
+  }
+
+  void saveStreamToken(StreamId streamId, std::string streamToken) override {
+    streamTokens_[streamId] = streamToken;
+  }
+
+  StreamId getLargestUsedStreamId() override {
+    return largestUsedStreamId_;
+  }
 
  private:
   void addFrame(const folly::IOBuf&, size_t);
   void evictFrame();
+
+  void onLocalStreamOpen(StreamId streamId, FrameType frameType);
+  void onRemoteStreamOpen(StreamId streamId, FrameType frameType);
 
   // Called before clearing cached frames to update stats.
   void clearFrames(ResumePosition position);
@@ -75,14 +118,29 @@ class InMemResumeManager : public ResumeManager {
   // Inferred position of the rcvd frames
   ResumePosition impliedPosition_{0};
 
-  // Active REQUEST_STREAMs are preserved here
-  std::set<StreamId> activeRequestStreams_;
+  // StreamIds of streams originating locally
+  std::unordered_set<StreamId> requesterRequestStreams_;
+  std::unordered_set<StreamId> requesterRequestChannels_;
+  std::unordered_set<StreamId> requesterRequestResponses_;
 
-  // Active REQUEST_CHANNELs are preserved here
-  std::set<StreamId> activeRequestChannels_;
+  // StreamIds of streams originating remotely
+  std::unordered_set<StreamId> responderRequestStreams_;
+  std::unordered_set<StreamId> responderRequestChannels_;
+  std::unordered_set<StreamId> responderRequestResponses_;
 
-  // Active REQUEST_RESPONSEs are preserved here
-  std::set<StreamId> activeRequestResponses_;
+  // This stores the allowance for streams where the local side
+  // is a publisher (REQUEST_STREAM Responder and REQUEST_CHANNEL)
+  std::map<StreamId, uint32_t> publisherAllowance_;
+
+  // This stores the allowance for streams where the local side
+  // is a consumer (REQUEST_STREAM Requester and REQUEST_CHANNEL)
+  std::map<StreamId, uint32_t> consumerAllowance_;
+
+  // This is a mapping between streamIds and application-aware streamTokens
+  std::map<StreamId, std::string> streamTokens_;
+
+  // Largest used StreamId so far.
+  StreamId largestUsedStreamId_{0};
 
   std::deque<std::pair<ResumePosition, std::unique_ptr<folly::IOBuf>>> frames_;
 

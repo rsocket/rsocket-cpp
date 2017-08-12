@@ -52,7 +52,13 @@ string(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_LOWER)
 if (APPLE)
   set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl")
   if ("${BUILD_TYPE_LOWER}" MATCHES "debug")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,integer -fno-sanitize=unsigned-integer-overflow")
+    if (${CMAKE_CXX_COMPILER_ID} MATCHES Clang)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,integer -fno-sanitize=unsigned-integer-overflow")
+    elseif (${CMAKE_CXX_COMPILER_ID} MATCHES GNU)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
+    else ()
+        message(FATAL_ERROR "Unsupported compiler on macOS")
+    endif()
   endif()
 endif()
 
@@ -66,21 +72,6 @@ if (CMAKE_COMPILER_IS_GNUCXX)
   endif ()
   set(EXTRA_LINK_FLAGS ${EXTRA_LINK_FLAGS} -fuse-ld=gold)
 
-  if (RSOCKET_BUILD_WITH_COVERAGE)
-    # Enable code coverage.
-    add_compile_options(--coverage)
-    set(EXTRA_LINK_FLAGS ${EXTRA_LINK_FLAGS} --coverage)
-    set(COVERAGE_INFO coverage.info)
-    add_custom_command(
-      OUTPUT ${COVERAGE_INFO}
-      # Capture coverage info.
-      COMMAND lcov --directory . --capture --output-file ${COVERAGE_INFO}
-      # Filter out system and test code.
-      COMMAND lcov --remove ${COVERAGE_INFO} 'tests/*' 'test/*' 'tck-test/*' '/usr/*' 'gmock/*' 'folly/*' --output-file
-                   ${COVERAGE_INFO}
-      # Debug before upload.
-      COMMAND lcov --list ${COVERAGE_INFO})
-  endif()
 elseif (${CMAKE_CXX_COMPILER_ID} MATCHES Clang)
   if (RSOCKET_ASAN)
     set(ASAN_FLAGS
@@ -89,12 +80,48 @@ elseif (${CMAKE_CXX_COMPILER_ID} MATCHES Clang)
   endif ()
 endif ()
 
+# Enable code coverage, if the compiler is supported
+if (RSOCKET_BUILD_WITH_COVERAGE)
+  set(COVERAGE_INFO coverage.info)
+
+  if (${CMAKE_SYSTEM_NAME} MATCHES Linux AND ${CMAKE_CXX_COMPILER_ID} MATCHES Clang)
+    # clang and linux's lcov don't play nice together; don't attempt with linux/clang
+    add_custom_command(
+      OUTPUT ${COVERAGE_INFO}
+      COMMAND echo "Coverage info omitted for clang/linux builds")
+
+  else ()
+    add_custom_command(
+      OUTPUT ${COVERAGE_INFO}
+      # Capture coverage info.
+      COMMAND lcov --directory . --capture --output-file ${COVERAGE_INFO}
+      # Filter out system and test code.
+      COMMAND lcov --remove ${COVERAGE_INFO} '*/tests/*' '*/test/*' '*/tck-test/*' '*/usr/include/*' '/usr/*' '*/gmock/*' '*/folly/*' --output-file
+                   ${COVERAGE_INFO}
+      # Debug before upload.
+      COMMAND lcov --list ${COVERAGE_INFO})
+  endif ()
+
+  if (CMAKE_COMPILER_IS_GNUCXX)
+    add_compile_options(--coverage -g)
+    set(EXTRA_LINK_FLAGS ${EXTRA_LINK_FLAGS} --coverage)
+
+  elseif (${CMAKE_CXX_COMPILER_ID} MATCHES Clang)
+    add_compile_options(-g -O0 -fprofile-arcs -ftest-coverage)
+    set(EXTRA_LINK_FLAGS ${EXTRA_LINK_FLAGS} -fprofile-arcs -ftest-coverage)
+
+  else ()
+    message(FATAL_ERROR "Code coverage not supported with this compiler/host combination")
+  endif ()
+
+  message(STATUS "Building with coverage")
+  add_custom_target(coverage DEPENDS ${COVERAGE_INFO})
+endif ()
+
 if (DEFINED ASAN_FLAGS)
   add_compile_options(${ASAN_FLAGS})
   set(EXTRA_LINK_FLAGS ${EXTRA_LINK_FLAGS} ${ASAN_FLAGS})
 endif ()
-
-add_custom_target(coverage DEPENDS ${COVERAGE_INFO})
 
 option(BUILD_BENCHMARKS "Build benchmarks" ON)
 
@@ -305,8 +332,6 @@ add_library(
   rsocket/framing/FrameTransport.cpp
   rsocket/framing/FrameTransport.h
   rsocket/framing/FrameType.cpp
-  rsocket/framing/FrameType.cpp
-  rsocket/framing/FrameType.h
   rsocket/framing/FrameType.h
   rsocket/framing/FramedDuplexConnection.cpp
   rsocket/framing/FramedDuplexConnection.h
@@ -343,6 +368,7 @@ add_library(
   rsocket/internal/SwappableEventBase.cpp
   rsocket/internal/SwappableEventBase.h
   rsocket/ResumeManager.h
+  rsocket/ColdResumeHandler.cpp
   rsocket/ColdResumeHandler.h
   rsocket/RSocketServiceHandler.cpp
   rsocket/RSocketServiceHandler.h

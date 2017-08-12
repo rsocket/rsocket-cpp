@@ -100,22 +100,23 @@ cache:
 before_script:
   # Install lcov to coveralls conversion + upload tool.
   - gem install coveralls-lcov
-  - lcov --directory build --zerocounters
+  - lcov --version
 
 script:
-  - mkdir build &&
-    cd build &&
-    cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DRSOCKET_CC=$COMPILER
+  - mkdir build
+  - cd build
+  - cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DRSOCKET_CC=$COMPILER
           -DRSOCKET_ASAN=$ASAN -DRSOCKET_INSTALL_DEPS=True
-          -DRSOCKET_BUILD_WITH_COVERAGE=ON .. &&
-    make -j8 &&
-    make test
+          -DRSOCKET_BUILD_WITH_COVERAGE=ON ..
+  - make -j8
+  - lcov --directory . --zerocounters
+  - make test
+  - make coverage
   - cd ..
   - ./scripts/tck_test.sh -c cpp -s cpp
   - ./scripts/tck_test.sh -c java -s java
   - ./scripts/tck_test.sh -c java -s cpp
   - ./scripts/tck_test.sh -c cpp -s java
-  - cd build && make coverage
 
 after_success:
     # Upload to coveralls.

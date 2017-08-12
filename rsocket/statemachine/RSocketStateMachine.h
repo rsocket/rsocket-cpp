@@ -5,12 +5,15 @@
 #include <list>
 #include <memory>
 
+#include <folly/io/async/EventBase.h>
+
+#include "rsocket/ColdResumeHandler.h"
 #include "rsocket/DuplexConnection.h"
 #include "rsocket/Payload.h"
 #include "rsocket/RSocketParameters.h"
+#include "rsocket/ResumeManager.h"
 #include "rsocket/framing/FrameProcessor.h"
 #include "rsocket/internal/Common.h"
-#include "rsocket/ResumeManager.h"
 #include "rsocket/statemachine/StreamState.h"
 #include "rsocket/statemachine/StreamsFactory.h"
 #include "rsocket/statemachine/StreamsWriter.h"
@@ -61,13 +64,14 @@ class RSocketStateMachine final
       public std::enable_shared_from_this<RSocketStateMachine> {
  public:
   RSocketStateMachine(
-      folly::Executor& executor,
+      folly::EventBase& eventBase,
       std::shared_ptr<RSocketResponder> requestResponder,
       std::unique_ptr<KeepaliveTimer> keepaliveTimer_,
       ReactiveSocketMode mode,
       std::shared_ptr<RSocketStats> stats,
       std::shared_ptr<RSocketConnectionEvents> connectionEvents,
-      std::shared_ptr<ResumeManager> resumeManager);
+      std::shared_ptr<ResumeManager> resumeManager,
+      std::shared_ptr<ColdResumeHandler> coldResumeHandler);
 
   void closeWithError(Frame_ERROR&& error);
   void disconnectOrCloseWithError(Frame_ERROR&& error) override;
@@ -199,7 +203,8 @@ class RSocketStateMachine final
   void tryClientResume(
       const ResumeIdentificationToken& token,
       yarpl::Reference<FrameTransport> frameTransport,
-      std::unique_ptr<ClientResumeStatusCallback> resumeCallback);
+      std::unique_ptr<ClientResumeStatusCallback> resumeCallback,
+      ProtocolVersion protocolVersion);
 
   void setFrameSerializer(std::unique_ptr<FrameSerializer>);
 
@@ -299,10 +304,12 @@ class RSocketStateMachine final
   const std::unique_ptr<KeepaliveTimer> keepaliveTimer_;
 
   std::unique_ptr<ClientResumeStatusCallback> resumeCallback_;
+  std::shared_ptr<ColdResumeHandler> coldResumeHandler_;
+  bool coldResumeInProgress_{false};
 
   StreamsFactory streamsFactory_;
 
   std::shared_ptr<RSocketConnectionEvents> connectionEvents_;
-  folly::Executor& executor_;
+  folly::EventBase& eventBase_;
 };
 }
