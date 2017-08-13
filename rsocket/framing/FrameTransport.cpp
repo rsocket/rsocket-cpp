@@ -59,7 +59,6 @@ void FrameTransport::setFrameProcessor(
     connect();
   }
 
-  drainWrites(lock);
   drainReads(lock);
 }
 
@@ -170,22 +169,12 @@ void FrameTransport::cancel() {
   terminateProcessor(folly::exception_wrapper());
 }
 
-void FrameTransport::outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf> frame) {
+void FrameTransport::outputFrame(std::unique_ptr<folly::IOBuf> frame) {
   Lock lock(mutex_);
 
-  // We allow sending frames even without a frame processor so it's possible to
-  // send terminal frames without expecting anything in return.
-  if (connection_ && connectionOutput_) {
-    drainWrites(lock);
-    if (pendingWrites_.empty()) {
-      connectionOutput_->onNext(std::move(frame));
-      return;
-    }
-  }
-
-  // We either have no allowance to perform the operation, or the queue has not
-  // been drained (e.g. we're looping in ::request), or we are disconnected.
-  pendingWrites_.emplace_back(std::move(frame));
+  CHECK(connection_); // its not legal to outputFrame on a closed connection
+  CHECK(connectionOutput_); // the connect method has to be already executed
+  connectionOutput_->onNext(std::move(frame));
 }
 
 void FrameTransport::drainReads(const FrameTransport::Lock&) {
@@ -205,16 +194,4 @@ void FrameTransport::drainReads(const FrameTransport::Lock&) {
   }
 }
 
-void FrameTransport::drainWrites(const FrameTransport::Lock&) {
-  if (!connection_ || !connectionOutput_) {
-    return;
-  }
-
-  // Drain the queue or the allowance.
-  while (!pendingWrites_.empty()) {
-    auto frame = std::move(pendingWrites_.front());
-    pendingWrites_.pop_front();
-    connectionOutput_->onNext(std::move(frame));
-  }
-}
 }

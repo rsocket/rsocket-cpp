@@ -42,7 +42,8 @@ class MockSubscriber : public Subscriber<T> {
   MOCK_METHOD0(onComplete_, void());
   MOCK_METHOD1_T(onError_, void(std::exception_ptr ex));
 
-  explicit MockSubscriber(int64_t initial = kMaxRequestN) : initial_(initial) {}
+  explicit MockSubscriber(int64_t initial = std::numeric_limits<int64_t>::max())
+      : initial_(initial) {}
 
   void onSubscribe(yarpl::Reference<Subscription> subscription) override {
     subscription_ = subscription;
@@ -113,7 +114,7 @@ class MockSubscriber : public Subscriber<T> {
   // we define it here again.
   yarpl::Reference<Subscription> subscription_;
 
-  int64_t initial_{kMaxRequestN};
+  int64_t initial_;
 
   bool terminated_{false};
   mutable std::mutex m_, mFrame_;

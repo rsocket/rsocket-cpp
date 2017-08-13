@@ -34,7 +34,7 @@ class FrameTransport final :
   /// Enqueuing a terminal frame does not end the stream.
   ///
   /// This signal corresponds to Subscriber::onNext.
-  void outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf>);
+  void outputFrame(std::unique_ptr<folly::IOBuf>);
 
   /// Cancel the input, complete the output, and close the underlying
   /// connection.
@@ -46,10 +46,6 @@ class FrameTransport final :
 
   bool isClosed() const {
     return !connection_;
-  }
-
-  bool outputQueueEmpty() const {
-    return pendingWrites_.empty();
   }
 
  private:
@@ -84,9 +80,6 @@ class FrameTransport final :
   /// payloads.  Not clear if that is desirable.
   void drainReads(const Lock&);
 
-  /// Drain all pending writes into the output subscriber.
-  void drainWrites(const Lock&);
-
   /// Terminates the FrameProcessor.  Will queue up the exception if no
   /// processor is set, overwriting any previously queued exception.
   void terminateProcessor(folly::exception_wrapper);
@@ -103,7 +96,6 @@ class FrameTransport final :
       connectionOutput_;
   yarpl::Reference<yarpl::flowable::Subscription> connectionInputSub_;
 
-  std::deque<std::unique_ptr<folly::IOBuf>> pendingWrites_;
   std::deque<std::unique_ptr<folly::IOBuf>> pendingReads_;
   folly::Optional<folly::exception_wrapper> pendingTerminal_;
 };
