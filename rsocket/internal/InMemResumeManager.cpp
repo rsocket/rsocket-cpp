@@ -181,7 +181,7 @@ void InMemResumeManager::sendFramesFromPosition(
   DCHECK(found->first == position);
 
   while (found != frames_.end()) {
-    frameTransport.outputFrame(found->second->clone());
+    frameTransport.outputFrameOrDrop(found->second->clone());
     found++;
   }
 }

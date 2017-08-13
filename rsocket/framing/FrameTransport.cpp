@@ -160,7 +160,7 @@ void FrameTransport::onError(std::exception_ptr eptr) {
 }
 
 void FrameTransport::request(int64_t n) {
-  // we are expecting we can write output withour back pressure
+  // we are expecting we can write output without back pressure
   CHECK_EQ(n, std::numeric_limits<int64_t>::max());
 }
 
@@ -169,10 +169,14 @@ void FrameTransport::cancel() {
   terminateProcessor(folly::exception_wrapper());
 }
 
-void FrameTransport::outputFrame(std::unique_ptr<folly::IOBuf> frame) {
+void FrameTransport::outputFrameOrDrop(std::unique_ptr<folly::IOBuf> frame) {
   Lock lock(mutex_);
 
-  CHECK(connection_); // its not legal to outputFrame on a closed connection
+  if (!connection_) {
+    // if the connection was closed we will drop the frame
+    return;
+  }
+
   CHECK(connectionOutput_); // the connect method has to be already executed
   connectionOutput_->onNext(std::move(frame));
 }

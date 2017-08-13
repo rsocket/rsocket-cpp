@@ -65,8 +65,8 @@ TEST(FrameTransport, SimpleNoQueue) {
   transport->setFrameProcessor(
       std::make_shared<StrictMock<MockFrameProcessor>>());
 
-  transport->outputFrame(folly::IOBuf::copyBuffer("Hello"));
-  transport->outputFrame(folly::IOBuf::copyBuffer("World"));
+  transport->outputFrameOrDrop(folly::IOBuf::copyBuffer("Hello"));
+  transport->outputFrameOrDrop(folly::IOBuf::copyBuffer("World"));
 
   transport->close();
 }

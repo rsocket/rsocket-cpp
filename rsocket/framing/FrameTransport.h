@@ -30,11 +30,9 @@ class FrameTransport final :
 
   void setFrameProcessor(std::shared_ptr<FrameProcessor>);
 
-  /// Enqueues provided frame to be written to the underlying connection.
-  /// Enqueuing a terminal frame does not end the stream.
-  ///
-  /// This signal corresponds to Subscriber::onNext.
-  void outputFrame(std::unique_ptr<folly::IOBuf>);
+  /// Writes the frame directly to output. If the connection was closed it will
+  /// drop the frame.
+  void outputFrameOrDrop(std::unique_ptr<folly::IOBuf>);
 
   /// Cancel the input, complete the output, and close the underlying
   /// connection.

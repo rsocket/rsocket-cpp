@@ -102,7 +102,7 @@ void SetupResumeAcceptor::processFrame(
       Frame_SETUP frame;
       if (!serializer->deserializeFrom(frame, std::move(buf))) {
         constexpr folly::StringPiece message{"Cannot decode SETUP frame"};
-        transport->outputFrame(serializer->serializeOut(
+        transport->outputFrameOrDrop(serializer->serializeOut(
             Frame_ERROR::connectionError(message.str())));
         close(std::move(transport), error(message));
         break;
@@ -116,7 +116,7 @@ void SetupResumeAcceptor::processFrame(
       if (serializer->protocolVersion() != params.protocolVersion) {
         constexpr folly::StringPiece message{
             "SETUP frame has invalid protocol version"};
-        transport->outputFrame(
+        transport->outputFrameOrDrop(
             serializer->serializeOut(Frame_ERROR::invalidSetup(message.str())));
         close(transport, error(message));
         break;
@@ -129,7 +129,7 @@ void SetupResumeAcceptor::processFrame(
       } catch (const std::exception& exn) {
         folly::exception_wrapper ew{std::current_exception(), exn};
         auto errFrame = Frame_ERROR::rejectedSetup(ew.what().toStdString());
-        transport->outputFrame(
+        transport->outputFrameOrDrop(
             serializer->serializeOut(std::move(errFrame)));
         close(std::move(transport), std::move(ew));
       }
@@ -140,7 +140,7 @@ void SetupResumeAcceptor::processFrame(
       Frame_RESUME frame;
       if (!serializer->deserializeFrom(frame, std::move(buf))) {
         constexpr folly::StringPiece message{"Cannot decode RESUME frame"};
-        transport->outputFrame(serializer->serializeOut(
+        transport->outputFrameOrDrop(serializer->serializeOut(
             Frame_ERROR::connectionError(message.str())));
         close(std::move(transport), error(message));
         break;
@@ -157,7 +157,7 @@ void SetupResumeAcceptor::processFrame(
       if (serializer->protocolVersion() != params.protocolVersion) {
         constexpr folly::StringPiece message{
             "RESUME frame has invalid protocol version"};
-        transport->outputFrame(serializer->serializeOut(
+        transport->outputFrameOrDrop(serializer->serializeOut(
             Frame_ERROR::rejectedResume(message.str())));
         close(std::move(transport), error(message));
         break;
@@ -171,7 +171,7 @@ void SetupResumeAcceptor::processFrame(
         folly::exception_wrapper ew{std::current_exception(), exn};
         auto errFrame = Frame_ERROR::rejectedResume(ew.what().toStdString());
         VLOG(3) << "Out: " << errFrame;
-        transport->outputFrame(
+        transport->outputFrameOrDrop(
             serializer->serializeOut(std::move(errFrame)));
         close(std::move(transport), std::move(ew));
       }
@@ -181,7 +181,7 @@ void SetupResumeAcceptor::processFrame(
     default: {
       constexpr folly::StringPiece message{
           "Invalid frame, expected SETUP/RESUME"};
-      transport->outputFrame(serializer->serializeOut(
+      transport->outputFrameOrDrop(serializer->serializeOut(
           Frame_ERROR::connectionError(message.str())));
       close(std::move(transport), error(message));
       break;

@@ -84,6 +84,7 @@ void RSocketStateMachine::connectServer(
   sendingPendingFrames();
 }
 
+//TODO: ensure the return value is not ignored!
 bool RSocketStateMachine::resumeServer(
     yarpl::Reference<FrameTransport> frameTransport,
     const ResumeParameters& resumeParams) {
@@ -783,7 +784,7 @@ bool RSocketStateMachine::resumeFromPositionOrClose(
       resumeManager_->isPositionAvailable(serverPosition)) {
     Frame_RESUME_OK resumeOkFrame(resumeManager_->impliedPosition());
     VLOG(3) << "Out: " << resumeOkFrame;
-    frameTransport_->outputFrame(
+    frameTransport_->outputFrameOrDrop(
         frameSerializer_->serializeOut(std::move(resumeOkFrame)));
     resumeFromPosition(serverPosition);
     return true;
@@ -810,7 +811,7 @@ void RSocketStateMachine::resumeFromPosition(ResumePosition position) {
   resumeManager_->sendFramesFromPosition(position, *frameTransport_);
 
   for (auto& frame : streamState_.moveOutputPendingFrames()) {
-    outputFrame(std::move(frame));
+    outputFrameOrEnqueue(std::move(frame));
   }
 
   if (!isDisconnectedOrClosed() && keepaliveTimer_) {
@@ -852,7 +853,7 @@ void RSocketStateMachine::outputFrame(std::unique_ptr<folly::IOBuf> frame) {
     auto streamIdPtr = frameSerializer_->peekStreamId(*frame);
     resumeManager_->trackSentFrame(*frame, frameType, streamIdPtr);
   }
-  frameTransport_->outputFrame(std::move(frame));
+  frameTransport_->outputFrameOrDrop(std::move(frame));
 }
 
 uint32_t RSocketStateMachine::getKeepaliveTime() const {
