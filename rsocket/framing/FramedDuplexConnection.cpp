@@ -17,19 +17,17 @@ FramedDuplexConnection::FramedDuplexConnection(
     : inner_(std::move(connection)),
       protocolVersion_(std::make_shared<ProtocolVersion>(protocolVersion)) {}
 
-yarpl::Reference<Subscriber<std::unique_ptr<folly::IOBuf>>>
+yarpl::Reference<DuplexConnection::Subscriber>
 FramedDuplexConnection::getOutput() {
-  return yarpl::make_ref<FramedWriter>(
-      inner_->getOutput(), protocolVersion_);
+  return yarpl::make_ref<FramedWriter>(inner_->getOutput(), protocolVersion_);
 }
 
 void FramedDuplexConnection::setInput(
-    yarpl::Reference<Subscriber<std::unique_ptr<folly::IOBuf>>> framesSink) {
-  if(!inputReader_) {
+    yarpl::Reference<DuplexConnection::Subscriber> framesSink) {
+  if (!inputReader_) {
     inputReader_ = yarpl::make_ref<FramedReader>(protocolVersion_);
     inner_->setInput(inputReader_);
   }
   inputReader_->setInput(std::move(framesSink));
 }
-
-} // reactivesocket
+}

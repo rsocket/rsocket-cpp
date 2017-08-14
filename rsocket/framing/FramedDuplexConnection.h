@@ -19,12 +19,9 @@ class FramedDuplexConnection : public virtual DuplexConnection {
 
   ~FramedDuplexConnection();
 
-  yarpl::Reference<yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>
-  getOutput() override;
+  yarpl::Reference<DuplexConnection::Subscriber> getOutput() override;
 
-  void setInput(
-      yarpl::Reference<
-          yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>) override;
+  void setInput(yarpl::Reference<DuplexConnection::Subscriber>) override;
 
   bool isFramed() const override {
     return true;
@@ -35,5 +32,4 @@ class FramedDuplexConnection : public virtual DuplexConnection {
   yarpl::Reference<FramedReader> inputReader_;
   std::shared_ptr<ProtocolVersion> protocolVersion_;
 };
-
-} // reactivesocket
+}

@@ -2,24 +2,20 @@
 
 #pragma once
 
-#include <vector>
 #include <memory>
-#include "yarpl/flowable/Subscriber.h"
+#include <vector>
 
-namespace folly {
-class IOBuf;
-}
+#include "rsocket/DuplexConnection.h"
+#include "yarpl/flowable/Subscriber.h"
 
 namespace rsocket {
 
 struct ProtocolVersion;
 
-class FramedWriter : public yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>> {
- using SubscriberBase = yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>;
-
+class FramedWriter : public DuplexConnection::Subscriber {
  public:
   explicit FramedWriter(
-      yarpl::Reference<SubscriberBase> stream,
+      yarpl::Reference<DuplexConnection::Subscriber> stream,
       std::shared_ptr<ProtocolVersion> protocolVersion)
       : stream_(std::move(stream)),
         protocolVersion_(std::move(protocolVersion)) {}
@@ -42,8 +38,7 @@ class FramedWriter : public yarpl::flowable::Subscriber<std::unique_ptr<folly::I
   std::unique_ptr<folly::IOBuf> appendSize(
       std::unique_ptr<folly::IOBuf> payload);
 
-  yarpl::Reference<SubscriberBase> stream_;
+  yarpl::Reference<DuplexConnection::Subscriber> stream_;
   std::shared_ptr<ProtocolVersion> protocolVersion_;
 };
-
-} // reactivesocket
+}

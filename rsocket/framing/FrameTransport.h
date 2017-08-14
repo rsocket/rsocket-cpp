@@ -9,19 +9,18 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/Optional.h>
 
+#include "rsocket/DuplexConnection.h"
 #include "rsocket/internal/AllowanceSemaphore.h"
 #include "rsocket/internal/Common.h"
-#include "yarpl/flowable/Subscriber.h"
 #include "yarpl/flowable/Subscription.h"
 
 namespace rsocket {
 
-class DuplexConnection;
 class FrameProcessor;
 
 class FrameTransport final :
     /// Registered as an input in the DuplexConnection.
-    public yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>,
+    public DuplexConnection::Subscriber,
     /// Receives signals about connection writability.
     public yarpl::flowable::Subscription {
  public:
@@ -100,8 +99,7 @@ class FrameTransport final :
   AllowanceSemaphore writeAllowance_;
   std::shared_ptr<DuplexConnection> connection_;
 
-  yarpl::Reference<yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>
-      connectionOutput_;
+  yarpl::Reference<DuplexConnection::Subscriber> connectionOutput_;
   yarpl::Reference<yarpl::flowable::Subscription> connectionInputSub_;
 
   std::deque<std::unique_ptr<folly::IOBuf>> pendingWrites_;

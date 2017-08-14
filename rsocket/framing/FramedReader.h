@@ -3,25 +3,23 @@
 #pragma once
 
 #include <folly/io/IOBufQueue.h>
+
 #include "rsocket/internal/AllowanceSemaphore.h"
-#include "yarpl/flowable/Subscriber.h"
+#include "rsocket/DuplexConnection.h"
 #include "yarpl/flowable/Subscription.h"
 
 namespace rsocket {
 
 struct ProtocolVersion;
 
-class FramedReader : public yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>,
+class FramedReader : public DuplexConnection::Subscriber,
                      public yarpl::flowable::Subscription {
- using SubscriberBase = yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>;
-
  public:
   explicit FramedReader(std::shared_ptr<ProtocolVersion> protocolVersion)
       : payloadQueue_(folly::IOBufQueue::cacheChainLength()),
         protocolVersion_(std::move(protocolVersion)) {}
 
-  void setInput(yarpl::Reference<yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>>
-                frames);
+  void setInput(yarpl::Reference<DuplexConnection::Subscriber> frames);
 
  private:
   // Subscriber methods
@@ -45,7 +43,7 @@ class FramedReader : public yarpl::flowable::Subscriber<std::unique_ptr<folly::I
   size_t getPayloadSize(size_t frameSize) const;
   size_t readFrameLength() const;
 
-  yarpl::Reference<yarpl::flowable::Subscriber<std::unique_ptr<folly::IOBuf>>> frames_;
+  yarpl::Reference<DuplexConnection::Subscriber> frames_;
 
   AllowanceSemaphore allowance_{0};
 
