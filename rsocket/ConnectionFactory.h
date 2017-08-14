@@ -30,6 +30,11 @@ class ConnectionFactory {
   ConnectionFactory& operator=(const ConnectionFactory&) = delete; // copy
   ConnectionFactory& operator=(ConnectionFactory&&) = delete; // move
 
+  struct ConnectedDuplexConnection {
+    std::unique_ptr<rsocket::DuplexConnection> connection;
+    folly::EventBase& eventBase;
+  };
+
   /**
    * Connect to server defined by constructor of the implementing class.
    *
@@ -39,11 +44,6 @@ class ConnectionFactory {
    *
    * Resource creation depends on the particular implementation.
    */
-  struct ConnectedDuplexConnection {
-    std::unique_ptr<rsocket::DuplexConnection> connection;
-    folly::EventBase &eventBase;
-  };
-
   virtual folly::Future<ConnectedDuplexConnection> connect() = 0;
 };
 } // namespace rsocket

@@ -15,7 +15,7 @@ TEST(RSocketClient, ConnectFails) {
   folly::ScopedEventBaseThread worker;
 
   folly::SocketAddress address;
-  address.setFromHostPort("localhost", 9876);
+  address.setFromHostPort("localhost", 1);
   auto client = RSocket::createConnectedClient(
       std::make_unique<TcpConnectionFactory>(*worker.getEventBase(),
                                              std::move(address)));
