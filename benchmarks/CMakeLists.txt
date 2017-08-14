@@ -18,3 +18,5 @@ function(make_folly_benchmark NAME FILE)
 endfunction()
 
 make_folly_benchmark(streamthroughput StreamThroughput.cpp)
+
+add_test(NAME StreamThroughputTest COMMAND streamthroughput --items 100000)
