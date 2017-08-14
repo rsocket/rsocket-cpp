@@ -82,7 +82,7 @@ class BM_Subscriber : public yarpl::flowable::Subscriber<Payload> {
   }
 
   void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
-                       subscription) noexcept override {
+                   subscription) noexcept override {
     VLOG(2) << "BM_Subscriber " << this << " onSubscribe";
     subscription_ = std::move(subscription);
     requested_ = initialRequest_;
@@ -178,8 +178,6 @@ void streamThroughput(unsigned, size_t items) {
   yarpl::Reference<BM_Subscriber> subscriber;
 
   BENCHMARK_SUSPEND {
-    LOG(INFO) << "  Running with " << items << " items";
-
     folly::SocketAddress address{FLAGS_host, static_cast<uint16_t>(FLAGS_port),
                                  true /* allowNameLookup */};
     server = makeServer(std::move(address));
@@ -214,7 +212,7 @@ int main(int argc, char** argv) {
 
   FLAGS_logtostderr = true;
 
-  LOG(INFO) << "Starting benchmarks...";
+  LOG(INFO) << "Running benchmarks... (takes minutes)";
   folly::runBenchmarks();
 
   return 0;

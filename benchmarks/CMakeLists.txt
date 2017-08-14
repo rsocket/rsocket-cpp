@@ -3,7 +3,6 @@
 # Google benchmark
 
 
-benchmark(baselines Baselines.cpp)
 benchmark(reqrespthroughput RequestResponseThroughput.cpp)
 benchmark(reqresplatency RequestResponseLatency.cpp)
 
@@ -18,3 +17,5 @@ function(make_folly_benchmark NAME FILE)
 endfunction()
 
 make_folly_benchmark(streamthroughput StreamThroughput.cpp)
+make_folly_benchmark(baselines_tcp BaselinesTcp.cpp)
+make_folly_benchmark(baselines_async_socket BaselinesAsyncSocket.cpp)
