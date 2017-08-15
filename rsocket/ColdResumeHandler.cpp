@@ -1,25 +1,25 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include <folly/Conv.h>
-
 #include "rsocket/ColdResumeHandler.h"
+
+#include <folly/Conv.h>
 
 using namespace yarpl;
 using namespace yarpl::flowable;
 
+namespace rsocket {
+
 namespace {
 
-class CancelingSubscriber : public Subscriber<rsocket::Payload> {
+class CancelingSubscriber : public Subscriber<Payload> {
   void onSubscribe(Reference<Subscription> subscription) override {
-    Subscriber<rsocket::Payload>::onSubscribe(subscription);
-    Subscriber<rsocket::Payload>::subscription()->cancel();
+    Subscriber<Payload>::onSubscribe(subscription);
+    Subscriber<Payload>::subscription()->cancel();
   }
 
-  void onNext(rsocket::Payload) override {}
+  void onNext(Payload) override {}
 };
 }
-
-namespace rsocket {
 
 std::string ColdResumeHandler::generateStreamToken(
     const Payload&,

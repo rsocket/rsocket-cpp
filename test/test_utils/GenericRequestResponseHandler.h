@@ -2,25 +2,14 @@
 
 #pragma once
 
-// #include "RSocketTests.h"
 #include "yarpl/Single.h"
 
 #include "folly/ExceptionWrapper.h"
-
-using namespace yarpl;
-using namespace yarpl::single;
-using namespace rsocket;
-using namespace rsocket::tests;
-using namespace rsocket::tests::client_server;
 
 namespace rsocket {
 namespace tests {
 
 using StringPair = std::pair<std::string, std::string>;
-
-inline std::ostream& operator<<(std::ostream& os, StringPair const& payload) {
-  return os << "('" << payload.first << "', '" << payload.second << "')";
-}
 
 struct ResponseImpl {
   enum class Type { PAYLOAD, EXCEPTION };
@@ -43,20 +32,21 @@ using Response = std::unique_ptr<ResponseImpl>;
 using HandlerFunc = folly::Function<Response(StringPair const&)>;
 
 struct GenericRequestResponseHandler : public rsocket::RSocketResponder {
-  GenericRequestResponseHandler(HandlerFunc&& func)
+  explicit GenericRequestResponseHandler(HandlerFunc&& func)
       : handler_(std::make_unique<HandlerFunc>(std::move(func))) {}
 
-  Reference<Single<Payload>> handleRequestResponse(Payload request, StreamId)
-      override {
+  yarpl::Reference<yarpl::single::Single<Payload>> handleRequestResponse(
+      Payload request,
+      StreamId) override {
     auto data = request.moveDataToString();
     auto meta = request.moveMetadataToString();
 
     StringPair req(data, meta);
     Response resp = (*handler_)(req);
 
-    return Single<Payload>::create(
+    return yarpl::single::Single<Payload>::create(
         [ resp = std::move(resp), this ](auto subscriber) {
-          subscriber->onSubscribe(SingleSubscriptions::empty());
+          subscriber->onSubscribe(yarpl::single::SingleSubscriptions::empty());
 
           if (resp->type == ResponseImpl::Type::PAYLOAD) {
             subscriber->onSuccess(Payload(resp->p.first, resp->p.second));
@@ -91,4 +81,10 @@ StringPair payload_to_stringpair(Payload p) {
   return StringPair(p.moveDataToString(), p.moveMetadataToString());
 }
 }
-} /* namespace rsocket::tests */
+}
+
+inline std::ostream& operator<<(
+    std::ostream& os,
+    rsocket::tests::StringPair const& payload) {
+  return os << "('" << payload.first << "', '" << payload.second << "')";
+}
