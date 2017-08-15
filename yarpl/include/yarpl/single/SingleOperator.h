@@ -32,11 +32,12 @@ class SingleOperator : public Single<D> {
   /// against Operators.  Each operator subscription has two functions: as a
   /// observer for the previous stage; as a subscription for the next one,
   /// the user-supplied observer being the last of the pipeline stages.
+  template <typename Operator>
   class Subscription : public ::yarpl::single::SingleSubscription,
                        public SingleObserver<U> {
    protected:
     Subscription(
-        Reference<Single<D>> single,
+        Reference<Operator> single,
         Reference<SingleObserver<D>> observer)
         : single_(std::move(single)), observer_(std::move(observer)) {}
 
@@ -49,9 +50,8 @@ class SingleOperator : public Single<D> {
       upstreamSubscription_.reset(); // should break the cycle to this
     }
 
-    template<typename TOperator>
-    TOperator* getObservableAs() {
-      return static_cast<TOperator*>(single_.get());
+    Reference<Operator> getOperator() {
+      return single_;
     }
 
    private:
@@ -74,7 +74,7 @@ class SingleOperator : public Single<D> {
     }
 
     /// The Single has the lambda, and other creation parameters.
-    Reference<Single<D>> single_;
+    Reference<Operator> single_;
 
     /// This subscription controls the life-cycle of the observer.  The
     /// observer is retained as long as calls on it can be made.  (Note:
@@ -98,32 +98,32 @@ template <
     typename F,
     typename = typename std::enable_if<std::is_callable<F(U), D>::value>::type>
 class MapOperator : public SingleOperator<U, D> {
+  using ThisOperatorT = MapOperator<U, D, F>;
+  using Super = SingleOperator<U, D>;
+  using OperatorSubscription = typename Super::template Subscription<ThisOperatorT>;
+
  public:
   MapOperator(Reference<Single<U>> upstream, F&& function)
-      : SingleOperator<U, D>(std::move(upstream)),
-        function_(std::forward<F>(function)) {}
+      : Super(std::move(upstream)), function_(std::forward<F>(function)) {}
 
   void subscribe(Reference<SingleObserver<D>> observer) override {
-    SingleOperator<U, D>::upstream_->subscribe(
+    Super::upstream_->subscribe(
         // Note: implicit cast to a reference to a observer.
-        Reference<Subscription>(new Subscription(
-            Reference<Single<D>>(this), std::move(observer))));
+        Reference<OperatorSubscription>(
+            new MapSubscription(Reference<ThisOperatorT>(this), std::move(observer))));
   }
 
  private:
-  class Subscription : public SingleOperator<U, D>::Subscription {
-    using Super = typename SingleOperator<U, D>::Subscription;
+  class MapSubscription : public OperatorSubscription {
    public:
-    Subscription(
-        Reference<Single<D>> single,
+    MapSubscription(
+        Reference<ThisOperatorT> single,
         Reference<SingleObserver<D>> observer)
-        : SingleOperator<U, D>::Subscription(
-              std::move(single),
-              std::move(observer)) {}
+        : OperatorSubscription(std::move(single), std::move(observer)) {}
 
     void onSuccess(U value) override {
-      auto* map = Super::template getObservableAs<MapOperator>();
-      Super::observerOnSuccess(map->function_(std::move(value)));
+      auto map_operator = OperatorSubscription::getOperator();
+      OperatorSubscription::observerOnSuccess(map_operator->function_(std::move(value)));
     }
   };
 
