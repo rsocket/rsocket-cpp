@@ -93,11 +93,10 @@ class ServerAcceptCallback : public AsyncServerSocket::AcceptCallback {
 
   void connectionAccepted(
       int fd,
-      const SocketAddress& clientAddr) noexcept override {
+      const SocketAddress&) noexcept override {
     auto socket =
         folly::AsyncSocket::UniquePtr(new AsyncSocket(&eventBase_, fd));
-
-    TcpReader* reader = new TcpReader(
+    new TcpReader(
         std::move(socket), eventBase_, loadSize_, recvBufferLength_);
   }
 
