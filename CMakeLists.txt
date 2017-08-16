@@ -442,6 +442,25 @@ add_dependencies(tests gmock ReactiveSocket)
 
 add_test(NAME ReactiveSocketTests COMMAND tests)
 
+### Fuzzer harnesses
+add_executable(
+  frame_fuzzer
+  test/fuzzers/frame_fuzzer.cpp)
+
+target_link_libraries(
+  frame_fuzzer
+  ReactiveSocket
+  yarpl
+  ${GFLAGS_LIBRARY}
+  ${GLOG_LIBRARY})
+
+add_dependencies(frame_fuzzer gmock ReactiveSocket)
+
+add_test(
+  NAME FrameFuzzerTests
+  COMMAND ./scripts/frame_fuzzer_test.sh
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
 ########################################
 # TCK Drivers
 ########################################
