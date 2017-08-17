@@ -2,24 +2,14 @@
 
 #include "rsocket/ColdResumeHandler.h"
 
+#include "yarpl/flowable/CancelingSubscriber.h"
+
 #include <folly/Conv.h>
 
 using namespace yarpl;
 using namespace yarpl::flowable;
 
 namespace rsocket {
-
-namespace {
-
-class CancelingSubscriber : public Subscriber<Payload> {
-  void onSubscribe(Reference<Subscription> subscription) override {
-    Subscriber<Payload>::onSubscribe(subscription);
-    Subscriber<Payload>::subscription()->cancel();
-  }
-
-  void onNext(Payload) override {}
-};
-}
 
 std::string ColdResumeHandler::generateStreamToken(
     const Payload&,
@@ -38,6 +28,6 @@ Reference<Flowable<Payload>> ColdResumeHandler::handleResponderResumeStream(
 Reference<Subscriber<Payload>> ColdResumeHandler::handleRequesterResumeStream(
     std::string /* streamToken */,
     uint32_t /* consumerAllowance */) {
-  return yarpl::make_ref<CancelingSubscriber>();
+  return yarpl::make_ref<CancelingSubscriber<Payload>>();
 }
 }
