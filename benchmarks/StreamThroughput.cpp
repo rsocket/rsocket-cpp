@@ -1,7 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include <folly/Benchmark.h>
-#include <folly/init/Init.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 
 #include <gflags/gflags.h>
@@ -178,6 +177,7 @@ void streamThroughput(unsigned, size_t items) {
   yarpl::Reference<BM_Subscriber> subscriber;
 
   BENCHMARK_SUSPEND {
+    LOG(INFO) << "  Running with " << items << " items";
     folly::SocketAddress address{FLAGS_host, static_cast<uint16_t>(FLAGS_port),
                                  true /* allowNameLookup */};
     server = makeServer(std::move(address));
@@ -206,14 +206,3 @@ void streamThroughput(unsigned, size_t items) {
 BENCHMARK_PARAM(streamThroughput, 10000)
 BENCHMARK_PARAM(streamThroughput, 100000)
 BENCHMARK_PARAM(streamThroughput, 1000000)
-
-int main(int argc, char** argv) {
-  folly::init(&argc, &argv);
-
-  FLAGS_logtostderr = true;
-
-  LOG(INFO) << "Running benchmarks... (takes minutes)";
-  folly::runBenchmarks();
-
-  return 0;
-}
