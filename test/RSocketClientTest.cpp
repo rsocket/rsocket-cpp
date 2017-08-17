@@ -20,14 +20,9 @@ TEST(RSocketClient, ConnectFails) {
       std::make_unique<TcpConnectionFactory>(*worker.getEventBase(),
                                              std::move(address)));
 
-  folly::Baton<> baton;
   client.then([&](auto&) {
     FAIL() << "the test needs to fail";
-    baton.post();
   }).onError([&](const std::exception&) {
     LOG(INFO) << "connection failed as expected";
-    baton.post();
-  });
-
-  baton.wait();
+  }).get();
 }
