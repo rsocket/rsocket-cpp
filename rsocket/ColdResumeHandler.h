@@ -13,6 +13,8 @@ namespace rsocket {
 // resumption.  The default implementation will error/close the streams.
 class ColdResumeHandler {
  public:
+  virtual ~ColdResumeHandler() = default;
+
   // Generate an application-aware streamToken for the given stream parameters.
   virtual std::string generateStreamToken(const Payload&, StreamId, StreamType);
 

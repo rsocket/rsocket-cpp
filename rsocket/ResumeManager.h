@@ -27,7 +27,7 @@ namespace rsocket {
 // - lastSentPosition() would return 350
 class ResumeManager {
  public:
-  virtual ~ResumeManager(){};
+  virtual ~ResumeManager() {}
 
   // The following methods will be called for each frame which is being
   // sent/received on the wire.  The application should implement a way to

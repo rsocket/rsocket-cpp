@@ -19,3 +19,5 @@ endfunction()
 make_folly_benchmark(streamthroughput StreamThroughput.cpp Benchmarks.cpp)
 make_folly_benchmark(baselines_tcp BaselinesTcp.cpp Benchmarks.cpp)
 make_folly_benchmark(baselines_async_socket BaselinesAsyncSocket.cpp Benchmarks.cpp)
+
+add_test(NAME StreamThroughputTest COMMAND streamthroughput --items 100000)

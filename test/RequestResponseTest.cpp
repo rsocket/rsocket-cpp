@@ -4,6 +4,7 @@
 #include <thread>
 
 #include "RSocketTests.h"
+#include "test/test_utils/GenericRequestResponseHandler.h"
 #include "yarpl/Single.h"
 #include "yarpl/single/SingleTestObserver.h"
 
@@ -12,37 +13,6 @@ using namespace yarpl::single;
 using namespace rsocket;
 using namespace rsocket::tests;
 using namespace rsocket::tests::client_server;
-
-namespace {
-class TestHandlerHello : public rsocket::RSocketResponder {
- public:
-  Reference<Single<Payload>> handleRequestResponse(Payload request, StreamId)
-      override {
-    auto requestString = request.moveDataToString();
-    return Single<Payload>::create([name = std::move(requestString)](
-        auto subscriber) {
-      subscriber->onSubscribe(SingleSubscriptions::empty());
-      std::stringstream ss;
-      ss << "Hello " << name << "!";
-      std::string s = ss.str();
-      subscriber->onSuccess(Payload(s, "metadata"));
-    });
-  }
-};
-}
-
-TEST(RequestResponseTest, Hello) {
-  auto server = makeServer(std::make_shared<TestHandlerHello>());
-  auto client = makeClient(*server->listeningPort());
-  auto requester = client->getRequester();
-
-  auto to = SingleTestObserver<std::string>::create();
-  requester->requestResponse(Payload("Jane"))
-      ->map([](auto p) { return p.moveDataToString(); })
-      ->subscribe(to);
-  to->awaitTerminalEvent();
-  to->assertOnSuccessValue("Hello Jane!");
-}
 
 namespace {
 class TestHandlerCancel : public rsocket::RSocketResponder {
@@ -117,5 +87,70 @@ TEST(RequestResponseTest, Cancel) {
   to->assertNoTerminalEvent();
 }
 
-// TODO failure on responder, requester sees
-// TODO failure on request, requester sees
+// response creation usage
+TEST(RequestResponseTest, CanCtorTypes) {
+  Response r1 = payload_response("foo", "bar");
+  Response r2 = error_response(std::runtime_error("whew!"));
+}
+
+TEST(RequestResponseTest, Hello) {
+  auto server = makeServer(std::make_shared<GenericRequestResponseHandler>(
+      [](StringPair const& request) {
+        return payload_response(
+            "Hello, " + request.first + " " + request.second + "!", ":)");
+      }));
+
+  auto client = makeClient(*server->listeningPort());
+  auto requester = client->getRequester();
+
+  auto to = SingleTestObserver<StringPair>::create();
+  requester->requestResponse(Payload("Jane", "Doe"))
+      ->map(payload_to_stringpair)
+      ->subscribe(to);
+  to->awaitTerminalEvent();
+  to->assertOnSuccessValue({"Hello, Jane Doe!", ":)"});
+}
+
+TEST(RequestResponseTest, FailureInResponse) {
+  auto server = makeServer(std::make_shared<GenericRequestResponseHandler>(
+      [](StringPair const& request) {
+        EXPECT_EQ(request.first, "foo");
+        EXPECT_EQ(request.second, "bar");
+        return error_response(std::runtime_error("whew!"));
+      }));
+
+  auto client = makeClient(*server->listeningPort());
+  auto requester = client->getRequester();
+
+  auto to = SingleTestObserver<StringPair>::create();
+  requester->requestResponse(Payload("foo", "bar"))
+      ->map(payload_to_stringpair)
+      ->subscribe(to);
+  to->awaitTerminalEvent();
+  to->assertOnErrorMessage("whew!");
+}
+
+// TODO: Currently, this hangs when the client sends a request,
+// we should fix this
+TEST(DISABLED_RequestResponseTest, FailureOnRequest) {
+  auto server = makeServer(
+      std::make_shared<GenericRequestResponseHandler>([](auto const&) {
+        ASSERT(false); // should never reach
+        return payload_response("", "");
+      }));
+
+  auto client = makeClient(*server->listeningPort());
+  auto requester = client->getRequester();
+
+  VLOG(0) << "Shutting down server so client request fails";
+  server->shutdownAndWait();
+  server.reset();
+  VLOG(0) << "Done";
+
+  auto to = SingleTestObserver<StringPair>::create();
+  requester->requestResponse(Payload("foo", "bar"))
+      ->map(payload_to_stringpair)
+      ->subscribe(to);
+  to->awaitTerminalEvent();
+  to->assertOnErrorMessage("???"); // ??? this probably isn't correct
+}
