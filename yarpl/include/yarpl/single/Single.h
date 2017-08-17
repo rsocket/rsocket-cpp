@@ -13,16 +13,6 @@
 namespace yarpl {
 namespace single {
 
-namespace details {
-
-template <typename T, typename OnSubscribe>
-class FromPublisherOperator;
-
-// specialization of Single<void>
-template <typename OnSubscribe>
-class SingleVoidFromPublisherOperator;
-}
-
 template <typename T>
 class Single : public virtual Refcounted {
  public:
@@ -77,11 +67,7 @@ class Single : public virtual Refcounted {
       typename = typename std::enable_if<std::is_callable<
           OnSubscribe(Reference<SingleObserver<T>>),
           void>::value>::type>
-  static auto create(OnSubscribe&& function) {
-    return Reference<Single<T>>(
-        new details::FromPublisherOperator<T, OnSubscribe>(
-            std::forward<OnSubscribe>(function)));
-  }
+  static auto create(OnSubscribe&&);
 
   template <typename Function>
   auto map(Function&& function);
@@ -109,13 +95,13 @@ class Single<void> : public virtual Refcounted {
         SingleObserver<void>::onSubscribe(std::move(subscription));
       }
 
-      virtual void onSuccess() override {
+      void onSuccess() override {
         success_();
         SingleObserver<void>::onSuccess();
       }
 
       // No further calls to the subscription after this method is invoked.
-      virtual void onError(std::exception_ptr eptr) override {
+      void onError(std::exception_ptr eptr) override {
         SingleObserver<void>::onError(eptr);
       }
 
@@ -131,51 +117,31 @@ class Single<void> : public virtual Refcounted {
       typename = typename std::enable_if<std::is_callable<
           OnSubscribe(Reference<SingleObserver<void>>),
           void>::value>::type>
-  static auto create(OnSubscribe&& function) {
-    return Reference<Single<void>>(
-        new details::SingleVoidFromPublisherOperator<OnSubscribe>(
-            std::forward<OnSubscribe>(function)));
-  }
+  static auto create(OnSubscribe&&);
 };
 
-namespace details {
-
-template <typename T, typename OnSubscribe>
-class FromPublisherOperator : public Single<T> {
- public:
-  explicit FromPublisherOperator(OnSubscribe&& function)
-      : function_(std::move(function)) {}
-
-  void subscribe(Reference<SingleObserver<T>> subscriber) override {
-    function_(std::move(subscriber));
-  }
-
- private:
-  OnSubscribe function_;
-};
-
-template <typename OnSubscribe>
-class SingleVoidFromPublisherOperator : public Single<void> {
- public:
-  explicit SingleVoidFromPublisherOperator(OnSubscribe&& function)
-      : function_(std::move(function)) {}
-
-  void subscribe(Reference<SingleObserver<void>> subscriber) override {
-    function_(std::move(subscriber));
-  }
-
- private:
-  OnSubscribe function_;
-};
-} // details
-
-} // observable
+} // single
 } // yarpl
 
 #include "yarpl/single/SingleOperator.h"
 
 namespace yarpl {
 namespace single {
+
+template <typename T>
+template <typename OnSubscribe, typename>
+auto Single<T>::create(OnSubscribe&& function) {
+  return Reference<Single<T>>(new FromPublisherOperator<T, OnSubscribe>(
+      std::forward<OnSubscribe>(function)));
+}
+
+template <typename OnSubscribe, typename>
+auto Single<void>::create(OnSubscribe&& function) {
+  return Reference<Single<void>>(
+      new SingleVoidFromPublisherOperator<OnSubscribe>(
+          std::forward<OnSubscribe>(function)));
+}
+
 template <typename T>
 template <typename Function>
 auto Single<T>::map(Function&& function) {

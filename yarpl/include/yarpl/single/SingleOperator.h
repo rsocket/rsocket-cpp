@@ -6,7 +6,7 @@
 
 #include "yarpl/single/Single.h"
 #include "yarpl/single/SingleObserver.h"
-#include "yarpl/single/SingleSubscription.h"
+#include "yarpl/single/SingleSubscriptions.h"
 
 namespace yarpl {
 namespace single {
@@ -144,5 +144,20 @@ class FromPublisherOperator : public Single<T> {
   OnSubscribe function_;
 };
 
-} // observable
+
+template <typename OnSubscribe>
+class SingleVoidFromPublisherOperator : public Single<void> {
+ public:
+  explicit SingleVoidFromPublisherOperator(OnSubscribe&& function)
+      : function_(std::move(function)) {}
+
+  void subscribe(Reference<SingleObserver<void>> observer) override {
+    function_(std::move(observer));
+  }
+
+ private:
+  OnSubscribe function_;
+};
+
+} // single
 } // yarpl
