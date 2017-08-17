@@ -170,11 +170,7 @@ class TcpOutputSubscriber : public DuplexConnection::Subscriber {
 
   void onSubscribe(yarpl::Reference<Subscription> subscription) override {
     CHECK(subscription);
-    if (!tcpReaderWriter_) {
-      LOG(ERROR) << "trying to resubscribe on a closed subscriber";
-      subscription->cancel();
-      return;
-    }
+    CHECK(tcpReaderWriter_);
     tcpReaderWriter_->setOutputSubscription(std::move(subscription));
   }
 
