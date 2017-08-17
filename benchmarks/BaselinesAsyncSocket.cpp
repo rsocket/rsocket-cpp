@@ -93,10 +93,11 @@ class ServerAcceptCallback : public AsyncServerSocket::AcceptCallback {
 
   void connectionAccepted(
       int fd,
-      const SocketAddress&) noexcept override {
+      const SocketAddress& clientAddr) noexcept override {
     auto socket =
         folly::AsyncSocket::UniquePtr(new AsyncSocket(&eventBase_, fd));
-    new TcpReader(
+
+    TcpReader* reader = new TcpReader(
         std::move(socket), eventBase_, loadSize_, recvBufferLength_);
   }
 
@@ -195,54 +196,43 @@ static void BM_Baseline_AsyncSocket_SendReceive(
   serverEventBase.loopForever();
 }
 
-void BM_Baseline_AsyncSocket_Throughput_100MB_s40B_r1024B(unsigned, unsigned) {
+BENCHMARK(BM_Baseline_AsyncSocket_Throughput_100MB_s40B_r1024B, n) {
   constexpr size_t loadSizeB = 100 * 1024 * 1024;
   constexpr size_t sendSizeB = 40;
   constexpr size_t receiveSizeB = 1024;
   BM_Baseline_AsyncSocket_SendReceive(loadSizeB, sendSizeB, receiveSizeB);
 }
-void BM_Baseline_AsyncSocket_Throughput_100MB_s40B_r4096B(unsigned, unsigned) {
+BENCHMARK(BM_Baseline_AsyncSocket_Throughput_100MB_s40B_r4096B, n) {
   constexpr size_t loadSizeB = 100 * 1024 * 1024;
   constexpr size_t sendSizeB = 40;
   constexpr size_t receiveSizeB = 4096;
   BM_Baseline_AsyncSocket_SendReceive(loadSizeB, sendSizeB, receiveSizeB);
 }
-void BM_Baseline_AsyncSocket_Throughput_100MB_s80B_r4096B(unsigned, unsigned) {
+BENCHMARK(BM_Baseline_AsyncSocket_Throughput_100MB_s80B_r4096B, n) {
   constexpr size_t loadSizeB = 100 * 1024 * 1024;
   constexpr size_t sendSizeB = 80;
   constexpr size_t receiveSizeB = 4096;
   BM_Baseline_AsyncSocket_SendReceive(loadSizeB, sendSizeB, receiveSizeB);
 }
-void BM_Baseline_AsyncSocket_Throughput_100MB_s4096B_r4096B(
-    unsigned,
-    unsigned) {
+BENCHMARK(BM_Baseline_AsyncSocket_Throughput_100MB_s4096B_r4096B, n) {
   constexpr size_t loadSizeB = 100 * 1024 * 1024;
   constexpr size_t sendSizeB = 4096;
   constexpr size_t receiveSizeB = 4096;
   BM_Baseline_AsyncSocket_SendReceive(loadSizeB, sendSizeB, receiveSizeB);
 }
 
-BENCHMARK_PARAM(BM_Baseline_AsyncSocket_Throughput_100MB_s40B_r1024B, 1);
-BENCHMARK_PARAM(BM_Baseline_AsyncSocket_Throughput_100MB_s40B_r4096B, 1);
-BENCHMARK_PARAM(BM_Baseline_AsyncSocket_Throughput_100MB_s80B_r4096B, 1);
-BENCHMARK_PARAM(BM_Baseline_AsyncSocket_Throughput_100MB_s4096B_r4096B, 1);
-
-void BM_Baseline_AsyncSocket_Latency_1M_msgs_32B(unsigned, unsigned) {
+BENCHMARK(BM_Baseline_AsyncSocket_Latency_1M_msgs_32B, n) {
   constexpr size_t messageSizeB = 32;
   constexpr size_t loadSizeB = 1000000 * messageSizeB;
   BM_Baseline_AsyncSocket_SendReceive(loadSizeB, messageSizeB, messageSizeB);
 }
-void BM_Baseline_AsyncSocket_Latency_1M_msgs_128B(unsigned, unsigned) {
+BENCHMARK(BM_Baseline_AsyncSocket_Latency_1M_msgs_128B, n) {
   constexpr size_t messageSizeB = 128;
   constexpr size_t loadSizeB = 1000000 * messageSizeB;
   BM_Baseline_AsyncSocket_SendReceive(loadSizeB, messageSizeB, messageSizeB);
 }
-void BM_Baseline_AsyncSocket_Latency_1M_msgs_4kB(unsigned, unsigned) {
+BENCHMARK(BM_Baseline_AsyncSocket_Latency_1M_msgs_4kB, n) {
   constexpr size_t messageSizeB = 4096;
   constexpr size_t loadSizeB = 1000000 * messageSizeB;
   BM_Baseline_AsyncSocket_SendReceive(loadSizeB, messageSizeB, messageSizeB);
 }
-
-BENCHMARK_PARAM(BM_Baseline_AsyncSocket_Latency_1M_msgs_32B, 1);
-BENCHMARK_PARAM(BM_Baseline_AsyncSocket_Latency_1M_msgs_128B, 1);
-BENCHMARK_PARAM(BM_Baseline_AsyncSocket_Latency_1M_msgs_4kB, 1);
