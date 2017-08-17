@@ -50,7 +50,15 @@ folly::Future<folly::Unit> RSocketClient::connect() {
   return connectionFactory_->connect().then([this](
       ConnectionFactory::ConnectedDuplexConnection connection) mutable {
     VLOG(3) << "onConnect received DuplexConnection";
-    fromConnection(std::move(connection.connection), connection.eventBase);
+
+    // fromConnection method must be called from the eventBase and since
+    // there is no guarantee that the Future returned from the factory::connect
+    // method is executed on the event base, we have to ensure it by using
+    // folly::via
+    return via(&connection.eventBase).then([this, connection = std::move(
+        connection.connection), eventBase = &connection.eventBase]() mutable {
+      fromConnection(std::move(connection), *eventBase);
+    });
   });
 }
 
