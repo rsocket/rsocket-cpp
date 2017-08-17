@@ -6,16 +6,24 @@
 
 namespace rsocket {
 
-/// Responder that streams back a fixed message infinitely.
+/// Responder that always sends back a fixed message.
 class FixedResponder : public RSocketResponder {
  public:
   FixedResponder(const std::string& message)
       : message_{folly::IOBuf::copyBuffer(message)} {}
 
+  /// Infinitely streams back the message.
   yarpl::Reference<yarpl::flowable::Flowable<Payload>> handleRequestStream(
       Payload,
       StreamId) override {
     return yarpl::flowable::Flowables::fromGenerator<Payload>(
+        [msg = message_->clone()] { return Payload(msg->clone()); });
+  }
+
+  yarpl::Reference<yarpl::single::Single<Payload>> handleRequestResponse(
+      Payload,
+      StreamId) override {
+    return yarpl::single::Singles::fromGenerator<Payload>(
         [msg = message_->clone()] { return Payload(msg->clone()); });
   }
 

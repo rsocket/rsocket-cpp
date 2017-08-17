@@ -1,16 +1,17 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
+#include "benchmarks/Latch.h"
 #include "benchmarks/Throughput.h"
 
-#include <folly/Baton.h>
 #include <folly/Benchmark.h>
+#include <folly/init/Init.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <folly/portability/GFlags.h>
 
 #include "rsocket/RSocket.h"
 #include "rsocket/transports/tcp/TcpConnectionAcceptor.h"
 #include "rsocket/transports/tcp/TcpConnectionFactory.h"
-#include "yarpl/Flowable.h"
+#include "yarpl/Single.h"
 
 using namespace rsocket;
 
@@ -18,7 +19,33 @@ constexpr size_t kMessageLen = 32;
 
 DEFINE_int32(port, 0, "port to connect to");
 
-DEFINE_int32(items, 1000000, "number of items in stream");
+DEFINE_int32(
+    items,
+    1000000,
+    "number of request-response requests to send, in total across all clients");
+
+class Observer : public yarpl::single::SingleObserver<Payload> {
+ public:
+  explicit Observer(Latch& latch) : latch_{latch} {}
+
+  void onSubscribe(yarpl::Reference<yarpl::single::SingleSubscription>
+                       subscription) override {
+    subscription_ = std::move(subscription);
+  }
+
+  void onSuccess(Payload) override {
+    latch_.post();
+  }
+
+  void onError(folly::exception_wrapper) override {
+    latch_.post();
+  }
+
+ private:
+  Latch& latch_;
+
+  yarpl::Reference<yarpl::single::SingleSubscription> subscription_;
+};
 
 std::unique_ptr<RSocketServer> makeServer(folly::SocketAddress address) {
   TcpConnectionAcceptor::Options opts;
@@ -36,19 +63,21 @@ std::unique_ptr<RSocketServer> makeServer(folly::SocketAddress address) {
 }
 
 std::shared_ptr<RSocketClient> makeClient(
-    folly::EventBase* eventBase,
+    folly::EventBase* evb,
     folly::SocketAddress address) {
   auto factory =
-      std::make_unique<TcpConnectionFactory>(*eventBase, std::move(address));
+      std::make_unique<TcpConnectionFactory>(*evb, std::move(address));
   return RSocket::createConnectedClient(std::move(factory)).get();
 }
 
-BENCHMARK(StreamThroughput, n) {
+BENCHMARK(RequestResponseThroughput, n) {
   folly::ScopedEventBaseThread worker;
 
   std::unique_ptr<RSocketServer> server;
   std::shared_ptr<RSocketClient> client;
-  yarpl::Reference<BoundedSubscriber> subscriber;
+  std::vector<yarpl::Reference<Observer>> observers;
+
+  Latch latch{static_cast<size_t>(FLAGS_items)};
 
   BENCHMARK_SUSPEND {
     LOG(INFO) << "  Running with " << FLAGS_items << " items";
@@ -57,14 +86,18 @@ BENCHMARK(StreamThroughput, n) {
     server = makeServer(std::move(address));
 
     folly::SocketAddress actual{"::1", *server->listeningPort()};
-    client = makeClient(worker.getEventBase(), std::move(actual));
 
-    subscriber = yarpl::make_ref<BoundedSubscriber>(FLAGS_items);
+    client = makeClient(worker.getEventBase(), std::move(actual));
   }
 
-  client->getRequester()
-      ->requestStream(Payload("TcpStream"))
-      ->subscribe(subscriber);
+  for (int i = 0; i < FLAGS_items; ++i) {
+    auto observer = yarpl::make_ref<Observer>(latch);
+    observers.push_back(observer);
 
-  subscriber->awaitTerminalEvent();
+    client->getRequester()
+        ->requestResponse(Payload("RequestResponseTcp"))
+        ->subscribe(observer);
+  }
+
+  latch.wait();
 }

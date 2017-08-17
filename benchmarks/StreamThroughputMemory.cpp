@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "benchmarks/StreamThroughput.h"
+#include "benchmarks/Throughput.h"
 
 #include <folly/Baton.h>
 #include <folly/Benchmark.h>

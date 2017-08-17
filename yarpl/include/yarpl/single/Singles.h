@@ -5,6 +5,7 @@
 #include "yarpl/utils/type_traits.h"
 
 #include "yarpl/single/Single.h"
+#include "yarpl/single/SingleSubscriptions.h"
 
 namespace yarpl {
 namespace single {
@@ -14,6 +15,7 @@ class Singles {
   template <typename T>
   static Reference<Single<T>> just(const T& value) {
     auto lambda = [value](Reference<SingleObserver<T>> observer) {
+      observer->onSubscribe(SingleSubscriptions::empty());
       observer->onSuccess(value);
     };
 
@@ -33,16 +35,28 @@ class Singles {
 
   template <typename T>
   static Reference<Single<T>> error(folly::exception_wrapper ex) {
-    auto lambda = [ex = std::move(ex)](Reference<SingleObserver<T>> observer) {
-      observer->onError(std::move(ex));
+    auto lambda = [e = std::move(ex)](Reference<SingleObserver<T>> observer) {
+      observer->onSubscribe(SingleSubscriptions::empty());
+      observer->onError(e);
     };
     return Single<T>::create(std::move(lambda));
   }
 
   template <typename T, typename ExceptionType>
   static Reference<Single<T>> error(const ExceptionType& ex) {
-    auto lambda = [ex = std::move(ex)](Reference<SingleObserver<T>> observer) {
-      observer->onError(std::move(ex));
+    auto lambda = [ex](Reference<SingleObserver<T>> observer) {
+      observer->onSubscribe(SingleSubscriptions::empty());
+      observer->onError(ex);
+    };
+    return Single<T>::create(std::move(lambda));
+  }
+
+  template <typename T, typename TGenerator>
+  static Reference<Single<T>> fromGenerator(TGenerator generator) {
+    auto lambda = [generator = std::move(generator)](
+        Reference<SingleObserver<T>> observer) mutable {
+      observer->onSubscribe(SingleSubscriptions::empty());
+      observer->onSuccess(generator());
     };
     return Single<T>::create(std::move(lambda));
   }
