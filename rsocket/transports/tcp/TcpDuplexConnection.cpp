@@ -159,6 +159,8 @@ class TcpReaderWriter : public folly::AsyncTransportWrapper::WriteCallback,
   std::shared_ptr<TcpReaderWriter> self_;
 };
 
+namespace {
+
 class TcpOutputSubscriber : public DuplexConnection::Subscriber {
  public:
   explicit TcpOutputSubscriber(std::shared_ptr<TcpReaderWriter> tcpReaderWriter)
@@ -217,6 +219,7 @@ class TcpInputSubscription : public Subscription {
  private:
   std::shared_ptr<TcpReaderWriter> tcpReaderWriter_;
 };
+}
 
 TcpDuplexConnection::TcpDuplexConnection(
     folly::AsyncSocket::UniquePtr&& socket,
