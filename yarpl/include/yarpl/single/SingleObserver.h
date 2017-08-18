@@ -2,11 +2,12 @@
 
 #pragma once
 
-#include <folly/ExceptionWrapper.h>
-#include <stdexcept>
-
 #include "yarpl/Refcounted.h"
 #include "yarpl/single/SingleSubscription.h"
+
+#include <folly/ExceptionWrapper.h>
+
+#include <glog/logging.h>
 
 namespace yarpl {
 namespace single {
@@ -14,19 +15,27 @@ namespace single {
 template <typename T>
 class SingleObserver : public virtual Refcounted {
  public:
-  // Note: if any of the following methods is overridden in a subclass,
-  // the new methods SHOULD ensure that these are invoked as well.
+  // Note: If any of the following methods is overridden in a subclass, the new
+  // methods SHOULD ensure that these are invoked as well.
   virtual void onSubscribe(Reference<SingleSubscription> subscription) {
-    subscription_ = subscription;
+    DCHECK(subscription);
+
+    if (subscription_) {
+      subscription->cancel();
+      return;
+    }
+
+    subscription_ = std::move(subscription);
   }
 
-  // No further calls to the subscription after this method is invoked.
   virtual void onSuccess(T) {
+    DCHECK(subscription_) << "Calling onSuccess() without a subscription";
     subscription_.reset();
   }
 
   // No further calls to the subscription after this method is invoked.
   virtual void onError(folly::exception_wrapper) {
+    DCHECK(subscription_) << "Calling onError() without a subscription";
     subscription_.reset();
   }
 
@@ -36,28 +45,34 @@ class SingleObserver : public virtual Refcounted {
   }
 
  private:
-  // "Our" reference to the subscription, to ensure that it is retained
-  // while calls to its methods are in-flight.
-  Reference<SingleSubscription> subscription_{nullptr};
+  Reference<SingleSubscription> subscription_;
 };
 
-// specialization of SingleObserver<void>
+/// Specialization of SingleObserver<void>.
 template <>
 class SingleObserver<void> : public virtual Refcounted {
  public:
-  // Note: if any of the following methods is overridden in a subclass,
-  // the new methods SHOULD ensure that these are invoked as well.
+  // Note: If any of the following methods is overridden in a subclass, the new
+  // methods SHOULD ensure that these are invoked as well.
   virtual void onSubscribe(Reference<SingleSubscription> subscription) {
-    subscription_ = subscription;
+    DCHECK(subscription);
+
+    if (subscription_) {
+      subscription->cancel();
+      return;
+    }
+
+    subscription_ = std::move(subscription);
   }
 
-  // No further calls to the subscription after this method is invoked.
   virtual void onSuccess() {
+    DCHECK(subscription_) << "Calling onSuccess() without a subscription";
     subscription_.reset();
   }
 
   // No further calls to the subscription after this method is invoked.
   virtual void onError(folly::exception_wrapper) {
+    DCHECK(subscription_) << "Calling onError() without a subscription";
     subscription_.reset();
   }
 
@@ -67,10 +82,7 @@ class SingleObserver<void> : public virtual Refcounted {
   }
 
  private:
-  // "Our" reference to the subscription, to ensure that it is retained
-  // while calls to its methods are in-flight.
-  Reference<SingleSubscription> subscription_{nullptr};
+  Reference<SingleSubscription> subscription_;
 };
-
-} // single
-} // yarpl
+}
+}

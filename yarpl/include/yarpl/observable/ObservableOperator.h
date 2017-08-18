@@ -459,6 +459,5 @@ class FromPublisherOperator : public Observable<T> {
  private:
   OnSubscribe function_;
 };
-
-} // observable
-} // yarpl
+}
+}

@@ -2,11 +2,12 @@
 
 #pragma once
 
-#include <folly/ExceptionWrapper.h>
-#include <stdexcept>
-
 #include "yarpl/Refcounted.h"
 #include "yarpl/observable/Subscription.h"
+
+#include <folly/ExceptionWrapper.h>
+
+#include <glog/logging.h>
 
 namespace yarpl {
 namespace observable {
@@ -14,19 +15,28 @@ namespace observable {
 template <typename T>
 class Observer : public virtual Refcounted {
  public:
-  // Note: if any of the following methods is overridden in a subclass,
-  // the new methods SHOULD ensure that these are invoked as well.
+  // Note: If any of the following methods is overridden in a subclass, the new
+  // methods SHOULD ensure that these are invoked as well.
   virtual void onSubscribe(Reference<Subscription> subscription) {
-    subscription_ = subscription;
+    DCHECK(subscription);
+
+    if (subscription_) {
+      subscription->cancel();
+      return;
+    }
+
+    subscription_ = std::move(subscription);
   }
 
   // No further calls to the subscription after this method is invoked.
   virtual void onComplete() {
+    DCHECK(subscription_) << "Calling onComplete() without a subscription";
     subscription_.reset();
   }
 
   // No further calls to the subscription after this method is invoked.
   virtual void onError(folly::exception_wrapper) {
+    DCHECK(subscription_) << "Calling onError() without a subscription";
     subscription_.reset();
   }
 
@@ -38,10 +48,7 @@ class Observer : public virtual Refcounted {
   }
 
  private:
-  // "Our" reference to the subscription, to ensure that it is retained
-  // while calls to its methods are in-flight.
-  Reference<Subscription> subscription_{nullptr};
+  Reference<Subscription> subscription_;
 };
-
-} // observable
-} // yarpl
+}
+}
