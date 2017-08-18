@@ -452,6 +452,7 @@ void RSocketStateMachine::handleConnectionFrame(
         } else if (keepaliveTimer_) {
           keepaliveTimer_->keepaliveReceived();
         }
+        stats_->keepaliveReceived();
       }
       return;
     }
@@ -727,6 +728,7 @@ void RSocketStateMachine::sendKeepalive(
   VLOG(3) << "Out: " << pingFrame;
   outputFrameOrEnqueue(
       frameSerializer_->serializeOut(std::move(pingFrame), remoteResumeable_));
+  stats_->keepaliveSent();
 }
 
 void RSocketStateMachine::tryClientResume(

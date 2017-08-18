@@ -47,18 +47,35 @@ std::ostream& operator<<(std::ostream& os, const Payload& payload) {
                     : "): <null>");
 }
 
-std::string Payload::moveDataToString() {
-  if (!data) {
+static std::string moveIOBufToString(std::unique_ptr<folly::IOBuf> iobuf) {
+  if (!iobuf) {
     return "";
   }
-  return data->moveToFbString().toStdString();
+  return iobuf->moveToFbString().toStdString();
+}
+
+static std::string cloneIOBufToString(
+    std::unique_ptr<folly::IOBuf> const& iobuf) {
+  if (!iobuf) {
+    return "";
+  }
+  return iobuf->cloneAsValue().moveToFbString().toStdString();
+}
+
+std::string Payload::moveDataToString() {
+  return moveIOBufToString(std::move(data));
 }
 
 std::string Payload::cloneDataToString() const {
-  if (!data) {
-    return "";
-  }
-  return data->cloneAsValue().moveToFbString().toStdString();
+  return cloneIOBufToString(data);
+}
+
+std::string Payload::moveMetadataToString() {
+  return moveIOBufToString(std::move(metadata));
+}
+
+std::string Payload::cloneMetadataToString() const {
+  return cloneIOBufToString(metadata);
 }
 
 void Payload::clear() {

@@ -103,7 +103,7 @@ if (RSOCKET_BUILD_WITH_COVERAGE)
   endif ()
 
   if (CMAKE_COMPILER_IS_GNUCXX)
-    add_compile_options(--coverage -g)
+    add_compile_options(-g -O0 --coverage)
     set(EXTRA_LINK_FLAGS ${EXTRA_LINK_FLAGS} --coverage)
 
   elseif (${CMAKE_CXX_COMPILER_ID} MATCHES Clang)
@@ -418,6 +418,7 @@ add_executable(
   test/internal/FollyKeepaliveTimerTest.cpp
   test/internal/SwappableEventBaseTest.cpp
   test/internal/SetupResumeAcceptorTest.cpp
+  test/test_utils/GenericRequestResponseHandler.h
   test/test_utils/MockDuplexConnection.h
   test/test_utils/MockKeepaliveTimer.h
   test/test_utils/MockRequestHandler.h
@@ -442,6 +443,25 @@ target_compile_options(
 add_dependencies(tests gmock ReactiveSocket)
 
 add_test(NAME ReactiveSocketTests COMMAND tests)
+
+### Fuzzer harnesses
+add_executable(
+  frame_fuzzer
+  test/fuzzers/frame_fuzzer.cpp)
+
+target_link_libraries(
+  frame_fuzzer
+  ReactiveSocket
+  yarpl
+  ${GFLAGS_LIBRARY}
+  ${GLOG_LIBRARY})
+
+add_dependencies(frame_fuzzer gmock ReactiveSocket)
+
+add_test(
+  NAME FrameFuzzerTests
+  COMMAND ./scripts/frame_fuzzer_test.sh
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
 ########################################
 # TCK Drivers
