@@ -2,7 +2,6 @@
 
 #include <folly/Baton.h>
 #include <folly/Benchmark.h>
-#include <folly/init/Init.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 
 #include <gflags/gflags.h>
@@ -135,15 +134,4 @@ BENCHMARK(StreamThroughput, n) {
       ->subscribe(subscriber);
 
   subscriber->awaitTerminalEvent();
-}
-
-int main(int argc, char** argv) {
-  folly::init(&argc, &argv);
-
-  FLAGS_logtostderr = true;
-
-  LOG(INFO) << "Starting benchmarks...";
-  folly::runBenchmarks();
-
-  return 0;
 }
