@@ -27,6 +27,9 @@ class NoopStats : public RSocketStats {
   void resumeBufferChanged(int, int) override {}
   void streamBufferChanged(int64_t, int64_t) override {}
 
+  void keepaliveSent() override {}
+  void keepaliveReceived() override {}
+
   static std::shared_ptr<NoopStats> instance() {
     static auto singleton = std::make_shared<NoopStats>();
     return singleton;

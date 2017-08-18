@@ -38,5 +38,8 @@ class RSocketStats {
   virtual void streamBufferChanged(
       int64_t framesCountDelta,
       int64_t dataSizeDelta) = 0;
+
+  virtual void keepaliveSent() = 0;
+  virtual void keepaliveReceived() = 0;
 };
 }

@@ -32,6 +32,10 @@ struct Payload {
 
   std::string moveDataToString();
   std::string cloneDataToString() const;
+
+  std::string moveMetadataToString();
+  std::string cloneMetadataToString() const;
+
   void clear();
 
   Payload clone() const;

@@ -57,4 +57,12 @@ void StatsPrinter::streamBufferChanged(
   LOG(INFO) << "streamBufferChanged framesCountDelta=" << framesCountDelta
             << " dataSizeDelta=" << dataSizeDelta;
 }
+
+void StatsPrinter::keepaliveSent() {
+  LOG(INFO) << "keepalive sent";
+}
+
+void StatsPrinter::keepaliveReceived() {
+  LOG(INFO) << "keepalive response received";
+}
 }

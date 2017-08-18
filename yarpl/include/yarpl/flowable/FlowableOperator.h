@@ -19,13 +19,14 @@ namespace flowable {
  * upstream Flowable, and are Flowables themselves.  Multi-stage pipelines can
  * be built: a Flowable heading a sequence of Operators.
  */
-template <typename U, typename D>
+template <typename U, typename D, typename Operator>
 class FlowableOperator : public Flowable<D> {
  public:
   explicit FlowableOperator(Reference<Flowable<U>> upstream)
       : upstream_(std::move(upstream)) {}
 
  protected:
+
   /// An Operator's subscription.
   ///
   /// When a pipeline chain is active, each Flowable has a corresponding
@@ -37,7 +38,7 @@ class FlowableOperator : public Flowable<D> {
                        public Subscriber<U> {
    protected:
     Subscription(
-        Reference<Flowable<D>> flowable,
+        Reference<Operator> flowable,
         Reference<Subscriber<D>> subscriber)
         : flowable_(std::move(flowable)), subscriber_(std::move(subscriber)) {
       assert(flowable_);
@@ -49,9 +50,8 @@ class FlowableOperator : public Flowable<D> {
       Refcounted::incRef(*this);
     }
 
-    template <typename TOperator>
-    TOperator* getFlowableAs() {
-      return static_cast<TOperator*>(flowable_.get());
+    Reference<Operator> getFlowableOperator() {
+      return flowable_;
     }
 
     void subscriberOnNext(D value) {
@@ -156,7 +156,7 @@ class FlowableOperator : public Flowable<D> {
     }
 
     /// The Flowable has the lambda, and other creation parameters.
-    Reference<Flowable<D>> flowable_;
+    Reference<Operator> flowable_;
 
     /// This subscription controls the life-cycle of the subscriber.  The
     /// subscriber is retained as long as calls on it can be made.  (Note: the
@@ -179,30 +179,33 @@ template <
     typename D,
     typename F,
     typename = typename std::enable_if<std::is_callable<F(U), D>::value>::type>
-class MapOperator : public FlowableOperator<U, D> {
+class MapOperator : public FlowableOperator<U, D, MapOperator<U, D, F>> {
+  using ThisOperatorT = MapOperator<U, D, F>;
+  using Super = FlowableOperator<U, D, ThisOperatorT>;
+
  public:
   MapOperator(Reference<Flowable<U>> upstream, F&& function)
-      : FlowableOperator<U, D>(std::move(upstream)),
+      : Super(std::move(upstream)),
         function_(std::forward<F>(function)) {}
 
   void subscribe(Reference<Subscriber<D>> subscriber) override {
-    FlowableOperator<U, D>::upstream_->subscribe(make_ref<Subscription>(
-        Reference<Flowable<D>>(this), std::move(subscriber)));
+    Super::upstream_->subscribe(make_ref<Subscription>(
+        get_ref(this), std::move(subscriber)));
   }
 
  private:
-  class Subscription : public FlowableOperator<U, D>::Subscription {
-    using Super = typename FlowableOperator<U, D>::Subscription;
+  using SuperSubscription = typename Super::Subscription;
+  class Subscription : public SuperSubscription {
 
    public:
     Subscription(
-        Reference<Flowable<D>> flowable,
+        Reference<ThisOperatorT> flowable,
         Reference<Subscriber<D>> subscriber)
-        : Super(std::move(flowable), std::move(subscriber)) {}
+        : SuperSubscription(std::move(flowable), std::move(subscriber)) {}
 
     void onNext(U value) override {
-      auto map = Super::template getFlowableAs<MapOperator>();
-      Super::subscriberOnNext(map->function_(std::move(value)));
+      auto map = SuperSubscription::getFlowableOperator();
+      SuperSubscription::subscriberOnNext(map->function_(std::move(value)));
     }
   };
 
@@ -214,33 +217,37 @@ template <
     typename F,
     typename =
         typename std::enable_if<std::is_callable<F(U), bool>::value>::type>
-class FilterOperator : public FlowableOperator<U, U> {
+class FilterOperator : public FlowableOperator<U, U, FilterOperator<U, F>> {
+  // for use in subclasses
+  using ThisOperatorT = FilterOperator<U, F>;
+  using Super = FlowableOperator<U, U, ThisOperatorT>;
+
  public:
   FilterOperator(Reference<Flowable<U>> upstream, F&& function)
-      : FlowableOperator<U, U>(std::move(upstream)),
+      : Super(std::move(upstream)),
         function_(std::forward<F>(function)) {}
 
   void subscribe(Reference<Subscriber<U>> subscriber) override {
-    FlowableOperator<U, U>::upstream_->subscribe(make_ref<Subscription>(
-        Reference<Flowable<U>>(this), std::move(subscriber)));
+    Super::upstream_->subscribe(make_ref<Subscription>(
+        get_ref(this), std::move(subscriber)));
   }
 
  private:
-  class Subscription : public FlowableOperator<U, U>::Subscription {
-    using Super = typename FlowableOperator<U, U>::Subscription;
+  using SuperSubscription = typename Super::Subscription;
+  class Subscription : public SuperSubscription {
 
    public:
     Subscription(
-        Reference<Flowable<U>> flowable,
+        Reference<ThisOperatorT> flowable,
         Reference<Subscriber<U>> subscriber)
-        : Super(std::move(flowable), std::move(subscriber)) {}
+        : SuperSubscription(std::move(flowable), std::move(subscriber)) {}
 
     void onNext(U value) override {
-      auto filter = Super::template getFlowableAs<FilterOperator>();
+      auto filter = SuperSubscription::getFlowableOperator();
       if (filter->function_(value)) {
-        Super::subscriberOnNext(std::move(value));
+        SuperSubscription::subscriberOnNext(std::move(value));
       } else {
-        Super::request(1);
+        SuperSubscription::request(1);
       }
     }
   };
@@ -255,35 +262,38 @@ template <
     typename = typename std::enable_if<std::is_assignable<D, U>::value>,
     typename =
         typename std::enable_if<std::is_callable<F(D, U), D>::value>::type>
-class ReduceOperator : public FlowableOperator<U, D> {
+class ReduceOperator : public FlowableOperator<U, D, ReduceOperator<U, D, F>> {
+  using ThisOperatorT = ReduceOperator<U, D, F>;
+  using Super = FlowableOperator<U, D, ThisOperatorT>;
+
  public:
   ReduceOperator(Reference<Flowable<U>> upstream, F&& function)
-      : FlowableOperator<U, D>(std::move(upstream)),
+      : Super(std::move(upstream)),
         function_(std::forward<F>(function)) {}
 
   void subscribe(Reference<Subscriber<D>> subscriber) override {
-    FlowableOperator<U, D>::upstream_->subscribe(make_ref<Subscription>(
-        Reference<Flowable<D>>(this), std::move(subscriber)));
+    Super::upstream_->subscribe(make_ref<Subscription>(
+        get_ref(this), std::move(subscriber)));
   }
 
  private:
-  class Subscription : public FlowableOperator<U, D>::Subscription {
-    using Super = typename FlowableOperator<U, D>::Subscription;
+  using SuperSubscription = typename Super::Subscription;
+  class Subscription : public SuperSubscription {
 
    public:
     Subscription(
-        Reference<Flowable<D>> flowable,
+        Reference<ThisOperatorT> flowable,
         Reference<Subscriber<D>> subscriber)
-        : Super(std::move(flowable), std::move(subscriber)),
+        : SuperSubscription(std::move(flowable), std::move(subscriber)),
           accInitialized_(false) {}
 
     void request(int64_t) override {
       // Request all of the items
-      Super::request(credits::kNoFlowControl);
+      SuperSubscription::request(credits::kNoFlowControl);
     }
 
     void onNext(U value) override {
-      auto reduce = Super::template getFlowableAs<ReduceOperator>();
+      auto reduce = SuperSubscription::getFlowableOperator();
       if (accInitialized_) {
         acc_ = reduce->function_(std::move(acc_), std::move(value));
       } else {
@@ -294,9 +304,9 @@ class ReduceOperator : public FlowableOperator<U, D> {
 
     void onComplete() override {
       if (accInitialized_) {
-        Super::subscriberOnNext(std::move(acc_));
+        SuperSubscription::subscriberOnNext(std::move(acc_));
       }
-      Super::onComplete();
+      SuperSubscription::onComplete();
     }
 
    private:
@@ -308,35 +318,38 @@ class ReduceOperator : public FlowableOperator<U, D> {
 };
 
 template <typename T>
-class TakeOperator : public FlowableOperator<T, T> {
+class TakeOperator : public FlowableOperator<T, T, TakeOperator<T>> {
+  using ThisOperatorT = TakeOperator<T>;
+  using Super = FlowableOperator<T, T, ThisOperatorT>;
+
  public:
   TakeOperator(Reference<Flowable<T>> upstream, int64_t limit)
-      : FlowableOperator<T, T>(std::move(upstream)), limit_(limit) {}
+      : Super(std::move(upstream)), limit_(limit) {}
 
   void subscribe(Reference<Subscriber<T>> subscriber) override {
-    FlowableOperator<T, T>::upstream_->subscribe(make_ref<Subscription>(
-        Reference<Flowable<T>>(this), limit_, std::move(subscriber)));
+    Super::upstream_->subscribe(make_ref<Subscription>(
+        get_ref(this), limit_, std::move(subscriber)));
   }
 
  private:
-  class Subscription : public FlowableOperator<T, T>::Subscription {
-    using Super = typename FlowableOperator<T, T>::Subscription;
+  using SuperSubscription = typename Super::Subscription;
+  class Subscription : public SuperSubscription {
 
    public:
     Subscription(
-        Reference<Flowable<T>> flowable,
+        Reference<ThisOperatorT> flowable,
         int64_t limit,
         Reference<Subscriber<T>> subscriber)
-        : Super(std::move(flowable), std::move(subscriber)), limit_(limit) {}
+        : SuperSubscription(std::move(flowable), std::move(subscriber)), limit_(limit) {}
 
     void onNext(T value) override {
       if (limit_-- > 0) {
         if (pending_ > 0) {
           --pending_;
         }
-        Super::subscriberOnNext(std::move(value));
+        SuperSubscription::subscriberOnNext(std::move(value));
         if (limit_ == 0) {
-          Super::terminate();
+          SuperSubscription::terminate();
         }
       }
     }
@@ -345,7 +358,7 @@ class TakeOperator : public FlowableOperator<T, T> {
       delta = std::min(delta, limit_ - pending_);
       if (delta > 0) {
         pending_ += delta;
-        Super::request(delta);
+        SuperSubscription::request(delta);
       }
     }
 
@@ -358,32 +371,34 @@ class TakeOperator : public FlowableOperator<T, T> {
 };
 
 template <typename T>
-class SkipOperator : public FlowableOperator<T, T> {
+class SkipOperator : public FlowableOperator<T, T, SkipOperator<T>> {
+  using ThisOperatorT = SkipOperator<T>;
+  using Super = FlowableOperator<T, T, ThisOperatorT>;
+
  public:
   SkipOperator(Reference<Flowable<T>> upstream, int64_t offset)
-      : FlowableOperator<T, T>(std::move(upstream)), offset_(offset) {}
+      : Super(std::move(upstream)), offset_(offset) {}
 
   void subscribe(Reference<Subscriber<T>> subscriber) override {
-    FlowableOperator<T, T>::upstream_->subscribe(make_ref<Subscription>(
-        Reference<Flowable<T>>(this), offset_, std::move(subscriber)));
+    Super::upstream_->subscribe(make_ref<Subscription>(
+        get_ref(this), offset_, std::move(subscriber)));
   }
 
  private:
-  class Subscription : public FlowableOperator<T, T>::Subscription {
-    using Super = typename FlowableOperator<T, T>::Subscription;
-
+  using SuperSubscription = typename Super::Subscription;
+  class Subscription : public SuperSubscription {
    public:
     Subscription(
-        Reference<Flowable<T>> flowable,
+        Reference<ThisOperatorT> flowable,
         int64_t offset,
         Reference<Subscriber<T>> subscriber)
-        : Super(std::move(flowable), std::move(subscriber)), offset_(offset) {}
+        : SuperSubscription(std::move(flowable), std::move(subscriber)), offset_(offset) {}
 
     void onNext(T value) override {
       if (offset_ > 0) {
         --offset_;
       } else {
-        Super::subscriberOnNext(std::move(value));
+        SuperSubscription::subscriberOnNext(std::move(value));
       }
     }
 
@@ -392,7 +407,7 @@ class SkipOperator : public FlowableOperator<T, T> {
         firstRequest_ = false;
         delta = credits::add(delta, offset_);
       }
-      Super::request(delta);
+      SuperSubscription::request(delta);
     }
 
    private:
@@ -404,54 +419,58 @@ class SkipOperator : public FlowableOperator<T, T> {
 };
 
 template <typename T>
-class IgnoreElementsOperator : public FlowableOperator<T, T> {
+class IgnoreElementsOperator : public FlowableOperator<T, T, IgnoreElementsOperator<T>> {
+  using ThisOperatorT = IgnoreElementsOperator<T>;
+  using Super = FlowableOperator<T, T, ThisOperatorT>;
+
  public:
   explicit IgnoreElementsOperator(Reference<Flowable<T>> upstream)
-      : FlowableOperator<T, T>(std::move(upstream)) {}
+      : Super(std::move(upstream)) {}
 
   void subscribe(Reference<Subscriber<T>> subscriber) override {
-    FlowableOperator<T, T>::upstream_->subscribe(make_ref<Subscription>(
-        Reference<Flowable<T>>(this), std::move(subscriber)));
+    Super::upstream_->subscribe(make_ref<Subscription>(
+        get_ref(this), std::move(subscriber)));
   }
 
  private:
-  class Subscription : public FlowableOperator<T, T>::Subscription {
-    using Super = typename FlowableOperator<T, T>::Subscription;
-
+  using SuperSubscription = typename Super::Subscription;
+  class Subscription : public SuperSubscription {
    public:
     Subscription(
-        Reference<Flowable<T>> flowable,
+        Reference<ThisOperatorT> flowable,
         Reference<Subscriber<T>> subscriber)
-        : Super(std::move(flowable), std::move(subscriber)) {}
+        : SuperSubscription(std::move(flowable), std::move(subscriber)) {}
 
     void onNext(T) override {}
   };
 };
 
 template <typename T>
-class SubscribeOnOperator : public FlowableOperator<T, T> {
+class SubscribeOnOperator : public FlowableOperator<T, T, SubscribeOnOperator<T>> {
+  using ThisOperatorT = SubscribeOnOperator<T>;
+  using Super = FlowableOperator<T, T, ThisOperatorT>;
+
  public:
   SubscribeOnOperator(Reference<Flowable<T>> upstream, Scheduler& scheduler)
-      : FlowableOperator<T, T>(std::move(upstream)),
+      : Super(std::move(upstream)),
         worker_(scheduler.createWorker()) {}
 
   void subscribe(Reference<Subscriber<T>> subscriber) override {
-    FlowableOperator<T, T>::upstream_->subscribe(make_ref<Subscription>(
-        Reference<Flowable<T>>(this),
+    Super::upstream_->subscribe(make_ref<Subscription>(
+        get_ref(this),
         std::move(worker_),
         std::move(subscriber)));
   }
 
  private:
-  class Subscription : public FlowableOperator<T, T>::Subscription {
-    using Super = typename FlowableOperator<T, T>::Subscription;
-
+  using SuperSubscription = typename Super::Subscription;
+  class Subscription : public SuperSubscription {
    public:
     Subscription(
-        Reference<Flowable<T>> flowable,
+        Reference<ThisOperatorT> flowable,
         std::unique_ptr<Worker> worker,
         Reference<Subscriber<T>> subscriber)
-        : Super(std::move(flowable), std::move(subscriber)),
+        : SuperSubscription(std::move(flowable), std::move(subscriber)),
           worker_(std::move(worker)) {}
 
     void request(int64_t delta) override {
@@ -463,18 +482,18 @@ class SubscribeOnOperator : public FlowableOperator<T, T> {
     }
 
     void onNext(T value) override {
-      Super::subscriberOnNext(std::move(value));
+      SuperSubscription::subscriberOnNext(std::move(value));
     }
 
    private:
     // Trampoline to call superclass method; gcc bug 58972.
     void callSuperRequest(int64_t delta) {
-      Super::request(delta);
+      SuperSubscription::request(delta);
     }
 
     // Trampoline to call superclass method; gcc bug 58972.
     void callSuperCancel() {
-      Super::cancel();
+      SuperSubscription::cancel();
     }
 
     std::unique_ptr<Worker> worker_;

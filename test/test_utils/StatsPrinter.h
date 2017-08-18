@@ -26,5 +26,8 @@ class StatsPrinter : public RSocketStats {
   void resumeBufferChanged(int framesCountDelta, int dataSizeDelta) override;
   void streamBufferChanged(int64_t framesCountDelta, int64_t dataSizeDelta)
       override;
+
+  void keepaliveSent() override;
+  void keepaliveReceived() override;
 };
 }
