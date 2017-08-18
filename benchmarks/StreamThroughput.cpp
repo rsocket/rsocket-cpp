@@ -109,11 +109,11 @@ std::shared_ptr<RSocketClient> makeClient(
 }
 
 BENCHMARK(StreamThroughput, n) {
+  folly::ScopedEventBaseThread worker;
+
   std::unique_ptr<RSocketServer> server;
   std::shared_ptr<RSocketClient> client;
   yarpl::Reference<BM_Subscriber> subscriber;
-
-  folly::ScopedEventBaseThread worker;
 
   BENCHMARK_SUSPEND {
     LOG(INFO) << "  Running with " << FLAGS_items << " items";
