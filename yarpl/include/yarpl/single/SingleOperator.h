@@ -100,7 +100,8 @@ template <
 class MapOperator : public SingleOperator<U, D> {
   using ThisOperatorT = MapOperator<U, D, F>;
   using Super = SingleOperator<U, D>;
-  using OperatorSubscription = typename Super::template Subscription<ThisOperatorT>;
+  using OperatorSubscription =
+      typename Super::template Subscription<ThisOperatorT>;
 
  public:
   MapOperator(Reference<Single<U>> upstream, F function)
@@ -109,8 +110,8 @@ class MapOperator : public SingleOperator<U, D> {
   void subscribe(Reference<SingleObserver<D>> observer) override {
     Super::upstream_->subscribe(
         // Note: implicit cast to a reference to a observer.
-        Reference<OperatorSubscription>(
-            new MapSubscription(Reference<ThisOperatorT>(this), std::move(observer))));
+        Reference<OperatorSubscription>(new MapSubscription(
+            Reference<ThisOperatorT>(this), std::move(observer))));
   }
 
  private:
@@ -123,7 +124,8 @@ class MapOperator : public SingleOperator<U, D> {
 
     void onSuccess(U value) override {
       auto map_operator = OperatorSubscription::getOperator();
-      OperatorSubscription::observerOnSuccess(map_operator->function_(std::move(value)));
+      OperatorSubscription::observerOnSuccess(
+          map_operator->function_(std::move(value)));
     }
   };
 
@@ -143,7 +145,6 @@ class FromPublisherOperator : public Single<T> {
  private:
   OnSubscribe function_;
 };
-
 
 template <typename OnSubscribe>
 class SingleVoidFromPublisherOperator : public Single<void> {

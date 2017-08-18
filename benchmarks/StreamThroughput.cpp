@@ -104,7 +104,8 @@ std::unique_ptr<RSocketServer> makeServer(folly::SocketAddress address) {
 std::shared_ptr<RSocketClient> makeClient(
     folly::EventBase* eventBase,
     folly::SocketAddress address) {
-  auto factory = std::make_unique<TcpConnectionFactory>(*eventBase, std::move(address));
+  auto factory =
+      std::make_unique<TcpConnectionFactory>(*eventBase, std::move(address));
   return RSocket::createConnectedClient(std::move(factory)).get();
 }
 
@@ -118,7 +119,8 @@ BENCHMARK(StreamThroughput, n) {
   BENCHMARK_SUSPEND {
     LOG(INFO) << "  Running with " << FLAGS_items << " items";
 
-    folly::SocketAddress address{FLAGS_host, static_cast<uint16_t>(FLAGS_port),
+    folly::SocketAddress address{FLAGS_host,
+                                 static_cast<uint16_t>(FLAGS_port),
                                  true /* allowNameLookup */};
     server = makeServer(std::move(address));
 

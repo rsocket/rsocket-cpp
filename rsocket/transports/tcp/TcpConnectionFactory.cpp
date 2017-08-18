@@ -18,7 +18,8 @@ class ConnectCallback : public folly::AsyncSocket::ConnectCallback {
  public:
   ConnectCallback(
       folly::SocketAddress address,
-      folly::Promise<ConnectionFactory::ConnectedDuplexConnection> connectPromise)
+      folly::Promise<ConnectionFactory::ConnectedDuplexConnection>
+          connectPromise)
       : address_(address), connectPromise_{std::move(connectPromise)} {
     VLOG(2) << "Constructing ConnectCallback";
 
@@ -69,8 +70,7 @@ class ConnectCallback : public folly::AsyncSocket::ConnectCallback {
 TcpConnectionFactory::TcpConnectionFactory(
     folly::EventBase& eventBase,
     folly::SocketAddress address)
-    : address_{std::move(address)},
-      eventBase_{&eventBase}{
+    : address_{std::move(address)}, eventBase_{&eventBase} {
   VLOG(1) << "Constructing TcpConnectionFactory";
 }
 
@@ -95,7 +95,8 @@ std::unique_ptr<DuplexConnection>
 TcpConnectionFactory::createDuplexConnectionFromSocket(
     folly::AsyncSocket::UniquePtr socket,
     std::shared_ptr<RSocketStats> stats) {
-  return std::make_unique<TcpDuplexConnection>(std::move(socket), std::move(stats));
+  return std::make_unique<TcpDuplexConnection>(
+      std::move(socket), std::move(stats));
 }
 
 } // namespace rsocket

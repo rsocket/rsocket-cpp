@@ -75,9 +75,10 @@ std::shared_ptr<RSocketClient> getClientAndRequestStream(
   SetupParameters setupParameters;
   setupParameters.resumable = true;
   auto client = RSocket::createConnectedClient(
-      std::make_unique<TcpConnectionFactory>(*eventBase, std::move(address)),
-      std::move(setupParameters))
-      .get();
+                    std::make_unique<TcpConnectionFactory>(
+                        *eventBase, std::move(address)),
+                    std::move(setupParameters))
+                    .get();
   client->getRequester()->requestStream(Payload("Jane"))->subscribe(subscriber);
   return client;
 }
@@ -124,7 +125,8 @@ int main(int argc, char* argv[]) {
         }
         // Create a new client
         auto subscriber2 = yarpl::make_ref<HelloSubscriber>();
-        auto client = getClientAndRequestStream(worker1.getEventBase(), subscriber2);
+        auto client =
+            getClientAndRequestStream(worker1.getEventBase(), subscriber2);
         subscriber2->request(7);
         while (subscriber2->rcvdCount() < 7) {
           std::this_thread::yield();

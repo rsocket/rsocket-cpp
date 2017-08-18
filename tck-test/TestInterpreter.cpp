@@ -93,11 +93,11 @@ void TestInterpreter::handleSubscribe(const SubscribeCommand& command) {
     if (test_.resumption()) {
       setupParameters.resumable = true;
     }
-    auto client =
-        RSocket::createConnectedClient(
-            std::make_unique<TcpConnectionFactory>(*worker_.getEventBase(), std::move(address_)),
-            std::move(setupParameters))
-            .get();
+    auto client = RSocket::createConnectedClient(
+                      std::make_unique<TcpConnectionFactory>(
+                          *worker_.getEventBase(), std::move(address_)),
+                      std::move(setupParameters))
+                      .get();
     testClient_[command.clientId()] =
         std::make_shared<TestClient>(move(client));
   }

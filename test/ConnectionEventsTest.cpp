@@ -1,8 +1,8 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
+#include <folly/io/async/ScopedEventBaseThread.h>
 #include <gmock/gmock.h>
 #include <thread>
-#include <folly/io/async/ScopedEventBaseThread.h>
 
 #include "RSocketTests.h"
 
@@ -42,7 +42,8 @@ TEST(ConnectionEventsTest, SimpleStream) {
       std::make_shared<HelloServiceHandler>(serverConnEvents));
 
   // create resumable client
-  auto client = makeResumableClient(worker.getEventBase(), *server->listeningPort(), clientConnEvents);
+  auto client = makeResumableClient(
+      worker.getEventBase(), *server->listeningPort(), clientConnEvents);
 
   // request stream
   auto requester = client->getRequester();

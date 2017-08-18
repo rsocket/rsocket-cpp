@@ -1,8 +1,8 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include <thread>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <gtest/gtest.h>
+#include <thread>
 
 #include "RSocketTests.h"
 
@@ -19,7 +19,8 @@ using namespace yarpl::flowable;
 TEST(WarmResumptionTest, SuccessfulResumption) {
   folly::ScopedEventBaseThread worker;
   auto server = makeResumableServer(std::make_shared<HelloServiceHandler>());
-  auto client = makeResumableClient(worker.getEventBase(), *server->listeningPort());
+  auto client =
+      makeResumableClient(worker.getEventBase(), *server->listeningPort());
   auto ts = TestSubscriber<std::string>::create(7 /* initialRequestN */);
   client->getRequester()
       ->requestStream(Payload("Bob"))
@@ -59,7 +60,8 @@ TEST(WarmResumptionTest, FailedResumption1) {
       .then([] { FAIL() << "Resumption succeeded when it should not"; })
       .onError([listeningPort, &worker](folly::exception_wrapper) {
         folly::ScopedEventBaseThread worker2;
-        auto newClient = makeResumableClient(worker2.getEventBase(), listeningPort);
+        auto newClient =
+            makeResumableClient(worker2.getEventBase(), listeningPort);
         auto newTs =
             TestSubscriber<std::string>::create(6 /* initialRequestN */);
         newClient->getRequester()
@@ -101,7 +103,8 @@ TEST(WarmResumptionTest, FailedResumption2) {
   std::shared_ptr<RSocketClient> newClient;
   client->resume()
       .then([] { FAIL() << "Resumption succeeded when it should not"; })
-      .onError([listeningPort, newTs, &newClient, &worker2](folly::exception_wrapper) {
+      .onError([listeningPort, newTs, &newClient, &worker2](
+          folly::exception_wrapper) {
         newClient = makeResumableClient(worker2.getEventBase(), listeningPort);
         newClient->getRequester()
             ->requestStream(Payload("Alice"))
