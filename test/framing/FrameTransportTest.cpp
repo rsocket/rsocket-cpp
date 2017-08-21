@@ -101,7 +101,7 @@ TEST(FrameTransport, InputSendsError) {
         EXPECT_CALL(*subscription, cancel_());
 
         input->onSubscribe(std::move(subscription));
-        input->onError(std::make_exception_ptr(std::runtime_error("Oops")));
+        input->onError(std::runtime_error("Oops"));
       },
       [](auto output) {
         EXPECT_CALL(*output, onSubscribe_(_));

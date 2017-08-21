@@ -62,7 +62,7 @@ void FlowableSubscriber::onComplete() noexcept {
   terminatedCV_.notify_one();
 }
 
-void FlowableSubscriber::onError(std::exception_ptr ex) noexcept {
+void FlowableSubscriber::onError(folly::exception_wrapper ex) noexcept {
   LOG(INFO) << "... received onError from Publisher";
   {
     std::unique_lock<std::mutex> lock(mutex_);

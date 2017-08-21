@@ -32,17 +32,17 @@ class Singles {
   }
 
   template <typename T>
-  static Reference<Single<T>> error(std::exception_ptr ex) {
-    auto lambda = [ex](Reference<SingleObserver<T>> observer) {
-      observer->onError(ex);
+  static Reference<Single<T>> error(folly::exception_wrapper ex) {
+    auto lambda = [ex = std::move(ex)](Reference<SingleObserver<T>> observer) {
+      observer->onError(std::move(ex));
     };
     return Single<T>::create(std::move(lambda));
   }
 
   template <typename T, typename ExceptionType>
   static Reference<Single<T>> error(const ExceptionType& ex) {
-    auto lambda = [ex](Reference<SingleObserver<T>> observer) {
-      observer->onError(std::make_exception_ptr(ex));
+    auto lambda = [ex = std::move(ex)](Reference<SingleObserver<T>> observer) {
+      observer->onError(std::move(ex));
     };
     return Single<T>::create(std::move(lambda));
   }

@@ -3,6 +3,7 @@
 #include <folly/Baton.h>
 #include <gtest/gtest.h>
 #include <atomic>
+#include <folly/ExceptionWrapper.h>
 
 #include "yarpl/Single.h"
 #include "yarpl/single/SingleTestObserver.h"
@@ -28,11 +29,8 @@ TEST(Single, SingleOnNext) {
 TEST(Single, OnError) {
   std::string errorMessage("DEFAULT->No Error Message");
   auto a = Single<int>::create([](Reference<SingleObserver<int>> obs) {
-    try {
-      throw std::runtime_error("something broke!");
-    } catch (const std::exception&) {
-      obs->onError(std::current_exception());
-    }
+    obs->onError(
+        folly::exception_wrapper(std::runtime_error("something broke!")));
   });
 
   auto to = SingleTestObserver<int>::create();

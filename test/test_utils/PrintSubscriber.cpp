@@ -4,7 +4,6 @@
 #include <folly/Memory.h>
 #include <folly/io/IOBufQueue.h>
 #include <glog/logging.h>
-#include "yarpl/utils/ExceptionString.h"
 
 namespace rsocket {
 
@@ -26,8 +25,7 @@ void PrintSubscriber::onComplete() noexcept {
   LOG(INFO) << "PrintSubscriber " << this << " onComplete";
 }
 
-void PrintSubscriber::onError(std::exception_ptr ex) noexcept {
-  LOG(INFO) << "PrintSubscriber " << this << " onError "
-            << yarpl::exceptionStr(ex);
+void PrintSubscriber::onError(folly::exception_wrapper ex) noexcept {
+  LOG(INFO) << "PrintSubscriber " << this << " onError " << ex;
 }
 }

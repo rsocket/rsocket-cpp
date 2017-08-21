@@ -21,7 +21,7 @@ class SingleSubscriber : public BaseSubscriber,
   void onSubscribe(yarpl::Reference<yarpl::single::SingleSubscription>
                        subscription) noexcept override;
   void onSuccess(Payload element) noexcept override;
-  void onError(std::exception_ptr ex) noexcept override;
+  void onError(folly::exception_wrapper ex) noexcept override;
 
  private:
   yarpl::Reference<yarpl::single::SingleSubscription> subscription_;

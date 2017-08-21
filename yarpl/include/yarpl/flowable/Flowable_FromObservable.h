@@ -88,8 +88,8 @@ class FlowableFromObservableSubscription
   }
 
   // Observer override
-  void onError(std::exception_ptr error) override {
-    subscriber_->onError(error);
+  void onError(folly::exception_wrapper error) override {
+    subscriber_->onError(std::move(error));
     release();
   }
 

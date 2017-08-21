@@ -57,7 +57,7 @@ class HelloSubscriber : public virtual yarpl::Refcounted,
     LOG(INFO) << "Received: onComplete";
   }
 
-  void onError(std::exception_ptr) noexcept override {
+  void onError(folly::exception_wrapper) noexcept override {
     LOG(INFO) << "Received: onError ";
   }
 

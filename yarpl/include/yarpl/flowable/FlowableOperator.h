@@ -60,8 +60,8 @@ class FlowableOperator : public Flowable<D> {
     }
 
     /// Terminates both ends of an operator with an error.
-    void terminateErr(std::exception_ptr eptr) {
-      terminateImpl(TerminateState::Both(), std::move(eptr));
+    void terminateErr(folly::exception_wrapper ex) {
+      terminateImpl(TerminateState::Both(), std::move(ex));
     }
 
     // Subscription.
@@ -93,8 +93,8 @@ class FlowableOperator : public Flowable<D> {
       terminateImpl(TerminateState::Down());
     }
 
-    void onError(std::exception_ptr eptr) override {
-      terminateImpl(TerminateState::Down(), std::move(eptr));
+    void onError(folly::exception_wrapper ex) override {
+      terminateImpl(TerminateState::Down(), std::move(ex));
     }
 
    private:
@@ -125,7 +125,7 @@ class FlowableOperator : public Flowable<D> {
     /// signals as necessary.
     void terminateImpl(
         TerminateState state,
-        std::exception_ptr eptr = nullptr) {
+        folly::exception_wrapper ex = folly::exception_wrapper{nullptr}) {
       if (isTerminated()) {
         return;
       }
@@ -138,8 +138,8 @@ class FlowableOperator : public Flowable<D> {
 
       if (auto subscriber = std::move(subscriber_)) {
         if (state.down) {
-          if (eptr) {
-            subscriber->onError(std::move(eptr));
+          if (ex) {
+            subscriber->onError(std::move(ex));
           } else {
             subscriber->onComplete();
           }

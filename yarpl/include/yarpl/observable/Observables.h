@@ -52,8 +52,7 @@ class Observables {
   static Reference<Observable<T>> justOnce(T value) {
     auto lambda = [value = std::move(value), used = false](Reference<Observer<T>> observer) mutable {
       if (used) {
-        observer->onError(
-            std::make_exception_ptr(std::runtime_error("justOnce value was already used")));
+        observer->onError(std::runtime_error("justOnce value was already used"));
         return;
       }
 
@@ -86,17 +85,17 @@ class Observables {
   }
 
   template <typename T>
-  static Reference<Observable<T>> error(std::exception_ptr ex) {
-    auto lambda = [ex](Reference<Observer<T>> observer) {
-      observer->onError(ex);
+  static Reference<Observable<T>> error(folly::exception_wrapper ex) {
+    auto lambda = [ex = std::move(ex)](Reference<Observer<T>> observer) {
+      observer->onError(std::move(ex));
     };
     return Observable<T>::create(std::move(lambda));
   }
 
   template <typename T, typename ExceptionType>
   static Reference<Observable<T>> error(const ExceptionType& ex) {
-    auto lambda = [ex](Reference<Observer<T>> observer) {
-      observer->onError(std::make_exception_ptr(ex));
+    auto lambda = [ex = std::move(ex)](Reference<Observer<T>> observer) {
+      observer->onError(std::move(ex));
     };
     return Observable<T>::create(std::move(lambda));
   }

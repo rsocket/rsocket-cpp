@@ -62,8 +62,8 @@ class SingleOperator : public Single<D> {
           Reference<::yarpl::single::SingleSubscription>(this));
     }
 
-    void onError(std::exception_ptr error) override {
-      observer_->onError(error);
+    void onError(folly::exception_wrapper error) override {
+      observer_->onError(std::move(error));
       upstreamSubscription_.reset(); // should break the cycle to this
       observer_.reset();
     }

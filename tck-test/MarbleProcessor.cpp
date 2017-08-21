@@ -80,8 +80,7 @@ std::tuple<int64_t, bool> MarbleProcessor::run(
     switch (c) {
       case '#':
         LOG(INFO) << "Sending onError";
-        subscriber->onError(
-            std::make_exception_ptr(std::runtime_error("Marble Error")));
+        subscriber->onError(std::runtime_error("Marble Error"));
         return std::make_tuple(requested, true);
       case '|':
         LOG(INFO) << "Sending onComplete";
@@ -122,13 +121,11 @@ void MarbleProcessor::run(
     switch (c) {
       case '#':
         LOG(INFO) << "Sending onError";
-        subscriber->onError(
-            std::make_exception_ptr(std::runtime_error("Marble Error")));
+        subscriber->onError(std::runtime_error("Marble Error"));
         return;
       case '|':
         LOG(INFO) << "Sending onComplete";
-        subscriber->onError(
-            std::make_exception_ptr(std::runtime_error("No Response found")));
+        subscriber->onError(std::runtime_error("No Response found"));
         return;
       default: {
         Payload payload;

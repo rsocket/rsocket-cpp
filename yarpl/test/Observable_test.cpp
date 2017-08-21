@@ -33,15 +33,10 @@ class CollectingObserver : public Observer<T> {
     complete_ = true;
   }
 
-  void onError(std::exception_ptr ex) override {
+  void onError(folly::exception_wrapper ex) override {
     Observer<T>::onError(ex);
     error_ = true;
-
-    try {
-      std::rethrow_exception(ex);
-    } catch (const std::exception& e) {
-      errorMsg_ = e.what();
-    }
+    errorMsg_ = ex.get_exception()->what();
   }
 
   std::vector<T>& values() {
@@ -114,21 +109,13 @@ TEST(Observable, MultiOnNext) {
 TEST(Observable, OnError) {
   std::string errorMessage("DEFAULT->No Error Message");
   auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
-    try {
-      throw std::runtime_error("something broke!");
-    } catch (const std::exception&) {
-      obs->onError(std::current_exception());
-    }
+    obs->onError(std::runtime_error("something broke!"));
   });
 
   a->subscribe(Observers::create<int>(
       [](int) { /* do nothing */ },
-      [&errorMessage](std::exception_ptr e) {
-        try {
-          std::rethrow_exception(e);
-        } catch (const std::runtime_error& ex) {
-          errorMessage = std::string(ex.what());
-        }
+      [&errorMessage](folly::exception_wrapper ex) {
+        errorMessage = ex.get_exception()->what();
       }));
 
   EXPECT_EQ("something broke!", errorMessage);
@@ -226,7 +213,7 @@ class TakeObserver : public Observer<int> {
     }
   }
 
-  void onError(std::exception_ptr) override {}
+  void onError(folly::exception_wrapper) override {}
   void onComplete() override {}
 };
 
@@ -429,8 +416,8 @@ TEST(Observable, Error) {
 }
 
 TEST(Observable, ErrorPtr) {
-  auto observable = Observables::error<int>(
-      std::make_exception_ptr(std::runtime_error("something broke!")));
+  auto observable =
+      Observables::error<int>(std::runtime_error("something broke!"));
   auto collector = make_ref<CollectingObserver<int>>();
   observable->subscribe(collector);
 
@@ -454,7 +441,7 @@ TEST(Observable, ObserversComplete) {
 
   auto observer = Observers::create<int>(
       [](int) { unreachable(); },
-      [](std::exception_ptr) { unreachable(); },
+      [](folly::exception_wrapper) { unreachable(); },
       [&] { completed = true; });
 
   observable->subscribe(std::move(observer));
@@ -467,7 +454,7 @@ TEST(Observable, ObserversError) {
 
   auto observer = Observers::create<int>(
       [](int) { unreachable(); },
-      [&](std::exception_ptr) { errored = true; },
+      [&](folly::exception_wrapper) { errored = true; },
       [] { unreachable(); });
 
   observable->subscribe(std::move(observer));

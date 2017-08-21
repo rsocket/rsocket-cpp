@@ -84,8 +84,8 @@ class Flowables {
     auto lambda = [ value = std::move(value), used = false ](
         Reference<Subscriber<T>> subscriber, int64_t) mutable {
       if (used) {
-        subscriber->onError(std::make_exception_ptr(
-            std::runtime_error("justOnce value was already used")));
+        subscriber->onError(
+            std::runtime_error("justOnce value was already used"));
         return std::make_tuple(static_cast<int64_t>(0), true);
       }
 
@@ -120,9 +120,9 @@ class Flowables {
   }
 
   template <typename T>
-  static Reference<Flowable<T>> error(std::exception_ptr ex) {
-    auto lambda = [ex](Reference<Subscriber<T>> subscriber, int64_t) {
-      subscriber->onError(ex);
+  static Reference<Flowable<T>> error(folly::exception_wrapper ex) {
+    auto lambda = [ex = std::move(ex)](Reference<Subscriber<T>> subscriber, int64_t) {
+      subscriber->onError(std::move(ex));
       return std::make_tuple(static_cast<int64_t>(0), true);
     };
     return Flowable<T>::create(std::move(lambda));
@@ -130,8 +130,8 @@ class Flowables {
 
   template <typename T, typename ExceptionType>
   static Reference<Flowable<T>> error(const ExceptionType& ex) {
-    auto lambda = [ex](Reference<Subscriber<T>> subscriber, int64_t) {
-      subscriber->onError(std::make_exception_ptr(ex));
+    auto lambda = [ex = std::move(ex)](Reference<Subscriber<T>> subscriber, int64_t) {
+      subscriber->onError(std::move(ex));
       return std::make_tuple(static_cast<int64_t>(0), true);
     };
     return Flowable<T>::create(std::move(lambda));
@@ -148,8 +148,11 @@ class Flowables {
           ++generated;
         }
         return std::make_tuple(generated, false);
+      } catch(const std::exception& ex) {
+        subscriber->onError(folly::exception_wrapper(std::current_exception(), ex));
+        return std::make_tuple(generated, true);
       } catch(...) {
-        subscriber->onError(std::current_exception());
+        subscriber->onError(std::runtime_error("unknown error"));
         return std::make_tuple(generated, true);
       }
     };

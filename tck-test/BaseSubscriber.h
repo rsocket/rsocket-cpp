@@ -37,7 +37,7 @@ class BaseSubscriber : public virtual yarpl::Refcounted {
   std::condition_variable valuesCV_;
   std::atomic<int> valuesCount_{0};
 
-  std::vector<std::exception_ptr> errors_;
+  std::vector<folly::exception_wrapper> errors_;
 
   std::condition_variable terminatedCV_;
   std::atomic<bool> completed_{false}; // by onComplete

@@ -16,9 +16,7 @@ namespace rsocket {
 namespace {
 
 folly::exception_wrapper error(folly::StringPiece message) {
-  std::runtime_error exn{message.str()};
-  auto eptr = std::make_exception_ptr(exn);
-  return folly::exception_wrapper{std::move(eptr), exn};
+  return std::runtime_error{message.str()};
 }
 }
 

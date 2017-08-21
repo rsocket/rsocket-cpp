@@ -92,7 +92,7 @@ void FrameTransport::closeImpl(folly::exception_wrapper ew) {
   // interface definition).
   if (auto subscriber = std::move(connectionOutput_)) {
     if (ew) {
-      subscriber->onError(ew.to_exception_ptr());
+      subscriber->onError(std::move(ew));
     } else {
       subscriber->onComplete();
     }
@@ -149,15 +149,9 @@ void FrameTransport::onComplete() {
   terminateProcessor(folly::exception_wrapper());
 }
 
-void FrameTransport::onError(std::exception_ptr eptr) {
-  VLOG(6) << "onError" << folly::exceptionStr(eptr);
-
-  try {
-    std::rethrow_exception(eptr);
-  } catch (const std::exception& exn) {
-    folly::exception_wrapper ew{std::move(eptr), exn};
-    terminateProcessor(std::move(ew));
-  }
+void FrameTransport::onError(folly::exception_wrapper ex) {
+  VLOG(6) << "onError" << ex;
+  terminateProcessor(std::move(ex));
 }
 
 void FrameTransport::request(int64_t n) {

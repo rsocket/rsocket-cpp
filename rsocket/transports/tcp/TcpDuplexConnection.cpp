@@ -94,7 +94,7 @@ class TcpReaderWriter : public folly::AsyncTransportWrapper::WriteCallback,
       subscription->cancel();
     }
     if (auto subscriber = std::move(inputSubscriber_)) {
-      subscriber->onError(ew.to_exception_ptr());
+      subscriber->onError(std::move(ew));
     }
   }
 
@@ -184,7 +184,7 @@ class TcpOutputSubscriber : public DuplexConnection::Subscriber {
     tcpReaderWriter_->setOutputSubscription(nullptr);
   }
 
-  void onError(std::exception_ptr) override {
+  void onError(folly::exception_wrapper) override {
     CHECK(tcpReaderWriter_);
     tcpReaderWriter_->setOutputSubscription(nullptr);
   }

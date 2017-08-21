@@ -5,7 +5,6 @@
 #include <glog/logging.h>
 
 #include "rsocket/Payload.h"
-#include "yarpl/utils/ExceptionString.h"
 
 namespace rsocket {
 
@@ -37,13 +36,13 @@ void RequestResponseResponder::onSuccess(Payload response) noexcept {
   }
 }
 
-void RequestResponseResponder::onError(std::exception_ptr ex) noexcept {
+void RequestResponseResponder::onError(folly::exception_wrapper ex) noexcept {
   DCHECK(producingSubscription_);
   producingSubscription_ = nullptr;
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
-      applicationError(yarpl::exceptionStr(ex));
+      applicationError(ex.get_exception()->what());
       closeStream(StreamCompletionSignal::APPLICATION_ERROR);
     } break;
     case State::CLOSED:

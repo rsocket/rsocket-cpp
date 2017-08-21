@@ -66,7 +66,7 @@ class TestObserver : public yarpl::observable::Observer<T>,
   void onSubscribe(Subscription* s) override;
   void onNext(const T& t) override;
   void onComplete() override;
-  void onError(std::exception_ptr ex) override;
+  void onError(folly::exception_wrapper ex) override;
 
   /**
    * Get a unique Observer<T> that can be passed into the Observable.subscribe
@@ -106,7 +106,7 @@ class TestObserver : public yarpl::observable::Observer<T>,
   T& getValueAt(size_t index);
 
   /**
-   * If the onError exception_ptr points to an error containing
+   * If the onError exception_wrapper points to an error containing
    * the given msg, complete successfully, otherwise throw a runtime_error
    */
   void assertOnErrorMessage(std::string msg);
@@ -119,7 +119,7 @@ class TestObserver : public yarpl::observable::Observer<T>,
  private:
   std::unique_ptr<Observer> delegate_;
   std::vector<T> values_;
-  std::exception_ptr e_;
+  folly::exception_wrapper e_;
   bool terminated_{false};
   std::mutex m_;
   std::condition_variable terminalEventCV_;
@@ -175,11 +175,11 @@ void TestObserver<T>::onComplete() {
 }
 
 template <typename T>
-void TestObserver<T>::onError(std::exception_ptr ex) {
+void TestObserver<T>::onError(folly::exception_wrapper ex) {
   if (delegate_) {
     delegate_->onError(ex);
   }
-  e_ = ex;
+  e_ = std::move(ex);
   terminated_ = true;
   terminalEventCV_.notify_all();
 }
@@ -212,8 +212,8 @@ TestObserver<T>::unique_observer() {
       ts_->onNext(t);
     }
 
-    void onError(std::exception_ptr e) override {
-      ts_->onError(e);
+    void onError(folly::exception_wrapper e) override {
+      ts_->onError(std::move(e));
     }
 
     void onComplete() override {
@@ -247,21 +247,10 @@ T& TestObserver<T>::getValueAt(size_t index) {
 
 template <typename T>
 void TestObserver<T>::assertOnErrorMessage(std::string msg) {
-  if (e_ == nullptr) {
+  if (!e_ || e_.get_exception()->what() != msg) {
     std::stringstream ss;
-    ss << "exception_ptr == nullptr, but expected " << msg;
+    ss << "Error is: " << e_ << " but expected: " << msg;
     throw std::runtime_error(ss.str());
-  }
-  try {
-    std::rethrow_exception(e_);
-  } catch (std::runtime_error& re) {
-    if (re.what() != msg) {
-      std::stringstream ss;
-      ss << "Error message is: " << re.what() << " but expected: " << msg;
-      throw std::runtime_error(ss.str());
-    }
-  } catch (...) {
-    throw std::runtime_error("Expects an std::runtime_error");
   }
 }
 }

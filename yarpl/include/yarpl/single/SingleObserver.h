@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <folly/ExceptionWrapper.h>
 #include <stdexcept>
 
 #include "yarpl/Refcounted.h"
@@ -25,7 +26,7 @@ class SingleObserver : public virtual Refcounted {
   }
 
   // No further calls to the subscription after this method is invoked.
-  virtual void onError(std::exception_ptr) {
+  virtual void onError(folly::exception_wrapper) {
     subscription_.reset();
   }
 
@@ -56,7 +57,7 @@ class SingleObserver<void> : public virtual Refcounted {
   }
 
   // No further calls to the subscription after this method is invoked.
-  virtual void onError(std::exception_ptr) {
+  virtual void onError(folly::exception_wrapper) {
     subscription_.reset();
   }
 

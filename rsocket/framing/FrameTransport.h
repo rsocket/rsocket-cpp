@@ -68,7 +68,7 @@ class FrameTransport final :
   void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>) override;
   void onNext(std::unique_ptr<folly::IOBuf>) override;
   void onComplete() override;
-  void onError(std::exception_ptr) override;
+  void onError(folly::exception_wrapper) override;
 
   // Subscription.
 

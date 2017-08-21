@@ -50,7 +50,7 @@ class Flowable : public virtual Refcounted {
       typename Error,
       typename = typename std::enable_if<
           std::is_callable<Next(T), void>::value &&
-          std::is_callable<Error(std::exception_ptr), void>::value>::type>
+          std::is_callable<Error(folly::exception_wrapper), void>::value>::type>
   void subscribe(
       Next next,
       Error error,
@@ -70,7 +70,7 @@ class Flowable : public virtual Refcounted {
       typename Complete,
       typename = typename std::enable_if<
           std::is_callable<Next(T), void>::value &&
-          std::is_callable<Error(std::exception_ptr), void>::value &&
+          std::is_callable<Error(folly::exception_wrapper), void>::value &&
           std::is_callable<Complete(), void>::value>::type>
   void subscribe(
       Next next,
@@ -219,14 +219,14 @@ class Flowable : public virtual Refcounted {
       // we're following the Subscription's protocol instead.
     }
 
-    void onError(std::exception_ptr error) override {
+    void onError(folly::exception_wrapper error) override {
       // we will set the flag first to save a potential call to lock.try_lock()
       // in the process method via cancel or request methods
       auto old = requested_.exchange(kCanceled, std::memory_order_relaxed);
       DCHECK_NE(old, kCanceled) << "Calling onComplete or onError twice or on "
                                 << "canceled subscription";
 
-      subscriber_->onError(error);
+      subscriber_->onError(std::move(error));
       // We should already be in process(); nothing more to do.
       //
       // Note: we're not invoking the Subscriber superclass' method:

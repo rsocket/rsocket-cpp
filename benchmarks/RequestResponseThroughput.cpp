@@ -14,7 +14,6 @@
 #include "yarpl/Flowable.h"
 #include "yarpl/flowable/Subscriber.h"
 #include "yarpl/flowable/Subscription.h"
-#include "yarpl/utils/ExceptionString.h"
 
 using namespace ::folly;
 using namespace ::rsocket;
@@ -128,9 +127,8 @@ class BM_Subscriber : public yarpl::flowable::Subscriber<Payload> {
     terminalEventCV_.notify_all();
   }
 
-  void onError(std::exception_ptr ex) noexcept override {
-    LOG(INFO) << "BM_Subscriber " << this << " onError "
-              << yarpl::exceptionStr(ex);
+  void onError(folly::exception_wrapper ex) noexcept override {
+    LOG(INFO) << "BM_Subscriber " << this << " onError " << ex;
     terminated_ = true;
     terminalEventCV_.notify_all();
   }

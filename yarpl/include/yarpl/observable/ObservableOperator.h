@@ -60,8 +60,8 @@ class ObservableOperator : public Observable<D> {
     }
 
     /// Terminates both ends of an operator with an error.
-    void terminateErr(std::exception_ptr eptr) {
-      terminateImpl(TerminateState::Both(), std::move(eptr));
+    void terminateErr(folly::exception_wrapper ex) {
+      terminateImpl(TerminateState::Both(), std::move(ex));
     }
 
     // Subscription.
@@ -87,8 +87,8 @@ class ObservableOperator : public Observable<D> {
       terminateImpl(TerminateState::Down());
     }
 
-    void onError(std::exception_ptr eptr) override {
-      terminateImpl(TerminateState::Down(), std::move(eptr));
+    void onError(folly::exception_wrapper ex) override {
+      terminateImpl(TerminateState::Down(), std::move(ex));
     }
 
    private:
@@ -119,7 +119,7 @@ class ObservableOperator : public Observable<D> {
     /// signals as necessary.
     void terminateImpl(
         TerminateState state,
-        std::exception_ptr eptr = nullptr) {
+        folly::exception_wrapper ex = folly::exception_wrapper{nullptr}) {
       if (isTerminated()) {
         return;
       }
@@ -132,8 +132,8 @@ class ObservableOperator : public Observable<D> {
 
       if (auto observer = std::move(observer_)) {
         if (state.down) {
-          if (eptr) {
-            observer->onError(std::move(eptr));
+          if (ex) {
+            observer->onError(std::move(ex));
           } else {
             observer->onComplete();
           }

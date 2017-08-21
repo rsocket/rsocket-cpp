@@ -97,7 +97,7 @@ TEST(SetupResumeAcceptor, EarlyError) {
 
   auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
       [](auto input) {
-        input->onError(std::make_exception_ptr(std::runtime_error("Whoops")));
+        input->onError(std::runtime_error("Whoops"));
       },
       [](auto output) {
         EXPECT_CALL(*output, onSubscribe_(_));

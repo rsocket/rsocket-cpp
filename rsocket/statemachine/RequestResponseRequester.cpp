@@ -24,8 +24,7 @@ void RequestResponseRequester::subscribe(
     newStream(StreamType::REQUEST_RESPONSE, 1, std::move(initialPayload_));
   } else {
     if (auto subscriber = std::move(consumingSubscriber_)) {
-      subscriber->onError(std::make_exception_ptr(
-          std::runtime_error("cannot request more than 1 item")));
+      subscriber->onError(std::runtime_error("cannot request more than 1 item"));
     }
     closeStream(StreamCompletionSignal::ERROR);
   }
@@ -64,8 +63,7 @@ void RequestResponseRequester::endStream(StreamCompletionSignal signal) {
   if (auto subscriber = std::move(consumingSubscriber_)) {
     DCHECK(signal != StreamCompletionSignal::COMPLETE);
     DCHECK(signal != StreamCompletionSignal::CANCEL);
-    subscriber->onError(std::make_exception_ptr(
-        StreamInterruptedException(static_cast<int>(signal))));
+    subscriber->onError(StreamInterruptedException(static_cast<int>(signal)));
   }
 }
 
@@ -79,7 +77,7 @@ void RequestResponseRequester::handleError(
     case State::REQUESTED:
       state_ = State::CLOSED;
       if (auto subscriber = std::move(consumingSubscriber_)) {
-        subscriber->onError(errorPayload.to_exception_ptr());
+        subscriber->onError(errorPayload);
       }
       closeStream(StreamCompletionSignal::ERROR);
       break;
