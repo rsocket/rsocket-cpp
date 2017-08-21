@@ -63,7 +63,7 @@ class HelloResumeHandler : public ColdResumeHandler {
 
   Reference<Subscriber<Payload>> handleRequesterResumeStream(
       std::string streamToken,
-      uint32_t consumerAllowance) override {
+      size_t consumerAllowance) override {
     CHECK(subscribers_.find(streamToken) != subscribers_.end());
     LOG(INFO) << "Resuming " << streamToken << " stream with allowance "
               << consumerAllowance;

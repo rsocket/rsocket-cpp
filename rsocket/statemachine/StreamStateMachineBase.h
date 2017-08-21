@@ -48,6 +48,8 @@ class StreamStateMachineBase : public virtual yarpl::Refcounted {
   virtual void handleError(folly::exception_wrapper errorPayload);
   virtual void handleCancel();
 
+  virtual size_t getConsumerAllowance() const;
+
   /// Indicates a terminal signal from the connection.
   ///
   /// This signal corresponds to Subscriber::{onComplete,onError} and

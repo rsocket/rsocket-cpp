@@ -48,34 +48,40 @@ InMemResumeManager::~InMemResumeManager() {
 }
 
 void InMemResumeManager::trackReceivedFrame(
-    const folly::IOBuf& serializedFrame,
+    size_t frameLength,
     FrameType frameType,
-    StreamId streamId) {
+    StreamId streamId,
+    size_t consumerAllowance) {
   if (isNewStreamFrame(frameType)) {
     onRemoteStreamOpen(streamId, frameType);
   }
   if (shouldTrackFrame(frameType)) {
-    VLOG(6) << "received frame " << frameType;
-    // TODO(tmont): this could be expensive, find a better way to get length
-    impliedPosition_ += serializedFrame.computeChainDataLength();
+    VLOG(6) << "Track received frame " << frameType << " StreamId: " << streamId
+            << " Allowance: " << consumerAllowance;
+    impliedPosition_ += frameLength;
   }
+  consumerAllowance_[streamId] = consumerAllowance;
 }
 
 void InMemResumeManager::trackSentFrame(
     const folly::IOBuf& serializedFrame,
     FrameType frameType,
-    folly::Optional<StreamId> streamIdPtr) {
+    folly::Optional<StreamId> streamIdPtr,
+    size_t consumerAllowance) {
   if (streamIdPtr) {
     const StreamId streamId = *streamIdPtr;
     if (isNewStreamFrame(frameType)) {
       onLocalStreamOpen(streamId, frameType);
     }
+    consumerAllowance_[streamId] = consumerAllowance;
   }
 
   if (shouldTrackFrame(frameType)) {
     // TODO(tmont): this could be expensive, find a better way to get length
     auto frameDataLength = serializedFrame.computeChainDataLength();
 
+    VLOG(6) << "Track sent frame " << frameType
+            << " Allowance: " << consumerAllowance;
     // if the frame is too huge, we don't cache it
     if (frameDataLength > capacity_) {
       resetUpToPosition(lastSentPosition_);

@@ -285,6 +285,8 @@ class RSocketStateMachine final
 
   bool ensureOrAutodetectFrameSerializer(const folly::IOBuf& firstFrame);
 
+  size_t getConsumerAllowance(StreamId streamId) const;
+
   ReactiveSocketMode mode_;
   bool isResumable_{false};
   bool remoteResumeable_{false};

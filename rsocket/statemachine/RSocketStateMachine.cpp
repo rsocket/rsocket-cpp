@@ -388,26 +388,25 @@ void RSocketStateMachine::processFrameImpl(
     return;
   }
 
+  auto frameLength = frame->computeChainDataLength();
   auto streamId = *streamIdPtr;
-  resumeManager_->trackReceivedFrame(*frame, frameType, streamId);
   if (streamId == 0) {
     handleConnectionFrame(frameType, std::move(frame));
-    return;
-  }
-
-  // during the time when we are resuming we are can't receive any other
-  // than connection level frames which drives the resumption
-  // TODO(lehecka): this assertion should be handled more elegantly using
-  // different state machine
-  if (resumeCallback_) {
+  } else if (resumeCallback_) {
+    // during the time when we are resuming we are can't receive any other
+    // than connection level frames which drives the resumption
+    // TODO(lehecka): this assertion should be handled more elegantly using
+    // different state machine
     constexpr folly::StringPiece message{
         "Received stream frame while resuming"};
     LOG(ERROR) << message;
     closeWithError(Frame_ERROR::connectionError(message.str()));
     return;
+  } else {
+    handleStreamFrame(streamId, frameType, std::move(frame));
   }
-
-  handleStreamFrame(streamId, frameType, std::move(frame));
+  resumeManager_->trackReceivedFrame(
+      frameLength, frameType, streamId, getConsumerAllowance(streamId));
 }
 
 void RSocketStateMachine::onTerminal(folly::exception_wrapper ex) {
@@ -596,7 +595,6 @@ void RSocketStateMachine::handleStreamFrame(
           std::move(framePayload.payload_),
           framePayload.header_.flagsComplete(),
           framePayload.header_.flagsNext());
-      resumeManager_->decrConsumerAllowance(streamId, 1);
       break;
     }
     case FrameType::ERROR: {
@@ -853,7 +851,10 @@ void RSocketStateMachine::outputFrame(std::unique_ptr<folly::IOBuf> frame) {
 
   if (isResumable_) {
     auto streamIdPtr = frameSerializer_->peekStreamId(*frame);
-    resumeManager_->trackSentFrame(*frame, frameType, streamIdPtr);
+    size_t consumerAllowance =
+        (streamIdPtr) ? getConsumerAllowance(*streamIdPtr) : 0;
+    resumeManager_->trackSentFrame(
+        *frame, frameType, streamIdPtr, consumerAllowance);
   }
   frameTransport_->outputFrameOrDrop(std::move(frame));
 }
@@ -949,7 +950,6 @@ void RSocketStateMachine::writeNewStream(
     case StreamType::STREAM:
       outputFrameOrEnqueue(Frame_REQUEST_STREAM(
           streamId, FrameFlags::EMPTY, initialRequestN, std::move(payload)));
-      resumeManager_->incrConsumerAllowance(streamId, initialRequestN);
       break;
 
     case StreamType::REQUEST_RESPONSE:
@@ -968,7 +968,6 @@ void RSocketStateMachine::writeNewStream(
 }
 
 void RSocketStateMachine::writeRequestN(StreamId streamId, uint32_t n) {
-  resumeManager_->incrConsumerAllowance(streamId, n);
   outputFrameOrEnqueue(Frame_REQUEST_N(streamId, n));
 }
 
@@ -1046,4 +1045,14 @@ bool RSocketStateMachine::ensureOrAutodetectFrameSerializer(
   frameSerializer_ = std::move(serializer);
   return true;
 }
+
+size_t RSocketStateMachine::getConsumerAllowance(StreamId streamId) const {
+  size_t consumerAllowance = 0;
+  auto it = streamState_.streams_.find(streamId);
+  if (it != streamState_.streams_.end()) {
+    consumerAllowance = it->second->getConsumerAllowance();
+  }
+  return consumerAllowance;
+}
+
 } // namespace rsocket

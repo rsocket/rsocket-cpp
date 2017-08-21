@@ -25,6 +25,10 @@ void StreamStateMachineBase::handleCancel() {
   VLOG(4) << "Unexpected handleCancel";
 }
 
+size_t StreamStateMachineBase::getConsumerAllowance() const {
+  return 0;
+}
+
 void StreamStateMachineBase::endStream(StreamCompletionSignal) {
   isTerminated_ = true;
 }

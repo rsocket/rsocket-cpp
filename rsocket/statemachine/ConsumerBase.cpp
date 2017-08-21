@@ -55,17 +55,9 @@ void ConsumerBase::endStream(StreamCompletionSignal signal) {
   Base::endStream(signal);
 }
 
-//void ConsumerBase::pauseStream(RequestHandler& requestHandler) {
-//  if (consumingSubscriber_) {
-//    requestHandler.onSubscriberPaused(consumingSubscriber_);
-//  }
-//}
-//
-//void ConsumerBase::resumeStream(RequestHandler& requestHandler) {
-//  if (consumingSubscriber_) {
-//    requestHandler.onSubscriberResumed(consumingSubscriber_);
-//  }
-//}
+size_t ConsumerBase::getConsumerAllowance() const {
+  return allowance_.getValue();
+}
 
 void ConsumerBase::processPayload(Payload&& payload, bool onNext) {
   if (payload || onNext) {

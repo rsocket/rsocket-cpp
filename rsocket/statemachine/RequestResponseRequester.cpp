@@ -116,15 +116,7 @@ void RequestResponseRequester::handlePayload(
   closeStream(StreamCompletionSignal::COMPLETE);
 }
 
-// void RequestResponseRequester::pauseStream(RequestHandler& requestHandler) {
-//  if (consumingSubscriber_) {
-//    requestHandler.onSubscriberPaused(consumingSubscriber_);
-//  }
-//}
-//
-// void RequestResponseRequester::resumeStream(RequestHandler& requestHandler) {
-//  if (consumingSubscriber_) {
-//    requestHandler.onSubscriberResumed(consumingSubscriber_);
-//  }
-//}
+size_t RequestResponseRequester::getConsumerAllowance() const {
+  return (state_ == State::REQUESTED) ? 1 : 0;
+}
 }

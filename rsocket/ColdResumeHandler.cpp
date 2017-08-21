@@ -20,14 +20,14 @@ std::string ColdResumeHandler::generateStreamToken(
 
 Reference<Flowable<Payload>> ColdResumeHandler::handleResponderResumeStream(
     std::string /* streamToken */,
-    uint32_t /* publisherAllowance */) {
+    size_t /* publisherAllowance */) {
   return Flowables::error<Payload>(
       std::logic_error("ResumeHandler method not implemented"));
 }
 
 Reference<Subscriber<Payload>> ColdResumeHandler::handleRequesterResumeStream(
     std::string /* streamToken */,
-    uint32_t /* consumerAllowance */) {
+    size_t /* consumerAllowance */) {
   return yarpl::make_ref<CancelingSubscriber<Payload>>();
 }
 }
