@@ -224,7 +224,7 @@ class RSocketStateMachine final
       yarpl::Reference<FrameTransport>,
       ProtocolVersion protocolVersion);
 
-  void sendingPendingFrames();
+  void sendPendingFrames();
 
   /// Performs the same actions as ::endStream without propagating closure
   /// signal to the underlying connection.

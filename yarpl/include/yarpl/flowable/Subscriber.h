@@ -3,6 +3,7 @@
 #pragma once
 
 #include <stdexcept>
+#include <glog/logging.h>
 
 #include "yarpl/Refcounted.h"
 #include "yarpl/flowable/Subscription.h"
@@ -13,6 +14,11 @@ namespace flowable {
 template <typename T>
 class Subscriber : public virtual Refcounted {
  public:
+  ~Subscriber() {
+    DCHECK(!subscription_) << "if you call onSubscribe on the base class, "
+        "you need to call terminating signals on the base class as well";
+  }
+
   // Note: if any of the following methods is overridden in a subclass,
   // the new methods SHOULD ensure that these are invoked as well.
   virtual void onSubscribe(Reference<Subscription> subscription) {

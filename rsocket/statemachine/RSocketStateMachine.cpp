@@ -81,7 +81,7 @@ void RSocketStateMachine::connectServer(
     const SetupParameters& setupParams) {
   setResumable(setupParams.resumable);
   CHECK(connect(std::move(frameTransport), setupParams.protocolVersion));
-  sendingPendingFrames();
+  sendPendingFrames();
 }
 
 //TODO: ensure the return value is not ignored!
@@ -141,7 +141,7 @@ bool RSocketStateMachine::connect(
   return true;
 }
 
-void RSocketStateMachine::sendingPendingFrames() {
+void RSocketStateMachine::sendPendingFrames() {
   DCHECK(!resumeCallback_);
   // we are free to try to send frames again
   // not all frames might be sent if the connection breaks, the rest of them
@@ -918,7 +918,7 @@ void RSocketStateMachine::connectClientSendSetup(
   // making sure we send setup frame first
   outputFrame(frameSerializer_->serializeOut(std::move(frame)));
   // then the rest of the cached frames will be sent
-  sendingPendingFrames();
+  sendPendingFrames();
 }
 
 bool RSocketStateMachine::isInEventBaseThread() {
