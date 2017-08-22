@@ -159,18 +159,9 @@ TEST(SetupResumeAcceptor, SetupAndFnf) {
 
   yarpl::Reference<FrameTransport> transport;
 
-  acceptor.accept(
-      std::move(connection),
-      [&](auto tport, auto) { transport = std::move(tport); },
-      resumeFail);
-
-  evb.loop();
-
-  EXPECT_TRUE(transport.get());
-
   auto processor = std::make_shared<StrictMock<MockFrameProcessor>>();
   EXPECT_CALL(*processor, processFrame_(_))
-    .WillOnce(Invoke([](auto const& buf) {
+      .WillOnce(Invoke([](auto const& buf) {
           auto serializer = FrameSerializer::createCurrentVersion();
 
           Frame_REQUEST_FNF fnf;
@@ -178,8 +169,19 @@ TEST(SetupResumeAcceptor, SetupAndFnf) {
           EXPECT_EQ(fnf.header_.streamId_, 100u);
           EXPECT_EQ(fnf.header_.flags_, FrameFlags::EMPTY);
           EXPECT_EQ(fnf.payload_.cloneDataToString(), "Hi");
-        }));
-  transport->setFrameProcessor(processor);
+      }));
+
+  acceptor.accept(
+      std::move(connection),
+      [&](auto tport, auto) {
+          transport = std::move(tport);
+          EXPECT_TRUE(transport.get());
+          transport->setFrameProcessor(processor);
+      },
+      resumeFail);
+
+  evb.loop();
+
   transport->close();
 }
 

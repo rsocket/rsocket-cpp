@@ -27,7 +27,12 @@ std::shared_ptr<RSocketServiceHandler> RSocketServiceHandler::create(
     explicit ServiceHandler(OnNewSetupFn fn) : onNewSetupFn_(std::move(fn)) {}
     folly::Expected<RSocketConnectionParams, RSocketException> onNewSetup(
         const SetupParameters& setupParameters) override {
-      return RSocketConnectionParams(onNewSetupFn_(setupParameters));
+      try {
+        return RSocketConnectionParams(onNewSetupFn_(setupParameters));
+      } catch(const std::exception& e) {
+        return folly::Unexpected<RSocketException>(
+            ConnectionException(e.what()));
+      }
     }
 
    private:
