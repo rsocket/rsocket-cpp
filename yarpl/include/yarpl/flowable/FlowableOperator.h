@@ -42,11 +42,6 @@ class FlowableOperator : public Flowable<D> {
         : flowableOperator_(std::move(flowable)), subscriber_(std::move(subscriber)) {
       assert(flowableOperator_);
       assert(subscriber_);
-
-      // We expect to be heap-allocated; until this subscription finishes (is
-      // canceled; completes; error's out), hold a reference so we are not
-      // deallocated (by the subscriber).
-      Refcounted::incRef(*this);
     }
 
     Reference<Operator> getFlowableOperator() {
@@ -150,8 +145,6 @@ class FlowableOperator : public Flowable<D> {
           }
         }
       }
-
-      Refcounted::decRef(*this);
     }
 
     /// The Flowable has the lambda, and other creation parameters.
