@@ -46,6 +46,7 @@ add_library(
         include/yarpl/Refcounted.h
         # Flowable public API
         include/yarpl/Flowable.h
+        include/yarpl/flowable/EmiterFlowable.h
         include/yarpl/flowable/Flowable.h
         include/yarpl/flowable/FlowableOperator.h
         include/yarpl/flowable/Flowable_FromObservable.h
