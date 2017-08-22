@@ -106,7 +106,7 @@ class Flowable : public virtual Refcounted {
 } // flowable
 } // yarpl
 
-#include "yarpl/flowable/EmiterFlowable.h"
+#include "yarpl/flowable/EmitterFlowable.h"
 #include "yarpl/flowable/FlowableOperator.h"
 
 namespace yarpl {
