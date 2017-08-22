@@ -34,7 +34,7 @@ std::unique_ptr<RSocketServer> makeResumableServer(
   return rs;
 }
 
-std::shared_ptr<RSocketClient> makeClient(
+folly::Future<std::shared_ptr<RSocketClient>> makeClientAsync(
     folly::EventBase* eventBase,
     uint16_t port) {
   CHECK(eventBase);
@@ -42,8 +42,13 @@ std::shared_ptr<RSocketClient> makeClient(
   folly::SocketAddress address;
   address.setFromHostPort("localhost", port);
   return RSocket::createConnectedClient(
-      std::make_unique<TcpConnectionFactory>(*eventBase, std::move(address)))
-      .get();
+      std::make_unique<TcpConnectionFactory>(*eventBase, std::move(address)));
+}
+
+std::shared_ptr<RSocketClient> makeClient(
+    folly::EventBase* eventBase,
+    uint16_t port) {
+  return makeClientAsync(eventBase, port).get();
 }
 
 std::shared_ptr<RSocketClient> makeResumableClient(
