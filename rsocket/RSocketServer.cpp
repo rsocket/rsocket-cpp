@@ -135,7 +135,6 @@ void RSocketServer::onRSocketSetup(
   auto responder = std::make_shared<ScheduledRSocketResponder>(
       std::move(connectionParams.responder), *eventBase);
   auto rs = std::make_shared<RSocketStateMachine>(
-      *eventBase,
       std::move(responder),
       nullptr,
       ReactiveSocketMode::SERVER,
@@ -146,7 +145,7 @@ void RSocketServer::onRSocketSetup(
   connectionManager_->manageConnection(rs, *eventBase);
   auto requester = std::make_shared<RSocketRequester>(rs, *eventBase);
   auto serverState = std::shared_ptr<RSocketServerState>(
-      new RSocketServerState(rs, requester));
+      new RSocketServerState(*eventBase, rs, requester));
   serviceHandler->onNewRSocketState(std::move(serverState), setupParams.token);
   rs->connectServer(std::move(frameTransport), std::move(setupParams));
 }
@@ -162,7 +161,7 @@ void RSocketServer::onRSocketResume(
   }
   auto serverState = std::move(result.value());
   CHECK(serverState);
-  if (!serverState->rSocketStateMachine_->isInEventBaseThread()) {
+  if (!serverState->eventBase_.isInEventBaseThread()) {
     throw RSocketException("Trying to RESUME in a different worker thread");
   }
   serverState->rSocketStateMachine_->resumeServer(

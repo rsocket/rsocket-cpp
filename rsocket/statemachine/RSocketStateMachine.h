@@ -5,8 +5,6 @@
 #include <list>
 #include <memory>
 
-#include <folly/io/async/EventBase.h>
-
 #include "rsocket/ColdResumeHandler.h"
 #include "rsocket/DuplexConnection.h"
 #include "rsocket/Payload.h"
@@ -64,7 +62,6 @@ class RSocketStateMachine final
       public std::enable_shared_from_this<RSocketStateMachine> {
  public:
   RSocketStateMachine(
-      folly::EventBase& eventBase,
       std::shared_ptr<RSocketResponder> requestResponder,
       std::unique_ptr<KeepaliveTimer> keepaliveTimer_,
       ReactiveSocketMode mode,
@@ -216,8 +213,6 @@ class RSocketStateMachine final
     return connectionEvents_;
   }
 
-  bool isInEventBaseThread();
-
  private:
 
   bool connect(
@@ -232,17 +227,8 @@ class RSocketStateMachine final
   /// The call is idempotent and returns false iff a stream has not been found.
   bool endStreamInternal(StreamId streamId, StreamCompletionSignal signal);
 
-  /// @{
-  /// FrameProcessor methods are implemented with ExecutorBase and automatic
-  /// marshaling
-  /// onto the right executor to allow DuplexConnection living on a different
-  /// executor and calling into ConnectionAutomaton.
   void processFrame(std::unique_ptr<folly::IOBuf>) override;
   void onTerminal(folly::exception_wrapper) override;
-
-  void processFrameImpl(std::unique_ptr<folly::IOBuf>);
-  void onTerminalImpl(folly::exception_wrapper);
-  /// @}
 
   void handleConnectionFrame(
       FrameType frameType,
@@ -265,8 +251,6 @@ class RSocketStateMachine final
 
   void resumeFromPosition(ResumePosition position);
   void outputFrame(std::unique_ptr<folly::IOBuf>);
-
-  void debugCheckCorrectExecutor() const;
 
   void writeNewStream(
       StreamId streamId,
@@ -311,6 +295,5 @@ class RSocketStateMachine final
   StreamsFactory streamsFactory_;
 
   std::shared_ptr<RSocketConnectionEvents> connectionEvents_;
-  folly::EventBase& eventBase_;
 };
 }

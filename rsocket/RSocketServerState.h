@@ -4,6 +4,10 @@
 
 #include "rsocket/RSocketRequester.h"
 
+namespace folly {
+class EventBase;
+}
+
 namespace rsocket {
 
 class RSocketServerState {
@@ -18,10 +22,14 @@ class RSocketServerState {
 
  private:
   RSocketServerState(
+      folly::EventBase& eventBase,
       std::shared_ptr<RSocketStateMachine> stateMachine,
       std::shared_ptr<RSocketRequester> rSocketRequester)
-      : rSocketStateMachine_(stateMachine),
+      : eventBase_(eventBase),
+        rSocketStateMachine_(stateMachine),
         rSocketRequester_(rSocketRequester) {}
+
+  folly::EventBase& eventBase_;
   std::shared_ptr<RSocketStateMachine> rSocketStateMachine_;
   std::shared_ptr<RSocketRequester> rSocketRequester_;
 };
