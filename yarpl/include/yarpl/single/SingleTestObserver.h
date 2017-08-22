@@ -108,14 +108,14 @@ class SingleTestObserver : public yarpl::single::SingleObserver<T> {
     terminalEventCV_.notify_all();
   }
 
-  void onError(std::exception_ptr ex) override {
+  void onError(folly::exception_wrapper ex) override {
     if (delegate_) {
       // Do NOT hold the mutex while emitting
       delegate_->onError(ex);
     }
     {
       std::lock_guard<std::mutex> g(m_);
-      e_ = ex;
+      e_ = std::move(ex);
       terminated_ = true;
     }
     terminalEventCV_.notify_all();
@@ -174,26 +174,15 @@ class SingleTestObserver : public yarpl::single::SingleObserver<T> {
   }
 
   /**
-   * If the onError exception_ptr points to an error containing
+   * If the onError exception_wrapper points to an error containing
    * the given msg, complete successfully, otherwise throw a runtime_error
    */
   void assertOnErrorMessage(std::string msg) {
     std::lock_guard<std::mutex> g(m_);
-    if (e_ == nullptr) {
+    if (!e_ || e_.get_exception()->what() != msg) {
       std::stringstream ss;
-      ss << "exception_ptr == nullptr, but expected " << msg;
+      ss << "Error is: " << e_ << " but expected: " << msg;
       throw std::runtime_error(ss.str());
-    }
-    try {
-      std::rethrow_exception(e_);
-    } catch (std::runtime_error& re) {
-      if (re.what() != msg) {
-        std::stringstream ss;
-        ss << "Error message is: " << re.what() << " but expected: " << msg;
-        throw std::runtime_error(ss.str());
-      }
-    } catch (...) {
-      throw std::runtime_error("Expects an std::runtime_error");
     }
   }
 
@@ -211,7 +200,7 @@ class SingleTestObserver : public yarpl::single::SingleObserver<T> {
   Reference<SingleObserver<T>> delegate_;
   // The following variables must be protected by mutex m_
   T value_;
-  std::exception_ptr e_;
+  folly::exception_wrapper e_;
   bool terminated_{false};
   // allows thread-safe cancellation against a delegate
   // regardless of when it is received

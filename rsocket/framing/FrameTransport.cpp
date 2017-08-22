@@ -59,7 +59,6 @@ void FrameTransport::setFrameProcessor(
     connect();
   }
 
-  drainWrites(lock);
   drainReads(lock);
 }
 
@@ -92,7 +91,7 @@ void FrameTransport::closeImpl(folly::exception_wrapper ew) {
   // interface definition).
   if (auto subscriber = std::move(connectionOutput_)) {
     if (ew) {
-      subscriber->onError(ew.to_exception_ptr());
+      subscriber->onError(std::move(ew));
     } else {
       subscriber->onComplete();
     }
@@ -112,7 +111,7 @@ void FrameTransport::onSubscribe(yarpl::Reference<Subscription> subscription) {
   CHECK(!connectionInputSub_);
   CHECK(frameProcessor_);
   connectionInputSub_ = std::move(subscription);
-  connectionInputSub_->request(kMaxRequestN);
+  connectionInputSub_->request(std::numeric_limits<int64_t>::max());
 }
 
 void FrameTransport::onNext(std::unique_ptr<folly::IOBuf> frame) {
@@ -149,33 +148,14 @@ void FrameTransport::onComplete() {
   terminateProcessor(folly::exception_wrapper());
 }
 
-void FrameTransport::onError(std::exception_ptr eptr) {
-  VLOG(6) << "onError" << folly::exceptionStr(eptr);
-
-  try {
-    std::rethrow_exception(eptr);
-  } catch (const std::exception& exn) {
-    folly::exception_wrapper ew{std::move(eptr), exn};
-    terminateProcessor(std::move(ew));
-  }
+void FrameTransport::onError(folly::exception_wrapper ex) {
+  VLOG(6) << "onError" << ex;
+  terminateProcessor(std::move(ex));
 }
 
 void FrameTransport::request(int64_t n) {
-  Lock lock(mutex_);
-
-  if (!connection_) {
-    // request(n) can be delivered during disconnecting.  We don't care for it
-    // anymore.
-    return;
-  }
-
-  if (writeAllowance_.release(n) > 0) {
-    // There are no pending wfrites or we already have this method on the
-    // stack.
-    return;
-  }
-
-  drainWrites(lock);
+  // we are expecting we can write output without back pressure
+  CHECK_EQ(n, std::numeric_limits<int64_t>::max());
 }
 
 void FrameTransport::cancel() {
@@ -183,22 +163,16 @@ void FrameTransport::cancel() {
   terminateProcessor(folly::exception_wrapper());
 }
 
-void FrameTransport::outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf> frame) {
+void FrameTransport::outputFrameOrDrop(std::unique_ptr<folly::IOBuf> frame) {
   Lock lock(mutex_);
 
-  // We allow sending frames even without a frame processor so it's possible to
-  // send terminal frames without expecting anything in return.
-  if (connection_) {
-    drainWrites(lock);
-    if (pendingWrites_.empty() && writeAllowance_.tryAcquire()) {
-      connectionOutput_->onNext(std::move(frame));
-      return;
-    }
+  if (!connection_) {
+    // if the connection was closed we will drop the frame
+    return;
   }
 
-  // We either have no allowance to perform the operation, or the queue has not
-  // been drained (e.g. we're looping in ::request), or we are disconnected.
-  pendingWrites_.emplace_back(std::move(frame));
+  CHECK(connectionOutput_); // the connect method has to be already executed
+  connectionOutput_->onNext(std::move(frame));
 }
 
 void FrameTransport::drainReads(const FrameTransport::Lock&) {
@@ -218,16 +192,4 @@ void FrameTransport::drainReads(const FrameTransport::Lock&) {
   }
 }
 
-void FrameTransport::drainWrites(const FrameTransport::Lock&) {
-  if (!connection_) {
-    return;
-  }
-
-  // Drain the queue or the allowance.
-  while (!pendingWrites_.empty() && writeAllowance_.tryAcquire()) {
-    auto frame = std::move(pendingWrites_.front());
-    pendingWrites_.pop_front();
-    connectionOutput_->onNext(std::move(frame));
-  }
-}
 }

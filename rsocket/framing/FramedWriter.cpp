@@ -111,7 +111,7 @@ void FramedWriter::onNextMultiple(
 
 void FramedWriter::error(std::string errorMsg) {
   VLOG(1) << "error: " << errorMsg;
-  onError(std::make_exception_ptr(std::runtime_error(std::move(errorMsg))));
+  onError(std::runtime_error(std::move(errorMsg)));
   DuplexConnection::Subscriber::subscription()->cancel();
 }
 
@@ -121,7 +121,7 @@ void FramedWriter::onComplete() {
   stream_ = nullptr;
 }
 
-void FramedWriter::onError(std::exception_ptr ex) {
+void FramedWriter::onError(folly::exception_wrapper ex) {
   DuplexConnection::Subscriber::onError(ex);
   stream_->onError(std::move(ex));
   stream_ = nullptr;

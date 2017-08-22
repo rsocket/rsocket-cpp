@@ -49,8 +49,7 @@ void ConsumerBase::endStream(StreamCompletionSignal signal) {
         signal == StreamCompletionSignal::CANCEL) { // TODO: remove CANCEL
       subscriber->onComplete();
     } else {
-      subscriber->onError(std::make_exception_ptr(
-          StreamInterruptedException(static_cast<int>(signal))));
+      subscriber->onError(StreamInterruptedException(static_cast<int>(signal)));
     }
   }
   Base::endStream(signal);
@@ -92,7 +91,7 @@ void ConsumerBase::completeConsumer() {
 void ConsumerBase::errorConsumer(folly::exception_wrapper ex) {
   state_ = State::CLOSED;
   if (auto subscriber = std::move(consumingSubscriber_)) {
-    subscriber->onError(ex.to_exception_ptr());
+    subscriber->onError(std::move(ex));
   }
 }
 
@@ -108,8 +107,7 @@ void ConsumerBase::sendRequests() {
 
 void ConsumerBase::handleFlowControlError() {
   if (auto subscriber = std::move(consumingSubscriber_)) {
-    subscriber->onError(
-        std::make_exception_ptr(std::runtime_error("surplus response")));
+    subscriber->onError(std::runtime_error("surplus response"));
   }
   errorStream("flow control error");
 }

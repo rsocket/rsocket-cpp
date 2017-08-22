@@ -4,6 +4,7 @@
 
 #include <exception>
 #include <limits>
+#include <folly/ExceptionWrapper.h>
 
 #include "yarpl/observable/Observer.h"
 #include "yarpl/utils/type_traits.h"
@@ -22,11 +23,11 @@ class Observers {
   template <
       typename T,
       typename Next,
-      typename Error = void (*)(std::exception_ptr),
+      typename Error = void (*)(folly::exception_wrapper),
       typename Complete = void (*)()>
   using EnableIfCompatible = typename std::enable_if<
       std::is_callable<Next(T), void>::value &&
-      std::is_callable<Error(std::exception_ptr), void>::value &&
+      std::is_callable<Error(folly::exception_wrapper), void>::value &&
       std::is_callable<Complete(), void>::value>::type;
 
  public:
@@ -79,8 +80,8 @@ class Observers {
     WithError(Next next, Error error)
         : Base<T, Next>(std::move(next)), error_(std::move(error)) {}
 
-    void onError(std::exception_ptr error) override {
-      error_(error);
+    void onError(folly::exception_wrapper error) override {
+      error_(std::move(error));
     }
 
    private:

@@ -13,7 +13,6 @@
 #include "rsocket/transports/tcp/TcpConnectionAcceptor.h"
 #include "rsocket/transports/tcp/TcpConnectionFactory.h"
 #include "yarpl/Flowable.h"
-#include "yarpl/utils/ExceptionString.h"
 
 using namespace rsocket;
 
@@ -68,9 +67,8 @@ class BM_Subscriber : public yarpl::flowable::Subscriber<Payload> {
     baton_.post();
   }
 
-  void onError(std::exception_ptr ex) noexcept override {
-    VLOG(2) << "BM_Subscriber " << this << " onError "
-            << yarpl::exceptionStr(ex);
+  void onError(folly::exception_wrapper ex) noexcept override {
+    VLOG(2) << "BM_Subscriber " << this << " onError " << ex;
     baton_.post();
   }
 

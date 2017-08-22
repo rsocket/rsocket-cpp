@@ -111,7 +111,7 @@ class EmiterSubscription : private Subscription, private Subscriber<T> {
     // we're following the Subscription's protocol instead.
   }
 
-  void onError(std::exception_ptr error) override {
+  void onError(folly::exception_wrapper error) override {
     // we will set the flag first to save a potential call to lock.try_lock()
     // in the process method via cancel or request methods
     auto old = requested_.exchange(kCanceled, std::memory_order_relaxed);

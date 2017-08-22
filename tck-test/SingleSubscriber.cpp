@@ -49,7 +49,7 @@ void SingleSubscriber::onSuccess(Payload element) noexcept {
   terminatedCV_.notify_one();
 }
 
-void SingleSubscriber::onError(std::exception_ptr ex) noexcept {
+void SingleSubscriber::onError(folly::exception_wrapper ex) noexcept {
   LOG(INFO) << "... received onError from Publisher";
   {
     std::unique_lock<std::mutex> lock(mutex_);

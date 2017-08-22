@@ -80,7 +80,7 @@ class RSocketStateMachine final
   ///
   /// May result, depending on the implementation of the DuplexConnection, in
   /// processing of one or more frames.
-  bool connectServer(
+  void connectServer(
       yarpl::Reference<FrameTransport>,
       const SetupParameters& setupParams);
 
@@ -222,8 +222,9 @@ class RSocketStateMachine final
 
   bool connect(
       yarpl::Reference<FrameTransport>,
-      bool sendingPendingFrames,
       ProtocolVersion protocolVersion);
+
+  void sendPendingFrames();
 
   /// Performs the same actions as ::endStream without propagating closure
   /// signal to the underlying connection.

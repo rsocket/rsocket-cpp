@@ -29,11 +29,9 @@ class FrameTransport final :
 
   void setFrameProcessor(std::shared_ptr<FrameProcessor>);
 
-  /// Enqueues provided frame to be written to the underlying connection.
-  /// Enqueuing a terminal frame does not end the stream.
-  ///
-  /// This signal corresponds to Subscriber::onNext.
-  void outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf>);
+  /// Writes the frame directly to output. If the connection was closed it will
+  /// drop the frame.
+  void outputFrameOrDrop(std::unique_ptr<folly::IOBuf>);
 
   /// Cancel the input, complete the output, and close the underlying
   /// connection.
@@ -45,10 +43,6 @@ class FrameTransport final :
 
   bool isClosed() const {
     return !connection_;
-  }
-
-  bool outputQueueEmpty() const {
-    return pendingWrites_.empty();
   }
 
  private:
@@ -68,7 +62,7 @@ class FrameTransport final :
   void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>) override;
   void onNext(std::unique_ptr<folly::IOBuf>) override;
   void onComplete() override;
-  void onError(std::exception_ptr) override;
+  void onError(folly::exception_wrapper) override;
 
   // Subscription.
 
@@ -83,9 +77,6 @@ class FrameTransport final :
   /// payloads.  Not clear if that is desirable.
   void drainReads(const Lock&);
 
-  /// Drain all pending writes into the output subscriber.
-  void drainWrites(const Lock&);
-
   /// Terminates the FrameProcessor.  Will queue up the exception if no
   /// processor is set, overwriting any previously queued exception.
   void terminateProcessor(folly::exception_wrapper);
@@ -96,13 +87,11 @@ class FrameTransport final :
 
   std::shared_ptr<FrameProcessor> frameProcessor_;
 
-  AllowanceSemaphore writeAllowance_;
   std::shared_ptr<DuplexConnection> connection_;
 
   yarpl::Reference<DuplexConnection::Subscriber> connectionOutput_;
   yarpl::Reference<yarpl::flowable::Subscription> connectionInputSub_;
 
-  std::deque<std::unique_ptr<folly::IOBuf>> pendingWrites_;
   std::deque<std::unique_ptr<folly::IOBuf>> pendingReads_;
   folly::Optional<folly::exception_wrapper> pendingTerminal_;
 };

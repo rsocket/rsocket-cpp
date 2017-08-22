@@ -99,20 +99,14 @@ void FlowableExamples::run() {
   auto flowable = Flowable<int>::create([total = 0](
       Reference<Subscriber<int>> subscriber, int64_t requested) mutable {
     subscriber->onNext(12345678);
-    subscriber->onError(std::make_exception_ptr(std::runtime_error("error")));
+    subscriber->onError(std::runtime_error("error"));
     return std::make_tuple(int64_t{1}, false);
   });
 
   auto subscriber = Subscribers::create<int>(
       [](int next) { std::cout << "@next: " << next << std::endl; },
-      [](std::exception_ptr eptr) {
-        try {
-          std::rethrow_exception(eptr);
-        } catch (const std::exception& exception) {
-          std::cerr << "  exception: " << exception.what() << std::endl;
-        } catch (...) {
-          std::cerr << "  !unknown exception!" << std::endl;
-        }
+      [](folly::exception_wrapper ex) {
+        std::cerr << "  exception: " << ex << std::endl;
       },
       [] { std::cout << "Completed." << std::endl; });
 

@@ -74,7 +74,7 @@ size_t FramedReader::readFrameLength() const {
 void FramedReader::onSubscribe(
     yarpl::Reference<Subscription> subscription) noexcept {
   DuplexConnection::Subscriber::onSubscribe(subscription);
-  subscription->request(kMaxRequestN);
+  subscription->request(std::numeric_limits<int64_t>::max());
 }
 
 void FramedReader::onNext(std::unique_ptr<folly::IOBuf> payload) noexcept {
@@ -141,14 +141,16 @@ void FramedReader::onComplete() noexcept {
   if (auto subscriber = std::move(frames_)) {
     subscriber->onComplete();
   }
+  DuplexConnection::Subscriber::onComplete();
 }
 
-void FramedReader::onError(std::exception_ptr ex) noexcept {
+void FramedReader::onError(folly::exception_wrapper ex) noexcept {
   completed_ = true;
   payloadQueue_.move(); // equivalent to clear(), releases the buffers
   if (auto subscriber = std::move(frames_)) {
     subscriber->onError(std::move(ex));
   }
+  DuplexConnection::Subscriber::onError(folly::exception_wrapper());
 }
 
 void FramedReader::request(int64_t n) noexcept {
@@ -207,7 +209,7 @@ bool FramedReader::ensureOrAutodetectProtocolVersion() {
 
 void FramedReader::error(std::string errorMsg) {
   VLOG(1) << "error: " << errorMsg;
-  onError(std::make_exception_ptr(std::runtime_error(std::move(errorMsg))));
+  onError(std::runtime_error(std::move(errorMsg)));
   DuplexConnection::Subscriber::subscription()->cancel();
 }
 }

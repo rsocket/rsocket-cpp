@@ -76,25 +76,27 @@ void RSocketStateMachine::setResumable(bool resumable) {
   remoteResumeable_ = isResumable_ = resumable;
 }
 
-bool RSocketStateMachine::connectServer(
+void RSocketStateMachine::connectServer(
     yarpl::Reference<FrameTransport> frameTransport,
     const SetupParameters& setupParams) {
   setResumable(setupParams.resumable);
-  return connect(std::move(frameTransport), true, setupParams.protocolVersion);
+  CHECK(connect(std::move(frameTransport), setupParams.protocolVersion));
+  sendPendingFrames();
 }
 
+//TODO: ensure the return value is not ignored!
 bool RSocketStateMachine::resumeServer(
     yarpl::Reference<FrameTransport> frameTransport,
     const ResumeParameters& resumeParams) {
-  return connect(
-             std::move(frameTransport), false, resumeParams.protocolVersion) &&
-      resumeFromPositionOrClose(
-             resumeParams.serverPosition, resumeParams.clientPosition);
+  CHECK(connect(
+      std::move(frameTransport), resumeParams.protocolVersion));
+  return resumeFromPositionOrClose(
+      resumeParams.serverPosition, resumeParams.clientPosition);
 }
 
+//TODO : ensure the return value is not ignored!!
 bool RSocketStateMachine::connect(
     yarpl::Reference<FrameTransport> frameTransport,
-    bool sendingPendingFrames,
     ProtocolVersion protocolVersion) {
   debugCheckCorrectExecutor();
   CHECK(isDisconnectedOrClosed());
@@ -136,24 +138,23 @@ bool RSocketStateMachine::connect(
   // ReactiveSocket instance.
   auto copyThis = shared_from_this();
   frameTransport_->setFrameProcessor(copyThis);
+  return true;
+}
 
-  if (sendingPendingFrames) {
-    DCHECK(!resumeCallback_);
-    // we are free to try to send frames again
-    // not all frames might be sent if the connection breaks, the rest of them
-    // will queue up again
-    auto outputFrames = streamState_.moveOutputPendingFrames();
-    for (auto& frame : outputFrames) {
-      outputFrameOrEnqueue(std::move(frame));
-    }
-
-    // TODO: turn on only after setup frame was received
-    if (keepaliveTimer_) {
-      keepaliveTimer_->start(shared_from_this());
-    }
+void RSocketStateMachine::sendPendingFrames() {
+  DCHECK(!resumeCallback_);
+  // we are free to try to send frames again
+  // not all frames might be sent if the connection breaks, the rest of them
+  // will queue up again
+  auto outputFrames = streamState_.moveOutputPendingFrames();
+  for (auto &frame : outputFrames) {
+    outputFrameOrEnqueue(std::move(frame));
   }
 
-  return true;
+  // TODO: turn on only after setup frame was received
+  if (keepaliveTimer_) {
+    keepaliveTimer_->start(shared_from_this());
+  }
 }
 
 void RSocketStateMachine::disconnect(folly::exception_wrapper ex) {
@@ -191,7 +192,7 @@ void RSocketStateMachine::close(
 
   if (resumeCallback_) {
     resumeCallback_->onResumeError(
-        ConnectionException(ex ? ex.what().c_str() : "RS closing"));
+        ConnectionException(ex ? ex.get_exception()->what() : "RS closing"));
     resumeCallback_.reset();
   }
 
@@ -218,8 +219,8 @@ void RSocketStateMachine::closeFrameTransport(
   }
 
   if (resumeCallback_) {
-    resumeCallback_->onResumeError(
-        ConnectionException(ex ? ex.what().c_str() : "connection closing"));
+    resumeCallback_->onResumeError(ConnectionException(
+        ex ? ex.get_exception()->what() : "connection closing"));
     resumeCallback_.reset();
   }
 
@@ -299,7 +300,7 @@ void RSocketStateMachine::reconnect(
   // TODO: output frame buffer should not be written to the new connection until
   // we receive resume ok
   resumeCallback_ = std::move(resumeCallback);
-  connect(std::move(newFrameTransport), false, ProtocolVersion::Unknown);
+  CHECK(connect(std::move(newFrameTransport), ProtocolVersion::Unknown));
 }
 
 void RSocketStateMachine::addStream(
@@ -756,14 +757,13 @@ void RSocketStateMachine::tryClientResume(
       resumeManager_->firstSentPosition(),
       frameSerializer_->protocolVersion());
   VLOG(3) << "Out: " << resumeFrame;
-  frameTransport->outputFrameOrEnqueue(
-      frameSerializer_->serializeOut(std::move(resumeFrame)));
 
   // if the client was still connected we will disconnected the old connection
   // with a clear error message
   disconnect(std::runtime_error("resuming client on a different connection"));
   setResumable(true);
   reconnect(std::move(frameTransport), std::move(resumeCallback));
+  outputFrame(frameSerializer_->serializeOut(std::move(resumeFrame)));
 }
 
 bool RSocketStateMachine::isPositionAvailable(ResumePosition position) {
@@ -786,7 +786,7 @@ bool RSocketStateMachine::resumeFromPositionOrClose(
       resumeManager_->isPositionAvailable(serverPosition)) {
     Frame_RESUME_OK resumeOkFrame(resumeManager_->impliedPosition());
     VLOG(3) << "Out: " << resumeOkFrame;
-    frameTransport_->outputFrameOrEnqueue(
+    frameTransport_->outputFrameOrDrop(
         frameSerializer_->serializeOut(std::move(resumeOkFrame)));
     resumeFromPosition(serverPosition);
     return true;
@@ -855,7 +855,7 @@ void RSocketStateMachine::outputFrame(std::unique_ptr<folly::IOBuf> frame) {
     auto streamIdPtr = frameSerializer_->peekStreamId(*frame);
     resumeManager_->trackSentFrame(*frame, frameType, streamIdPtr);
   }
-  frameTransport_->outputFrameOrEnqueue(std::move(frame));
+  frameTransport_->outputFrameOrDrop(std::move(frame));
 }
 
 uint32_t RSocketStateMachine::getKeepaliveTime() const {
@@ -914,12 +914,11 @@ void RSocketStateMachine::connectClientSendSetup(
   // TODO: when the server returns back that it doesn't support resumability, we
   // should retry without resumability
 
-  VLOG(3) << "Out: " << frame;
+  CHECK(connect(std::move(frameTransport), ProtocolVersion::Unknown));
   // making sure we send setup frame first
-  frameTransport->outputFrameOrEnqueue(
-      frameSerializer_->serializeOut(std::move(frame)));
+  outputFrame(frameSerializer_->serializeOut(std::move(frame)));
   // then the rest of the cached frames will be sent
-  connect(std::move(frameTransport), true, ProtocolVersion::Unknown);
+  sendPendingFrames();
 }
 
 bool RSocketStateMachine::isInEventBaseThread() {

@@ -48,28 +48,6 @@ TEST(FrameTransport, CloseWithError) {
   transport->closeWithError(std::runtime_error("Uh oh"));
 }
 
-TEST(FrameTransport, SimpleEnqueue) {
-  auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
-      [](auto) {},
-      [](auto output) {
-        EXPECT_CALL(*output, onSubscribe_(_));
-
-        EXPECT_CALL(*output, onNext_(IOBufStringEq("Hello")));
-        EXPECT_CALL(*output, onNext_(IOBufStringEq("World")));
-
-        EXPECT_CALL(*output, onComplete_());
-      });
-
-  auto transport = yarpl::make_ref<FrameTransport>(std::move(connection));
-
-  transport->outputFrameOrEnqueue(folly::IOBuf::copyBuffer("Hello"));
-  transport->outputFrameOrEnqueue(folly::IOBuf::copyBuffer("World"));
-
-  transport->setFrameProcessor(
-      std::make_shared<StrictMock<MockFrameProcessor>>());
-  transport->close();
-}
-
 TEST(FrameTransport, SimpleNoQueue) {
   auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
       [](auto) {},
@@ -87,8 +65,8 @@ TEST(FrameTransport, SimpleNoQueue) {
   transport->setFrameProcessor(
       std::make_shared<StrictMock<MockFrameProcessor>>());
 
-  transport->outputFrameOrEnqueue(folly::IOBuf::copyBuffer("Hello"));
-  transport->outputFrameOrEnqueue(folly::IOBuf::copyBuffer("World"));
+  transport->outputFrameOrDrop(folly::IOBuf::copyBuffer("Hello"));
+  transport->outputFrameOrDrop(folly::IOBuf::copyBuffer("World"));
 
   transport->close();
 }
@@ -101,7 +79,7 @@ TEST(FrameTransport, InputSendsError) {
         EXPECT_CALL(*subscription, cancel_());
 
         input->onSubscribe(std::move(subscription));
-        input->onError(std::make_exception_ptr(std::runtime_error("Oops")));
+        input->onError(std::runtime_error("Oops"));
       },
       [](auto output) {
         EXPECT_CALL(*output, onSubscribe_(_));

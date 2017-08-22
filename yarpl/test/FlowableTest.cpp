@@ -6,7 +6,6 @@
 
 #include "yarpl/Flowable.h"
 #include "yarpl/flowable/TestSubscriber.h"
-#include "yarpl/utils/ExceptionString.h"
 
 namespace yarpl {
 namespace flowable {
@@ -35,10 +34,10 @@ class CollectingSubscriber : public Subscriber<T> {
     complete_ = true;
   }
 
-  void onError(std::exception_ptr ex) override {
+  void onError(folly::exception_wrapper ex) override {
     Subscriber<T>::onError(ex);
     error_ = true;
-    errorMsg_ = yarpl::exceptionStr(ex);
+    errorMsg_ = ex.get_exception()->what();
   }
 
   std::vector<T>& values() {
@@ -318,8 +317,7 @@ TEST(FlowableTest, FlowableError) {
 TEST(FlowableTest, FlowableErrorPtr) {
   constexpr auto kMsg = "something broke!";
 
-  auto flowable = Flowables::error<int>(
-      std::make_exception_ptr(std::runtime_error(kMsg)));
+  auto flowable = Flowables::error<int>(std::runtime_error(kMsg));
   auto subscriber = make_ref<TestSubscriber<int>>();
   flowable->subscribe(subscriber);
 
@@ -372,14 +370,14 @@ TEST(FlowableTest, FlowableFromGeneratorException) {
 TEST(FlowableTest, SubscribersComplete) {
   auto flowable = Flowables::empty<int>();
   auto subscriber = Subscribers::create<int>(
-      [](int) { FAIL(); }, [](std::exception_ptr) { FAIL(); }, [&] {});
+      [](int) { FAIL(); }, [](folly::exception_wrapper) { FAIL(); }, [&] {});
   flowable->subscribe(std::move(subscriber));
 }
 
 TEST(FlowableTest, SubscribersError) {
   auto flowable = Flowables::error<int>(std::runtime_error("Whoops"));
   auto subscriber = Subscribers::create<int>(
-      [](int) { FAIL(); }, [&](std::exception_ptr) {}, [] { FAIL(); });
+      [](int) { FAIL(); }, [&](folly::exception_wrapper) {}, [] { FAIL(); });
   flowable->subscribe(std::move(subscriber));
 }
 

@@ -52,7 +52,7 @@ class Observable : public virtual Refcounted {
       typename Error,
       typename = typename std::enable_if<
           std::is_callable<Next(T), void>::value &&
-          std::is_callable<Error(std::exception_ptr), void>::value>::type>
+          std::is_callable<Error(folly::exception_wrapper), void>::value>::type>
   void subscribe(Next next, Error error) {
     subscribe(Observers::create<T>(
         std::move(next), std::move(error)));
@@ -67,7 +67,7 @@ class Observable : public virtual Refcounted {
       typename Complete,
       typename = typename std::enable_if<
           std::is_callable<Next(T), void>::value &&
-          std::is_callable<Error(std::exception_ptr), void>::value &&
+          std::is_callable<Error(folly::exception_wrapper), void>::value &&
           std::is_callable<Complete(), void>::value>::type>
   void subscribe(Next next, Error error, Complete complete) {
     subscribe(Observers::create<T>(

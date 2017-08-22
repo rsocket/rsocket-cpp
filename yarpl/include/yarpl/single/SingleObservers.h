@@ -20,10 +20,10 @@ class SingleObservers {
   template <
       typename T,
       typename Success,
-      typename Error = void (*)(std::exception_ptr)>
+      typename Error = void (*)(folly::exception_wrapper)>
   using EnableIfCompatible = typename std::enable_if<
       std::is_callable<Success(T), void>::value &&
-      std::is_callable<Error(std::exception_ptr), void>::value>::type;
+      std::is_callable<Error(folly::exception_wrapper), void>::value>::type;
 
  public:
   template <typename T, typename Next, typename = EnableIfCompatible<T, Next>>
@@ -64,10 +64,10 @@ class SingleObservers {
     WithError(Success next, Error error)
         : Base<T, Success>(std::move(next)), error_(std::move(error)) {}
 
-    void onError(std::exception_ptr error) override {
+    void onError(folly::exception_wrapper error) override {
       error_(error);
       // TODO do we call the super here to trigger release?
-      Base<T, Success>::onError(error);
+      Base<T, Success>::onError(std::move(error));
     }
 
    private:

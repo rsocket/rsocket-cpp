@@ -15,12 +15,12 @@ struct ResponseImpl {
   enum class Type { PAYLOAD, EXCEPTION };
 
   StringPair p;
-  std::exception_ptr e;
+  folly::exception_wrapper e;
   Type type;
 
   explicit ResponseImpl(StringPair const& p) : p(p), type(Type::PAYLOAD) {}
-  explicit ResponseImpl(std::exception_ptr const& e)
-      : e(e), type(Type::EXCEPTION) {}
+  explicit ResponseImpl(folly::exception_wrapper e)
+      : e(std::move(e)), type(Type::EXCEPTION) {}
 
   ~ResponseImpl() {}
 };
@@ -74,7 +74,7 @@ Response payload_response(std::string const& a, std::string const& b) {
 
 template <typename T>
 Response error_response(T const& err) {
-  return std::make_unique<ResponseImpl>(std::make_exception_ptr(err));
+  return std::make_unique<ResponseImpl>(err);
 }
 
 StringPair payload_to_stringpair(Payload p) {

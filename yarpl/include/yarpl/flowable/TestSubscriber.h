@@ -9,7 +9,6 @@
 
 #include "yarpl/flowable/Flowable.h"
 #include "yarpl/flowable/Subscriber.h"
-#include "yarpl/utils/ExceptionString.h"
 #include "yarpl/utils/credits.h"
 
 namespace yarpl {
@@ -92,11 +91,11 @@ class TestSubscriber : public Subscriber<T> {
     terminalEventCV_.notify_all();
   }
 
-  void onError(std::exception_ptr ex) override {
+  void onError(folly::exception_wrapper ex) override {
     if (delegate_) {
       delegate_->onError(ex);
     }
-    e_ = ex;
+    e_ = std::move(ex);
     subscription_.reset();
     terminated_ = true;
     terminalEventCV_.notify_all();
@@ -141,10 +140,7 @@ class TestSubscriber : public Subscriber<T> {
   }
 
   std::string getErrorMsg() const {
-    if (e_ == nullptr) {
-      return "";
-    }
-    return exceptionStr(e_);
+    return e_? e_.get_exception()->what() : "";
   }
 
   void assertValueAt(int64_t index, T expected) {
@@ -176,25 +172,14 @@ class TestSubscriber : public Subscriber<T> {
   }
 
   /**
-   * If the onError exception_ptr points to an error containing
+   * If the onError exception_wrapper points to an error containing
    * the given msg, complete successfully, otherwise throw a runtime_error
    */
   void assertOnErrorMessage(std::string msg) {
-    if (e_ == nullptr) {
+    if (!e_ || e_.get_exception()->what() != msg) {
       std::stringstream ss;
-      ss << "exception_ptr == nullptr, but expected " << msg;
+      ss << "Error is: " << e_ << " but expected: " << msg;
       throw std::runtime_error(ss.str());
-    }
-    try {
-      std::rethrow_exception(e_);
-    } catch (std::runtime_error& re) {
-      if (re.what() != msg) {
-        std::stringstream ss;
-        ss << "Error message is: " << re.what() << " but expected: " << msg;
-        throw std::runtime_error(ss.str());
-      }
-    } catch (...) {
-      throw std::runtime_error("Expects an std::runtime_error");
     }
   }
 
@@ -212,7 +197,7 @@ class TestSubscriber : public Subscriber<T> {
  private:
   Reference<Subscriber<T>> delegate_;
   std::vector<T> values_;
-  std::exception_ptr e_;
+  folly::exception_wrapper e_;
   int64_t initial_{kNoFlowControl};
   bool terminated_{false};
   std::mutex m_;

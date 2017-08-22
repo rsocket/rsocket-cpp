@@ -14,6 +14,6 @@ class PrintSubscriber : public yarpl::flowable::Subscriber<Payload> {
                        subscription) noexcept override;
   void onNext(Payload element) noexcept override;
   void onComplete() noexcept override;
-  void onError(std::exception_ptr ex) noexcept override;
+  void onError(folly::exception_wrapper ex) noexcept override;
 };
 }

@@ -58,8 +58,9 @@ class TcpReaderWriter : public folly::AsyncTransportWrapper::WriteCallback,
       return;
     }
 
-    // No flow control at TCP level, since we can't know the size of messages.
-    subscription->request(std::numeric_limits<size_t>::max());
+    // No flow control at TCP level for output
+    // The AsyncSocket will accept all send calls
+    subscription->request(std::numeric_limits<int64_t>::max());
     outputSubscription_ = std::move(subscription);
   }
 
@@ -94,7 +95,7 @@ class TcpReaderWriter : public folly::AsyncTransportWrapper::WriteCallback,
       subscription->cancel();
     }
     if (auto subscriber = std::move(inputSubscriber_)) {
-      subscriber->onError(ew.to_exception_ptr());
+      subscriber->onError(std::move(ew));
     }
   }
 
@@ -184,7 +185,7 @@ class TcpOutputSubscriber : public DuplexConnection::Subscriber {
     tcpReaderWriter_->setOutputSubscription(nullptr);
   }
 
-  void onError(std::exception_ptr) override {
+  void onError(folly::exception_wrapper) override {
     CHECK(tcpReaderWriter_);
     tcpReaderWriter_->setOutputSubscription(nullptr);
   }
@@ -203,7 +204,7 @@ class TcpInputSubscription : public Subscription {
 
   void request(int64_t n) noexcept override {
     DCHECK(tcpReaderWriter_);
-    DCHECK(n == kMaxRequestN)
+    DCHECK_EQ(n, std::numeric_limits<int64_t>::max())
         << "TcpDuplexConnection doesnt support proper flow control";
   }
 

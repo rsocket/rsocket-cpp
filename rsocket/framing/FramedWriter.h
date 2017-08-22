@@ -28,7 +28,7 @@ class FramedWriter : public DuplexConnection::Subscriber {
       yarpl::Reference<yarpl::flowable::Subscription> subscription) override;
   void onNext(std::unique_ptr<folly::IOBuf> element) override;
   void onComplete() override;
-  void onError(std::exception_ptr ex) override;
+  void onError(folly::exception_wrapper ex) override;
 
   void error(std::string errorMsg);
 

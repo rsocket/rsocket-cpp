@@ -27,7 +27,7 @@ class FramedReader : public DuplexConnection::Subscriber,
       yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept override;
   void onNext(std::unique_ptr<folly::IOBuf> element) noexcept override;
   void onComplete() noexcept override;
-  void onError(std::exception_ptr ex) noexcept override;
+  void onError(folly::exception_wrapper ex) noexcept override;
 
   // Subscription methods
   void request(int64_t n) noexcept override;

@@ -69,7 +69,7 @@ RSocketResponder::handleRequestChannelCore(
       subscription_.reset();
     }
 
-    void onError(std::exception_ptr ex) noexcept override {
+    void onError(folly::exception_wrapper ex) noexcept override {
       DCHECK(inner_);
       inner_->onError(std::move(ex));
 
