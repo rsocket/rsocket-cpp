@@ -41,11 +41,6 @@ class ObservableOperator : public Observable<D> {
         : observable_(std::move(observable)), observer_(std::move(observer)) {
       assert(observable_);
       assert(observer_);
-
-      // We expect to be heap-allocated; until this subscription finishes (is
-      // canceled; completes; error's out), hold a reference so we are not
-      // deallocated (by the subscriber).
-      Refcounted::incRef(*this);
     }
 
     template <typename TOperator>
@@ -144,8 +139,6 @@ class ObservableOperator : public Observable<D> {
           }
         }
       }
-
-      Refcounted::decRef(*this);
     }
 
     /// The Observable has the lambda, and other creation parameters.
