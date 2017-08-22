@@ -23,9 +23,7 @@ FrameTransport::~FrameTransport() {
 }
 
 void FrameTransport::connect() {
-  Lock lock(mutex_);
-
-  DCHECK(connection_);
+  CHECK(connection_);
 
   if (connectionOutput_) {
     // Already connected.
@@ -51,15 +49,11 @@ void FrameTransport::connect() {
 
 void FrameTransport::setFrameProcessor(
     std::shared_ptr<FrameProcessor> frameProcessor) {
-  Lock lock(mutex_);
-
   frameProcessor_ = std::move(frameProcessor);
   if (frameProcessor_) {
     CHECK(!isClosed());
     connect();
   }
-
-  drainReads(lock);
 }
 
 void FrameTransport::close() {
@@ -75,8 +69,6 @@ void FrameTransport::closeWithError(folly::exception_wrapper ew) {
 }
 
 void FrameTransport::closeImpl(folly::exception_wrapper ew) {
-  Lock lock(mutex_);
-
   // Make sure we never try to call back into the processor.
   frameProcessor_ = nullptr;
 
@@ -102,8 +94,6 @@ void FrameTransport::closeImpl(folly::exception_wrapper ew) {
 }
 
 void FrameTransport::onSubscribe(yarpl::Reference<Subscription> subscription) {
-  Lock lock(mutex_);
-
   if (!connection_) {
     return;
   }
@@ -115,32 +105,21 @@ void FrameTransport::onSubscribe(yarpl::Reference<Subscription> subscription) {
 }
 
 void FrameTransport::onNext(std::unique_ptr<folly::IOBuf> frame) {
-  Lock lock(mutex_);
-
-  if (connection_ && frameProcessor_) {
-    frameProcessor_->processFrame(std::move(frame));
-  } else {
-    pendingReads_.emplace_back(std::move(frame));
-  }
+  CHECK(frameProcessor_);
+  frameProcessor_->processFrame(std::move(frame));
 }
 
 void FrameTransport::terminateProcessor(folly::exception_wrapper ex) {
   // This method can be executed multiple times while terminating.
 
-  std::shared_ptr<FrameProcessor> frameProcessor;
-  {
-    Lock lock(mutex_);
-    if (!frameProcessor_) {
-      pendingTerminal_ = std::move(ex);
-      return;
-    }
-    frameProcessor = std::move(frameProcessor_);
+  if(!frameProcessor_) {
+    // already terminated
+    return;
   }
 
-  if (frameProcessor) {
-    VLOG(3) << this << " terminating frame processor ex=" << ex.what();
-    frameProcessor->onTerminal(std::move(ex));
-  }
+  auto frameProcessor = std::move(frameProcessor_);
+  VLOG(3) << this << " terminating frame processor ex=" << ex.what();
+  frameProcessor->onTerminal(std::move(ex));
 }
 
 void FrameTransport::onComplete() {
@@ -164,8 +143,6 @@ void FrameTransport::cancel() {
 }
 
 void FrameTransport::outputFrameOrDrop(std::unique_ptr<folly::IOBuf> frame) {
-  Lock lock(mutex_);
-
   if (!connection_) {
     // if the connection was closed we will drop the frame
     return;
@@ -173,23 +150,6 @@ void FrameTransport::outputFrameOrDrop(std::unique_ptr<folly::IOBuf> frame) {
 
   CHECK(connectionOutput_); // the connect method has to be already executed
   connectionOutput_->onNext(std::move(frame));
-}
-
-void FrameTransport::drainReads(const FrameTransport::Lock&) {
-  if (!frameProcessor_) {
-    return;
-  }
-
-  while (!pendingReads_.empty()) {
-    auto frame = std::move(pendingReads_.front());
-    pendingReads_.pop_front();
-    frameProcessor_->processFrame(std::move(frame));
-  }
-
-  if (pendingTerminal_) {
-    terminateProcessor(std::move(*pendingTerminal_));
-    pendingTerminal_ = folly::none;
-  }
 }
 
 }
