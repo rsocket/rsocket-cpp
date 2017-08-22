@@ -23,11 +23,11 @@ class Worker : public yarpl::Disposable {
   //          std::is_callable<F(), typename
   //          std::result_of<F()>::type>::value>::
   //          type>
-  //  virtual yarpl::Disposable schedule(F&&) = 0; // TODO can't do this, so how
+  //  virtual yarpl::Disposable schedule(F) = 0; // TODO can't do this, so how
   //  do we allow different impls?
 
   virtual std::unique_ptr<yarpl::Disposable> schedule(
-      std::function<void()>&&) = 0;
+      std::function<void()>) = 0;
 
   virtual void dispose() override = 0;
 

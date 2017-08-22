@@ -40,8 +40,8 @@ class Observable : public virtual Refcounted {
       typename Next,
       typename =
           typename std::enable_if<std::is_callable<Next(T), void>::value>::type>
-  void subscribe(Next&& next) {
-    subscribe(Observers::create<T>(next));
+  void subscribe(Next next) {
+    subscribe(Observers::create<T>(std::move(next)));
   }
 
   /**
@@ -53,8 +53,9 @@ class Observable : public virtual Refcounted {
       typename = typename std::enable_if<
           std::is_callable<Next(T), void>::value &&
           std::is_callable<Error(std::exception_ptr), void>::value>::type>
-  void subscribe(Next&& next, Error&& error) {
-    subscribe(Observers::create<T>(next, error));
+  void subscribe(Next next, Error error) {
+    subscribe(Observers::create<T>(
+        std::move(next), std::move(error)));
   }
 
   /**
@@ -68,21 +69,24 @@ class Observable : public virtual Refcounted {
           std::is_callable<Next(T), void>::value &&
           std::is_callable<Error(std::exception_ptr), void>::value &&
           std::is_callable<Complete(), void>::value>::type>
-  void subscribe(Next&& next, Error&& error, Complete&& complete) {
-    subscribe(Observers::create<T>(next, error, complete));
+  void subscribe(Next next, Error error, Complete complete) {
+    subscribe(Observers::create<T>(
+        std::move(next),
+        std::move(error),
+        std::move(complete)));
   }
 
   template <typename OnSubscribe>
-  static auto create(OnSubscribe&&);
+  static auto create(OnSubscribe);
 
   template <typename Function>
-  auto map(Function&& function);
+  auto map(Function function);
 
   template <typename Function>
-  auto filter(Function&& function);
+  auto filter(Function function);
 
   template <typename Function>
-  auto reduce(Function&& function);
+  auto reduce(Function function);
 
   auto take(int64_t);
 
@@ -109,36 +113,36 @@ namespace observable {
 
 template <typename T>
 template <typename OnSubscribe>
-auto Observable<T>::create(OnSubscribe&& function) {
+auto Observable<T>::create(OnSubscribe function) {
   static_assert(
       std::is_callable<OnSubscribe(Reference<Observer<T>>), void>(),
       "OnSubscribe must have type `void(Reference<Observer<T>>)`");
 
   return make_ref<FromPublisherOperator<T, OnSubscribe>>(
-      std::forward<OnSubscribe>(function));
+      std::move(function));
 }
 
 template <typename T>
 template <typename Function>
-auto Observable<T>::map(Function&& function) {
+auto Observable<T>::map(Function function) {
   using D = typename std::result_of<Function(T)>::type;
   return Reference<Observable<D>>(new MapOperator<T, D, Function>(
-      Reference<Observable<T>>(this), std::forward<Function>(function)));
+      Reference<Observable<T>>(this), std::move(function)));
 }
 
 template <typename T>
 template <typename Function>
-auto Observable<T>::filter(Function&& function) {
+auto Observable<T>::filter(Function function) {
   return Reference<Observable<T>>(new FilterOperator<T, Function>(
-      Reference<Observable<T>>(this), std::forward<Function>(function)));
+      Reference<Observable<T>>(this), std::move(function)));
 }
 
 template <typename T>
 template <typename Function>
-auto Observable<T>::reduce(Function&& function) {
+auto Observable<T>::reduce(Function function) {
   using D = typename std::result_of<Function(T, T)>::type;
   return Reference<Observable<D>>(new ReduceOperator<T, D, Function>(
-      Reference<Observable<T>>(this), std::forward<Function>(function)));
+      Reference<Observable<T>>(this), std::move(function)));
 }
 
 template <typename T>

@@ -21,7 +21,7 @@ bool AtomicBoolSubscription::isCancelled() const {
 /**
  * Implementation that gets a callback when cancellation occurs.
  */
-CallbackSubscription::CallbackSubscription(std::function<void()>&& onCancel)
+CallbackSubscription::CallbackSubscription(std::function<void()> onCancel)
     : onCancel_(std::move(onCancel)) {}
 
 void CallbackSubscription::cancel() {

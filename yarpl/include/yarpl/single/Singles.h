@@ -26,9 +26,9 @@ class Singles {
       typename = typename std::enable_if<std::is_callable<
           OnSubscribe(Reference<SingleObserver<T>>),
           void>::value>::type>
-  static Reference<Single<T>> create(OnSubscribe&& function) {
+  static Reference<Single<T>> create(OnSubscribe function) {
     return Reference<Single<T>>(new FromPublisherOperator<T, OnSubscribe>(
-        std::forward<OnSubscribe>(function)));
+        std::move(function)));
   }
 
   template <typename T>

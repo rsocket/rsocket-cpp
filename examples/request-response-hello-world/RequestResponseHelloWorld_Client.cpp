@@ -28,9 +28,11 @@ int main(int argc, char* argv[]) {
   folly::SocketAddress address;
   address.setFromHostPort(FLAGS_host, FLAGS_port);
 
+  folly::ScopedEventBaseThread worker;
   auto client = RSocket::createConnectedClient(
-                    std::make_unique<TcpConnectionFactory>(std::move(address)))
-                    .get();
+      std::make_unique<TcpConnectionFactory>(
+          *worker.getEventBase(),
+          std::move(address))).get();
 
   client->getRequester()
       ->requestResponse(Payload("Jane"))

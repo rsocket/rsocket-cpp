@@ -1,6 +1,8 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include <thread>
+#include <folly/io/async/ScopedEventBaseThread.h>
+#include <gtest/gtest.h>
 
 #include "RSocketTests.h"
 #include "yarpl/Flowable.h"
@@ -32,8 +34,9 @@ class TestHandlerSync : public rsocket::RSocketResponder {
 };
 
 TEST(RequestStreamTest, HelloSync) {
+  folly::ScopedEventBaseThread worker;
   auto server = makeServer(std::make_shared<TestHandlerSync>());
-  auto client = makeClient(*server->listeningPort());
+  auto client = makeClient(worker.getEventBase(), *server->listeningPort());
   auto requester = client->getRequester();
   auto ts = TestSubscriber<std::string>::create();
   requester->requestStream(Payload("Bob"))
@@ -76,8 +79,9 @@ class TestHandlerAsync : public rsocket::RSocketResponder {
 }
 
 TEST(RequestStreamTest, HelloAsync) {
+  folly::ScopedEventBaseThread worker;
   auto server = makeServer(std::make_shared<TestHandlerAsync>());
-  auto client = makeClient(*server->listeningPort());
+  auto client = makeClient(worker.getEventBase(), *server->listeningPort());
   auto requester = client->getRequester();
   auto ts = TestSubscriber<std::string>::create();
   requester->requestStream(Payload("Bob"))

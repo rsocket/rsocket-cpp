@@ -4,6 +4,7 @@
 
 #include <map>
 
+#include <folly/io/async/ScopedEventBaseThread.h>
 #include <folly/SocketAddress.h>
 #include "rsocket/Payload.h"
 #include "rsocket/RSocket.h"
@@ -58,6 +59,7 @@ class TestInterpreter {
 
   yarpl::Reference<BaseSubscriber> getSubscriber(const std::string& id);
 
+  folly::ScopedEventBaseThread worker_;
   folly::SocketAddress address_;
   const Test& test_;
   std::map<std::string, std::string> interactionIdToType_;

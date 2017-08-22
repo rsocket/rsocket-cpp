@@ -27,9 +27,9 @@ class SingleObservers {
 
  public:
   template <typename T, typename Next, typename = EnableIfCompatible<T, Next>>
-  static auto create(Next&& next) {
+  static auto create(Next next) {
     return Reference<SingleObserver<T>>(
-        new Base<T, Next>(std::forward<Next>(next)));
+        new Base<T, Next>(std::move(next)));
   }
 
   template <
@@ -37,16 +37,16 @@ class SingleObservers {
       typename Success,
       typename Error,
       typename = EnableIfCompatible<T, Success, Error>>
-  static auto create(Success&& next, Error&& error) {
+  static auto create(Success next, Error error) {
     return Reference<SingleObserver<T>>(new WithError<T, Success, Error>(
-        std::forward<Success>(next), std::forward<Error>(error)));
+        std::move(next), std::move(error)));
   }
 
  private:
   template <typename T, typename Next>
   class Base : public SingleObserver<T> {
    public:
-    explicit Base(Next&& next) : next_(std::forward<Next>(next)) {}
+    explicit Base(Next next) : next_(std::move(next)) {}
 
     void onSuccess(T value) override {
       next_(std::move(value));
@@ -61,8 +61,8 @@ class SingleObservers {
   template <typename T, typename Success, typename Error>
   class WithError : public Base<T, Success> {
    public:
-    WithError(Success&& next, Error&& error)
-        : Base<T, Success>(std::forward<Success>(next)), error_(error) {}
+    WithError(Success next, Error error)
+        : Base<T, Success>(std::move(next)), error_(std::move(error)) {}
 
     void onError(std::exception_ptr error) override {
       error_(error);

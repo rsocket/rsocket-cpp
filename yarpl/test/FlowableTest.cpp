@@ -384,11 +384,12 @@ TEST(FlowableTest, SubscribersError) {
 }
 
 TEST(FlowableTest, FlowableCompleteInTheMiddle) {
-  auto flowable = Flowable<int>::create(
-      [](Subscriber<int> & subscriber, int64_t requested) {
+  auto flowable =
+      Flowable<int>::create([](Reference<Subscriber<int>> subscriber,
+                               int64_t requested) {
         EXPECT_GT(requested, 1);
-        subscriber.onNext(123);
-        subscriber.onComplete();
+        subscriber->onNext(123);
+        subscriber->onComplete();
         return std::make_tuple(int64_t(1), true);
       })->map([](int v) { return std::to_string(v); });
 

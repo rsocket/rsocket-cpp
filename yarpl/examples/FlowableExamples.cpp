@@ -97,9 +97,9 @@ void FlowableExamples::run() {
   Flowables::range(1, 11)->take(3)->subscribe(printer<int64_t>());
 
   auto flowable = Flowable<int>::create([total = 0](
-      Subscriber<int> & subscriber, int64_t requested) mutable {
-    subscriber.onNext(12345678);
-    subscriber.onError(std::make_exception_ptr(std::runtime_error("error")));
+      Reference<Subscriber<int>> subscriber, int64_t requested) mutable {
+    subscriber->onNext(12345678);
+    subscriber->onError(std::make_exception_ptr(std::runtime_error("error")));
     return std::make_tuple(int64_t{1}, false);
   });
 

@@ -33,7 +33,7 @@ class AtomicBoolSingleSubscription : public SingleSubscription {
 */
 class CallbackSingleSubscription : public SingleSubscription {
  public:
-  explicit CallbackSingleSubscription(std::function<void()>&& onCancel)
+  explicit CallbackSingleSubscription(std::function<void()> onCancel)
       : onCancel_(std::move(onCancel)) {}
   void cancel() override {
     bool expected = false;

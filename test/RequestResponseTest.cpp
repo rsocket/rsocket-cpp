@@ -1,6 +1,8 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include <folly/Baton.h>
+#include <folly/io/async/ScopedEventBaseThread.h>
+#include <gtest/gtest.h>
 #include <thread>
 
 #include "RSocketTests.h"
@@ -65,11 +67,12 @@ class TestHandlerCancel : public rsocket::RSocketResponder {
 }
 
 TEST(RequestResponseTest, Cancel) {
+  folly::ScopedEventBaseThread worker;
   auto onCancel = std::make_shared<folly::Baton<>>();
   auto onSubscribe = std::make_shared<folly::Baton<>>();
   auto server =
       makeServer(std::make_shared<TestHandlerCancel>(onCancel, onSubscribe));
-  auto client = makeClient(*server->listeningPort());
+  auto client = makeClient(worker.getEventBase(), *server->listeningPort());
   auto requester = client->getRequester();
 
   auto to = SingleTestObserver<std::string>::create();
@@ -94,13 +97,14 @@ TEST(RequestResponseTest, CanCtorTypes) {
 }
 
 TEST(RequestResponseTest, Hello) {
+  folly::ScopedEventBaseThread worker;
   auto server = makeServer(std::make_shared<GenericRequestResponseHandler>(
       [](StringPair const& request) {
         return payload_response(
             "Hello, " + request.first + " " + request.second + "!", ":)");
       }));
 
-  auto client = makeClient(*server->listeningPort());
+  auto client = makeClient(worker.getEventBase(), *server->listeningPort());
   auto requester = client->getRequester();
 
   auto to = SingleTestObserver<StringPair>::create();
@@ -112,6 +116,7 @@ TEST(RequestResponseTest, Hello) {
 }
 
 TEST(RequestResponseTest, FailureInResponse) {
+  folly::ScopedEventBaseThread worker;
   auto server = makeServer(std::make_shared<GenericRequestResponseHandler>(
       [](StringPair const& request) {
         EXPECT_EQ(request.first, "foo");
@@ -119,7 +124,7 @@ TEST(RequestResponseTest, FailureInResponse) {
         return error_response(std::runtime_error("whew!"));
       }));
 
-  auto client = makeClient(*server->listeningPort());
+  auto client = makeClient(worker.getEventBase(), *server->listeningPort());
   auto requester = client->getRequester();
 
   auto to = SingleTestObserver<StringPair>::create();
@@ -133,13 +138,14 @@ TEST(RequestResponseTest, FailureInResponse) {
 // TODO: Currently, this hangs when the client sends a request,
 // we should fix this
 TEST(DISABLED_RequestResponseTest, FailureOnRequest) {
+  folly::ScopedEventBaseThread worker;
   auto server = makeServer(
       std::make_shared<GenericRequestResponseHandler>([](auto const&) {
         ASSERT(false); // should never reach
         return payload_response("", "");
       }));
 
-  auto client = makeClient(*server->listeningPort());
+  auto client = makeClient(worker.getEventBase(), *server->listeningPort());
   auto requester = client->getRequester();
 
   VLOG(0) << "Shutting down server so client request fails";

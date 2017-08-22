@@ -20,18 +20,18 @@ class Flowables {
    */
   static Reference<Flowable<int64_t>> range(int64_t start, int64_t count) {
     auto lambda = [ start, count, i = start ](
-        Subscriber<int64_t> & subscriber, int64_t requested) mutable {
+        Reference<Subscriber<int64_t>> subscriber, int64_t requested) mutable {
       int64_t emitted = 0;
       bool done = false;
       int64_t end = start + count;
 
       while (i < end && emitted < requested) {
-        subscriber.onNext(i++);
+        subscriber->onNext(i++);
         ++emitted;
       }
 
       if (i >= end) {
-        subscriber.onComplete();
+        subscriber->onComplete();
         done = true;
       }
 
@@ -43,10 +43,10 @@ class Flowables {
 
   template <typename T>
   static Reference<Flowable<T>> just(const T& value) {
-    auto lambda = [value](Subscriber<T>& subscriber, int64_t) {
+    auto lambda = [value](Reference<Subscriber<T>> subscriber, int64_t) {
       // # requested should be > 0.  Ignoring the actual parameter.
-      subscriber.onNext(value);
-      subscriber.onComplete();
+      subscriber->onNext(value);
+      subscriber->onComplete();
       return std::make_tuple(static_cast<int64_t>(1), true);
     };
 
@@ -58,17 +58,17 @@ class Flowables {
     std::vector<T> vec(list);
 
     auto lambda = [ v = std::move(vec), i = size_t{0} ](
-        Subscriber<T> & subscriber, int64_t requested) mutable {
+        Reference<Subscriber<T>> subscriber, int64_t requested) mutable {
       int64_t emitted = 0;
       bool done = false;
 
       while (i < v.size() && emitted < requested) {
-        subscriber.onNext(v[i++]);
+        subscriber->onNext(v[i++]);
         ++emitted;
       }
 
       if (i == v.size()) {
-        subscriber.onComplete();
+        subscriber->onComplete();
         done = true;
       }
 
@@ -81,17 +81,18 @@ class Flowables {
   // this will generate a flowable which can be subscribed to only once
   template <typename T>
   static Reference<Flowable<T>> justOnce(T value) {
-    auto lambda = [value = std::move(value), used = false](Subscriber<T>& subscriber, int64_t) mutable {
+    auto lambda = [ value = std::move(value), used = false ](
+        Reference<Subscriber<T>> subscriber, int64_t) mutable {
       if (used) {
-        subscriber.onError(
-            std::make_exception_ptr(std::runtime_error("justOnce value was already used")));
+        subscriber->onError(std::make_exception_ptr(
+            std::runtime_error("justOnce value was already used")));
         return std::make_tuple(static_cast<int64_t>(0), true);
       }
 
       used = true;
       // # requested should be > 0.  Ignoring the actual parameter.
-      subscriber.onNext(std::move(value));
-      subscriber.onComplete();
+      subscriber->onNext(std::move(value));
+      subscriber->onComplete();
       return std::make_tuple(static_cast<int64_t>(1), true);
     };
 
@@ -104,15 +105,15 @@ class Flowables {
       typename = typename std::enable_if<std::is_callable<
           OnSubscribe(Reference<Subscriber<T>>),
           void>::value>::type>
-  static Reference<Flowable<T>> fromPublisher(OnSubscribe&& function) {
+  static Reference<Flowable<T>> fromPublisher(OnSubscribe function) {
     return Reference<Flowable<T>>(new FromPublisherOperator<T, OnSubscribe>(
-        std::forward<OnSubscribe>(function)));
+        std::move(function)));
   }
 
   template <typename T>
   static Reference<Flowable<T>> empty() {
-    auto lambda = [](Subscriber<T>& subscriber, int64_t) {
-      subscriber.onComplete();
+    auto lambda = [](Reference<Subscriber<T>> subscriber, int64_t) {
+      subscriber->onComplete();
       return std::make_tuple(static_cast<int64_t>(0), true);
     };
     return Flowable<T>::create(std::move(lambda));
@@ -120,8 +121,8 @@ class Flowables {
 
   template <typename T>
   static Reference<Flowable<T>> error(std::exception_ptr ex) {
-    auto lambda = [ex](Subscriber<T>& subscriber, int64_t) {
-      subscriber.onError(ex);
+    auto lambda = [ex](Reference<Subscriber<T>> subscriber, int64_t) {
+      subscriber->onError(ex);
       return std::make_tuple(static_cast<int64_t>(0), true);
     };
     return Flowable<T>::create(std::move(lambda));
@@ -129,8 +130,8 @@ class Flowables {
 
   template <typename T, typename ExceptionType>
   static Reference<Flowable<T>> error(const ExceptionType& ex) {
-    auto lambda = [ex](Subscriber<T>& subscriber, int64_t) {
-      subscriber.onError(std::make_exception_ptr(ex));
+    auto lambda = [ex](Reference<Subscriber<T>> subscriber, int64_t) {
+      subscriber->onError(std::make_exception_ptr(ex));
       return std::make_tuple(static_cast<int64_t>(0), true);
     };
     return Flowable<T>::create(std::move(lambda));
@@ -138,17 +139,17 @@ class Flowables {
 
   template <typename T, typename TGenerator>
   static Reference<Flowable<T>> fromGenerator(TGenerator generator) {
-    auto lambda = [generator = std::move(generator)]
-    (Subscriber<T>& subscriber, int64_t requested) {
+    auto lambda = [generator = std::move(generator)](
+        Reference<Subscriber<T>> subscriber, int64_t requested) {
       int64_t generated = 0;
       try {
         while (generated < requested) {
-          subscriber.onNext(generator());
+          subscriber->onNext(generator());
           ++generated;
         }
         return std::make_tuple(generated, false);
       } catch(...) {
-        subscriber.onError(std::current_exception());
+        subscriber->onError(std::current_exception());
         return std::make_tuple(generated, true);
       }
     };

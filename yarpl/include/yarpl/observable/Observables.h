@@ -72,9 +72,9 @@ class Observables {
       typename = typename std::enable_if<
           std::is_callable<OnSubscribe(Reference<Observer<T>>), void>::value>::
           type>
-  static Reference<Observable<T>> create(OnSubscribe&& function) {
+  static Reference<Observable<T>> create(OnSubscribe function) {
     return Reference<Observable<T>>(new FromPublisherOperator<T, OnSubscribe>(
-        std::forward<OnSubscribe>(function)));
+        std::move(function)));
   }
 
   template <typename T>

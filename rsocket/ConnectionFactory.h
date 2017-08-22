@@ -3,6 +3,7 @@
 #pragma once
 
 #include <folly/Function.h>
+#include <folly/futures/Future.h>
 #include "rsocket/DuplexConnection.h"
 
 namespace folly {
@@ -10,10 +11,6 @@ class EventBase;
 }
 
 namespace rsocket {
-
-using OnDuplexConnectionConnect = folly::Function<void(
-    std::unique_ptr<rsocket::DuplexConnection>,
-    folly::EventBase&)>;
 
 /**
  * Common interface for a client to create connections and turn them into
@@ -33,6 +30,11 @@ class ConnectionFactory {
   ConnectionFactory& operator=(const ConnectionFactory&) = delete; // copy
   ConnectionFactory& operator=(ConnectionFactory&&) = delete; // move
 
+  struct ConnectedDuplexConnection {
+    std::unique_ptr<rsocket::DuplexConnection> connection;
+    folly::EventBase& eventBase;
+  };
+
   /**
    * Connect to server defined by constructor of the implementing class.
    *
@@ -42,6 +44,6 @@ class ConnectionFactory {
    *
    * Resource creation depends on the particular implementation.
    */
-  virtual void connect(OnDuplexConnectionConnect onConnect) = 0;
+  virtual folly::Future<ConnectedDuplexConnection> connect() = 0;
 };
 } // namespace rsocket

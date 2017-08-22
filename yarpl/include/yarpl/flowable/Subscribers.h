@@ -25,9 +25,9 @@ class Subscribers {
       typename Next,
       typename =
           typename std::enable_if<std::is_callable<Next(T), void>::value>::type>
-  static auto create(Next&& next, int64_t batch = kNoFlowControl) {
+  static auto create(Next next, int64_t batch = kNoFlowControl) {
     return Reference<Subscriber<T>>(
-        new Base<T, Next>(std::forward<Next>(next), batch));
+        new Base<T, Next>(std::move(next), batch));
   }
 
   template <
@@ -38,9 +38,9 @@ class Subscribers {
           std::is_callable<Next(T), void>::value &&
           std::is_callable<Error(std::exception_ptr), void>::value>::type>
   static auto
-  create(Next&& next, Error&& error, int64_t batch = kNoFlowControl) {
+  create(Next next, Error error, int64_t batch = kNoFlowControl) {
     return Reference<Subscriber<T>>(new WithError<T, Next, Error>(
-        std::forward<Next>(next), std::forward<Error>(error), batch));
+        std::move(next), std::move(error), batch));
   }
 
   template <
@@ -53,15 +53,15 @@ class Subscribers {
           std::is_callable<Error(std::exception_ptr), void>::value &&
           std::is_callable<Complete(), void>::value>::type>
   static auto create(
-      Next&& next,
-      Error&& error,
-      Complete&& complete,
+      Next next,
+      Error error,
+      Complete complete,
       int64_t batch = kNoFlowControl) {
     return Reference<Subscriber<T>>(
         new WithErrorAndComplete<T, Next, Error, Complete>(
-            std::forward<Next>(next),
-            std::forward<Error>(error),
-            std::forward<Complete>(complete),
+            std::move(next),
+            std::move(error),
+            std::move(complete),
             batch));
   }
 
@@ -69,8 +69,8 @@ class Subscribers {
   template <typename T, typename Next>
   class Base : public Subscriber<T> {
    public:
-    Base(Next&& next, int64_t batch)
-        : next_(std::forward<Next>(next)), batch_(batch), pending_(0) {}
+    Base(Next next, int64_t batch)
+        : next_(std::move(next)), batch_(batch), pending_(0) {}
 
     void onSubscribe(Reference<Subscription> subscription) override {
       Subscriber<T>::onSubscribe(subscription);
@@ -96,8 +96,8 @@ class Subscribers {
   template <typename T, typename Next, typename Error>
   class WithError : public Base<T, Next> {
    public:
-    WithError(Next&& next, Error&& error, int64_t batch)
-        : Base<T, Next>(std::forward<Next>(next), batch), error_(error) {}
+    WithError(Next next, Error error, int64_t batch)
+        : Base<T, Next>(std::move(next), batch), error_(std::move(error)) {}
 
     void onError(std::exception_ptr error) override {
       Subscriber<T>::onError(error);
@@ -112,15 +112,15 @@ class Subscribers {
   class WithErrorAndComplete : public WithError<T, Next, Error> {
    public:
     WithErrorAndComplete(
-        Next&& next,
-        Error&& error,
-        Complete&& complete,
+        Next next,
+        Error error,
+        Complete complete,
         int64_t batch)
         : WithError<T, Next, Error>(
-              std::forward<Next>(next),
-              std::forward<Error>(error),
+              std::move(next),
+              std::move(error),
               batch),
-          complete_(complete) {}
+          complete_(std::move(complete)) {}
 
     void onComplete() {
       Subscriber<T>::onComplete();

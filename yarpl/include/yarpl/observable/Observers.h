@@ -31,8 +31,8 @@ class Observers {
 
  public:
   template <typename T, typename Next, typename = EnableIfCompatible<T, Next>>
-  static auto create(Next&& next) {
-    return Reference<Observer<T>>(new Base<T, Next>(std::forward<Next>(next)));
+  static auto create(Next next) {
+    return Reference<Observer<T>>(new Base<T, Next>(std::move(next)));
   }
 
   template <
@@ -40,9 +40,9 @@ class Observers {
       typename Next,
       typename Error,
       typename = EnableIfCompatible<T, Next, Error>>
-  static auto create(Next&& next, Error&& error) {
+  static auto create(Next next, Error error) {
     return Reference<Observer<T>>(new WithError<T, Next, Error>(
-        std::forward<Next>(next), std::forward<Error>(error)));
+        std::move(next), std::move(error)));
   }
 
   template <
@@ -51,19 +51,19 @@ class Observers {
       typename Error,
       typename Complete,
       typename = EnableIfCompatible<T, Next, Error, Complete>>
-  static auto create(Next&& next, Error&& error, Complete&& complete) {
+  static auto create(Next next, Error error, Complete complete) {
     return Reference<Observer<T>>(
         new WithErrorAndComplete<T, Next, Error, Complete>(
-            std::forward<Next>(next),
-            std::forward<Error>(error),
-            std::forward<Complete>(complete)));
+            std::move(next),
+            std::move(error),
+            std::move(complete)));
   }
 
  private:
   template <typename T, typename Next>
   class Base : public Observer<T> {
    public:
-    explicit Base(Next&& next) : next_(std::forward<Next>(next)) {}
+    explicit Base(Next next) : next_(std::move(next)) {}
 
     void onNext(T value) override {
       next_(std::move(value));
@@ -76,8 +76,8 @@ class Observers {
   template <typename T, typename Next, typename Error>
   class WithError : public Base<T, Next> {
    public:
-    WithError(Next&& next, Error&& error)
-        : Base<T, Next>(std::forward<Next>(next)), error_(error) {}
+    WithError(Next next, Error error)
+        : Base<T, Next>(std::move(next)), error_(std::move(error)) {}
 
     void onError(std::exception_ptr error) override {
       error_(error);
@@ -90,11 +90,11 @@ class Observers {
   template <typename T, typename Next, typename Error, typename Complete>
   class WithErrorAndComplete : public WithError<T, Next, Error> {
    public:
-    WithErrorAndComplete(Next&& next, Error&& error, Complete&& complete)
+    WithErrorAndComplete(Next next, Error error, Complete complete)
         : WithError<T, Next, Error>(
-              std::forward<Next>(next),
-              std::forward<Error>(error)),
-          complete_(complete) {}
+              std::move(next),
+              std::move(error)),
+          complete_(std::move(complete)) {}
 
     void onComplete() override {
       complete_();

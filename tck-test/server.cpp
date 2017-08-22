@@ -87,12 +87,11 @@ class ServerResponder : public RSocketResponder {
           std::logic_error("No MarbleHandler found"));
     } else {
       auto marbleProcessor = std::make_shared<tck::MarbleProcessor>(it->second);
-      auto lambda =
-          [marbleProcessor](
-              yarpl::flowable::Subscriber<rsocket::Payload>& subscriber,
-              int64_t requested) mutable {
-            return marbleProcessor->run(subscriber, requested);
-          };
+      auto lambda = [marbleProcessor](
+          Reference<yarpl::flowable::Subscriber<rsocket::Payload>> subscriber,
+          int64_t requested) mutable {
+        return marbleProcessor->run(subscriber, requested);
+      };
       return Flowable<rsocket::Payload>::create(std::move(lambda));
     }
   }

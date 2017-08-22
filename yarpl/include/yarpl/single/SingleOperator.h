@@ -6,7 +6,7 @@
 
 #include "yarpl/single/Single.h"
 #include "yarpl/single/SingleObserver.h"
-#include "yarpl/single/SingleSubscription.h"
+#include "yarpl/single/SingleSubscriptions.h"
 
 namespace yarpl {
 namespace single {
@@ -100,17 +100,18 @@ template <
 class MapOperator : public SingleOperator<U, D> {
   using ThisOperatorT = MapOperator<U, D, F>;
   using Super = SingleOperator<U, D>;
-  using OperatorSubscription = typename Super::template Subscription<ThisOperatorT>;
+  using OperatorSubscription =
+      typename Super::template Subscription<ThisOperatorT>;
 
  public:
-  MapOperator(Reference<Single<U>> upstream, F&& function)
-      : Super(std::move(upstream)), function_(std::forward<F>(function)) {}
+  MapOperator(Reference<Single<U>> upstream, F function)
+      : Super(std::move(upstream)), function_(std::move(function)) {}
 
   void subscribe(Reference<SingleObserver<D>> observer) override {
     Super::upstream_->subscribe(
         // Note: implicit cast to a reference to a observer.
-        Reference<OperatorSubscription>(
-            new MapSubscription(Reference<ThisOperatorT>(this), std::move(observer))));
+        Reference<OperatorSubscription>(new MapSubscription(
+            Reference<ThisOperatorT>(this), std::move(observer))));
   }
 
  private:
@@ -123,7 +124,8 @@ class MapOperator : public SingleOperator<U, D> {
 
     void onSuccess(U value) override {
       auto map_operator = OperatorSubscription::getOperator();
-      OperatorSubscription::observerOnSuccess(map_operator->function_(std::move(value)));
+      OperatorSubscription::observerOnSuccess(
+          map_operator->function_(std::move(value)));
     }
   };
 
@@ -133,7 +135,7 @@ class MapOperator : public SingleOperator<U, D> {
 template <typename T, typename OnSubscribe>
 class FromPublisherOperator : public Single<T> {
  public:
-  explicit FromPublisherOperator(OnSubscribe&& function)
+  explicit FromPublisherOperator(OnSubscribe function)
       : function_(std::move(function)) {}
 
   void subscribe(Reference<SingleObserver<T>> observer) override {
@@ -144,5 +146,19 @@ class FromPublisherOperator : public Single<T> {
   OnSubscribe function_;
 };
 
-} // observable
+template <typename OnSubscribe>
+class SingleVoidFromPublisherOperator : public Single<void> {
+ public:
+  explicit SingleVoidFromPublisherOperator(OnSubscribe&& function)
+      : function_(std::move(function)) {}
+
+  void subscribe(Reference<SingleObserver<void>> observer) override {
+    function_(std::move(observer));
+  }
+
+ private:
+  OnSubscribe function_;
+};
+
+} // single
 } // yarpl

@@ -4,7 +4,6 @@
 
 #include <folly/SocketAddress.h>
 #include <folly/io/async/AsyncSocket.h>
-#include <folly/io/async/ScopedEventBaseThread.h>
 
 #include "rsocket/ConnectionFactory.h"
 #include "rsocket/DuplexConnection.h"
@@ -20,7 +19,7 @@ class RSocketStats;
  */
 class TcpConnectionFactory : public ConnectionFactory {
  public:
-  explicit TcpConnectionFactory(folly::SocketAddress);
+  TcpConnectionFactory(folly::EventBase& eventBase, folly::SocketAddress);
   virtual ~TcpConnectionFactory();
 
   /**
@@ -28,7 +27,7 @@ class TcpConnectionFactory : public ConnectionFactory {
    *
    * Each call to connect() creates a new AsyncSocket.
    */
-  void connect(OnDuplexConnectionConnect) override;
+  folly::Future<ConnectedDuplexConnection> connect() override;
 
   static std::unique_ptr<DuplexConnection> createDuplexConnectionFromSocket(
       folly::AsyncSocket::UniquePtr socket,
@@ -36,6 +35,6 @@ class TcpConnectionFactory : public ConnectionFactory {
 
  private:
   folly::SocketAddress address_;
-  folly::ScopedEventBaseThread worker_;
+  folly::EventBase* eventBase_;
 };
 } // namespace rsocket

@@ -30,7 +30,7 @@ class AtomicBoolSubscription : public Subscription {
 */
 class CallbackSubscription : public Subscription {
  public:
-  explicit CallbackSubscription(std::function<void()>&& onCancel);
+  explicit CallbackSubscription(std::function<void()> onCancel);
   void cancel() override;
   bool isCancelled() const;
 

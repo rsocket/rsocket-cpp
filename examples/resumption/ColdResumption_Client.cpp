@@ -82,10 +82,11 @@ SetupParameters getSetupParams(ResumeIdentificationToken token) {
   return setupParameters;
 }
 
-std::unique_ptr<TcpConnectionFactory> getConnFactory() {
+std::unique_ptr<TcpConnectionFactory> getConnFactory(
+    folly::EventBase* eventBase) {
   folly::SocketAddress address;
   address.setFromHostPort(FLAGS_host, FLAGS_port);
-  return std::make_unique<TcpConnectionFactory>(address);
+  return std::make_unique<TcpConnectionFactory>(*eventBase, address);
 }
 }
 
@@ -100,6 +101,8 @@ int main(int argc, char* argv[]) {
   FLAGS_minloglevel = 0;
   folly::init(&argc, &argv);
 
+  folly::ScopedEventBaseThread worker;
+
   auto token = ResumeIdentificationToken::generateNew();
   auto resumeManager =
       std::make_shared<InMemResumeManager>(RSocketStats::noop());
@@ -113,7 +116,7 @@ int main(int argc, char* argv[]) {
     auto coldResumeHandler = std::make_shared<HelloResumeHandler>(
         HelloSubscribers({{firstPayload, firstSub}}));
     auto firstClient = RSocket::createConnectedClient(
-                           getConnFactory(),
+                           getConnFactory(worker.getEventBase()),
                            getSetupParams(token),
                            nullptr, // responder
                            nullptr, // keepAliveTimer
@@ -139,7 +142,7 @@ int main(int argc, char* argv[]) {
     auto coldResumeHandler = std::make_shared<HelloResumeHandler>(
         HelloSubscribers({{firstPayload, firstSub}}));
     auto secondClient = RSocket::createResumedClient(
-                            getConnFactory(),
+                            getConnFactory(worker.getEventBase()),
                             getSetupParams(token),
                             resumeManager,
                             coldResumeHandler)
@@ -169,7 +172,7 @@ int main(int argc, char* argv[]) {
         std::make_shared<HelloResumeHandler>(HelloSubscribers(
             {{firstPayload, firstSub}, {secondPayload, secondSub}}));
     auto thirdClient = RSocket::createResumedClient(
-                           getConnFactory(),
+                           getConnFactory(worker.getEventBase()),
                            getSetupParams(token),
                            resumeManager,
                            coldResumeHandler)

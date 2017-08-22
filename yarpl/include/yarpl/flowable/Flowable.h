@@ -36,8 +36,8 @@ class Flowable : public virtual Refcounted {
       typename Next,
       typename =
           typename std::enable_if<std::is_callable<Next(T), void>::value>::type>
-  void subscribe(Next&& next, int64_t batch = kNoFlowControl) {
-    subscribe(Subscribers::create<T>(next, batch));
+  void subscribe(Next next, int64_t batch = kNoFlowControl) {
+    subscribe(Subscribers::create<T>(std::move(next), batch));
   }
 
   /**
@@ -52,10 +52,11 @@ class Flowable : public virtual Refcounted {
           std::is_callable<Next(T), void>::value &&
           std::is_callable<Error(std::exception_ptr), void>::value>::type>
   void subscribe(
-      Next&& next,
-      Error&& error,
+      Next next,
+      Error error,
       int64_t batch = kNoFlowControl) {
-    subscribe(Subscribers::create<T>(next, error, batch));
+    subscribe(Subscribers::create<T>(
+        std::move(next), std::move(error), batch));
   }
 
   /**
@@ -72,21 +73,25 @@ class Flowable : public virtual Refcounted {
           std::is_callable<Error(std::exception_ptr), void>::value &&
           std::is_callable<Complete(), void>::value>::type>
   void subscribe(
-      Next&& next,
-      Error&& error,
-      Complete&& complete,
+      Next next,
+      Error error,
+      Complete complete,
       int64_t batch = kNoFlowControl) {
-    subscribe(Subscribers::create<T>(next, error, complete, batch));
+    subscribe(Subscribers::create<T>(
+        std::move(next),
+        std::move(error),
+        std::move(complete),
+        batch));
   }
 
   template <typename Function>
-  auto map(Function&& function);
+  auto map(Function function);
 
   template <typename Function>
-  auto filter(Function&& function);
+  auto filter(Function function);
 
   template <typename Function>
-  auto reduce(Function&& function);
+  auto reduce(Function function);
 
   auto take(int64_t);
 
@@ -118,12 +123,12 @@ class Flowable : public virtual Refcounted {
   template <
       typename Emitter,
       typename = typename std::enable_if<std::is_callable<
-          Emitter(Subscriber<T>&, int64_t),
+          Emitter(Reference<Subscriber<T>>, int64_t),
           std::tuple<int64_t, bool>>::value>::type>
-  static auto create(Emitter&& emitter);
+  static auto create(Emitter emitter);
 
  private:
-  virtual std::tuple<int64_t, bool> emit(Subscriber<T>&, int64_t) {
+  virtual std::tuple<int64_t, bool> emit(Reference<Subscriber<T>>, int64_t) {
     return std::make_tuple(static_cast<int64_t>(0), false);
   }
 
@@ -267,8 +272,8 @@ class Flowable : public virtual Refcounted {
         int64_t emitted;
         bool done;
 
-        std::tie(emitted, done) = flowable_->emit(
-            *this /* implicit conversion to subscriber */, current);
+        std::tie(emitted, done) =
+            flowable_->emit(yarpl::get_ref<Subscriber<T>>(this), current);
 
         while (true) {
           current = requested_.load(std::memory_order_relaxed);
@@ -316,17 +321,18 @@ template <typename T>
 template <typename Emitter>
 class Flowable<T>::EmitterWrapper : public Flowable<T> {
  public:
-  explicit EmitterWrapper(Emitter&& emitter)
-      : emitter_(std::forward<Emitter>(emitter)) {}
+  explicit EmitterWrapper(Emitter emitter)
+      : emitter_(std::move(emitter)) {}
 
   void subscribe(Reference<Subscriber<T>> subscriber) override {
     new SynchronousSubscription(
         Reference<Flowable>(this), std::move(subscriber));
   }
 
-  std::tuple<int64_t, bool> emit(Subscriber<T>& subscriber, int64_t requested)
-      override {
-    return emitter_(subscriber, requested);
+  std::tuple<int64_t, bool> emit(
+      Reference<Subscriber<T>> subscriber,
+      int64_t requested) override {
+    return emitter_(std::move(subscriber), requested);
   }
 
  private:
@@ -335,32 +341,32 @@ class Flowable<T>::EmitterWrapper : public Flowable<T> {
 
 template <typename T>
 template <typename Emitter, typename>
-auto Flowable<T>::create(Emitter&& emitter) {
+auto Flowable<T>::create(Emitter emitter) {
   return Reference<Flowable<T>>(
-      new Flowable<T>::EmitterWrapper<Emitter>(std::forward<Emitter>(emitter)));
+      new Flowable<T>::EmitterWrapper<Emitter>(std::move(emitter)));
 }
 
 template <typename T>
 template <typename Function>
-auto Flowable<T>::map(Function&& function) {
+auto Flowable<T>::map(Function function) {
   using D = typename std::result_of<Function(T)>::type;
   return Reference<Flowable<D>>(new MapOperator<T, D, Function>(
-      Reference<Flowable<T>>(this), std::forward<Function>(function)));
+      Reference<Flowable<T>>(this), std::move(function)));
 }
 
 template <typename T>
 template <typename Function>
-auto Flowable<T>::filter(Function&& function) {
+auto Flowable<T>::filter(Function function) {
   return Reference<Flowable<T>>(new FilterOperator<T, Function>(
-      Reference<Flowable<T>>(this), std::forward<Function>(function)));
+      Reference<Flowable<T>>(this), std::move(function)));
 }
 
 template <typename T>
 template <typename Function>
-auto Flowable<T>::reduce(Function&& function) {
+auto Flowable<T>::reduce(Function function) {
   using D = typename std::result_of<Function(T, T)>::type;
   return Reference<Flowable<D>>(new ReduceOperator<T, D, Function>(
-      Reference<Flowable<T>>(this), std::forward<Function>(function)));
+      Reference<Flowable<T>>(this), std::move(function)));
 }
 
 template <typename T>

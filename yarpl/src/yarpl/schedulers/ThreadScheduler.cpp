@@ -31,7 +31,7 @@ class ADisposable : public yarpl::Disposable {
 class ThreadWorker : public Worker {
  public:
   std::unique_ptr<yarpl::Disposable> schedule(
-      std::function<void()>&& task) override {
+      std::function<void()> task) override {
     std::thread([task = std::move(task)]() { task(); }).detach();
     return std::make_unique<ADisposable>();
   }
