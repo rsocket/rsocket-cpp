@@ -91,6 +91,10 @@ void FramedReader::parseFrames() {
     return;
   }
 
+  // delivering onNext can trigger termination and destroying this instance
+  // while in this method so we will make sure we survive
+  auto thisPtr = yarpl::get_ref(this);
+
   dispatchingFrames_ = true;
 
   while (allowance_.canAcquire() && frames_) {
@@ -138,19 +142,21 @@ void FramedReader::parseFrames() {
 void FramedReader::onComplete() noexcept {
   completed_ = true;
   payloadQueue_.move(); // equivalent to clear(), releases the buffers
+  DuplexConnection::Subscriber::onComplete();
   if (auto subscriber = std::move(frames_)) {
+    // after this call the instance can be destroyed!
     subscriber->onComplete();
   }
-  DuplexConnection::Subscriber::onComplete();
 }
 
 void FramedReader::onError(folly::exception_wrapper ex) noexcept {
   completed_ = true;
   payloadQueue_.move(); // equivalent to clear(), releases the buffers
+  DuplexConnection::Subscriber::onError(folly::exception_wrapper());
   if (auto subscriber = std::move(frames_)) {
+    // after this call the instance can be destroyed!
     subscriber->onError(std::move(ex));
   }
-  DuplexConnection::Subscriber::onError(folly::exception_wrapper());
 }
 
 void FramedReader::request(int64_t n) noexcept {
