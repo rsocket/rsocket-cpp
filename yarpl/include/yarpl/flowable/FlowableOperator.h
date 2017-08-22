@@ -44,8 +44,8 @@ class FlowableOperator : public Flowable<D> {
       assert(subscriber_);
     }
 
-    Reference<Operator> getFlowableOperator() {
-      return flowableOperator_;
+    const Reference<Operator>& getFlowableOperator() {
+      return flowable_;
     }
 
     void subscriberOnNext(D value) {
@@ -194,7 +194,7 @@ class MapOperator : public FlowableOperator<U, D, MapOperator<U, D, F>> {
         : SuperSubscription(std::move(flowable), std::move(subscriber)) {}
 
     void onNext(U value) override {
-      auto map = SuperSubscription::getFlowableOperator();
+      auto&& map = SuperSubscription::getFlowableOperator();
       SuperSubscription::subscriberOnNext(map->function_(std::move(value)));
     }
   };
@@ -231,7 +231,7 @@ class FilterOperator : public FlowableOperator<U, U, FilterOperator<U, F>> {
         : SuperSubscription(std::move(flowable), std::move(subscriber)) {}
 
     void onNext(U value) override {
-      auto filter = SuperSubscription::getFlowableOperator();
+      auto&& filter = SuperSubscription::getFlowableOperator();
       if (filter->function_(value)) {
         SuperSubscription::subscriberOnNext(std::move(value));
       } else {
@@ -279,7 +279,7 @@ class ReduceOperator : public FlowableOperator<U, D, ReduceOperator<U, D, F>> {
     }
 
     void onNext(U value) override {
-      auto reduce = SuperSubscription::getFlowableOperator();
+      auto&& reduce = SuperSubscription::getFlowableOperator();
       if (accInitialized_) {
         acc_ = reduce->function_(std::move(acc_), std::move(value));
       } else {
