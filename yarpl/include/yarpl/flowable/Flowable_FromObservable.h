@@ -24,12 +24,7 @@ class FlowableFromObservableSubscription
   FlowableFromObservableSubscription(
       Reference<yarpl::observable::Observable<T>> observable,
       Reference<yarpl::flowable::Subscriber<T>> s)
-      : observable_(std::move(observable)), subscriber_(std::move(s)) {
-    // We expect to be heap-allocated; until this subscription finishes
-    // (is canceled; completes; error's out), hold a reference so we are
-    // not deallocated (by the subscriber).
-    Refcounted::incRef(*this);
-  }
+      : observable_(std::move(observable)), subscriber_(std::move(s)) {}
 
   FlowableFromObservableSubscription(FlowableFromObservableSubscription&&) =
       delete;
@@ -62,7 +57,6 @@ class FlowableFromObservableSubscription
     if (credits::cancel(&requested_)) {
       // if this is the first time calling cancel, send the cancel
       observableSubscription_->cancel();
-      release();
     }
   }
 
@@ -84,23 +78,14 @@ class FlowableFromObservableSubscription
   // Observer override
   void onComplete() override {
     subscriber_->onComplete();
-    release();
   }
 
   // Observer override
   void onError(folly::exception_wrapper error) override {
     subscriber_->onError(std::move(error));
-    release();
   }
 
  private:
-  void release() {
-    observable_.reset();
-    subscriber_.reset();
-    observableSubscription_.reset();
-    Refcounted::decRef(*this);
-  }
-
   Reference<yarpl::observable::Observable<T>> observable_;
   Reference<yarpl::flowable::Subscriber<T>> subscriber_;
   Reference<yarpl::observable::Subscription> observableSubscription_;
