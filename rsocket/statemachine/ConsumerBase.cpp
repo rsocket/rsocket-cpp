@@ -27,8 +27,9 @@ void ConsumerBase::subscribe(
 }
 
 void ConsumerBase::checkConsumerRequest() {
-  DCHECK(consumingSubscriber_);
-  CHECK(state_ == State::RESPONDING);
+  // we are either responding and subscribe method was called
+  // or we are already terminated
+  CHECK((state_ == State::RESPONDING) == !!consumingSubscriber_);
 }
 
 void ConsumerBase::cancelConsumer() {

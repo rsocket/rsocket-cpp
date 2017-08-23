@@ -25,8 +25,9 @@ void PublisherBase::publisherSubscribe(
 }
 
 void PublisherBase::checkPublisherOnNext() {
-  DCHECK(producingSubscription_);
-  CHECK(state_ == State::RESPONDING);
+  // we are either responding and publisherSubscribe method was called
+  // or we are already terminated
+  CHECK((state_ == State::RESPONDING) == !!producingSubscription_);
 }
 
 void PublisherBase::publisherComplete() {
