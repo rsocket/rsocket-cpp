@@ -24,7 +24,7 @@ class TcpDuplexConnection : public DuplexConnection {
   void setInput(yarpl::Reference<DuplexConnection::Subscriber>) override;
 
  private:
-  std::shared_ptr<TcpReaderWriter> tcpReaderWriter_;
+  yarpl::Reference<TcpReaderWriter> tcpReaderWriter_;
   std::shared_ptr<RSocketStats> stats_;
 };
 }
