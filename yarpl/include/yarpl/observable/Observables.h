@@ -50,9 +50,11 @@ class Observables {
   // this will generate an observable which can be subscribed to only once
   template <typename T>
   static Reference<Observable<T>> justOnce(T value) {
-    auto lambda = [value = std::move(value), used = false](Reference<Observer<T>> observer) mutable {
+    auto lambda = [ value = std::move(value), used = false ](
+        Reference<Observer<T>> observer) mutable {
       if (used) {
-        observer->onError(std::runtime_error("justOnce value was already used"));
+        observer->onError(
+            std::runtime_error("justOnce value was already used"));
         return;
       }
 
@@ -72,8 +74,8 @@ class Observables {
           std::is_callable<OnSubscribe(Reference<Observer<T>>), void>::value>::
           type>
   static Reference<Observable<T>> create(OnSubscribe function) {
-    return Reference<Observable<T>>(new FromPublisherOperator<T, OnSubscribe>(
-        std::move(function)));
+    return Reference<Observable<T>>(
+        new FromPublisherOperator<T, OnSubscribe>(std::move(function)));
   }
 
   template <typename T>

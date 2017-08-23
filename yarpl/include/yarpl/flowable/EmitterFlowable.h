@@ -10,14 +10,12 @@ namespace yarpl {
 namespace flowable {
 namespace details {
 
-
-template<typename T>
+template <typename T>
 class EmiterBase : public virtual Refcounted {
  public:
   ~EmiterBase() = default;
 
-  virtual std::tuple<int64_t, bool>
-  emit(Reference <Subscriber<T>>, int64_t) = 0;
+  virtual std::tuple<int64_t, bool> emit(Reference<Subscriber<T>>, int64_t) = 0;
 };
 
 /**
@@ -26,15 +24,15 @@ class EmiterBase : public virtual Refcounted {
  * This is synchronous: the emit calls are triggered within the context
  * of a request(n) call.
  */
-template<typename T>
+template <typename T>
 class EmiterSubscription : private Subscription, private Subscriber<T> {
   constexpr static auto kCanceled = credits::kCanceled;
   constexpr static auto kNoFlowControl = credits::kNoFlowControl;
 
  public:
   EmiterSubscription(
-      Reference <EmiterBase<T>> emiter,
-      Reference <Subscriber<T>> subscriber)
+      Reference<EmiterBase<T>> emiter,
+      Reference<Subscriber<T>> subscriber)
       : emiter_(std::move(emiter)), subscriber_(std::move(subscriber)) {
     // We expect to be heap-allocated; until this subscription finishes
     // (is canceled; completes; error's out), hold a reference so we are
@@ -57,10 +55,10 @@ class EmiterSubscription : private Subscription, private Subscriber<T> {
       auto current = requested_.load(std::memory_order_relaxed);
 
       if (current == kCanceled) {
-        // this can happen because there could be an async barrier between
-        // the subscriber and the subscription
-        // for instance while onComplete is being delivered
-        // (on effectively cancelled subscription) the subscriber can call call request(n)
+        // this can happen because there could be an async barrier between the
+        // subscriber and the subscription for instance while onComplete is
+        // being delivered (on effectively cancelled subscription) the
+        // subscriber can call request(n)
         return;
       }
 
@@ -77,13 +75,12 @@ class EmiterSubscription : private Subscription, private Subscriber<T> {
     // if this is the first terminating signal to receive, we need to
     // make sure we break the reference cycle between subscription and
     // subscriber
-    //
     auto previous = requested_.exchange(kCanceled, std::memory_order_relaxed);
     if (previous != kCanceled) {
-      // this can happen because there could be an async barrier between
-      // the subscriber and the subscription
-      // for instance while onComplete is being delivered
-      // (on effectively cancelled subscription) the subscriber can call call request(n)
+      // this can happen because there could be an async barrier between the
+      // subscriber and the subscription for instance while onComplete is being
+      // delivered (on effectively cancelled subscription) the subscriber can
+      // call request(n)
       process();
     }
   }
@@ -196,23 +193,21 @@ class EmiterSubscription : private Subscription, private Subscriber<T> {
   // We don't want to recursively invoke process(); one loop should do.
   std::mutex processing_;
 
-  Reference <EmiterBase<T>> emiter_;
-  Reference <Subscriber<T>> subscriber_;
+  Reference<EmiterBase<T>> emiter_;
+  Reference<Subscriber<T>> subscriber_;
 };
 
-
-template<typename T, typename Emitter>
+template <typename T, typename Emitter>
 class EmitterWrapper : public EmiterBase<T>, public Flowable<T> {
  public:
-  explicit EmitterWrapper(Emitter emitter)
-      : emitter_(std::move(emitter)) {}
+  explicit EmitterWrapper(Emitter emitter) : emitter_(std::move(emitter)) {}
 
-  void subscribe(Reference <Subscriber<T>> subscriber) override {
+  void subscribe(Reference<Subscriber<T>> subscriber) override {
     new EmiterSubscription<T>(get_ref(this), std::move(subscriber));
   }
 
   std::tuple<int64_t, bool> emit(
-      Reference <Subscriber<T>> subscriber,
+      Reference<Subscriber<T>> subscriber,
       int64_t requested) override {
     return emitter_(std::move(subscriber), requested);
   }

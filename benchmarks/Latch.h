@@ -7,7 +7,7 @@
 /// Simple implementation of a latch synchronization primitive, for testing.
 class Latch {
  public:
-  Latch(size_t limit): limit_{limit} {}
+  explicit Latch(size_t limit) : limit_{limit} {}
 
   void wait() {
     baton_.wait();

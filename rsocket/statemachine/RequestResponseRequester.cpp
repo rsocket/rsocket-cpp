@@ -24,7 +24,8 @@ void RequestResponseRequester::subscribe(
     newStream(StreamType::REQUEST_RESPONSE, 1, std::move(initialPayload_));
   } else {
     if (auto subscriber = std::move(consumingSubscriber_)) {
-      subscriber->onError(std::runtime_error("cannot request more than 1 item"));
+      subscriber->onError(
+          std::runtime_error("cannot request more than 1 item"));
     }
     closeStream(StreamCompletionSignal::ERROR);
   }
@@ -115,13 +116,13 @@ void RequestResponseRequester::handlePayload(
   closeStream(StreamCompletionSignal::COMPLETE);
 }
 
-//void RequestResponseRequester::pauseStream(RequestHandler& requestHandler) {
+// void RequestResponseRequester::pauseStream(RequestHandler& requestHandler) {
 //  if (consumingSubscriber_) {
 //    requestHandler.onSubscriberPaused(consumingSubscriber_);
 //  }
 //}
 //
-//void RequestResponseRequester::resumeStream(RequestHandler& requestHandler) {
+// void RequestResponseRequester::resumeStream(RequestHandler& requestHandler) {
 //  if (consumingSubscriber_) {
 //    requestHandler.onSubscriberResumed(consumingSubscriber_);
 //  }

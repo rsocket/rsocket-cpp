@@ -106,8 +106,8 @@ class Flowables {
           OnSubscribe(Reference<Subscriber<T>>),
           void>::value>::type>
   static Reference<Flowable<T>> fromPublisher(OnSubscribe function) {
-    return Reference<Flowable<T>>(new FromPublisherOperator<T, OnSubscribe>(
-        std::move(function)));
+    return Reference<Flowable<T>>(
+        new FromPublisherOperator<T, OnSubscribe>(std::move(function)));
   }
 
   template <typename T>
@@ -121,7 +121,8 @@ class Flowables {
 
   template <typename T>
   static Reference<Flowable<T>> error(folly::exception_wrapper ex) {
-    auto lambda = [ex = std::move(ex)](Reference<Subscriber<T>> subscriber, int64_t) {
+    auto lambda = [ex = std::move(ex)](
+        Reference<Subscriber<T>> subscriber, int64_t) {
       subscriber->onError(std::move(ex));
       return std::make_tuple(static_cast<int64_t>(0), true);
     };
@@ -130,7 +131,8 @@ class Flowables {
 
   template <typename T, typename ExceptionType>
   static Reference<Flowable<T>> error(const ExceptionType& ex) {
-    auto lambda = [ex = std::move(ex)](Reference<Subscriber<T>> subscriber, int64_t) {
+    auto lambda = [ex = std::move(ex)](
+        Reference<Subscriber<T>> subscriber, int64_t) {
       subscriber->onError(std::move(ex));
       return std::make_tuple(static_cast<int64_t>(0), true);
     };
@@ -148,10 +150,11 @@ class Flowables {
           ++generated;
         }
         return std::make_tuple(generated, false);
-      } catch(const std::exception& ex) {
-        subscriber->onError(folly::exception_wrapper(std::current_exception(), ex));
+      } catch (const std::exception& ex) {
+        subscriber->onError(
+            folly::exception_wrapper(std::current_exception(), ex));
         return std::make_tuple(generated, true);
-      } catch(...) {
+      } catch (...) {
         subscriber->onError(std::runtime_error("unknown error"));
         return std::make_tuple(generated, true);
       }
