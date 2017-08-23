@@ -117,6 +117,10 @@ void FrameTransport::terminateProcessor(folly::exception_wrapper ex) {
     return;
   }
 
+  if (auto conn_sub = std::move(connectionInputSub_)) {
+    conn_sub->cancel();
+  }
+
   auto frameProcessor = std::move(frameProcessor_);
   VLOG(3) << this << " terminating frame processor ex=" << ex.what();
   frameProcessor->onTerminal(std::move(ex));

@@ -37,19 +37,19 @@ class OneFrameProcessor : public FrameProcessor {
   }
 
   void processFrame(std::unique_ptr<folly::IOBuf> buf) override {
+    DCHECK(transport_);
+
     acceptor_.processFrame(
-        std::move(transport_),
-        std::move(buf),
-        std::move(onSetup_),
-        std::move(onResume_));
+        transport_, std::move(buf), std::move(onSetup_), std::move(onResume_));
     // No more code here as the instance might be gone by now.
   }
 
   void onTerminal(folly::exception_wrapper ew) override {
     onSetup_ = nullptr;
     onResume_ = nullptr;
+    DCHECK(transport_);
 
-    acceptor_.close(std::move(transport_), std::move(ew));
+    acceptor_.close(transport_, std::move(ew));
     // No more code here as the instance might be gone by now.
   }
 
@@ -83,6 +83,7 @@ void SetupResumeAcceptor::processFrame(
     SetupResumeAcceptor::OnSetup onSetup,
     SetupResumeAcceptor::OnResume onResume) {
   DCHECK(eventBase_->isInEventBaseThread());
+  DCHECK(transport);
 
   if (closed_) {
     transport->closeWithError(error("SetupResumeAcceptor is shutting down"));
@@ -219,6 +220,7 @@ void SetupResumeAcceptor::close(
     yarpl::Reference<FrameTransport> tport,
     folly::exception_wrapper e) {
   DCHECK(eventBase_->isInEventBaseThread());
+  DCHECK(tport);
 
   // This method always gets called with a FrameTransport::onNext() stack frame
   // above it.  Closing the transport too early will destroy it and we'll unwind

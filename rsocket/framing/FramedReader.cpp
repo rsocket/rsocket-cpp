@@ -216,6 +216,8 @@ bool FramedReader::ensureOrAutodetectProtocolVersion() {
 void FramedReader::error(std::string errorMsg) {
   VLOG(1) << "error: " << errorMsg;
   onError(std::runtime_error(std::move(errorMsg)));
-  DuplexConnection::Subscriber::subscription()->cancel();
+  if (DuplexConnection::Subscriber::subscription()) {
+    DuplexConnection::Subscriber::subscription()->cancel();
+  }
 }
 }
