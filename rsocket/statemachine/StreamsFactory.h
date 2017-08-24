@@ -31,7 +31,7 @@ class StreamsFactory {
   void createStreamRequester(
       yarpl::Reference<yarpl::flowable::Subscriber<Payload>> responseSink,
       StreamId streamId,
-      uint32_t n);
+      size_t n);
 
   void createRequestResponseRequester(
       Payload payload,

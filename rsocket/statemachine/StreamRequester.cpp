@@ -4,7 +4,7 @@
 
 namespace rsocket {
 
-void StreamRequester::setRequested(uint32_t n) {
+void StreamRequester::setRequested(size_t n) {
   VLOG(3) << "Setting allowance to " << n;
   requested_ = true;
   addImplicitAllowance(n);

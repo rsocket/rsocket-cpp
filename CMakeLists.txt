@@ -353,8 +353,8 @@ add_library(
   rsocket/framing/FrameSerializer_v0_1.h
   rsocket/framing/FrameSerializer_v1_0.cpp
   rsocket/framing/FrameSerializer_v1_0.h
-  rsocket/internal/InMemResumeManager.h
-  rsocket/internal/InMemResumeManager.cpp
+  rsocket/internal/WarmResumeManager.h
+  rsocket/internal/WarmResumeManager.cpp
   rsocket/internal/ScheduledSubscription.cpp
   rsocket/internal/ScheduledSubscription.h
   rsocket/internal/ScheduledSubscriber.h
@@ -423,6 +423,8 @@ add_executable(
   test/test_utils/MockKeepaliveTimer.h
   test/test_utils/MockRequestHandler.h
   test/test_utils/MockStats.h
+  test/test_utils/ColdResumeManager.cpp
+  test/test_utils/ColdResumeManager.h
   test/transport/DuplexConnectionTest.cpp
   test/transport/DuplexConnectionTest.h
   test/transport/TcpDuplexConnectionTest.cpp)
@@ -526,6 +528,8 @@ add_library(
   reactivesocket_examples_util
   examples/util/ExampleSubscriber.cpp
   examples/util/ExampleSubscriber.h
+  test/test_utils/ColdResumeManager.h
+  test/test_utils/ColdResumeManager.cpp
 )
 
 target_link_libraries(

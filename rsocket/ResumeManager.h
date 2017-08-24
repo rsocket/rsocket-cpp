@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <unordered_set>
+#include <unordered_map>
 
 #include <folly/Optional.h>
 
@@ -15,9 +15,37 @@ class IOBuf;
 
 namespace rsocket {
 
+// Struct to hold information relevant per stream.
+struct StreamResumeInfo {
+  StreamResumeInfo() = delete;
+  StreamResumeInfo(StreamType sType, RequestOriginator req, std::string sToken)
+      : streamType(sType), requester(req), streamToken(sToken) {}
+
+  // REQUEST_STREAM, REQUEST_CHANNEL or REQUEST_RESPONSE.  We don't
+  // have to store any stream level information for FNF.
+  StreamType streamType;
+
+  // Did the stream originate locally or remotely.
+  RequestOriginator requester;
+
+  // Application defined string representation for the stream.
+  std::string streamToken;
+
+  // Stores the allowance which the local side has received but hasn't
+  // fulfilled yet.  Relevant for REQUEST_STREAM Responder and REQUEST_CHANNEL
+  size_t producerAllowance{0};
+
+  // Stores the allowance which has been sent to the remote side and has not
+  // been fulfilled yet.  Relevant for REQUEST_STREAM Requester and
+  // REQUEST_CHANNEL
+  size_t consumerAllowance{0};
+};
+
+using StreamResumeInfos = std::unordered_map<StreamId, StreamResumeInfo>;
+
 // Applications desiring to have cold-resumption should implement a
 // ResumeManager interface.  By default, an in-memory implementation of this
-// interface (InMemResumeManager) will be used by RSocket.
+// interface (WarmResumeManager) will be used by RSocket.
 //
 // The API refers to the stored frames by "position".  "position" is the byte
 // count at frame boundaries.  For example, if the ResumeManager has stored 3
@@ -77,31 +105,45 @@ class ResumeManager {
   // remote side.
   virtual ResumePosition impliedPosition() const = 0;
 
-  // This gets called when a stream is closed.
+  // This gets called when a stream is opened (both local/remote streams)
+  virtual void onStreamOpen(
+      StreamId,
+      RequestOriginator,
+      std::string streamToken,
+      StreamType streamType) = 0;
+
+  // This gets called when a stream is closed (both local/remote streams)
   virtual void onStreamClosed(StreamId streamId) = 0;
 
-  // Return the StreamIds of locally originating REQUEST_STREAMs
-  virtual std::unordered_set<StreamId> getRequesterRequestStreamIds() = 0;
-
-  // Get allowance for the given StreamId.  This is called for situations where
-  // the local side is a publisher (REQUEST_STREAM Responder and
-  // REQUEST_CHANNEL).  This should return the allowance which the local side
-  // has received and hasn't fulfilled yet.
-  virtual size_t getPublisherAllowance(StreamId) = 0;
-
-  // Get allowance for the given StreamId.  This is called for situations where
-  // the local side is a consumer (REQUEST_STREAM Requester and
-  // REQUEST_CHANNEL).  This should return the allowance which has been sent to
-  // the remote side and hasn't been fulfilled yet.
-  virtual size_t getConsumerAllowance(StreamId) = 0;
-
-  // Return the application-aware streamToken for the given StreamId
-  virtual std::string getStreamToken(StreamId) = 0;
-
-  // Save the application-aware streamToken for the given StreamId
-  virtual void saveStreamToken(StreamId, std::string streamToken) = 0;
+  // Returns the cached stream information.
+  virtual const StreamResumeInfos& getStreamResumeInfos() = 0;
 
   // Returns the largest used StreamId so far.
   virtual StreamId getLargestUsedStreamId() = 0;
+
+  // Utility method to check frames which should be tracked for resumption.
+  inline bool shouldTrackFrame(const FrameType frameType) {
+    switch (frameType) {
+      case FrameType::REQUEST_CHANNEL:
+      case FrameType::REQUEST_STREAM:
+      case FrameType::REQUEST_RESPONSE:
+      case FrameType::REQUEST_FNF:
+      case FrameType::REQUEST_N:
+      case FrameType::CANCEL:
+      case FrameType::ERROR:
+      case FrameType::PAYLOAD:
+        return true;
+      case FrameType::RESERVED:
+      case FrameType::SETUP:
+      case FrameType::LEASE:
+      case FrameType::KEEPALIVE:
+      case FrameType::METADATA_PUSH:
+      case FrameType::RESUME:
+      case FrameType::RESUME_OK:
+      case FrameType::EXT:
+      default:
+        return false;
+    }
+  }
 };
 }

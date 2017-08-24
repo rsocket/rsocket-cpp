@@ -1,81 +1,32 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "rsocket/internal/InMemResumeManager.h"
+#include "rsocket/internal/WarmResumeManager.h"
 
 #include <algorithm>
 
-namespace {
-
-using rsocket::FrameType;
-
-bool shouldTrackFrame(const FrameType frameType) {
-  switch (frameType) {
-    case FrameType::REQUEST_CHANNEL:
-    case FrameType::REQUEST_STREAM:
-    case FrameType::REQUEST_RESPONSE:
-    case FrameType::REQUEST_FNF:
-    case FrameType::REQUEST_N:
-    case FrameType::CANCEL:
-    case FrameType::ERROR:
-    case FrameType::PAYLOAD:
-      return true;
-    case FrameType::RESERVED:
-    case FrameType::SETUP:
-    case FrameType::LEASE:
-    case FrameType::KEEPALIVE:
-    case FrameType::METADATA_PUSH:
-    case FrameType::RESUME:
-    case FrameType::RESUME_OK:
-    case FrameType::EXT:
-    default:
-      return false;
-  }
-}
-
-bool isNewStreamFrame(FrameType frameType) {
-  return frameType == FrameType::REQUEST_CHANNEL ||
-      frameType == FrameType::REQUEST_STREAM ||
-      frameType == FrameType::REQUEST_RESPONSE ||
-      frameType == FrameType::REQUEST_FNF;
-}
-
-} // anonymous
-
 namespace rsocket {
 
-InMemResumeManager::~InMemResumeManager() {
+WarmResumeManager::~WarmResumeManager() {
   clearFrames(lastSentPosition_);
 }
 
-void InMemResumeManager::trackReceivedFrame(
+void WarmResumeManager::trackReceivedFrame(
     size_t frameLength,
     FrameType frameType,
     StreamId streamId,
     size_t consumerAllowance) {
-  if (isNewStreamFrame(frameType)) {
-    onRemoteStreamOpen(streamId, frameType);
-  }
   if (shouldTrackFrame(frameType)) {
     VLOG(6) << "Track received frame " << frameType << " StreamId: " << streamId
             << " Allowance: " << consumerAllowance;
     impliedPosition_ += frameLength;
   }
-  consumerAllowance_[streamId] = consumerAllowance;
 }
 
-void InMemResumeManager::trackSentFrame(
+void WarmResumeManager::trackSentFrame(
     const folly::IOBuf& serializedFrame,
     FrameType frameType,
-    folly::Optional<StreamId> streamIdPtr,
+    folly::Optional<StreamId>,
     size_t consumerAllowance) {
-  if (streamIdPtr) {
-    const StreamId streamId = *streamIdPtr;
-    if (isNewStreamFrame(frameType)) {
-      onLocalStreamOpen(streamId, frameType);
-    }
-    consumerAllowance_[streamId] = consumerAllowance;
-  }
-
   if (shouldTrackFrame(frameType)) {
     // TODO(tmont): this could be expensive, find a better way to get length
     auto frameDataLength = serializedFrame.computeChainDataLength();
@@ -95,7 +46,7 @@ void InMemResumeManager::trackSentFrame(
   }
 }
 
-void InMemResumeManager::resetUpToPosition(ResumePosition position) {
+void WarmResumeManager::resetUpToPosition(ResumePosition position) {
   if (position <= firstSentPosition_) {
     return;
   }
@@ -110,7 +61,7 @@ void InMemResumeManager::resetUpToPosition(ResumePosition position) {
   DCHECK(frames_.empty() || frames_.front().first == firstSentPosition_);
 }
 
-bool InMemResumeManager::isPositionAvailable(ResumePosition position) const {
+bool WarmResumeManager::isPositionAvailable(ResumePosition position) const {
   return (lastSentPosition_ == position) ||
       std::binary_search(
              frames_.begin(),
@@ -122,7 +73,7 @@ bool InMemResumeManager::isPositionAvailable(ResumePosition position) const {
              });
 }
 
-void InMemResumeManager::addFrame(
+void WarmResumeManager::addFrame(
     const folly::IOBuf& frame,
     size_t frameDataLength) {
   size_ += frameDataLength;
@@ -133,7 +84,7 @@ void InMemResumeManager::addFrame(
   stats_->resumeBufferChanged(1, static_cast<int>(frameDataLength));
 }
 
-void InMemResumeManager::evictFrame() {
+void WarmResumeManager::evictFrame() {
   DCHECK(!frames_.empty());
 
   auto position = frames_.size() > 1 ? std::next(frames_.begin())->first
@@ -141,7 +92,7 @@ void InMemResumeManager::evictFrame() {
   resetUpToPosition(position);
 }
 
-void InMemResumeManager::clearFrames(ResumePosition position) {
+void WarmResumeManager::clearFrames(ResumePosition position) {
   if (frames_.empty()) {
     return;
   }
@@ -165,7 +116,7 @@ void InMemResumeManager::clearFrames(ResumePosition position) {
   size_ -= static_cast<decltype(size_)>(pos - firstSentPosition_);
 }
 
-void InMemResumeManager::sendFramesFromPosition(
+void WarmResumeManager::sendFramesFromPosition(
     ResumePosition position,
     FrameTransport& frameTransport) const {
   DCHECK(isPositionAvailable(position));
@@ -190,52 +141,6 @@ void InMemResumeManager::sendFramesFromPosition(
     frameTransport.outputFrameOrDrop(found->second->clone());
     found++;
   }
-}
-
-void InMemResumeManager::onStreamClosed(StreamId streamId) {
-  // This is crude. We could try to preserve the stream type in
-  // RSocketStateMachine and pass it down explicitly here.
-  requesterRequestStreams_.erase(streamId);
-  requesterRequestChannels_.erase(streamId);
-  requesterRequestResponses_.erase(streamId);
-  responderRequestStreams_.erase(streamId);
-  responderRequestChannels_.erase(streamId);
-  responderRequestResponses_.erase(streamId);
-  publisherAllowance_.erase(streamId);
-  consumerAllowance_.erase(streamId);
-  streamTokens_.erase(streamId);
-}
-
-void InMemResumeManager::onLocalStreamOpen(
-    StreamId streamId,
-    FrameType frameType) {
-  if (streamId > largestUsedStreamId_) {
-    largestUsedStreamId_ = streamId;
-  }
-  if (frameType == FrameType::REQUEST_STREAM) {
-    requesterRequestStreams_.insert(streamId);
-  } else if (frameType == FrameType::REQUEST_CHANNEL) {
-    requesterRequestChannels_.insert(streamId);
-  } else if (frameType == FrameType::REQUEST_RESPONSE) {
-    requesterRequestResponses_.insert(streamId);
-  }
-}
-
-void InMemResumeManager::onRemoteStreamOpen(
-    StreamId streamId,
-    FrameType frameType) {
-  if (frameType == FrameType::REQUEST_STREAM) {
-    responderRequestStreams_.insert(streamId);
-  } else if (frameType == FrameType::REQUEST_CHANNEL) {
-    responderRequestChannels_.insert(streamId);
-  } else if (frameType == FrameType::REQUEST_RESPONSE) {
-    responderRequestResponses_.insert(streamId);
-  }
-}
-
-std::unordered_set<StreamId>
-InMemResumeManager::getRequesterRequestStreamIds() {
-  return requesterRequestStreams_;
 }
 
 } // reactivesocket

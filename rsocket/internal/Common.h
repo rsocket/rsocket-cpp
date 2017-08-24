@@ -61,6 +61,11 @@ enum class StreamType {
   FNF,
 };
 
+enum class RequestOriginator {
+  LOCAL,
+  REMOTE,
+};
+
 std::string to_string(StreamCompletionSignal);
 std::ostream& operator<<(std::ostream&, StreamCompletionSignal);
 

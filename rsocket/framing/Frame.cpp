@@ -249,4 +249,25 @@ std::ostream& operator<<(std::ostream& os, const Frame_ERROR& frame) {
               << ", " << frame.payload_;
   }
 
+  StreamType getStreamType(FrameType frameType) {
+    if (frameType == FrameType::REQUEST_STREAM) {
+      return StreamType::STREAM;
+    } else if (frameType == FrameType::REQUEST_CHANNEL) {
+      return StreamType::CHANNEL;
+    } else if (frameType == FrameType::REQUEST_RESPONSE) {
+      return StreamType::REQUEST_RESPONSE;
+    } else if (frameType == FrameType::REQUEST_FNF) {
+      return StreamType::FNF;
+    } else {
+      LOG(FATAL) << "Unknown open stream frame : " << frameType;
+    }
+  }
+
+  bool isNewStreamFrame(FrameType frameType) {
+    return frameType == FrameType::REQUEST_CHANNEL ||
+        frameType == FrameType::REQUEST_STREAM ||
+        frameType == FrameType::REQUEST_RESPONSE ||
+        frameType == FrameType::REQUEST_FNF;
+  }
+
 } // namespace rsocket
