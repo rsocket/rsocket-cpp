@@ -6,6 +6,7 @@
 #include <folly/Optional.h>
 #include <folly/Synchronized.h>
 
+#include <atomic>
 #include <mutex>
 #include <unordered_map>
 
@@ -26,16 +27,15 @@ class RSocketConnectionManager {
       folly::EventBase&);
 
  private:
+  using StateMachineMap = std::unordered_map<
+      std::shared_ptr<rsocket::RSocketStateMachine>,
+      folly::EventBase&>;
+
   void removeConnection(const std::shared_ptr<rsocket::RSocketStateMachine>&);
 
-  /// Set of currently open ReactiveSockets.
-  folly::Synchronized<
-      std::unordered_map<
-          std::shared_ptr<rsocket::RSocketStateMachine>,
-          folly::EventBase&>,
-      std::mutex>
-      sockets_;
+  folly::Synchronized<StateMachineMap, std::mutex> sockets_;
 
-  folly::Optional<folly::Baton<>> shutdown_;
+  folly::Optional<folly::Baton<>> shutdownBaton_;
+  std::atomic<size_t> shutdownCounter_{0};
 };
-} // namespace rsocket
+}

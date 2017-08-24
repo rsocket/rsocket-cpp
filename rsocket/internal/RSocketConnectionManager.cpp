@@ -2,9 +2,9 @@
 
 #include "rsocket/internal/RSocketConnectionManager.h"
 
-#include <folly/io/async/EventBase.h>
-#include <folly/ScopeGuard.h>
 #include <folly/ExceptionWrapper.h>
+#include <folly/ScopeGuard.h>
+#include <folly/io/async/EventBase.h>
 
 #include "rsocket/RSocketConnectionEvents.h"
 #include "rsocket/statemachine/RSocketStateMachine.h"
@@ -12,32 +12,61 @@
 namespace rsocket {
 
 RSocketConnectionManager::~RSocketConnectionManager() {
-  // Asynchronously close all existing ReactiveSockets.  If there are none, then
-  // we can do an early exit.
-  VLOG(1) << "Destroying RSocketConnectionManager...";
-  auto scopeGuard = folly::makeGuard([]{ VLOG(1) << "Destroying RSocketConnectionManager... DONE"; });
+  VLOG(1) << "Started ~RSocketConnectionManager";
+  SCOPE_EXIT {
+    VLOG(1) << "Finished ~RSocketConnectionManager";
+  };
 
+  StateMachineMap map;
+
+  // Set up the baton and counter of connections yet to be closed.  Move all the
+  // connections out of the synchronized map so we don't block while keeping the
+  // map locked.
   {
     auto locked = sockets_.lock();
     if (locked->empty()) {
+      VLOG(2) << "No connections to close, early exit";
       return;
     }
 
-    shutdown_.emplace();
+    shutdownBaton_.emplace();
+    shutdownCounter_ = locked->size();
 
-    for (auto& connectionPair : *locked) {
-      // close() has to be called on the same executor as the socket
-      auto& executor_ = connectionPair.second;
-      executor_.add([rs = std::move(connectionPair.first)] {
-        rs->close(
-            folly::exception_wrapper(), StreamCompletionSignal::SOCKET_CLOSED);
-      });
+    VLOG(2) << "Need to close " << shutdownCounter_.load() << " connections";
+
+    map.swap(*locked);
+  }
+
+  for (auto& kv : map) {
+    auto rsocket = std::move(kv.first);
+    auto& evb = kv.second;
+
+    auto close = [rs = std::move(rsocket)] {
+      rs->close({}, StreamCompletionSignal::SOCKET_CLOSED);
+    };
+
+    // We could be closing on the same thread as the state machine.  In that
+    // case, close the state machine inline, otherwise we hang.
+    if (evb.isInEventBaseThread()) {
+      VLOG(3) << "Closing connection inline";
+      close();
+    } else {
+      VLOG(3) << "Closing connection asynchronously";
+      evb.runInEventBaseThread(close);
     }
   }
 
-  // Wait for all ReactiveSockets to close.
-  shutdown_->wait();
   DCHECK(sockets_.lock()->empty());
+
+  VLOG(2) << "Blocking on shutdown baton";
+
+  // Wait for all connections to close.
+  shutdownBaton_->wait();
+
+  VLOG(2) << "Unblocked off of shutdown baton";
+
+  DCHECK(sockets_.lock()->empty());
+  DCHECK_EQ(shutdownCounter_.load(), 0);
 }
 
 void RSocketConnectionManager::manageConnection(
@@ -66,12 +95,7 @@ void RSocketConnectionManager::manageConnection(
     }
 
     void onClosed(const folly::exception_wrapper& ex) override {
-      // Enqueue another event to remove and delete it.  We cannot delete
-      // the RSocketStateMachine now as it still needs to finish processing
-      // the onClosed handlers in the stack frame above us.
-      eventBase_.add([connectionManager = &connectionManager_, socket = std::move(socket_)] {
-        connectionManager->removeConnection(socket);
-      });
+      connectionManager_.removeConnection(socket_);
 
       if (inner) {
         inner->onClosed(ex);
@@ -108,12 +132,19 @@ void RSocketConnectionManager::manageConnection(
 void RSocketConnectionManager::removeConnection(
     const std::shared_ptr<RSocketStateMachine>& socket) {
   auto locked = sockets_.lock();
-  locked->erase(socket);
+  auto const result = locked->erase(socket);
+  DCHECK_LE(result, 1);
+  DCHECK(result == 1 || shutdownBaton_);
 
   VLOG(2) << "Removed RSocketStateMachine";
 
-  if (shutdown_ && locked->empty()) {
-    shutdown_->post();
+  if (shutdownBaton_) {
+    auto const old = shutdownCounter_.fetch_sub(1);
+    DCHECK_GT(old, 0);
+
+    if (old == 1) {
+      shutdownBaton_->post();
+    }
   }
 }
-} // namespace rsocket
+}

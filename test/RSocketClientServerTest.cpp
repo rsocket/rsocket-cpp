@@ -62,3 +62,15 @@ TEST(RSocketClientServer, ConnectManyAsync) {
   CHECK_EQ(executed, connectionCount);
   workers.clear();
 }
+
+/// Test destroying a client with an open connection on the same worker thread
+/// as that connection.
+TEST(RSocketClientServer, ClientClosesOnWorker) {
+  folly::ScopedEventBaseThread worker;
+  auto server = makeServer(std::make_shared<HelloStreamRequestHandler>());
+  auto client = makeClient(worker.getEventBase(), *server->listeningPort());
+  auto requester = client->getRequester();
+
+  // Move the client to the worker thread.
+  worker.getEventBase()->runInEventBaseThread([c = std::move(client)] {});
+}
