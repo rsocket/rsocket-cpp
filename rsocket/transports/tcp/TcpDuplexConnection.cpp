@@ -4,7 +4,13 @@
 
 #include <folly/ExceptionWrapper.h>
 #include <folly/io/IOBufQueue.h>
+
+#include <boost/version.hpp>
+#if BOOST_VERSION < 105500
+#include <boost/log/utility/intrusive_ref_counter.hpp>
+#else
 #include <boost/smart_ptr/intrusive_ref_counter.hpp>
+#endif
 
 #include "rsocket/internal/Common.h"
 #include "yarpl/flowable/Subscription.h"

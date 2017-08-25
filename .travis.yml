@@ -11,7 +11,6 @@ addons:
   apt:
     sources: &common_srcs
       - ubuntu-toolchain-r-test
-      - boost-latest
     packages: &common_deps
       - lcov
       # Folly dependencies
@@ -20,7 +19,7 @@ addons:
       - automake
       - binutils-dev
       - g++
-      - libboost1.55-all-dev
+      - libboost-all-dev
       - libdouble-conversion-dev
       - libevent-dev
       - libgflags-dev
