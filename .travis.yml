@@ -19,7 +19,7 @@ addons:
       - automake
       - binutils-dev
       - g++
-      - libboost-all-dev
+      - libboost1.64-all-dev
       - libdouble-conversion-dev
       - libevent-dev
       - libgflags-dev

@@ -4,7 +4,6 @@
 
 #include <folly/ExceptionWrapper.h>
 #include <folly/io/IOBufQueue.h>
-#include <boost/smart_ptr/intrusive_ptr.hpp>
 #include <boost/smart_ptr/intrusive_ref_counter.hpp>
 
 #include "rsocket/internal/Common.h"
