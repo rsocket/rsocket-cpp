@@ -5,15 +5,18 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/io/IOBufQueue.h>
 
+#include "rsocket/internal/Common.h"
+#include "yarpl/flowable/Subscription.h"
+
 #include <boost/version.hpp>
 #if BOOST_VERSION < 105500
 #include <boost/log/utility/intrusive_ref_counter.hpp>
+using namespace boost::log;
 #else
 #include <boost/smart_ptr/intrusive_ref_counter.hpp>
 #endif
 
-#include "rsocket/internal/Common.h"
-#include "yarpl/flowable/Subscription.h"
+using namespace boost;
 
 namespace rsocket {
 
@@ -21,7 +24,7 @@ using namespace yarpl::flowable;
 
 class TcpReaderWriter : public folly::AsyncTransportWrapper::WriteCallback,
                         public folly::AsyncTransportWrapper::ReadCallback,
-                        public boost::intrusive_ref_counter<TcpReaderWriter, boost::thread_unsafe_counter> {
+                        public intrusive_ref_counter<TcpReaderWriter, thread_unsafe_counter> {
  public:
   explicit TcpReaderWriter(
       folly::AsyncSocket::UniquePtr&& socket,
