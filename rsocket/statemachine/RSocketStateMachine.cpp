@@ -88,6 +88,10 @@ void RSocketStateMachine::connectServer(
 bool RSocketStateMachine::resumeServer(
     yarpl::Reference<FrameTransport> frameTransport,
     const ResumeParameters& resumeParams) {
+  if (!isDisconnectedOrClosed()) {
+    disconnect(folly::exception_wrapper(
+        std::runtime_error("A new transport is resuming the session")));
+  }
   CHECK(connect(
       std::move(frameTransport), resumeParams.protocolVersion));
   return resumeFromPositionOrClose(

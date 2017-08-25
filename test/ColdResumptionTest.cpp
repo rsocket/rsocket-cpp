@@ -149,7 +149,6 @@ TEST(ColdResumptionTest, SuccessfulResumption) {
   }
 
   VLOG(1) << "============== First Cold Resumption ================";
-  sleep(1);
 
   {
     auto firstSub = yarpl::make_ref<HelloSubscriber>(firstLatestValue);
@@ -185,7 +184,6 @@ TEST(ColdResumptionTest, SuccessfulResumption) {
   }
 
   VLOG(1) << "============= Second Cold Resumption ===============";
-  sleep(1);
 
   {
     auto firstSub = yarpl::make_ref<HelloSubscriber>(firstLatestValue);
