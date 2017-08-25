@@ -33,7 +33,7 @@ class Observers {
  public:
   template <typename T, typename Next, typename = EnableIfCompatible<T, Next>>
   static auto create(Next next) {
-    return Reference<Observer<T>>(new Base<T, Next>(std::move(next)));
+    return make_ref<Base<T, Next>, Observer<T>>(std::move(next));
   }
 
   template <
@@ -42,8 +42,8 @@ class Observers {
       typename Error,
       typename = EnableIfCompatible<T, Next, Error>>
   static auto create(Next next, Error error) {
-    return Reference<Observer<T>>(new WithError<T, Next, Error>(
-        std::move(next), std::move(error)));
+    return make_ref<WithError<T, Next, Error>, Observer<T>>(
+        std::move(next), std::move(error));
   }
 
   template <
@@ -53,11 +53,9 @@ class Observers {
       typename Complete,
       typename = EnableIfCompatible<T, Next, Error, Complete>>
   static auto create(Next next, Error error, Complete complete) {
-    return Reference<Observer<T>>(
-        new WithErrorAndComplete<T, Next, Error, Complete>(
-            std::move(next),
-            std::move(error),
-            std::move(complete)));
+    return make_ref<
+        WithErrorAndComplete<T, Next, Error, Complete>,
+        Observer<T>>(std::move(next), std::move(error), std::move(complete));
   }
 
  private:

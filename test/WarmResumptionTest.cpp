@@ -20,7 +20,7 @@ TEST(WarmResumptionTest, SuccessfulResumption) {
   folly::ScopedEventBaseThread worker;
   auto server = makeResumableServer(std::make_shared<HelloServiceHandler>());
   auto client =
-      makeResumableClient(worker.getEventBase(), *server->listeningPort());
+      makeWarmResumableClient(worker.getEventBase(), *server->listeningPort());
   auto ts = TestSubscriber<std::string>::create(7 /* initialRequestN */);
   client->getRequester()
       ->requestStream(Payload("Bob"))
@@ -45,7 +45,7 @@ TEST(WarmResumptionTest, FailedResumption1) {
   auto server =
       makeServer(std::make_shared<rsocket::tests::HelloStreamRequestHandler>());
   auto listeningPort = *server->listeningPort();
-  auto client = makeResumableClient(worker.getEventBase(), listeningPort);
+  auto client = makeWarmResumableClient(worker.getEventBase(), listeningPort);
   auto ts = TestSubscriber<std::string>::create(7 /* initialRequestN */);
   client->getRequester()
       ->requestStream(Payload("Bob"))
@@ -61,7 +61,7 @@ TEST(WarmResumptionTest, FailedResumption1) {
       .onError([listeningPort, &worker](folly::exception_wrapper) {
         folly::ScopedEventBaseThread worker2;
         auto newClient =
-            makeResumableClient(worker2.getEventBase(), listeningPort);
+            makeWarmResumableClient(worker2.getEventBase(), listeningPort);
         auto newTs =
             TestSubscriber<std::string>::create(6 /* initialRequestN */);
         newClient->getRequester()
@@ -88,7 +88,7 @@ TEST(WarmResumptionTest, FailedResumption2) {
   auto server =
       makeServer(std::make_shared<rsocket::tests::HelloStreamRequestHandler>());
   auto listeningPort = *server->listeningPort();
-  auto client = makeResumableClient(worker.getEventBase(), listeningPort);
+  auto client = makeWarmResumableClient(worker.getEventBase(), listeningPort);
   auto ts = TestSubscriber<std::string>::create(7 /* initialRequestN */);
   client->getRequester()
       ->requestStream(Payload("Bob"))
@@ -105,7 +105,8 @@ TEST(WarmResumptionTest, FailedResumption2) {
       .then([] { FAIL() << "Resumption succeeded when it should not"; })
       .onError([listeningPort, newTs, &newClient, &worker2](
           folly::exception_wrapper) {
-        newClient = makeResumableClient(worker2.getEventBase(), listeningPort);
+        newClient =
+            makeWarmResumableClient(worker2.getEventBase(), listeningPort);
         newClient->getRequester()
             ->requestStream(Payload("Alice"))
             ->map([](auto p) { return p.moveDataToString(); })

@@ -21,7 +21,7 @@ class MySubscriber : public Subscriber<T> {
 }
 
 TEST(ReferenceTest, Upcast) {
-  Reference<MySubscriber<int>> derived(new MySubscriber<int>());
+  Reference<MySubscriber<int>> derived = yarpl::make_ref<MySubscriber<int>>();
   Reference<Subscriber<int>> base1(derived);
 
   Reference<Subscriber<int>> base2;
@@ -38,48 +38,36 @@ TEST(ReferenceTest, Upcast) {
 
 TEST(RefcountedTest, CopyAssign) {
   using Sub = MySubscriber<int>;
-  Reference<Sub> a(new Sub());
+  Reference<Sub> a = yarpl::make_ref<Sub>();
   Reference<Sub> b(a);
   EXPECT_EQ(2u, a->count());
-  Sub* ptr = nullptr;
-  Reference<Sub> c(ptr = new Sub());
+  Reference<Sub> c = yarpl::make_ref<Sub>();
   b = c;
   EXPECT_EQ(1u, a->count());
-  EXPECT_EQ(ptr, b.get());
+  EXPECT_EQ(2u, b->count());
+  EXPECT_EQ(2u, c->count());
+  EXPECT_EQ(c, b);
 }
 
 TEST(RefcountedTest, MoveAssign) {
   using Sub = MySubscriber<int>;
-  Reference<Sub> a(new Sub());
-  Reference<Sub> b(a);
-  EXPECT_EQ(2u, a->count());
-  Sub* ptr = nullptr;
-  b = Reference<Sub>(ptr = new Sub());
-  EXPECT_EQ(1u, a->count());
-  EXPECT_EQ(ptr, b.get());
-}
+  Reference<Sub> a = yarpl::make_ref<Sub>();
+  Reference<Sub> b(std::move(a));
+  EXPECT_EQ(nullptr, a);
+  EXPECT_EQ(1u, b->count());
 
-TEST(RefcountedTest, CopyAssignTemplate) {
-  using Sub = MySubscriber<int>;
-  Reference<Sub> a(new Sub());
-  Reference<Sub> b(a);
-  EXPECT_EQ(2u, a->count());
-  using Sub2 = MySubscriber<int>;
-  Sub2* ptr = nullptr;
-  Reference<Sub2> c(ptr = new Sub2());
-  b = c;
-  EXPECT_EQ(1u, a->count());
-  EXPECT_EQ(ptr, b.get());
+  Reference<Sub> c;
+  c = std::move(b);
+  EXPECT_EQ(nullptr, b);
+  EXPECT_EQ(1u, c->count());
 }
 
 TEST(RefcountedTest, MoveAssignTemplate) {
   using Sub = MySubscriber<int>;
-  Reference<Sub> a(new Sub());
+  Reference<Sub> a = yarpl::make_ref<Sub>();
   Reference<Sub> b(a);
   EXPECT_EQ(2u, a->count());
   using Sub2 = MySubscriber<int>;
-  Sub2* ptr = nullptr;
-  b = Reference<Sub2>(ptr = new Sub2());
+  b = yarpl::make_ref<Sub2>();
   EXPECT_EQ(1u, a->count());
-  EXPECT_EQ(ptr, b.get());
 }

@@ -42,7 +42,7 @@ TEST(ConnectionEventsTest, SimpleStream) {
       std::make_shared<HelloServiceHandler>(serverConnEvents));
 
   // create resumable client
-  auto client = makeResumableClient(
+  auto client = makeWarmResumableClient(
       worker.getEventBase(), *server->listeningPort(), clientConnEvents);
 
   // request stream

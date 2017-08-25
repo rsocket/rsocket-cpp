@@ -116,7 +116,7 @@ class SingleSubscriptions {
     return create([&cancelled]() { cancelled = true; });
   }
   static Reference<SingleSubscription> empty() {
-    return Reference<SingleSubscription>(new AtomicBoolSingleSubscription());
+    return make_ref<AtomicBoolSingleSubscription>();
   }
   static Reference<AtomicBoolSingleSubscription> atomicBoolSubscription() {
     return make_ref<AtomicBoolSingleSubscription>();

@@ -37,7 +37,7 @@ bool CallbackSubscription::isCancelled() const {
 }
 
 Reference<Subscription> Subscriptions::create(std::function<void()> onCancel) {
-  return Reference<Subscription>(new CallbackSubscription(std::move(onCancel)));
+  return make_ref<CallbackSubscription>(std::move(onCancel));
 }
 
 Reference<Subscription> Subscriptions::create(std::atomic_bool& cancelled) {
@@ -45,11 +45,11 @@ Reference<Subscription> Subscriptions::create(std::atomic_bool& cancelled) {
 }
 
 Reference<Subscription> Subscriptions::empty() {
-  return Reference<Subscription>(new AtomicBoolSubscription());
+  return make_ref<AtomicBoolSubscription>();
 }
 
 Reference<AtomicBoolSubscription> Subscriptions::atomicBoolSubscription() {
-  return Reference<AtomicBoolSubscription>(new AtomicBoolSubscription());
+  return make_ref<AtomicBoolSubscription>();
 }
 }
 }

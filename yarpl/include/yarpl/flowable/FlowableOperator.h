@@ -39,7 +39,8 @@ class FlowableOperator : public Flowable<D> {
     Subscription(
         Reference<Operator> flowable,
         Reference<Subscriber<D>> subscriber)
-        : flowableOperator_(std::move(flowable)), subscriber_(std::move(subscriber)) {
+        : flowableOperator_(std::move(flowable)),
+          subscriber_(std::move(subscriber)) {
       assert(flowableOperator_);
       assert(subscriber_);
     }

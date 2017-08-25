@@ -80,7 +80,7 @@ class ObservableOperator : public Observable<D> {
       }
 
       upstream_ = std::move(subscription);
-      observer_->onSubscribe(Reference<yarpl::observable::Subscription>(this));
+      observer_->onSubscribe(get_ref(this));
     }
 
     void onComplete() override {
@@ -174,8 +174,7 @@ class MapOperator : public ObservableOperator<U, D> {
   void subscribe(Reference<Observer<D>> observer) override {
     ObservableOperator<U, D>::upstream_->subscribe(
         // Note: implicit cast to a reference to a observer.
-        Reference<Subscription>(new Subscription(
-            Reference<Observable<D>>(this), std::move(observer))));
+        make_ref<Subscription>(get_ref(this), std::move(observer)));
   }
 
  private:
@@ -211,8 +210,7 @@ class FilterOperator : public ObservableOperator<U, U> {
   void subscribe(Reference<Observer<U>> observer) override {
     ObservableOperator<U, U>::upstream_->subscribe(
         // Note: implicit cast to a reference to a observer.
-        Reference<Subscription>(new Subscription(
-            Reference<Observable<U>>(this), std::move(observer))));
+        make_ref<Subscription>(get_ref(this), std::move(observer)));
   }
 
  private:
@@ -252,8 +250,7 @@ class ReduceOperator : public ObservableOperator<U, D> {
   void subscribe(Reference<Observer<D>> subscriber) override {
     ObservableOperator<U, D>::upstream_->subscribe(
         // Note: implicit cast to a reference to a subscriber.
-        Reference<Subscription>(new Subscription(
-            Reference<Observable<D>>(this), std::move(subscriber))));
+        make_ref<Subscription>(get_ref(this), std::move(subscriber)));
   }
 
  private:
@@ -300,8 +297,7 @@ class TakeOperator : public ObservableOperator<T, T> {
 
   void subscribe(Reference<Observer<T>> observer) override {
     ObservableOperator<T, T>::upstream_->subscribe(
-        Reference<Subscription>(new Subscription(
-            Reference<Observable<T>>(this), limit_, std::move(observer))));
+        make_ref<Subscription>(get_ref(this), limit_, std::move(observer)));
   }
 
  private:
@@ -341,8 +337,8 @@ class SkipOperator : public ObservableOperator<T, T> {
       : ObservableOperator<T, T>(std::move(upstream)), offset_(offset) {}
 
   void subscribe(Reference<Observer<T>> observer) override {
-    ObservableOperator<T, T>::upstream_->subscribe(make_ref<Subscription>(
-        Reference<Observable<T>>(this), offset_, std::move(observer)));
+    ObservableOperator<T, T>::upstream_->subscribe(
+        make_ref<Subscription>(get_ref(this), offset_, std::move(observer)));
   }
 
  private:
@@ -378,8 +374,8 @@ class IgnoreElementsOperator : public ObservableOperator<T, T> {
       : ObservableOperator<T, T>(std::move(upstream)) {}
 
   void subscribe(Reference<Observer<T>> observer) override {
-    ObservableOperator<T, T>::upstream_->subscribe(Reference<Subscription>(
-        new Subscription(Reference<Observable<T>>(this), std::move(observer))));
+    ObservableOperator<T, T>::upstream_->subscribe(
+        make_ref<Subscription>(get_ref(this), std::move(observer)));
   }
 
  private:
@@ -406,11 +402,8 @@ class SubscribeOnOperator : public ObservableOperator<T, T> {
         worker_(scheduler.createWorker()) {}
 
   void subscribe(Reference<Observer<T>> observer) override {
-    ObservableOperator<T, T>::upstream_->subscribe(
-        Reference<Subscription>(new Subscription(
-            Reference<Observable<T>>(this),
-            std::move(worker_),
-            std::move(observer))));
+    ObservableOperator<T, T>::upstream_->subscribe(make_ref<Subscription>(
+        get_ref(this), std::move(worker_), std::move(observer)));
   }
 
  private:

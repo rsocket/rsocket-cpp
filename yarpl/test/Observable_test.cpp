@@ -236,7 +236,7 @@ TEST(Observable, SubscriptionCancellation) {
   });
 
   std::vector<int> v;
-  a->subscribe(Reference<Observer<int>>(new TakeObserver(2, v)));
+  a->subscribe(make_ref<TakeObserver>(2, v));
   EXPECT_EQ((unsigned long)2, v.size());
   EXPECT_EQ(2, emitted);
 }

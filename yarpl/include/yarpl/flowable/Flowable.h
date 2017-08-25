@@ -45,12 +45,9 @@ class Flowable : public virtual Refcounted {
       typename = typename std::enable_if<
           std::is_callable<Next(T), void>::value &&
           std::is_callable<Error(folly::exception_wrapper), void>::value>::type>
-  void subscribe(
-      Next next,
-      Error error,
-      int64_t batch = credits::kNoFlowControl) {
-    subscribe(Subscribers::create<T>(
-        std::move(next), std::move(error), batch));
+  void
+  subscribe(Next next, Error error, int64_t batch = credits::kNoFlowControl) {
+    subscribe(Subscribers::create<T>(std::move(next), std::move(error), batch));
   }
 
   /**
@@ -72,19 +69,20 @@ class Flowable : public virtual Refcounted {
       Complete complete,
       int64_t batch = credits::kNoFlowControl) {
     subscribe(Subscribers::create<T>(
-        std::move(next),
-        std::move(error),
-        std::move(complete),
-        batch));
+        std::move(next), std::move(error), std::move(complete), batch));
   }
 
-  template <typename Function, typename R = typename std::result_of<Function(T)>::type>
+  template <
+      typename Function,
+      typename R = typename std::result_of<Function(T)>::type>
   Reference<Flowable<R>> map(Function function);
 
   template <typename Function>
   Reference<Flowable<T>> filter(Function function);
 
-  template <typename Function, typename R = typename std::result_of<Function(T, T)>::type>
+  template <
+      typename Function,
+      typename R = typename std::result_of<Function(T, T)>::type>
   Reference<Flowable<R>> reduce(Function function);
 
   Reference<Flowable<T>> take(int64_t);

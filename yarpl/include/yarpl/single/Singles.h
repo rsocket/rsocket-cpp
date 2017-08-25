@@ -29,8 +29,7 @@ class Singles {
           OnSubscribe(Reference<SingleObserver<T>>),
           void>::value>::type>
   static Reference<Single<T>> create(OnSubscribe function) {
-    return Reference<Single<T>>(new FromPublisherOperator<T, OnSubscribe>(
-        std::move(function)));
+    return make_ref<FromPublisherOperator<T, OnSubscribe>>(std::move(function));
   }
 
   template <typename T>

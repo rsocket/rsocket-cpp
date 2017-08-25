@@ -406,6 +406,7 @@ add_executable(
   test/RequestResponseTest.cpp
   test/RequestStreamTest.cpp
   test/WarmResumptionTest.cpp
+  test/ColdResumptionTest.cpp
   test/ConnectionEventsTest.cpp
   test/Test.cpp
   test/framing/FrameTest.cpp

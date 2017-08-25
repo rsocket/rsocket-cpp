@@ -126,61 +126,59 @@ template <typename T>
 template <typename Function>
 auto Observable<T>::map(Function function) {
   using D = typename std::result_of<Function(T)>::type;
-  return Reference<Observable<D>>(new MapOperator<T, D, Function>(
-      Reference<Observable<T>>(this), std::move(function)));
+  return make_ref<MapOperator<T, D, Function>, Observable<D>>(
+      get_ref(this), std::move(function));
 }
 
 template <typename T>
 template <typename Function>
 auto Observable<T>::filter(Function function) {
-  return Reference<Observable<T>>(new FilterOperator<T, Function>(
-      Reference<Observable<T>>(this), std::move(function)));
+  return make_ref<FilterOperator<T, Function>, Observable<T>>(
+      get_ref(this), std::move(function));
 }
 
 template <typename T>
 template <typename Function>
 auto Observable<T>::reduce(Function function) {
   using D = typename std::result_of<Function(T, T)>::type;
-  return Reference<Observable<D>>(new ReduceOperator<T, D, Function>(
-      Reference<Observable<T>>(this), std::move(function)));
+  return make_ref<ReduceOperator<T, D, Function>, Observable<D>>(
+      get_ref(this), std::move(function));
 }
 
 template <typename T>
 auto Observable<T>::take(int64_t limit) {
-  return Reference<Observable<T>>(
-      new TakeOperator<T>(Reference<Observable<T>>(this), limit));
+  return make_ref<TakeOperator<T>, Observable<T>>(get_ref(this), limit);
 }
 
 template <typename T>
 auto Observable<T>::skip(int64_t offset) {
-  return Reference<Observable<T>>(
-      new SkipOperator<T>(Reference<Observable<T>>(this), offset));
+  return make_ref<SkipOperator<T>, Observable<T>>(get_ref(this), offset);
 }
 
 template <typename T>
 auto Observable<T>::ignoreElements() {
-  return Reference<Observable<T>>(
-      new IgnoreElementsOperator<T>(Reference<Observable<T>>(this)));
+  return make_ref<IgnoreElementsOperator<T>, Observable<T>>(get_ref(this));
 }
 
 template <typename T>
 auto Observable<T>::subscribeOn(Scheduler& scheduler) {
-  return Reference<Observable<T>>(
-      new SubscribeOnOperator<T>(Reference<Observable<T>>(this), scheduler));
+  return make_ref<SubscribeOnOperator<T>, Observable<T>>(
+      get_ref(this), scheduler);
 }
 
 template <typename T>
 auto Observable<T>::toFlowable(BackpressureStrategy strategy) {
   // we currently ONLY support the DROP strategy
   // so do not use the strategy parameter for anything
-  auto o = Reference<Observable<T>>(this);
+  auto o = get_ref<Observable<T>>(this);
   return yarpl::flowable::Flowables::fromPublisher<T>([
     o = std::move(o), // the Observable to pass through
     strategy
   ](Reference<yarpl::flowable::Subscriber<T>> s) {
-    s->onSubscribe(Reference<yarpl::flowable::Subscription>(
-        new yarpl::flowable::sources::FlowableFromObservableSubscription<T>(
-            std::move(o), std::move(s))));
+    s->onSubscribe(
+        make_ref<
+            yarpl::flowable::sources::FlowableFromObservableSubscription<T>>(
+            std::move(o), std::move(s)));
   });
 }
 

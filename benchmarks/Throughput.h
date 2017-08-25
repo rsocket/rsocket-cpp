@@ -9,7 +9,7 @@ namespace rsocket {
 /// Responder that always sends back a fixed message.
 class FixedResponder : public RSocketResponder {
  public:
-  FixedResponder(const std::string& message)
+  explicit FixedResponder(const std::string& message)
       : message_{folly::IOBuf::copyBuffer(message)} {}
 
   /// Infinitely streams back the message.

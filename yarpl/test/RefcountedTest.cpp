@@ -13,14 +13,14 @@ TEST(RefcountedTest, ObjectCountsAreMaintained) {
   std::vector<std::unique_ptr<Refcounted>> v;
   for (std::size_t i = 0; i < 16; ++i) {
     v.push_back(std::make_unique<Refcounted>());
-    EXPECT_EQ(0U, v[i]->count()); // no references.
+    EXPECT_EQ(1U, v[i]->count()); // no references.
   }
 
   v.resize(11);
 }
 
 TEST(RefcountedTest, ReferenceCountingWorks) {
-  auto first = Reference<Refcounted>(new Refcounted);
+  auto first = make_ref<Refcounted>();
   EXPECT_EQ(1U, first->count());
 
   auto second = first;
@@ -45,4 +45,17 @@ TEST(RefcountedTest, ReferenceCountingWorks) {
   EXPECT_EQ(nullptr, fourth.get());
   EXPECT_EQ(2U, first->count());
 }
+
+
+class MyRefInside : public virtual Refcounted {
+public:
+  MyRefInside() {
+    auto r = get_ref(this);
+  }
+};
+
+TEST(RefcountedTest, CanCallGetRefInCtor) {
+  make_ref<MyRefInside>();
+}
+
 } // yarpl

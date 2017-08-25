@@ -11,6 +11,14 @@
 
 namespace yarpl {
 
+namespace detail {
+struct skip_initial_refcount_check {};
+struct do_initial_refcount_check {};
+}
+
+template <typename T>
+class Reference;
+
 /// Base of refcounted objects.  The intention is the same as that
 /// of boost::intrusive_ptr<>, except that we have virtual methods
 /// anyway, and want to avoid argument-dependent lookup.
@@ -25,19 +33,10 @@ class Refcounted {
     return refcount_;
   }
 
-  // Not intended to be broadly used by the application code mostly for library
-  // code (static to purposely make it more awkward).
-  static void incRef(Refcounted& obj) {
-    obj.incRef();
-  }
-
-  // Not intended to be broadly used by the application code mostly for library
-  // code (static to purposely make it more awkward).
-  static void decRef(Refcounted& obj) {
-    obj.decRef();
-  }
-
  private:
+  template <typename U>
+  friend class Reference;
+
   void incRef() {
     refcount_.fetch_add(1, std::memory_order_relaxed);
   }
@@ -51,7 +50,9 @@ class Refcounted {
     }
   }
 
-  mutable std::atomic_size_t refcount_{0};
+  // refcount starts at 1 always, so we don't destroy ourselves in
+  // the constructor if we call `get_ref` in it
+  mutable std::atomic_size_t refcount_{1};
 };
 
 /// RAII-enabling smart pointer for refcounted objects.  Each reference
@@ -66,7 +67,36 @@ class Reference {
   Reference() = default;
   inline /* implicit */ Reference(std::nullptr_t) {}
 
-  explicit Reference(T* pointer) : pointer_(pointer) {
+  explicit Reference(T* pointer, detail::skip_initial_refcount_check)
+      : pointer_(pointer) {
+    // newly constructed object in `make_ref` already had a refcount of 1,
+    // so don't increment it (we take 'ownership' of the reference made in
+    // make_ref)
+    assert(pointer->Refcounted::count() >= 1);
+  }
+  explicit Reference(T* pointer, detail::do_initial_refcount_check)
+      : pointer_(pointer) {
+    /**
+     * consider the following:
+     *
+     class MyClass : Refcounted {
+       MyClass() {
+        // count() == 0
+        auto r = get_ref<MyClass>(this)
+        // count() == 1
+        do_something_with(r);
+        // if do_something_with(r) doens't keep a reference to r somewhere, then
+        // count() == 0
+        // and we call ~MyClass() within the constructor, which is a Bad Thing
+       }
+     };
+
+     * the check below prevents (at runtime) taking a reference in situations
+     * like this
+     */
+    assert(
+        pointer->count() >= 1 &&
+        "can't take an additional reference to something with a zero refcount");
     inc();
   }
 
@@ -121,6 +151,7 @@ class Reference {
 
   //////////////////////////////////////////////////////////////////////////////
 
+  // TODO: remove this from public Reference API
   T* get() const {
     return pointer_;
   }
@@ -148,7 +179,7 @@ class Reference {
         "Reference must be used with types that virtually derive Refcounted");
 
     if (pointer_) {
-      Refcounted::incRef(*pointer_);
+      pointer_->incRef();
     }
   }
 
@@ -158,7 +189,7 @@ class Reference {
         "Reference must be used with types that virtually derive Refcounted");
 
     if (pointer_) {
-      Refcounted::decRef(*pointer_);
+      pointer_->decRef();
     }
   }
 
@@ -268,19 +299,38 @@ bool operator>=(std::nullptr_t, const Reference<T>& rhs) noexcept {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-template <typename T, typename... Args>
-Reference<T> make_ref(Args&&... args) {
-  return Reference<T>(new T(std::forward<Args>(args)...));
+template <typename T, typename CastTo = T, typename... Args>
+Reference<CastTo> make_ref(Args&&... args) {
+  static_assert(
+      std::is_base_of<Refcounted, std::decay_t<T>>::value,
+      "Reference can only be constructed with a Refcounted object");
+
+  static_assert(
+      std::is_base_of<std::decay_t<CastTo>, std::decay_t<T>>::value,
+      "Concrete type must be a subclass of casted-to-type");
+
+  return Reference<CastTo>(
+    new T(std::forward<Args>(args)...),
+    detail::skip_initial_refcount_check{}
+  );
 }
 
 template <typename T>
 Reference<T> get_ref(T& object) {
-  return Reference<T>(&object);
+  static_assert(
+      std::is_base_of<Refcounted, std::decay_t<T>>::value,
+      "Reference can only be constructed with a Refcounted object");
+
+  return Reference<T>(&object, detail::do_initial_refcount_check{});
 }
 
 template <typename T>
 Reference<T> get_ref(T* object) {
-  return Reference<T>(object);
+  static_assert(
+      std::is_base_of<Refcounted, std::decay_t<T>>::value,
+      "Reference can only be constructed with a Refcounted object");
+
+  return Reference<T>(object, detail::do_initial_refcount_check{});
 }
 
 } // namespace yarpl

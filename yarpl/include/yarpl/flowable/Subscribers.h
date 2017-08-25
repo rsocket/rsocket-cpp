@@ -25,9 +25,10 @@ class Subscribers {
       typename Next,
       typename =
           typename std::enable_if<std::is_callable<Next(T), void>::value>::type>
-  static auto create(Next next, int64_t batch = kNoFlowControl) {
-    return Reference<Subscriber<T>>(
-        new Base<T, Next>(std::move(next), batch));
+  static Reference<Subscriber<T>> create(
+      Next next,
+      int64_t batch = kNoFlowControl) {
+    return make_ref<Base<T, Next>>(std::move(next), batch);
   }
 
   template <
@@ -37,10 +38,10 @@ class Subscribers {
       typename = typename std::enable_if<
           std::is_callable<Next(T), void>::value &&
           std::is_callable<Error(folly::exception_wrapper), void>::value>::type>
-  static auto
+  static Reference<Subscriber<T>>
   create(Next next, Error error, int64_t batch = kNoFlowControl) {
-    return Reference<Subscriber<T>>(new WithError<T, Next, Error>(
-        std::move(next), std::move(error), batch));
+    return make_ref<WithError<T, Next, Error>>(
+        std::move(next), std::move(error), batch);
   }
 
   template <
@@ -52,17 +53,13 @@ class Subscribers {
           std::is_callable<Next(T), void>::value &&
           std::is_callable<Error(folly::exception_wrapper), void>::value &&
           std::is_callable<Complete(), void>::value>::type>
-  static auto create(
+  static Reference<Subscriber<T>> create(
       Next next,
       Error error,
       Complete complete,
       int64_t batch = kNoFlowControl) {
-    return Reference<Subscriber<T>>(
-        new WithErrorAndComplete<T, Next, Error, Complete>(
-            std::move(next),
-            std::move(error),
-            std::move(complete),
-            batch));
+    return make_ref<WithErrorAndComplete<T, Next, Error, Complete>>(
+        std::move(next), std::move(error), std::move(complete), batch);
   }
 
  private:

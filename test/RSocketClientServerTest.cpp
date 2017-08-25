@@ -2,8 +2,8 @@
 
 #include "RSocketTests.h"
 
-#include <folly/io/async/ScopedEventBaseThread.h>
 #include <folly/Random.h>
+#include <folly/io/async/ScopedEventBaseThread.h>
 #include <gtest/gtest.h>
 #include "test/handlers/HelloStreamRequestHandler.h"
 
@@ -46,7 +46,8 @@ TEST(RSocketClientServer, ConnectManyAsync) {
   for (size_t i = 0; i < connectionCount; ++i) {
     int workerId = folly::Random::rand32(workerCount);
     auto clientFuture =
-        makeClientAsync(workers[workerId].getEventBase(), *server->listeningPort())
+        makeClientAsync(
+            workers[workerId].getEventBase(), *server->listeningPort())
             .then([&executed](std::shared_ptr<rsocket::RSocketClient> client) {
               auto requester = client->getRequester();
               client->disconnect(folly::exception_wrapper());

@@ -25,10 +25,10 @@ namespace {
 class HelloSubscriber : public virtual Refcounted, public Subscriber<Payload> {
  public:
   void request(int n) {
-    while (!subscription_) {
+    while (!Subscriber<Payload>::subscription()) {
       std::this_thread::yield();
     }
-    subscription_->request(n);
+    Subscriber<Payload>::subscription()->request(n);
   }
 
   int rcvdCount() const {
@@ -37,7 +37,7 @@ class HelloSubscriber : public virtual Refcounted, public Subscriber<Payload> {
 
  protected:
   void onSubscribe(Reference<Subscription> subscription) noexcept override {
-    subscription_ = subscription;
+    Subscriber<rsocket::Payload>::onSubscribe(subscription);
   }
 
   void onNext(Payload) noexcept override {
@@ -45,7 +45,6 @@ class HelloSubscriber : public virtual Refcounted, public Subscriber<Payload> {
   }
 
  private:
-  Reference<Subscription> subscription_{nullptr};
   std::atomic<int> count_{0};
 };
 

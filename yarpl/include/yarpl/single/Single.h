@@ -68,7 +68,7 @@ class Single : public virtual Refcounted {
       typename = typename std::enable_if<std::is_callable<
           OnSubscribe(Reference<SingleObserver<T>>),
           void>::value>::type>
-  static auto create(OnSubscribe);
+  static Reference<Single<T>> create(OnSubscribe);
 
   template <typename Function>
   auto map(Function function);
@@ -131,24 +131,22 @@ namespace single {
 
 template <typename T>
 template <typename OnSubscribe, typename>
-auto Single<T>::create(OnSubscribe function) {
-  return Reference<Single<T>>(new FromPublisherOperator<T, OnSubscribe>(
-      std::move(function)));
+Reference<Single<T>> Single<T>::create(OnSubscribe function) {
+  return make_ref<FromPublisherOperator<T, OnSubscribe>>(std::move(function));
 }
 
 template <typename OnSubscribe, typename>
 auto Single<void>::create(OnSubscribe function) {
-  return Reference<Single<void>>(
-      new SingleVoidFromPublisherOperator<OnSubscribe>(
-          std::forward<OnSubscribe>(function)));
+  return make_ref<SingleVoidFromPublisherOperator<OnSubscribe>, Single<void>>(
+      std::forward<OnSubscribe>(function));
 }
 
 template <typename T>
 template <typename Function>
 auto Single<T>::map(Function function) {
   using D = typename std::result_of<Function(T)>::type;
-  return Reference<Single<D>>(new MapOperator<T, D, Function>(
-      Reference<Single<T>>(this), std::move(function)));
+  return make_ref<MapOperator<T, D, Function>, Single<D>>(
+      get_ref<Single<T>>(this), std::move(function));
 }
 
 } // single
