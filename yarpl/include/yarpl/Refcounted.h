@@ -333,6 +333,33 @@ Reference<T> get_ref(T* object) {
   return Reference<T>(object, detail::do_initial_refcount_check{});
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
+// helper for retaining a reference to a Refcounted object
+class NonAtomicManualReference : public virtual Refcounted {
+public:
+  NonAtomicManualReference() {
+    this_ref_ = get_ref(this);
+  }
+
+  void incRef() {
+    assert(this_ref_ && "Called incRef on a NonAtomicManualReference that was already released!");
+    refcount_++;
+  }
+
+  void decRef() {
+    assert(refcount_ > 0  && "Called decRef too many times on a NonAtomicManualReference!");
+    refcount_--;
+    if(refcount_ == 0) {
+      this_ref_ = nullptr;
+    }
+  }
+
+private:
+  int refcount_ = 0;
+  Reference<NonAtomicManualReference> this_ref_;
+};
+
 } // namespace yarpl
 
 //
