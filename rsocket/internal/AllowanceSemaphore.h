@@ -53,6 +53,10 @@ class AllowanceSemaphore {
     return value_;
   }
 
+  ValueType getValue() const {
+    return value_;
+  }
+
   static ValueType max() {
     return std::numeric_limits<ValueType>::max();
   }

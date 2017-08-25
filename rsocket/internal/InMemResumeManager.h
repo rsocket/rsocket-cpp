@@ -27,14 +27,16 @@ class InMemResumeManager : public ResumeManager {
   ~InMemResumeManager();
 
   void trackReceivedFrame(
-      const folly::IOBuf& serializedFrame,
+      size_t frameLength,
       FrameType frameType,
-      StreamId streamId) override;
+      StreamId streamId,
+      size_t consumerAllowance) override;
 
   void trackSentFrame(
       const folly::IOBuf& serializedFrame,
       FrameType frameType,
-      folly::Optional<StreamId> streamIdPtr) override;
+      folly::Optional<StreamId> streamIdPtr,
+      size_t consumerAllowance) override;
 
   void resetUpToPosition(ResumePosition position) override;
 
@@ -60,30 +62,14 @@ class InMemResumeManager : public ResumeManager {
 
   std::unordered_set<StreamId> getRequesterRequestStreamIds() override;
 
-  uint32_t getPublisherAllowance(StreamId streamId) override {
+  size_t getPublisherAllowance(StreamId streamId) override {
     auto it = consumerAllowance_.find(streamId);
     return it != consumerAllowance_.end() ? it->second : 0;
   }
 
-  uint32_t getConsumerAllowance(StreamId streamId) override {
+  size_t getConsumerAllowance(StreamId streamId) override {
     auto it = consumerAllowance_.find(streamId);
     return it != consumerAllowance_.end() ? it->second : 0;
-  }
-
-  void incrPublisherAllowance(StreamId streamId, uint32_t n) override {
-    publisherAllowance_[streamId] += n;
-  }
-
-  void decrPublisherAllowance(StreamId streamId, uint32_t n) override {
-    publisherAllowance_[streamId] -= n;
-  }
-
-  void incrConsumerAllowance(StreamId streamId, uint32_t n) override {
-    consumerAllowance_[streamId] += n;
-  }
-
-  void decrConsumerAllowance(StreamId streamId, uint32_t n) override {
-    consumerAllowance_[streamId] -= n;
   }
 
   std::string getStreamToken(StreamId streamId) override {
@@ -130,11 +116,11 @@ class InMemResumeManager : public ResumeManager {
 
   // This stores the allowance for streams where the local side
   // is a publisher (REQUEST_STREAM Responder and REQUEST_CHANNEL)
-  std::map<StreamId, uint32_t> publisherAllowance_;
+  std::map<StreamId, size_t> publisherAllowance_;
 
   // This stores the allowance for streams where the local side
   // is a consumer (REQUEST_STREAM Requester and REQUEST_CHANNEL)
-  std::map<StreamId, uint32_t> consumerAllowance_;
+  std::map<StreamId, size_t> consumerAllowance_;
 
   // This is a mapping between streamIds and application-aware streamTokens
   std::map<StreamId, std::string> streamTokens_;

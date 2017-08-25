@@ -40,6 +40,8 @@ class ConsumerBase : public StreamStateMachineBase,
   void generateRequest(size_t n);
   /// @}
 
+  size_t getConsumerAllowance() const override;
+
  protected:
   void checkConsumerRequest();
   void cancelConsumer();

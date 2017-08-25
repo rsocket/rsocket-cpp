@@ -33,14 +33,16 @@ class ResumeManager {
   // sent/received on the wire.  The application should implement a way to
   // store the sent and received frames in persistent storage.
   virtual void trackReceivedFrame(
-      const folly::IOBuf& serializedFrame,
+      size_t frameLength,
       FrameType frameType,
-      StreamId streamId) = 0;
+      StreamId streamId,
+      size_t consumerAllowance) = 0;
 
   virtual void trackSentFrame(
       const folly::IOBuf& serializedFrame,
       FrameType frameType,
-      folly::Optional<StreamId> streamIdPtr) = 0;
+      folly::Optional<StreamId> streamIdPtr,
+      size_t consumerAllowance) = 0;
 
   // We have received acknowledgement from the remote-side that it has frames
   // up to "position".  We can discard all frames before that.  This
@@ -85,25 +87,13 @@ class ResumeManager {
   // the local side is a publisher (REQUEST_STREAM Responder and
   // REQUEST_CHANNEL).  This should return the allowance which the local side
   // has received and hasn't fulfilled yet.
-  virtual uint32_t getPublisherAllowance(StreamId) = 0;
+  virtual size_t getPublisherAllowance(StreamId) = 0;
 
   // Get allowance for the given StreamId.  This is called for situations where
   // the local side is a consumer (REQUEST_STREAM Requester and
   // REQUEST_CHANNEL).  This should return the allowance which has been sent to
   // the remote side and hasn't been fulfilled yet.
-  virtual uint32_t getConsumerAllowance(StreamId) = 0;
-
-  // Increment the publisher allowance to be preserved for the StreamId
-  virtual void incrPublisherAllowance(StreamId, uint32_t) = 0;
-
-  // Decrement the publisher allowance to be preserved for the StreamId
-  virtual void decrPublisherAllowance(StreamId, uint32_t) = 0;
-
-  // Increment the consumer allowance to be preserved for the StreamId
-  virtual void incrConsumerAllowance(StreamId, uint32_t) = 0;
-
-  // Decrement the consumer allowance to be preserved for the StreamId
-  virtual void decrConsumerAllowance(StreamId, uint32_t) = 0;
+  virtual size_t getConsumerAllowance(StreamId) = 0;
 
   // Return the application-aware streamToken for the given StreamId
   virtual std::string getStreamToken(StreamId) = 0;

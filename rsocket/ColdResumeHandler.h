@@ -26,7 +26,7 @@ class ColdResumeHandler {
   virtual yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
   handleResponderResumeStream(
       std::string streamToken,
-      uint32_t publisherAllowance);
+      size_t publisherAllowance);
 
   // This method will be called for each REQUEST_STREAM for which the
   // application acted as a requester.  The default action would be to return a
@@ -36,6 +36,6 @@ class ColdResumeHandler {
   virtual yarpl::Reference<yarpl::flowable::Subscriber<rsocket::Payload>>
   handleRequesterResumeStream(
       std::string streamToken,
-      uint32_t consumerAllowance);
+      size_t consumerAllowance);
 };
 }
