@@ -8,23 +8,16 @@
 #include "rsocket/internal/Common.h"
 #include "yarpl/flowable/Subscription.h"
 
-#include <boost/version.hpp>
-#if BOOST_VERSION < 105500
-#include <boost/log/utility/intrusive_ref_counter.hpp>
-using namespace boost::log;
-#else
-#include <boost/smart_ptr/intrusive_ref_counter.hpp>
-#endif
-
-using namespace boost;
-
 namespace rsocket {
 
 using namespace yarpl::flowable;
 
 class TcpReaderWriter : public folly::AsyncTransportWrapper::WriteCallback,
-                        public folly::AsyncTransportWrapper::ReadCallback,
-                        public intrusive_ref_counter<TcpReaderWriter, thread_unsafe_counter> {
+                        public folly::AsyncTransportWrapper::ReadCallback {
+
+  friend void intrusive_ptr_add_ref(TcpReaderWriter* x);
+  friend void intrusive_ptr_release(TcpReaderWriter* x);
+
  public:
   explicit TcpReaderWriter(
       folly::AsyncSocket::UniquePtr&& socket,
@@ -173,7 +166,20 @@ class TcpReaderWriter : public folly::AsyncTransportWrapper::WriteCallback,
   yarpl::Reference<DuplexConnection::Subscriber> inputSubscriber_;
   yarpl::Reference<Subscription> outputSubscription_;
   bool readerSet_{false};
+  int refCount_{0};
 };
+
+void intrusive_ptr_add_ref(TcpReaderWriter* x);
+void intrusive_ptr_release(TcpReaderWriter* x);
+
+inline void intrusive_ptr_add_ref(TcpReaderWriter* x){
+  ++x->refCount_;
+}
+
+inline void intrusive_ptr_release(TcpReaderWriter* x){
+  if(--x->refCount_ == 0)
+    delete x;
+}
 
 namespace {
 
