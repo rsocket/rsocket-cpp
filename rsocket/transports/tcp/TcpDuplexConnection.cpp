@@ -4,6 +4,8 @@
 
 #include <folly/ExceptionWrapper.h>
 #include <folly/io/IOBufQueue.h>
+#include <boost/smart_ptr/intrusive_ptr.hpp>
+#include <boost/smart_ptr/intrusive_ref_counter.hpp>
 
 #include "rsocket/internal/Common.h"
 #include "yarpl/flowable/Subscription.h"
@@ -14,7 +16,7 @@ using namespace yarpl::flowable;
 
 class TcpReaderWriter : public folly::AsyncTransportWrapper::WriteCallback,
                         public folly::AsyncTransportWrapper::ReadCallback,
-                        public yarpl::Refcounted {
+                        public boost::intrusive_ref_counter<TcpReaderWriter, boost::thread_unsafe_counter> {
  public:
   explicit TcpReaderWriter(
       folly::AsyncSocket::UniquePtr&& socket,
@@ -45,7 +47,7 @@ class TcpReaderWriter : public folly::AsyncTransportWrapper::WriteCallback,
       readerSet_ = true;
       // now AsyncSocket will hold a reference to this instance until
       // they call readEOF or readErr
-      yarpl::Refcounted::incRef(*this);
+      intrusive_ptr_add_ref(this);
       socket_->setReadCB(this);
     }
   }
@@ -77,7 +79,7 @@ class TcpReaderWriter : public folly::AsyncTransportWrapper::WriteCallback,
     }
     // now AsyncSocket will hold a reference to this instance as a writer until
     // they call writeComplete or writeErr
-    yarpl::Refcounted::incRef(*this);
+    intrusive_ptr_add_ref(this);
     socket_->writeChain(this, std::move(element));
   }
 
@@ -111,14 +113,14 @@ class TcpReaderWriter : public folly::AsyncTransportWrapper::WriteCallback,
   }
 
   void writeSuccess() noexcept override {
-    yarpl::Refcounted::decRef(*this);
+    intrusive_ptr_release(this);
   }
 
   void writeErr(
       size_t,
       const folly::AsyncSocketException& exn) noexcept override {
     closeErr(exn);
-    yarpl::Refcounted::decRef(*this);
+    intrusive_ptr_release(this);
   }
 
   void getReadBuffer(void** bufReturn, size_t* lenReturn) noexcept override {
@@ -138,12 +140,12 @@ class TcpReaderWriter : public folly::AsyncTransportWrapper::WriteCallback,
 
   void readEOF() noexcept override {
     close();
-    yarpl::Refcounted::decRef(*this);
+    intrusive_ptr_release(this);
   }
 
   void readErr(const folly::AsyncSocketException& exn) noexcept override {
     closeErr(exn);
-    yarpl::Refcounted::decRef(*this);
+    intrusive_ptr_release(this);
   }
 
   bool isBufferMovable() noexcept override {
@@ -169,7 +171,7 @@ namespace {
 
 class TcpOutputSubscriber : public DuplexConnection::Subscriber {
  public:
-  explicit TcpOutputSubscriber(yarpl::Reference<TcpReaderWriter> tcpReaderWriter)
+  explicit TcpOutputSubscriber(boost::intrusive_ptr<TcpReaderWriter> tcpReaderWriter)
       : tcpReaderWriter_(std::move(tcpReaderWriter)) {
     CHECK(tcpReaderWriter_);
   }
@@ -196,13 +198,13 @@ class TcpOutputSubscriber : public DuplexConnection::Subscriber {
   }
 
  private:
-  yarpl::Reference<TcpReaderWriter> tcpReaderWriter_;
+  boost::intrusive_ptr<TcpReaderWriter> tcpReaderWriter_;
 };
 
 class TcpInputSubscription : public Subscription {
  public:
   explicit TcpInputSubscription(
-      yarpl::Reference<TcpReaderWriter> tcpReaderWriter)
+      boost::intrusive_ptr<TcpReaderWriter> tcpReaderWriter)
       : tcpReaderWriter_(std::move(tcpReaderWriter)) {
     CHECK(tcpReaderWriter_);
   }
@@ -219,7 +221,7 @@ class TcpInputSubscription : public Subscription {
   }
 
  private:
-  yarpl::Reference<TcpReaderWriter> tcpReaderWriter_;
+  boost::intrusive_ptr<TcpReaderWriter> tcpReaderWriter_;
 };
 }
 
@@ -227,7 +229,7 @@ TcpDuplexConnection::TcpDuplexConnection(
     folly::AsyncSocket::UniquePtr&& socket,
     std::shared_ptr<RSocketStats> stats)
     : tcpReaderWriter_(
-          yarpl::make_ref<TcpReaderWriter>(std::move(socket), stats)),
+          new TcpReaderWriter(std::move(socket), stats)),
       stats_(stats) {
   if (stats_) {
     stats_->duplexConnectionCreated("tcp", this);

@@ -6,6 +6,7 @@
 #include <folly/Format.h>
 #include <folly/Optional.h>
 #include <folly/String.h>
+#include <folly/io/async/EventBaseManager.h>
 
 #include "rsocket/DuplexConnection.h"
 #include "rsocket/RSocketConnectionEvents.h"
@@ -466,11 +467,10 @@ void RSocketStateMachine::handleConnectionFrame(
           auto subscriber = coldResumeHandler_->handleRequesterResumeStream(
               streamToken, consumerAllowance);
           //TODO(somatsun): ensure that subscription is called from the correct
-          // thread (eventBase)
+          // thread (eventBase) without using EventBaseManager
           streamsFactory().createStreamRequester(
-              std::move(subscriber),
-//              yarpl::make_ref<ScheduledSubscriptionSubscriber<Payload>>(
-//                  std::move(subscriber), eventBase_),
+              yarpl::make_ref<ScheduledSubscriptionSubscriber<Payload>>(
+                  std::move(subscriber), *folly::EventBaseManager::get()->getEventBase()),
               streamId,
               consumerAllowance);
         }

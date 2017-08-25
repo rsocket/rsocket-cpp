@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <boost/smart_ptr/intrusive_ptr.hpp>
 #include <folly/io/async/AsyncSocket.h>
 
 #include "rsocket/DuplexConnection.h"
@@ -24,7 +25,7 @@ class TcpDuplexConnection : public DuplexConnection {
   void setInput(yarpl::Reference<DuplexConnection::Subscriber>) override;
 
  private:
-  yarpl::Reference<TcpReaderWriter> tcpReaderWriter_;
+  boost::intrusive_ptr<TcpReaderWriter> tcpReaderWriter_;
   std::shared_ptr<RSocketStats> stats_;
 };
 }

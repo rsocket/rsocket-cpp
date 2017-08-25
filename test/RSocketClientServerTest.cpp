@@ -53,11 +53,18 @@ TEST(RSocketClientServer, ConnectManyAsync) {
               client->disconnect(folly::exception_wrapper());
               ++executed;
               return client;
-            });
+            }).onError([&](folly::exception_wrapper ex) {
+          LOG(ERROR) << "error: " << ex.what();
+          ++executed;
+          return std::shared_ptr<RSocketClient>(nullptr);
+        });
     clients.emplace_back(std::move(clientFuture));
   }
 
-  auto results = folly::collectAll(clients).get(folly::Duration(5000));
+  CHECK_EQ(clients.size(), connectionCount);
+  auto results = folly::collectAll(clients).get();
+  CHECK_EQ(results.size(), connectionCount);
+
   results.clear();
   clients.clear();
   CHECK_EQ(executed, connectionCount);
