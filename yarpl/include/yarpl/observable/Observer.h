@@ -21,6 +21,7 @@ class Observer : public virtual Refcounted {
     DCHECK(subscription);
 
     if (subscription_) {
+      DLOG(ERROR) << "attempt to double subscribe";
       subscription->cancel();
       return;
     }
@@ -42,9 +43,19 @@ class Observer : public virtual Refcounted {
 
   virtual void onNext(T) = 0;
 
+  bool isUnsubscribed() const {
+    CHECK(subscription_);
+    return subscription_->isCancelled();
+  }
+
  protected:
   Subscription* subscription() {
     return subscription_.operator->();
+  }
+
+  void unsubscribe() {
+    CHECK(subscription_);
+    subscription_->cancel();
   }
 
  private:

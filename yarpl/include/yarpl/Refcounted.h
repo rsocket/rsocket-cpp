@@ -26,6 +26,9 @@ class Reference;
 /// NOTE: Only derive using "virtual public" inheritance.
 class Refcounted {
  public:
+
+  /// dtor is thread safe because we cast thread_fence before
+  /// calling delete this
   virtual ~Refcounted() = default;
 
   // Return the current count.  For testing.

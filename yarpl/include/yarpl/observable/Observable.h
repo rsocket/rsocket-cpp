@@ -31,7 +31,7 @@ enum class BackpressureStrategy { DROP };
 template <typename T>
 class Observable : public virtual Refcounted {
  public:
-  virtual void subscribe(Reference<Observer<T>>) = 0;
+  virtual Reference<Subscription> subscribe(Reference<Observer<T>>) = 0;
 
   /**
    * Subscribe overload that accepts lambdas.
@@ -40,8 +40,8 @@ class Observable : public virtual Refcounted {
       typename Next,
       typename =
           typename std::enable_if<std::is_callable<Next(T), void>::value>::type>
-  void subscribe(Next next) {
-    subscribe(Observers::create<T>(std::move(next)));
+  Reference<Subscription> subscribe(Next next) {
+    return subscribe(Observers::create<T>(std::move(next)));
   }
 
   /**
@@ -53,8 +53,8 @@ class Observable : public virtual Refcounted {
       typename = typename std::enable_if<
           std::is_callable<Next(T), void>::value &&
           std::is_callable<Error(folly::exception_wrapper), void>::value>::type>
-  void subscribe(Next next, Error error) {
-    subscribe(Observers::create<T>(
+  Reference<Subscription> subscribe(Next next, Error error) {
+    return subscribe(Observers::create<T>(
         std::move(next), std::move(error)));
   }
 
@@ -69,32 +69,36 @@ class Observable : public virtual Refcounted {
           std::is_callable<Next(T), void>::value &&
           std::is_callable<Error(folly::exception_wrapper), void>::value &&
           std::is_callable<Complete(), void>::value>::type>
-  void subscribe(Next next, Error error, Complete complete) {
-    subscribe(Observers::create<T>(
+  Reference<Subscription> subscribe(Next next, Error error, Complete complete) {
+    return subscribe(Observers::create<T>(
         std::move(next),
         std::move(error),
         std::move(complete)));
   }
 
   template <typename OnSubscribe>
-  static auto create(OnSubscribe);
+  static Reference<Observable<T>> create(OnSubscribe);
+
+  template <
+      typename Function,
+      typename R = typename std::result_of<Function(T)>::type>
+  Reference<Observable<R>> map(Function function);
 
   template <typename Function>
-  auto map(Function function);
+  Reference<Observable<T>> filter(Function function);
 
-  template <typename Function>
-  auto filter(Function function);
+  template <
+      typename Function,
+      typename R = typename std::result_of<Function(T, T)>::type>
+  Reference<Observable<R>> reduce(Function function);
 
-  template <typename Function>
-  auto reduce(Function function);
+  Reference<Observable<T>> take(int64_t);
 
-  auto take(int64_t);
+  Reference<Observable<T>> skip(int64_t);
 
-  auto skip(int64_t);
+  Reference<Observable<T>> ignoreElements();
 
-  auto ignoreElements();
-
-  auto subscribeOn(Scheduler&);
+  Reference<Observable<T>> subscribeOn(Scheduler&);
 
   /**
   * Convert from Observable to Flowable with a given BackpressureStrategy.
@@ -113,7 +117,7 @@ namespace observable {
 
 template <typename T>
 template <typename OnSubscribe>
-auto Observable<T>::create(OnSubscribe function) {
+Reference<Observable<T>> Observable<T>::create(OnSubscribe function) {
   static_assert(
       std::is_callable<OnSubscribe(Reference<Observer<T>>), void>(),
       "OnSubscribe must have type `void(Reference<Observer<T>>)`");
@@ -123,46 +127,44 @@ auto Observable<T>::create(OnSubscribe function) {
 }
 
 template <typename T>
-template <typename Function>
-auto Observable<T>::map(Function function) {
-  using D = typename std::result_of<Function(T)>::type;
-  return make_ref<MapOperator<T, D, Function>, Observable<D>>(
+template <typename Function, typename R>
+Reference<Observable<R>> Observable<T>::map(Function function) {
+  return make_ref<MapOperator<T, R, Function>>(
       get_ref(this), std::move(function));
 }
 
 template <typename T>
 template <typename Function>
-auto Observable<T>::filter(Function function) {
-  return make_ref<FilterOperator<T, Function>, Observable<T>>(
+Reference<Observable<T>> Observable<T>::filter(Function function) {
+  return make_ref<FilterOperator<T, Function>>(
       get_ref(this), std::move(function));
 }
 
 template <typename T>
-template <typename Function>
-auto Observable<T>::reduce(Function function) {
-  using D = typename std::result_of<Function(T, T)>::type;
-  return make_ref<ReduceOperator<T, D, Function>, Observable<D>>(
+template <typename Function, typename R>
+Reference<Observable<R>> Observable<T>::reduce(Function function) {
+  return make_ref<ReduceOperator<T, R, Function>>(
       get_ref(this), std::move(function));
 }
 
 template <typename T>
-auto Observable<T>::take(int64_t limit) {
-  return make_ref<TakeOperator<T>, Observable<T>>(get_ref(this), limit);
+Reference<Observable<T>> Observable<T>::take(int64_t limit) {
+  return make_ref<TakeOperator<T>>(get_ref(this), limit);
 }
 
 template <typename T>
-auto Observable<T>::skip(int64_t offset) {
-  return make_ref<SkipOperator<T>, Observable<T>>(get_ref(this), offset);
+Reference<Observable<T>> Observable<T>::skip(int64_t offset) {
+  return make_ref<SkipOperator<T>>(get_ref(this), offset);
 }
 
 template <typename T>
-auto Observable<T>::ignoreElements() {
-  return make_ref<IgnoreElementsOperator<T>, Observable<T>>(get_ref(this));
+Reference<Observable<T>> Observable<T>::ignoreElements() {
+  return make_ref<IgnoreElementsOperator<T>>(get_ref(this));
 }
 
 template <typename T>
-auto Observable<T>::subscribeOn(Scheduler& scheduler) {
-  return make_ref<SubscribeOnOperator<T>, Observable<T>>(
+Reference<Observable<T>> Observable<T>::subscribeOn(Scheduler& scheduler) {
+  return make_ref<SubscribeOnOperator<T>>(
       get_ref(this), scheduler);
 }
 

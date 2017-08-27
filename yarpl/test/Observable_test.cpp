@@ -2,6 +2,7 @@
 
 #include <folly/Baton.h>
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
 #include <atomic>
 
 #include "yarpl/Observable.h"
@@ -76,8 +77,6 @@ std::vector<T> run(Reference<Observable<T>> observable) {
 
 TEST(Observable, SingleOnNext) {
   auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
-    auto s = Subscriptions::empty();
-    obs->onSubscribe(s);
     obs->onNext(1);
     obs->onComplete();
   });
@@ -90,7 +89,6 @@ TEST(Observable, SingleOnNext) {
 
 TEST(Observable, MultiOnNext) {
   auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
-    obs->onSubscribe(Subscriptions::empty());
     obs->onNext(1);
     obs->onNext(2);
     obs->onNext(3);
@@ -121,14 +119,11 @@ TEST(Observable, OnError) {
   EXPECT_EQ("something broke!", errorMessage);
 }
 
-static std::atomic<int> instanceCount;
-
 /**
  * Assert that all items passed through the Observable get destroyed
  */
 TEST(Observable, ItemsCollectedSynchronously) {
   auto a = Observable<Tuple>::create([](Reference<Observer<Tuple>> obs) {
-    obs->onSubscribe(Subscriptions::empty());
     obs->onNext(Tuple{1, 2});
     obs->onNext(Tuple{2, 3});
     obs->onNext(Tuple{3, 4});
@@ -138,11 +133,6 @@ TEST(Observable, ItemsCollectedSynchronously) {
   a->subscribe(Observers::create<Tuple>([](const Tuple& value) {
     std::cout << "received value " << value.a << std::endl;
   }));
-
-  std::cout << "Finished ... remaining instances == " << instanceCount
-            << std::endl;
-
-  EXPECT_EQ(0, Tuple::instanceCount);
 }
 
 /*
@@ -153,39 +143,34 @@ TEST(Observable, ItemsCollectedSynchronously) {
  * in a Vector which could then be consumed on another thread.
  */
 TEST(DISABLED_Observable, ItemsCollectedAsynchronously) {
-  // scope this so we can check destruction of Vector after this block
-  {
-    auto a = Observable<Tuple>::create([](Reference<Observer<Tuple>> obs) {
-      obs->onSubscribe(Subscriptions::empty());
-      std::cout << "-----------------------------" << std::endl;
-      obs->onNext(Tuple{1, 2});
-      std::cout << "-----------------------------" << std::endl;
-      obs->onNext(Tuple{2, 3});
-      std::cout << "-----------------------------" << std::endl;
-      obs->onNext(Tuple{3, 4});
-      std::cout << "-----------------------------" << std::endl;
-      obs->onComplete();
-    });
+  auto a = Observable<Tuple>::create([](Reference<Observer<Tuple>> obs) {
+    std::cout << "-----------------------------" << std::endl;
+    obs->onNext(Tuple{1, 2});
+    std::cout << "-----------------------------" << std::endl;
+    obs->onNext(Tuple{2, 3});
+    std::cout << "-----------------------------" << std::endl;
+    obs->onNext(Tuple{3, 4});
+    std::cout << "-----------------------------" << std::endl;
+    obs->onComplete();
+  });
 
-    std::vector<Tuple> v;
-    v.reserve(10); // otherwise it resizes and copies on each push_back
-    a->subscribe(Observers::create<Tuple>([&v](const Tuple& value) {
-      std::cout << "received value " << value.a << std::endl;
-      // copy into vector
-      v.push_back(value);
-      std::cout << "done pushing into vector" << std::endl;
-    }));
+  std::vector<Tuple> v;
+  v.reserve(10); // otherwise it resizes and copies on each push_back
+  a->subscribe(Observers::create<Tuple>([&v](const Tuple& value) {
+    std::cout << "received value " << value.a << std::endl;
+    // copy into vector
+    v.push_back(value);
+    std::cout << "done pushing into vector" << std::endl;
+  }));
 
-    // expect that 3 instances were originally created, then 3 more when copying
-    EXPECT_EQ(6, Tuple::createdCount);
-    // expect that 3 instances still exist in the vector, so only 3 destroyed so
-    // far
-    EXPECT_EQ(3, Tuple::destroyedCount);
+  // expect that 3 instances were originally created, then 3 more when copying
+  EXPECT_EQ(6, Tuple::createdCount);
+  // expect that 3 instances still exist in the vector, so only 3 destroyed so
+  // far
+  EXPECT_EQ(3, Tuple::destroyedCount);
 
-    std::cout << "Leaving block now so Vector should release Tuples..."
-              << std::endl;
-  }
-  EXPECT_EQ(0, Tuple::instanceCount);
+  std::cout << "Leaving block now so Vector should release Tuples..."
+            << std::endl;
 }
 
 class TakeObserver : public Observer<int> {
@@ -219,18 +204,15 @@ class TakeObserver : public Observer<int> {
 
 // assert behavior of onComplete after subscription.cancel
 TEST(Observable, SubscriptionCancellation) {
-  static std::atomic_int emitted{0};
-  auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
-    std::atomic_bool isUnsubscribed{false};
-    auto s =
-        Subscriptions::create([&isUnsubscribed] { isUnsubscribed = true; });
-    obs->onSubscribe(std::move(s));
+  std::atomic_int emitted{0};
+  auto a = Observable<int>::create([&](Reference<Observer<int>> obs) {
     int i = 0;
-    while (!isUnsubscribed && i <= 10) {
+    while (!obs->isUnsubscribed() && i <= 10) {
       emitted++;
       obs->onNext(i++);
     }
-    if (!isUnsubscribed) {
+    if (!obs->isUnsubscribed()) {
+      // should be ignored
       obs->onComplete();
     }
   });
@@ -241,10 +223,28 @@ TEST(Observable, SubscriptionCancellation) {
   EXPECT_EQ(2, emitted);
 }
 
+TEST(Observable, CancelFromDifferentThread) {
+  std::atomic_int emitted{0};
+  std::thread t;
+  auto a = Observable<int>::create([&](Reference<Observer<int>> obs) {
+    t = std::thread([obs, &emitted](){
+      while (!obs->isUnsubscribed()) {
+        ++emitted;
+        obs->onNext(0);
+      }
+    });
+  });
+
+  auto subscription = a->subscribe([](int){});
+  while(emitted < 1000);
+
+  subscription->cancel();
+  t.join();
+  LOG(INFO) << "cancelled after " << emitted << " items";
+}
+
 TEST(Observable, toFlowable) {
   auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
-    auto s = Subscriptions::empty();
-    obs->onSubscribe(s);
     obs->onNext(1);
     obs->onComplete();
   });
@@ -260,13 +260,11 @@ TEST(Observable, toFlowable) {
 
 TEST(Observable, toFlowableWithCancel) {
   auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
-    auto s = Subscriptions::atomicBoolSubscription();
-    obs->onSubscribe(s);
     int i = 0;
-    while (!s->isCancelled()) {
+    while (!obs->isUnsubscribed()) {
       obs->onNext(++i);
     }
-    if (!s->isCancelled()) {
+    if (!obs->isUnsubscribed()) {
       obs->onComplete();
     }
   });
@@ -469,4 +467,86 @@ TEST(Observable, CancelReleasesObjects) {
 
   auto collector = make_ref<CollectingObserver<int>>();
   observable->subscribe(collector);
+}
+
+class InfiniteAsyncTestOperator : public ObservableOperator<int, int> {
+ public:
+  InfiniteAsyncTestOperator(Reference<Observable<int>> upstream, testing::MockFunction<void()>& checkpoint)
+      : ObservableOperator<int, int>(std::move(upstream)), checkpoint_(checkpoint) {}
+
+  Reference<Subscription> subscribe(Reference<Observer<int>> observer) override {
+    auto subscription = make_ref<TestSubscription>(get_ref(this), std::move(observer), checkpoint_);
+    ObservableOperator<int, int>::upstream_->subscribe(
+        // Note: implicit cast to a reference to a observer.
+        subscription
+        );
+    return subscription;
+  }
+
+ private:
+  class TestSubscription : public ObservableOperator<int, int>::OperatorSubscription {
+    using Super = typename ObservableOperator<int, int>::OperatorSubscription;
+
+    ~TestSubscription() {
+      t_.join();
+    }
+
+   public:
+    TestSubscription(
+        Reference<Observable<int>> observable,
+        Reference<Observer<int>> observer,
+        testing::MockFunction<void()>& checkpoint)
+        : Super(std::move(observable), std::move(observer)), checkpoint_(checkpoint) {
+
+    }
+
+    void onSubscribe(yarpl::Reference<Subscription> subscription) override {
+      Super::onSubscribe(std::move(subscription));
+      t_ = std::thread([this](){
+        while (!isCancelled()) {
+          Super::observerOnNext(1);
+        }
+        checkpoint_.Call();
+      });
+    }
+    void onNext(int value) override {
+    }
+
+    std::thread t_;
+    testing::MockFunction<void()>& checkpoint_;
+  };
+
+  testing::MockFunction<void()>& checkpoint_;
+};
+
+TEST(Observable, CancelSubscriptionChain) {
+  std::atomic_int emitted{0};
+  testing::MockFunction<void()> checkpoint;
+  testing::MockFunction<void()> checkpoint2;
+  testing::MockFunction<void()> checkpoint3;
+  std::thread t;
+  auto infinite1 = Observable<int>::create([&](Reference<Observer<int>> obs) {
+    EXPECT_CALL(checkpoint, Call()).Times(1);
+    EXPECT_CALL(checkpoint2, Call()).Times(1);
+    EXPECT_CALL(checkpoint3, Call()).Times(1);
+    t = std::thread([obs, &emitted, &checkpoint](){
+      while (!obs->isUnsubscribed()) {
+        ++emitted;
+        obs->onNext(0);
+      }
+      checkpoint.Call();
+    });
+  });
+  auto infinite2 = infinite1->skip(1)->skip(1);
+  auto test1 = make_ref<InfiniteAsyncTestOperator>(infinite2, checkpoint2);
+  auto test2 = make_ref<InfiniteAsyncTestOperator>(test1->skip(1), checkpoint3);
+  auto skip = test2->skip(8);
+
+  auto subscription = skip->subscribe([](int){});
+  while(emitted < 1000);
+
+  subscription->cancel();
+  t.join();
+
+  LOG(INFO) << "cancelled after " << emitted << " items";
 }
