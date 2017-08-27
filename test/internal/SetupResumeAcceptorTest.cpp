@@ -19,10 +19,12 @@ namespace {
  * Make a legitimate-looking SETUP frame.
  */
 Frame_SETUP makeSetup() {
+  auto version = FrameSerializer::getCurrentProtocolVersion();
+
   Frame_SETUP frame;
   frame.header_ = FrameHeader{FrameType::SETUP, FrameFlags::EMPTY, 0};
-  frame.versionMajor_ = 1;
-  frame.versionMinor_ = 0;
+  frame.versionMajor_ = version.major;
+  frame.versionMinor_ = version.minor;
   frame.keepaliveTime_ = Frame_SETUP::kMaxKeepaliveTime;
   frame.maxLifetime_ = Frame_SETUP::kMaxLifetime;
   frame.token_ = ResumeIdentificationToken::generateNew();
@@ -72,15 +74,12 @@ TEST(SetupResumeAcceptor, ImmediateClose) {
   acceptor2.close().get();
 }
 
-
 TEST(SetupResumeAcceptor, EarlyComplete) {
   folly::EventBase evb;
-  SetupResumeAcceptor acceptor{ProtocolVersion::Latest, &evb};
+  SetupResumeAcceptor acceptor{ProtocolVersion::Unknown, &evb};
 
   auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
-      [](auto input) {
-        input->onComplete();
-      },
+      [](auto input) { input->onComplete(); },
       [](auto output) {
         EXPECT_CALL(*output, onSubscribe_(_));
         EXPECT_CALL(*output, onComplete_());
@@ -93,12 +92,10 @@ TEST(SetupResumeAcceptor, EarlyComplete) {
 
 TEST(SetupResumeAcceptor, EarlyError) {
   folly::EventBase evb;
-  SetupResumeAcceptor acceptor{ProtocolVersion::Latest, &evb};
+  SetupResumeAcceptor acceptor{ProtocolVersion::Unknown, &evb};
 
   auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
-      [](auto input) {
-        input->onError(std::runtime_error("Whoops"));
-      },
+      [](auto input) { input->onError(std::runtime_error("Whoops")); },
       [](auto output) {
         EXPECT_CALL(*output, onSubscribe_(_));
         EXPECT_CALL(*output, onError_(_));
@@ -111,7 +108,7 @@ TEST(SetupResumeAcceptor, EarlyError) {
 
 TEST(SetupResumeAcceptor, SingleSetup) {
   folly::EventBase evb;
-  SetupResumeAcceptor acceptor{ProtocolVersion::Latest, &evb};
+  SetupResumeAcceptor acceptor{ProtocolVersion::Unknown, &evb};
 
   auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
       [](auto input) {
@@ -138,56 +135,9 @@ TEST(SetupResumeAcceptor, SingleSetup) {
   EXPECT_TRUE(setupCalled);
 }
 
-TEST(SetupResumeAcceptor, SetupAndFnf) {
-  folly::EventBase evb;
-  SetupResumeAcceptor acceptor{ProtocolVersion::Latest, &evb};
-
-  auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
-      [](auto input) {
-        auto serializer = FrameSerializer::createCurrentVersion();
-
-        auto setup = makeSetup();
-        Frame_REQUEST_FNF fnf{100, FrameFlags::EMPTY, Payload("Hi")};
-
-        input->onNext(serializer->serializeOut(std::move(setup)));
-        input->onNext(serializer->serializeOut(std::move(fnf)));
-      },
-      [](auto output) {
-        EXPECT_CALL(*output, onSubscribe_(_));
-        EXPECT_CALL(*output, onComplete_());
-      });
-
-  yarpl::Reference<FrameTransport> transport;
-
-  auto processor = std::make_shared<StrictMock<MockFrameProcessor>>();
-  EXPECT_CALL(*processor, processFrame_(_))
-      .WillOnce(Invoke([](auto const& buf) {
-          auto serializer = FrameSerializer::createCurrentVersion();
-
-          Frame_REQUEST_FNF fnf;
-          EXPECT_TRUE(serializer->deserializeFrom(fnf, buf->clone()));
-          EXPECT_EQ(fnf.header_.streamId_, 100u);
-          EXPECT_EQ(fnf.header_.flags_, FrameFlags::EMPTY);
-          EXPECT_EQ(fnf.payload_.cloneDataToString(), "Hi");
-      }));
-
-  acceptor.accept(
-      std::move(connection),
-      [&](auto tport, auto) {
-          transport = std::move(tport);
-          EXPECT_TRUE(transport.get());
-          transport->setFrameProcessor(processor);
-      },
-      resumeFail);
-
-  evb.loop();
-
-  transport->close();
-}
-
 TEST(SetupResumeAcceptor, InvalidSetup) {
   folly::EventBase evb;
-  SetupResumeAcceptor acceptor{ProtocolVersion::Latest, &evb};
+  SetupResumeAcceptor acceptor{ProtocolVersion::Unknown, &evb};
 
   auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
       [](auto input) {
@@ -217,7 +167,7 @@ TEST(SetupResumeAcceptor, InvalidSetup) {
 
 TEST(SetupResumeAcceptor, RejectedSetup) {
   folly::EventBase evb;
-  SetupResumeAcceptor acceptor{ProtocolVersion::Latest, &evb};
+  SetupResumeAcceptor acceptor{ProtocolVersion::Unknown, &evb};
 
   auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
       [](auto input) {
@@ -252,7 +202,7 @@ TEST(SetupResumeAcceptor, RejectedSetup) {
 
 TEST(SetupResumeAcceptor, RejectedResume) {
   folly::EventBase evb;
-  SetupResumeAcceptor acceptor{ProtocolVersion::Latest, &evb};
+  SetupResumeAcceptor acceptor{ProtocolVersion::Unknown, &evb};
 
   auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
       [](auto input) {
@@ -286,7 +236,7 @@ TEST(SetupResumeAcceptor, EventBaseDisappear) {
   auto evb = std::make_unique<folly::EventBase>();
 
   SetupResumeAcceptor acceptor{
-      ProtocolVersion::Latest, evb.get(), std::this_thread::get_id()};
+      ProtocolVersion::Unknown, evb.get(), std::this_thread::get_id()};
   evb.reset();
 }
 

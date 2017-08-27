@@ -693,10 +693,20 @@ bool FrameSerializerV0::deserializeFrom(
 
     frame.versionMajor_ = cur.readBE<uint16_t>();
     frame.versionMinor_ = cur.readBE<uint16_t>();
+
+    auto keepaliveTime = cur.readBE<int32_t>();
+    if (keepaliveTime <= 0) {
+      return false;
+    }
     frame.keepaliveTime_ =
-        std::min(cur.readBE<uint32_t>(), Frame_SETUP::kMaxKeepaliveTime);
+        std::min<uint32_t>(keepaliveTime, Frame_SETUP::kMaxKeepaliveTime);
+
+    auto maxLifetime = cur.readBE<int32_t>();
+    if (maxLifetime <= 0) {
+      return false;
+    }
     frame.maxLifetime_ =
-        std::min(cur.readBE<uint32_t>(), Frame_SETUP::kMaxLifetime);
+        std::min<uint32_t>(maxLifetime, Frame_SETUP::kMaxLifetime);
 
     // TODO: Remove hack:
     // https://github.com/ReactiveSocket/reactivesocket-cpp/issues/243
