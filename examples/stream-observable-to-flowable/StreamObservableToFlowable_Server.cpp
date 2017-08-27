@@ -52,10 +52,8 @@ class PushStreamRequestResponder : public rsocket::RSocketResponder {
              // operator is not ready yet. This can eventually
              // be replaced with use of 'subscribeOn'.
              std::thread([s, name]() {
-               auto subscription = Subscriptions::atomicBoolSubscription();
-               s->onSubscribe(subscription);
                int64_t v = 0;
-               while (!subscription->isCancelled()) {
+               while (!s->isUnsubscribed()) {
                  std::stringstream ss;
                  ss << "Event[" << name << "]-" << ++v << "!";
                  std::string payloadData = ss.str();

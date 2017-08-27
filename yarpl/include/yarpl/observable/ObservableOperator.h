@@ -468,7 +468,7 @@ class FromPublisherOperator : public Observable<T> {
       Observer<T>::onSubscribe(std::move(subscription));
     }
 
-    void onSubscribe(Reference<Subscription> subscription) override {
+    void onSubscribe(Reference<Subscription>) override {
       DLOG(ERROR) << "not allowed to call";
     }
 
