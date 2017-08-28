@@ -10,11 +10,11 @@ namespace observable {
 /**
  * Implementation that allows checking if a Subscription is cancelled.
  */
-void AtomicBoolSubscription::cancel() {
+void Subscription::cancel() {
   cancelled_ = true;
 }
 
-bool AtomicBoolSubscription::isCancelled() const {
+bool Subscription::isCancelled() const {
   return cancelled_;
 }
 
@@ -32,10 +32,6 @@ void CallbackSubscription::cancel() {
   }
 }
 
-bool CallbackSubscription::isCancelled() const {
-  return cancelled_;
-}
-
 Reference<Subscription> Subscriptions::create(std::function<void()> onCancel) {
   return make_ref<CallbackSubscription>(std::move(onCancel));
 }
@@ -44,12 +40,9 @@ Reference<Subscription> Subscriptions::create(std::atomic_bool& cancelled) {
   return create([&cancelled]() { cancelled = true; });
 }
 
-Reference<Subscription> Subscriptions::empty() {
-  return make_ref<AtomicBoolSubscription>();
+Reference<Subscription> Subscriptions::create() {
+  return make_ref<Subscription>();
 }
 
-Reference<AtomicBoolSubscription> Subscriptions::atomicBoolSubscription() {
-  return make_ref<AtomicBoolSubscription>();
-}
 }
 }

@@ -10,10 +10,10 @@ namespace observable {
 class Subscription : public virtual Refcounted {
  public:
   virtual ~Subscription() = default;
-  virtual void cancel() = 0;
+  virtual void cancel();
+  bool isCancelled() const;
 
- protected:
-  Subscription() = default;
+  std::atomic<bool> cancelled_{false};
 };
 
 } // observable
