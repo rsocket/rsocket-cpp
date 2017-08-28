@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include <atomic>
+#include <condition_variable>
 
 #include "yarpl/Observable.h"
 #include "yarpl/flowable/Subscriber.h"
@@ -225,6 +226,9 @@ TEST(Observable, SubscriptionCancellation) {
 
 TEST(Observable, CancelFromDifferentThread) {
   std::atomic_int emitted{0};
+  std::mutex m;
+  std::condition_variable cv;
+
   std::thread t;
   auto a = Observable<int>::create([&](Reference<Observer<int>> obs) {
     t = std::thread([obs, &emitted](){
@@ -236,7 +240,9 @@ TEST(Observable, CancelFromDifferentThread) {
   });
 
   auto subscription = a->subscribe([](int){});
-  while(emitted < 1000);
+
+  std::unique_lock<std::mutex> lk(m);
+  CHECK(cv.wait_for(lk, std::chrono::seconds(1), [&]{return emitted >= 1000;}));
 
   subscription->cancel();
   t.join();
@@ -492,6 +498,9 @@ class InfiniteAsyncTestOperator : public ObservableOperator<int, int> {
     }
 
    public:
+    // gcc bug 58972.
+    using Super::observerOnNext;
+
     TestSubscription(
         Reference<Observable<int>> observable,
         Reference<Observer<int>> observer,
@@ -521,6 +530,9 @@ class InfiniteAsyncTestOperator : public ObservableOperator<int, int> {
 
 TEST(Observable, CancelSubscriptionChain) {
   std::atomic_int emitted{0};
+  std::mutex m;
+  std::condition_variable cv;
+
   testing::MockFunction<void()> checkpoint;
   testing::MockFunction<void()> checkpoint2;
   testing::MockFunction<void()> checkpoint3;
@@ -543,7 +555,9 @@ TEST(Observable, CancelSubscriptionChain) {
   auto skip = test2->skip(8);
 
   auto subscription = skip->subscribe([](int){});
-  while(emitted < 1000);
+
+  std::unique_lock<std::mutex> lk(m);
+  CHECK(cv.wait_for(lk, std::chrono::seconds(1), [&]{return emitted >= 1000;}));
 
   subscription->cancel();
   t.join();
