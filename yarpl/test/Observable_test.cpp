@@ -498,8 +498,10 @@ class InfiniteAsyncTestOperator : public ObservableOperator<int, int> {
     }
 
    public:
-    // gcc bug 58972.
-    using Super::observerOnNext;
+    void sendSuperNext() {
+      // workaround for gcc bug 58972.
+      Super::observerOnNext(1);
+    }
 
     TestSubscription(
         Reference<Observable<int>> observable,
@@ -513,7 +515,7 @@ class InfiniteAsyncTestOperator : public ObservableOperator<int, int> {
       Super::onSubscribe(std::move(subscription));
       t_ = std::thread([this](){
         while (!isCancelled()) {
-          Super::observerOnNext(1);
+          sendSuperNext();
         }
         checkpoint_.Call();
       });
