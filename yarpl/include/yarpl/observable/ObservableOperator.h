@@ -52,6 +52,8 @@ class ObservableOperator : public Observable<D> {
     }
 
     void observerOnNext(D value) {
+      // in order to keep this method thread safe we need to check the observer
+      // and use the same pointer
       auto observer = observer_;
       if (observer) {
         observer->onNext(std::move(value));
