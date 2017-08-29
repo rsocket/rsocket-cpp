@@ -1,8 +1,8 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include <folly/Baton.h>
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include <atomic>
 #include <condition_variable>
 
@@ -231,7 +231,7 @@ TEST(Observable, CancelFromDifferentThread) {
 
   std::thread t;
   auto a = Observable<int>::create([&](Reference<Observer<int>> obs) {
-    t = std::thread([obs, &emitted](){
+    t = std::thread([obs, &emitted]() {
       while (!obs->isUnsubscribed()) {
         ++emitted;
         obs->onNext(0);
@@ -239,10 +239,11 @@ TEST(Observable, CancelFromDifferentThread) {
     });
   });
 
-  auto subscription = a->subscribe([](int){});
+  auto subscription = a->subscribe([](int) {});
 
   std::unique_lock<std::mutex> lk(m);
-  CHECK(cv.wait_for(lk, std::chrono::seconds(1), [&]{return emitted >= 1000;}));
+  CHECK(cv.wait_for(
+      lk, std::chrono::seconds(1), [&] { return emitted >= 1000; }));
 
   subscription->cancel();
   t.join();
@@ -301,13 +302,9 @@ TEST(Observable, SingleMovable) {
   EXPECT_EQ(std::size_t{1}, observable->count());
 
   auto values = run(std::move(observable));
-  EXPECT_EQ(
-      values.size(),
-      size_t(1));
+  EXPECT_EQ(values.size(), size_t(1));
 
-  EXPECT_EQ(
-      *values[0],
-      123456);
+  EXPECT_EQ(*values[0], 123456);
 }
 
 TEST(Observable, Range) {
@@ -325,29 +322,27 @@ TEST(Observable, RangeWithMap) {
 }
 
 TEST(Observable, RangeWithReduce) {
-  auto observable = Observables::range(0, 10)
-      ->reduce([](int64_t acc, int64_t v) { return acc + v; });
-  EXPECT_EQ(
-      run(std::move(observable)), std::vector<int64_t>({45}));
+  auto observable = Observables::range(0, 10)->reduce(
+      [](int64_t acc, int64_t v) { return acc + v; });
+  EXPECT_EQ(run(std::move(observable)), std::vector<int64_t>({45}));
 }
 
 TEST(Observable, RangeWithReduceByMultiplication) {
-  auto observable = Observables::range(0, 10)
-      ->reduce([](int64_t acc, int64_t v) { return acc * v; });
-  EXPECT_EQ(
-      run(std::move(observable)), std::vector<int64_t>({0}));
+  auto observable = Observables::range(0, 10)->reduce(
+      [](int64_t acc, int64_t v) { return acc * v; });
+  EXPECT_EQ(run(std::move(observable)), std::vector<int64_t>({0}));
 
-  observable = Observables::range(1, 10)
-      ->reduce([](int64_t acc, int64_t v) { return acc * v; });
+  observable = Observables::range(1, 10)->reduce(
+      [](int64_t acc, int64_t v) { return acc * v; });
   EXPECT_EQ(
-      run(std::move(observable)), std::vector<int64_t>({2*3*4*5*6*7*8*9}));
+      run(std::move(observable)),
+      std::vector<int64_t>({2 * 3 * 4 * 5 * 6 * 7 * 8 * 9}));
 }
 
 TEST(Observable, RangeWithReduceOneItem) {
-  auto observable = Observables::range(5, 6)
-      ->reduce([](int64_t acc, int64_t v) { return acc + v; });
-  EXPECT_EQ(
-      run(std::move(observable)), std::vector<int64_t>({5}));
+  auto observable = Observables::range(5, 6)->reduce(
+      [](int64_t acc, int64_t v) { return acc + v; });
+  EXPECT_EQ(run(std::move(observable)), std::vector<int64_t>({5}));
 }
 
 TEST(Observable, RangeWithReduceNoItem) {
@@ -360,11 +355,11 @@ TEST(Observable, RangeWithReduceNoItem) {
 }
 
 TEST(Observable, RangeWithReduceToBiggerType) {
-  auto observable = Observables::range(5, 6)
-      ->map([](int64_t v){ return (int32_t)v; })
-      ->reduce([](int64_t acc, int32_t v) { return acc + v; });
-  EXPECT_EQ(
-      run(std::move(observable)), std::vector<int64_t>({5}));
+  auto observable =
+      Observables::range(5, 6)
+          ->map([](int64_t v) { return (int32_t)v; })
+          ->reduce([](int64_t acc, int32_t v) { return acc + v; });
+  EXPECT_EQ(run(std::move(observable)), std::vector<int64_t>({5}));
 }
 
 TEST(Observable, StringReduce) {
@@ -485,8 +480,10 @@ class InfiniteAsyncTestOperator
       testing::MockFunction<void()>& checkpoint)
       : Super(std::move(upstream)), checkpoint_(checkpoint) {}
 
-  Reference<Subscription> subscribe(Reference<Observer<int>> observer) override {
-    auto subscription = make_ref<TestSubscription>(get_ref(this), std::move(observer), checkpoint_);
+  Reference<Subscription> subscribe(
+      Reference<Observer<int>> observer) override {
+    auto subscription = make_ref<TestSubscription>(
+        get_ref(this), std::move(observer), checkpoint_);
     Super::upstream_->subscribe(
         // Note: implicit cast to a reference to a observer.
         subscription);
@@ -516,15 +513,14 @@ class InfiniteAsyncTestOperator
 
     void onSubscribe(yarpl::Reference<Subscription> subscription) override {
       SuperSub::onSubscribe(std::move(subscription));
-      t_ = std::thread([this](){
+      t_ = std::thread([this]() {
         while (!isCancelled()) {
           sendSuperNext();
         }
         checkpoint_.Call();
       });
     }
-    void onNext(int value) override {
-    }
+    void onNext(int value) override {}
 
     std::thread t_;
     testing::MockFunction<void()>& checkpoint_;
@@ -546,7 +542,7 @@ TEST(Observable, CancelSubscriptionChain) {
     EXPECT_CALL(checkpoint, Call()).Times(1);
     EXPECT_CALL(checkpoint2, Call()).Times(1);
     EXPECT_CALL(checkpoint3, Call()).Times(1);
-    t = std::thread([obs, &emitted, &checkpoint](){
+    t = std::thread([obs, &emitted, &checkpoint]() {
       while (!obs->isUnsubscribed()) {
         ++emitted;
         obs->onNext(0);
@@ -559,10 +555,11 @@ TEST(Observable, CancelSubscriptionChain) {
   auto test2 = make_ref<InfiniteAsyncTestOperator>(test1->skip(1), checkpoint3);
   auto skip = test2->skip(8);
 
-  auto subscription = skip->subscribe([](int){});
+  auto subscription = skip->subscribe([](int) {});
 
   std::unique_lock<std::mutex> lk(m);
-  CHECK(cv.wait_for(lk, std::chrono::seconds(1), [&]{return emitted >= 1000;}));
+  CHECK(cv.wait_for(
+      lk, std::chrono::seconds(1), [&] { return emitted >= 1000; }));
 
   subscription->cancel();
   t.join();
