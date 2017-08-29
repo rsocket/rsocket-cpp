@@ -52,8 +52,9 @@ class ObservableOperator : public Observable<D> {
     }
 
     void observerOnNext(D value) {
-      if (observer_) {
-        observer_->onNext(std::move(value));
+      auto observer = observer_;
+      if (observer) {
+        observer->onNext(std::move(value));
       }
     }
 
