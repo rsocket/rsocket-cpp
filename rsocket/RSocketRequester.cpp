@@ -7,6 +7,7 @@
 #include "rsocket/internal/ScheduledSingleObserver.h"
 #include "rsocket/internal/ScheduledSubscriber.h"
 #include "yarpl/Flowable.h"
+#include "yarpl/single/SingleSubscriptions.h"
 
 using namespace folly;
 using namespace yarpl;
@@ -130,6 +131,7 @@ yarpl::Reference<yarpl::single::Single<void>> RSocketRequester::fireAndForget(
       // call onSuccess/onError once put on network
       srs->requestFireAndForget(std::move(request));
       // right now just immediately call onSuccess
+      subscriber->onSubscribe(yarpl::single::SingleSubscriptions::empty());
       subscriber->onSuccess();
     });
   });
