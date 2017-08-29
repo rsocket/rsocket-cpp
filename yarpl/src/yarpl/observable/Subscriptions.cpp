@@ -3,6 +3,7 @@
 #include "yarpl/observable/Subscriptions.h"
 #include <atomic>
 #include <iostream>
+#include <glog/logging.h>
 
 namespace yarpl {
 namespace observable {
@@ -12,10 +13,18 @@ namespace observable {
  */
 void Subscription::cancel() {
   cancelled_ = true;
+  for(auto& subscription : *tiedSubscriptions_.rlock()) {
+    subscription->cancel();
+  }
 }
 
 bool Subscription::isCancelled() const {
   return cancelled_;
+}
+
+void Subscription::tieSubscription(Reference<Subscription> subscription) {
+  CHECK(subscription);
+  tiedSubscriptions_->push_back(std::move(subscription));
 }
 
 /**
@@ -29,6 +38,9 @@ void CallbackSubscription::cancel() {
   // mark cancelled 'true' and only if successful invoke 'onCancel()'
   if (cancelled_.compare_exchange_strong(expected, true)) {
     onCancel_();
+    for(auto& subscription : *tiedSubscriptions_.rlock()) {
+      subscription->cancel();
+    }
   }
 }
 

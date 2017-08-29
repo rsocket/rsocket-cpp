@@ -229,14 +229,19 @@ TEST(Observable, CancelFromDifferentThread) {
   std::mutex m;
   std::condition_variable cv;
 
+  std::atomic<bool> cancelled1{false};
+  std::atomic<bool> cancelled2{false};
+
   std::thread t;
   auto a = Observable<int>::create([&](Reference<Observer<int>> obs) {
-    t = std::thread([obs, &emitted](){
+    t = std::thread([obs, &emitted, &cancelled1](){
+      obs->addSubscription([&](){ cancelled1 = true; });
       while (!obs->isUnsubscribed()) {
         ++emitted;
         obs->onNext(0);
       }
     });
+    obs->addSubscription([&](){ cancelled2 = true; });
   });
 
   auto subscription = a->subscribe([](int){});
@@ -246,6 +251,8 @@ TEST(Observable, CancelFromDifferentThread) {
 
   subscription->cancel();
   t.join();
+  CHECK(cancelled1);
+  CHECK(cancelled2);
   LOG(INFO) << "cancelled after " << emitted << " items";
 }
 
