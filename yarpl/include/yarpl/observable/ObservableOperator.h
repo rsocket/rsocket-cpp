@@ -34,7 +34,7 @@ class ObservableOperator : public Observable<D> {
   /// subscriber for the previous stage; as a subscription for the next one,
   /// the user-supplied subscriber being the last of the pipeline stages.
   class OperatorSubscription : public ::yarpl::observable::Subscription,
-                       public Observer<U> {
+                               public Observer<U> {
    protected:
     OperatorSubscription(
         Reference<ThisOperatorT> observable,
@@ -158,7 +158,8 @@ class ObservableOperator : public Observable<D> {
     /// calls should be forwarded upstream.  Note that `this` is also a
     /// observer for the upstream stage: thus, there are cycles; all of
     /// the objects drop their references at cancel/complete.
-    //TODO(lehecka): this is extra field... base class has this member so remove it
+    // TODO(lehecka): this is extra field... base class has this member so
+    // remove it
     Reference<::yarpl::observable::Subscription> upstream_;
   };
 
@@ -179,7 +180,8 @@ class MapOperator : public ObservableOperator<U, D, MapOperator<U, D, F>> {
       : Super(std::move(upstream)), function_(std::move(function)) {}
 
   Reference<Subscription> subscribe(Reference<Observer<D>> observer) override {
-    auto subscription = make_ref<MapSubscription>(get_ref(this), std::move(observer));
+    auto subscription =
+        make_ref<MapSubscription>(get_ref(this), std::move(observer));
     Super::upstream_->subscribe(
         // Note: implicit cast to a reference to a observer.
         subscription);
@@ -219,7 +221,8 @@ class FilterOperator : public ObservableOperator<U, U, FilterOperator<U, F>> {
       : Super(std::move(upstream)), function_(std::move(function)) {}
 
   Reference<Subscription> subscribe(Reference<Observer<U>> observer) override {
-    auto subscription = make_ref<FilterSubscription>(get_ref(this), std::move(observer));
+    auto subscription =
+        make_ref<FilterSubscription>(get_ref(this), std::move(observer));
     Super::upstream_->subscribe(
         // Note: implicit cast to a reference to a observer.
         subscription);
@@ -263,8 +266,10 @@ class ReduceOperator
   ReduceOperator(Reference<Observable<U>> upstream, F function)
       : Super(std::move(upstream)), function_(std::move(function)) {}
 
-  Reference<Subscription> subscribe(Reference<Observer<D>> subscriber) override {
-    auto subscription = make_ref<ReduceSubscription>(get_ref(this), std::move(subscriber));
+  Reference<Subscription> subscribe(
+      Reference<Observer<D>> subscriber) override {
+    auto subscription =
+        make_ref<ReduceSubscription>(get_ref(this), std::move(subscriber));
     Super::upstream_->subscribe(
         // Note: implicit cast to a reference to a subscriber.
         subscription);
@@ -317,9 +322,9 @@ class TakeOperator : public ObservableOperator<T, T, TakeOperator<T>> {
       : Super(std::move(upstream)), limit_(limit) {}
 
   Reference<Subscription> subscribe(Reference<Observer<T>> observer) override {
-    auto subscription = make_ref<TakeSubscription>(get_ref(this), limit_, std::move(observer));
-    Super::upstream_->subscribe(
-        subscription);
+    auto subscription =
+        make_ref<TakeSubscription>(get_ref(this), limit_, std::move(observer));
+    Super::upstream_->subscribe(subscription);
     return subscription;
   }
 
@@ -363,9 +368,9 @@ class SkipOperator : public ObservableOperator<T, T, SkipOperator<T>> {
       : Super(std::move(upstream)), offset_(offset) {}
 
   Reference<Subscription> subscribe(Reference<Observer<T>> observer) override {
-    auto subscription = make_ref<SkipSubscription>(get_ref(this), offset_, std::move(observer));
-    Super::upstream_->subscribe(
-        subscription);
+    auto subscription =
+        make_ref<SkipSubscription>(get_ref(this), offset_, std::move(observer));
+    Super::upstream_->subscribe(subscription);
     return subscription;
   }
 
@@ -407,9 +412,9 @@ class IgnoreElementsOperator
       : Super(std::move(upstream)) {}
 
   Reference<Subscription> subscribe(Reference<Observer<T>> observer) override {
-    auto subscription = make_ref<IgnoreElementsSubscription>(get_ref(this), std::move(observer));
-    Super::upstream_->subscribe(
-        subscription);
+    auto subscription = make_ref<IgnoreElementsSubscription>(
+        get_ref(this), std::move(observer));
+    Super::upstream_->subscribe(subscription);
     return subscription;
   }
 
@@ -485,7 +490,10 @@ class FromPublisherOperator : public Observable<T> {
  private:
   class PublisherObserver : public Observer<T> {
    public:
-    PublisherObserver(Reference<Observer<T>> inner, Reference<Subscription> subscription) : inner_(std::move(inner)) {
+    PublisherObserver(
+        Reference<Observer<T>> inner,
+        Reference<Subscription> subscription)
+        : inner_(std::move(inner)) {
       Observer<T>::onSubscribe(std::move(subscription));
     }
 
@@ -517,7 +525,7 @@ class FromPublisherOperator : public Observable<T> {
     auto subscription = Subscriptions::create();
     observer->onSubscribe(subscription);
 
-    if(!subscription->isCancelled()) {
+    if (!subscription->isCancelled()) {
       function_(make_ref<PublisherObserver>(std::move(observer), subscription));
     }
     return subscription;

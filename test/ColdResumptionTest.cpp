@@ -32,7 +32,7 @@ class HelloSubscriber : public virtual Refcounted, public Subscriber<Payload> {
     auto count = 3;
     while (value != latestValue_ && count > 0) {
       VLOG(1) << "Wait for " << count << " seconds for latest value";
-      sleep(1);
+      /* sleep override */ sleep(1);
       count--;
       std::this_thread::yield();
     }

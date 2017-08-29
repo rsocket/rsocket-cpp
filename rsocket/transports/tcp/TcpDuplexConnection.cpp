@@ -14,7 +14,6 @@ using namespace yarpl::flowable;
 
 class TcpReaderWriter : public folly::AsyncTransportWrapper::WriteCallback,
                         public folly::AsyncTransportWrapper::ReadCallback {
-
   friend void intrusive_ptr_add_ref(TcpReaderWriter* x);
   friend void intrusive_ptr_release(TcpReaderWriter* x);
 
@@ -172,12 +171,12 @@ class TcpReaderWriter : public folly::AsyncTransportWrapper::WriteCallback,
 void intrusive_ptr_add_ref(TcpReaderWriter* x);
 void intrusive_ptr_release(TcpReaderWriter* x);
 
-inline void intrusive_ptr_add_ref(TcpReaderWriter* x){
+inline void intrusive_ptr_add_ref(TcpReaderWriter* x) {
   ++x->refCount_;
 }
 
-inline void intrusive_ptr_release(TcpReaderWriter* x){
-  if(--x->refCount_ == 0)
+inline void intrusive_ptr_release(TcpReaderWriter* x) {
+  if (--x->refCount_ == 0)
     delete x;
 }
 
@@ -185,7 +184,8 @@ namespace {
 
 class TcpOutputSubscriber : public DuplexConnection::Subscriber {
  public:
-  explicit TcpOutputSubscriber(boost::intrusive_ptr<TcpReaderWriter> tcpReaderWriter)
+  explicit TcpOutputSubscriber(
+      boost::intrusive_ptr<TcpReaderWriter> tcpReaderWriter)
       : tcpReaderWriter_(std::move(tcpReaderWriter)) {
     CHECK(tcpReaderWriter_);
   }
@@ -242,8 +242,7 @@ class TcpInputSubscription : public Subscription {
 TcpDuplexConnection::TcpDuplexConnection(
     folly::AsyncSocket::UniquePtr&& socket,
     std::shared_ptr<RSocketStats> stats)
-    : tcpReaderWriter_(
-          new TcpReaderWriter(std::move(socket), stats)),
+    : tcpReaderWriter_(new TcpReaderWriter(std::move(socket), stats)),
       stats_(stats) {
   if (stats_) {
     stats_->duplexConnectionCreated("tcp", this);

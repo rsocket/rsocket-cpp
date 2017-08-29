@@ -11,9 +11,9 @@
 
 using namespace folly;
 
-//namespace {
+// namespace {
 //
-//class TcpReader : public ::folly::AsyncTransportWrapper::ReadCallback {
+// class TcpReader : public ::folly::AsyncTransportWrapper::ReadCallback {
 // public:
 //  TcpReader(
 //      folly::AsyncSocket::UniquePtr&& socket,
@@ -71,7 +71,8 @@ using namespace folly;
 //
 //  void close() {
 //    if (socket_) {
-//      LOG(INFO) << "received " << receivedLength_ << " via " << reads_ << " reads";
+//      LOG(INFO) << "received " << receivedLength_ << " via " << reads_
+//                << " reads";
 //      auto socket = std::move(socket_);
 //      socket->close();
 //      eventBase_.terminateLoopSoon();
@@ -88,7 +89,7 @@ using namespace folly;
 //  int reads_{0};
 //};
 //
-//class ServerAcceptCallback : public AsyncServerSocket::AcceptCallback {
+// class ServerAcceptCallback : public AsyncServerSocket::AcceptCallback {
 // public:
 //  ServerAcceptCallback(
 //      EventBase& eventBase,
@@ -119,13 +120,15 @@ using namespace folly;
 //  const size_t recvBufferLength_;
 //};
 //
-//class TcpWriter : public ::folly::AsyncTransportWrapper::WriteCallback {
+// class TcpWriter : public ::folly::AsyncTransportWrapper::WriteCallback {
 // public:
 //  ~TcpWriter() {
-//    LOG(INFO) << "writes=" << writes_ << " success=" << success_ << " errors=" << errors_;
+//    LOG(INFO) << "writes=" << writes_ << " success=" << success_ << " errors="
+//              << errors_;
 //  }
 //
-//  void startWriting(AsyncSocket& socket, size_t loadSize, size_t messageSize) {
+//  void startWriting(AsyncSocket& socket, size_t loadSize,
+//                    size_t messageSize) {
 //    size_t bytesSent{0};
 //
 //    while (!closed_ && bytesSent < loadSize) {
@@ -156,9 +159,10 @@ using namespace folly;
 //  int errors_{0};
 //};
 //
-//class ClientConnectCallback : public AsyncSocket::ConnectCallback {
+// class ClientConnectCallback : public AsyncSocket::ConnectCallback {
 // public:
-//  ClientConnectCallback(EventBase& eventBase, size_t loadSize, size_t msgLength)
+//  ClientConnectCallback(EventBase& eventBase, size_t loadSize,
+//                        size_t msgLength)
 //      : eventBase_(eventBase), loadSize_(loadSize), msgLength_(msgLength) {}
 //
 //  void connect() {
@@ -198,26 +202,28 @@ static void BM_Baseline_AsyncSocket_SendReceive(
     size_t loadSize,
     size_t msgLength,
     size_t recvLength) {
-  LOG_EVERY_N(INFO, 10000) << "TODO(lehecka): benchmark needs updating, it has memory corruption bugs";
-//  EventBase serverEventBase;
-//  auto serverSocket = AsyncServerSocket::newSocket(&serverEventBase);
-//
-//  ServerAcceptCallback serverCallback(serverEventBase, loadSize, recvLength);
-//
-//  SocketAddress addr("::", PORT);
-//
-//  serverSocket->setReusePortEnabled(true);
-//  serverSocket->bind(addr);
-//  serverSocket->addAcceptCallback(&serverCallback, &serverEventBase);
-//  serverSocket->listen(1);
-//  serverSocket->startAccepting();
-//
-//  ScopedEventBaseThread clientThread;
-//  auto* clientCallback = new ClientConnectCallback(
-//      *clientThread.getEventBase(), loadSize, msgLength);
-//  clientCallback->connect();
-//
-//  serverEventBase.loopForever();
+  LOG_EVERY_N(INFO, 10000) << "TODO(lehecka): benchmark needs updating, "
+                           << "it has memory corruption bugs";
+  //  EventBase serverEventBase;
+  //  auto serverSocket = AsyncServerSocket::newSocket(&serverEventBase);
+  //
+  //  ServerAcceptCallback serverCallback(serverEventBase, loadSize,
+  //  recvLength);
+  //
+  //  SocketAddress addr("::", PORT);
+  //
+  //  serverSocket->setReusePortEnabled(true);
+  //  serverSocket->bind(addr);
+  //  serverSocket->addAcceptCallback(&serverCallback, &serverEventBase);
+  //  serverSocket->listen(1);
+  //  serverSocket->startAccepting();
+  //
+  //  ScopedEventBaseThread clientThread;
+  //  auto* clientCallback = new ClientConnectCallback(
+  //      *clientThread.getEventBase(), loadSize, msgLength);
+  //  clientCallback->connect();
+  //
+  //  serverEventBase.loopForever();
 }
 
 BENCHMARK(BM_Baseline_AsyncSocket_Throughput_100MB_s40B_r1024B, n) {

@@ -81,7 +81,7 @@ void RSocketStateMachine::connectServer(
   sendPendingFrames();
 }
 
-//TODO: ensure the return value is not ignored!
+// TODO: ensure the return value is not ignored!
 bool RSocketStateMachine::resumeServer(
     yarpl::Reference<FrameTransport> frameTransport,
     const ResumeParameters& resumeParams) {
@@ -89,13 +89,12 @@ bool RSocketStateMachine::resumeServer(
     disconnect(folly::exception_wrapper(
         std::runtime_error("A new transport is resuming the session")));
   }
-  CHECK(connect(
-      std::move(frameTransport), resumeParams.protocolVersion));
+  CHECK(connect(std::move(frameTransport), resumeParams.protocolVersion));
   return resumeFromPositionOrClose(
       resumeParams.serverPosition, resumeParams.clientPosition);
 }
 
-//TODO : ensure the return value is not ignored!!
+// TODO : ensure the return value is not ignored!!
 bool RSocketStateMachine::connect(
     yarpl::Reference<FrameTransport> frameTransport,
     ProtocolVersion protocolVersion) {
@@ -147,7 +146,7 @@ void RSocketStateMachine::sendPendingFrames() {
   // not all frames might be sent if the connection breaks, the rest of them
   // will queue up again
   auto outputFrames = streamState_.moveOutputPendingFrames();
-  for (auto &frame : outputFrames) {
+  for (auto& frame : outputFrames) {
     outputFrameOrEnqueue(std::move(frame));
   }
 
@@ -469,11 +468,12 @@ void RSocketStateMachine::handleConnectionFrame(
           auto streamToken = resumeManager_->getStreamToken(streamId);
           auto subscriber = coldResumeHandler_->handleRequesterResumeStream(
               streamToken, consumerAllowance);
-          //TODO(somatsun): ensure that subscription is called from the correct
+          // TODO(somatsun): ensure that subscription is called from the correct
           // thread (eventBase) without using EventBaseManager
           streamsFactory().createStreamRequester(
               yarpl::make_ref<ScheduledSubscriptionSubscriber<Payload>>(
-                  std::move(subscriber), *folly::EventBaseManager::get()->getEventBase()),
+                  std::move(subscriber),
+                  *folly::EventBaseManager::get()->getEventBase()),
               streamId,
               consumerAllowance);
         }
