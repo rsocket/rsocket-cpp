@@ -16,10 +16,10 @@ using namespace yarpl;
 
 StreamsFactory::StreamsFactory(
     RSocketStateMachine& connection,
-    ReactiveSocketMode mode)
+    RSocketMode mode)
     : connection_(connection),
       nextStreamId_(
-          mode == ReactiveSocketMode::CLIENT
+          mode == RSocketMode::CLIENT
               ? 1 /*Streams initiated by a client MUST use
                     odd-numbered stream identifiers*/
               : 2 /*streams initiated by the server MUST use
