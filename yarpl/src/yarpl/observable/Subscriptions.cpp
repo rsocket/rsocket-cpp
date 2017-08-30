@@ -24,6 +24,9 @@ bool Subscription::isCancelled() const {
 
 void Subscription::tieSubscription(Reference<Subscription> subscription) {
   CHECK(subscription);
+  if (isCancelled()) {
+    subscription->cancel();
+  }
   tiedSubscriptions_->push_back(std::move(subscription));
 }
 

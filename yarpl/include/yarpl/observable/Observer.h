@@ -53,7 +53,10 @@ class Observer : public virtual Refcounted {
   // Note that calling cancel on the tied subscription is not going to cancel
   // this subscriber
   void addSubscription(Reference<Subscription> subscription) {
-    CHECK(subscription_);
+    if(!subscription_) {
+      subscription->cancel();
+      return;
+    }
     subscription_->tieSubscription(std::move(subscription));
   }
 
