@@ -43,10 +43,9 @@ class TcpReaderWriter : public folly::AsyncTransportWrapper::WriteCallback,
     CHECK(!inputSubscriber_);
     inputSubscriber_ = std::move(inputSubscriber);
 
-    if (!readerSet_) {
-      readerSet_ = true;
-      // now AsyncSocket will hold a reference to this instance until
-      // they call readEOF or readErr
+    if (!socket_->getReadCallback()) {
+      // The AsyncSocket will hold a reference to this instance until it calls
+      // readEOF or readErr.
       intrusive_ptr_add_ref(this);
       socket_->setReadCB(this);
     }
@@ -164,7 +163,6 @@ class TcpReaderWriter : public folly::AsyncTransportWrapper::WriteCallback,
 
   yarpl::Reference<DuplexConnection::Subscriber> inputSubscriber_;
   yarpl::Reference<Subscription> outputSubscription_;
-  bool readerSet_{false};
   int refCount_{0};
 };
 
