@@ -396,7 +396,6 @@ install(DIRECTORY yarpl/include/yarpl DESTINATION include FILES_MATCHING PATTERN
 
 add_executable(
   tests
-  test/MocksTest.cpp
   test/PayloadTest.cpp
   test/RSocketClientServerTest.cpp
   test/RSocketTests.h
@@ -424,7 +423,6 @@ add_executable(
   test/test_utils/MockKeepaliveTimer.h
   test/test_utils/MockRequestHandler.h
   test/test_utils/MockStats.h
-  test/test_utils/Mocks.h
   test/transport/DuplexConnectionTest.cpp
   test/transport/DuplexConnectionTest.h
   test/transport/TcpDuplexConnectionTest.cpp)
@@ -433,15 +431,17 @@ target_link_libraries(
   tests
   ReactiveSocket
   yarpl
+  yarpl-test-utils
   ${GMOCK_LIBS}
   ${GFLAGS_LIBRARY}
   ${GLOG_LIBRARY})
 
+target_include_directories(tests PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/test/")
 target_compile_options(
   tests
   PRIVATE ${TEST_CXX_FLAGS})
 
-add_dependencies(tests gmock ReactiveSocket)
+add_dependencies(tests gmock yarpl-test-utils ReactiveSocket)
 
 add_test(NAME RSocketTests COMMAND tests)
 add_test(NAME RSocketTests-0.1 COMMAND tests --rs_use_protocol_version=0.1)

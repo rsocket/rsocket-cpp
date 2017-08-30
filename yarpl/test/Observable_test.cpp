@@ -11,7 +11,7 @@
 #include "yarpl/flowable/Subscribers.h"
 #include "yarpl/schedulers/ThreadScheduler.h"
 
-#include "Tuple.h"
+#include "yarpl/test_utils/Tuple.h"
 
 // TODO can we eliminate need to import both of these?
 using namespace yarpl;

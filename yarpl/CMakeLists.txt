@@ -96,6 +96,12 @@ target_link_libraries(
   folly
   ${GLOG_LIBRARY})
 
+add_library(
+  yarpl-test-utils
+  test/yarpl/test_utils/Tuple.cpp
+  test/yarpl/test_utils/Tuple.h
+  test/yarpl/test_utils/Mocks.h)
+
 # Executable for experimenting.
 add_executable(
   yarpl-playground
@@ -108,25 +114,25 @@ target_link_libraries(yarpl-playground yarpl)
 # Unit tests.
 add_executable(
   yarpl-tests
+  test/MocksTest.cpp
   test/FlowableTest.cpp
   test/Observable_test.cpp
   test/RefcountedTest.cpp
   test/ReferenceTest.cpp
   test/Scheduler_test.cpp
   test/Single_test.cpp
-  test/Tuple.cpp
-  test/Tuple.h
   test/credits-test.cpp
   test/yarpl-tests.cpp)
 
 target_link_libraries(
   yarpl-tests
   yarpl
+  yarpl-test-utils
   ${GLOG_LIBRARY}
 
   # Inherited from rsocket-cpp CMake.
   ${GMOCK_LIBS})
 
-add_dependencies(yarpl-tests gmock)
+add_dependencies(yarpl-tests yarpl-test-utils gmock)
 
 add_test(NAME yarpl-tests COMMAND yarpl-tests)

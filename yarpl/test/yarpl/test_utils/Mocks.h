@@ -10,11 +10,10 @@
 #include <folly/ExceptionWrapper.h>
 #include <gmock/gmock.h>
 
-#include "rsocket/framing/FrameProcessor.h"
-#include "rsocket/internal/Common.h"
 #include "yarpl/flowable/Flowable.h"
 
-namespace rsocket {
+namespace yarpl {
+namespace mocks {
 
 using namespace yarpl::flowable;
 
@@ -86,25 +85,22 @@ class MockSubscriber : public Subscriber<T> {
     // now block this thread
     std::unique_lock<std::mutex> lk(m_);
     // if shutdown gets implemented this would then be released by it
-    bool result = terminalEventCV_.wait_for(
-        lk, timeout, [this] {
-          return terminated_;
-        });
+    bool result =
+        terminalEventCV_.wait_for(lk, timeout, [this] { return terminated_; });
     EXPECT_TRUE(result) << "Timed out";
   }
 
   /**
    * Block the current thread until onNext is called 'count' times.
    */
-  void awaitFrames(uint64_t count,
-       std::chrono::milliseconds timeout = std::chrono::seconds(1)) {
+  void awaitFrames(
+      uint64_t count,
+      std::chrono::milliseconds timeout = std::chrono::seconds(1)) {
     waitedFrameCount_ += count;
     std::unique_lock<std::mutex> lk(mFrame_);
     if (waitedFrameCount_ > 0) {
       bool result = framesEventCV_.wait_for(
-          lk, timeout, [this] {
-            return waitedFrameCount_ <= 0;
-          });
+          lk, timeout, [this] { return waitedFrameCount_ <= 0; });
       EXPECT_TRUE(result) << "Timed out";
     }
   }
@@ -148,5 +144,5 @@ class MockSubscription : public Subscription {
   bool requested_{false};
   testing::MockFunction<void()> checkpoint_;
 };
-
-} // namespace rsocket
+}
+} // namespace yarpl::mocks

@@ -1,13 +1,13 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "test/test_utils/Mocks.h"
+#include "yarpl/test_utils/Mocks.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 using namespace ::testing;
-using namespace rsocket;
 using namespace yarpl::flowable;
+using namespace yarpl::mocks;
 
 TEST(MocksTest, SelfManagedMocks) {
   // Best run with ASAN, to detect potential leaks, use-after-free or
@@ -15,8 +15,8 @@ TEST(MocksTest, SelfManagedMocks) {
   int value = 42;
 
   MockFlowable<int> flowable;
-  auto subscription = yarpl::make_ref<MockSubscription>();
-  auto subscriber = yarpl::make_ref<MockSubscriber<int>>(0);
+  auto subscription = yarpl::make_ref<yarpl::mocks::MockSubscription>();
+  auto subscriber = yarpl::make_ref<yarpl::mocks::MockSubscriber<int>>(0);
   {
     InSequence dummy;
     EXPECT_CALL(flowable, subscribe_(_))
