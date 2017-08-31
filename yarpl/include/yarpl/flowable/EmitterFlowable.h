@@ -87,35 +87,23 @@ class EmiterSubscription : public Subscription, public Subscriber<T> {
   }
 
   void onNext(T value) override {
+    DCHECK(!hasFinished_) << "onComplete() or onError() already called";
+
     subscriber_->onNext(std::move(value));
   }
 
   void onComplete() override {
-    // we will set the flag first to save a potential call to lock.try_lock()
-    // in the process method via cancel or request methods
-    auto old = requested_.exchange(kCanceled, std::memory_order_relaxed);
-    DCHECK_NE(old, kCanceled) << "Calling onComplete or onError twice or on "
-                              << "canceled subscription";
+    DCHECK(!hasFinished_) << "onComplete() or onError() already called";
+    hasFinished_ = true;
 
     subscriber_->onComplete();
-    // We should already be in process(); nothing more to do.
-    //
-    // Note: we're not invoking the Subscriber superclass' method:
-    // we're following the Subscription's protocol instead.
   }
 
   void onError(folly::exception_wrapper error) override {
-    // we will set the flag first to save a potential call to lock.try_lock()
-    // in the process method via cancel or request methods
-    auto old = requested_.exchange(kCanceled, std::memory_order_relaxed);
-    DCHECK_NE(old, kCanceled) << "Calling onComplete or onError twice or on "
-                              << "canceled subscription";
+    DCHECK(!hasFinished_) << "onComplete() or onError() already called";
+    hasFinished_ = true;
 
     subscriber_->onError(error);
-    // We should already be in process(); nothing more to do.
-    //
-    // Note: we're not invoking the Subscriber superclass' method:
-    // we're following the Subscription's protocol instead.
   }
 
  private:
@@ -187,6 +175,8 @@ class EmiterSubscription : public Subscription, public Subscriber<T> {
   // disabled: items sent downstream don't consume any longer.  A MIN
   // value represents cancellation.  Other -ve values aren't permitted.
   std::atomic_int_fast64_t requested_{0};
+
+  bool hasFinished_{false}; // onComplete or onError called
 
   // We don't want to recursively invoke process(); one loop should do.
   std::mutex processing_;

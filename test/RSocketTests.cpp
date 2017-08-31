@@ -3,6 +3,7 @@
 #include "test/RSocketTests.h"
 
 #include "rsocket/transports/tcp/TcpConnectionAcceptor.h"
+#include "test/test_utils/GenericRequestResponseHandler.h"
 
 namespace rsocket {
 namespace tests {
@@ -51,6 +52,58 @@ std::shared_ptr<RSocketClient> makeClient(
     folly::EventBase* eventBase,
     uint16_t port) {
   return makeClientAsync(eventBase, port).get();
+}
+
+namespace {
+struct DisconnectedResponder : public rsocket::RSocketResponder {
+  DisconnectedResponder() {}
+
+  yarpl::Reference<yarpl::single::Single<rsocket::Payload>>
+  handleRequestResponse(rsocket::Payload, rsocket::StreamId) override {
+    CHECK(false);
+    return nullptr;
+  }
+
+  yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
+  handleRequestStream(rsocket::Payload, rsocket::StreamId) override {
+    CHECK(false);
+    return nullptr;
+  }
+
+  yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
+  handleRequestChannel(
+      rsocket::Payload,
+      yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>,
+      rsocket::StreamId) override {
+    CHECK(false);
+    return nullptr;
+  }
+
+  void handleFireAndForget(rsocket::Payload, rsocket::StreamId) override {
+    CHECK(false);
+  }
+
+  void handleMetadataPush(std::unique_ptr<folly::IOBuf>) override {
+    CHECK(false);
+  }
+
+  ~DisconnectedResponder() {}
+};
+}
+
+std::shared_ptr<RSocketClient> makeDisconnectedClient(
+    folly::EventBase* eventBase) {
+  auto server =
+      makeServer(std::make_shared<DisconnectedResponder>());
+
+  auto client = makeClient(eventBase, *server->listeningPort());
+
+  client->disconnect();
+  folly::Baton<> wait_for_disconnect;
+  eventBase->runInEventBaseThread([&] { wait_for_disconnect.post(); });
+  // force all other operations to complete, including the disconnect
+  wait_for_disconnect.timed_wait(std::chrono::milliseconds(100));
+  return client;
 }
 
 std::shared_ptr<RSocketClient> makeWarmResumableClient(

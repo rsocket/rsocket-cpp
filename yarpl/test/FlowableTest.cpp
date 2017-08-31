@@ -7,6 +7,8 @@
 
 #include <folly/Baton.h>
 
+#include "yarpl/test_utils/Mocks.h"
+
 #include "yarpl/Flowable.h"
 #include "yarpl/flowable/TestSubscriber.h"
 
@@ -537,6 +539,59 @@ TEST(FlowableTest, FlowableFromDifferentThreadsWithError) {
   t2.join();
 }
 } // namespace
+
+TEST(FlowableTest, SubscribeMultipleTimes) {
+  using namespace ::testing;
+  using StrictMockSubscriber =
+      testing::StrictMock<yarpl::mocks::MockSubscriber<int64_t>>;
+  auto f = Flowable<int64_t>::create([](auto subscriber, int64_t req) {
+    for (int64_t i = 0; i < req; i++) {
+      subscriber->onNext(i);
+    }
+
+    subscriber->onComplete();
+    return std::make_tuple(req, true);
+  });
+
+  auto setup_mock = [](auto request_num, auto& resps) {
+    auto mock = make_ref<StrictMockSubscriber>(request_num);
+
+    Sequence seq;
+    EXPECT_CALL(*mock, onSubscribe_(_)).InSequence(seq);
+    EXPECT_CALL(*mock, onNext_(_))
+        .InSequence(seq)
+        .WillRepeatedly(
+            Invoke([&resps](int64_t value) { resps.push_back(value); }));
+    EXPECT_CALL(*mock, onComplete_()).InSequence(seq);
+    return mock;
+  };
+
+  std::vector<std::vector<int64_t>> results{5};
+  auto mock1 = setup_mock(5, results[0]);
+  auto mock2 = setup_mock(5, results[1]);
+  auto mock3 = setup_mock(5, results[2]);
+  auto mock4 = setup_mock(5, results[3]);
+  auto mock5 = setup_mock(5, results[4]);
+
+  // map on the same flowable twice
+  auto stream1 = f->map([](auto i) { return i + 1; });
+  auto stream2 = f->map([](auto i) { return i * 2; });
+  auto stream3 = stream2->skip(2); // skip operator chained after a map operator
+  auto stream4 = stream1->take(3); // take operator chained after a map operator
+  auto stream5 = stream1; // test subscribing to exact same flowable twice
+
+  stream1->subscribe(mock1);
+  stream2->subscribe(mock2);
+  stream3->subscribe(mock3);
+  stream4->subscribe(mock4);
+  stream5->subscribe(mock5);
+
+  EXPECT_EQ(results[0], std::vector<int64_t>({1, 2, 3, 4, 5}));
+  EXPECT_EQ(results[1], std::vector<int64_t>({0, 2, 4, 6, 8}));
+  EXPECT_EQ(results[2], std::vector<int64_t>({4, 6, 8, 10, 12}));
+  EXPECT_EQ(results[3], std::vector<int64_t>({1, 2, 3}));
+  EXPECT_EQ(results[4], std::vector<int64_t>({1, 2, 3, 4, 5}));
+}
 
 } // flowable
 } // yarpl

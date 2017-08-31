@@ -74,7 +74,8 @@ TEST(FrameTransport, SimpleNoQueue) {
 TEST(FrameTransport, InputSendsError) {
   auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
       [](auto input) {
-        auto subscription = yarpl::make_ref<StrictMock<MockSubscription>>();
+        auto subscription =
+            yarpl::make_ref<StrictMock<yarpl::mocks::MockSubscription>>();
         EXPECT_CALL(*subscription, request_(_));
         EXPECT_CALL(*subscription, cancel_());
 

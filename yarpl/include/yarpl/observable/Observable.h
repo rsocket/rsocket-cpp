@@ -26,7 +26,7 @@ namespace observable {
 /**
 *Strategy for backpressure when converting from Observable to Flowable.
 */
-enum class BackpressureStrategy { DROP };
+enum class BackpressureStrategy { BUFFER, DROP, ERROR, LATEST, MISSING };
 
 template <typename T>
 class Observable : public virtual Refcounted {
@@ -172,15 +172,40 @@ template <typename T>
 auto Observable<T>::toFlowable(BackpressureStrategy strategy) {
   // we currently ONLY support the DROP strategy
   // so do not use the strategy parameter for anything
-  auto o = get_ref<Observable<T>>(this);
   return yarpl::flowable::Flowables::fromPublisher<T>([
-    o = std::move(o), // the Observable to pass through
+    thisObservable = get_ref(this),
     strategy
-  ](Reference<yarpl::flowable::Subscriber<T>> s) {
-    s->onSubscribe(
-        make_ref<
-            yarpl::flowable::sources::FlowableFromObservableSubscription<T>>(
-            std::move(o), std::move(s)));
+  ](Reference<flowable::Subscriber<T>> subscriber) {
+    Reference<flowable::Subscription> subscription;
+    switch(strategy) {
+      case BackpressureStrategy::DROP:
+        subscription = make_ref<
+            flowable::details::FlowableFromObservableSubscriptionDropStrategy<T>>(
+            thisObservable, subscriber);
+        break;
+      case BackpressureStrategy::ERROR:
+        subscription = make_ref<
+            flowable::details::FlowableFromObservableSubscriptionErrorStrategy<T>>(
+            thisObservable, subscriber);
+        break;
+      case BackpressureStrategy::BUFFER:
+        subscription = make_ref<
+            flowable::details::FlowableFromObservableSubscriptionBufferStrategy<T>>(
+            thisObservable, subscriber);
+        break;
+      case BackpressureStrategy::LATEST:
+        subscription = make_ref<
+            flowable::details::FlowableFromObservableSubscriptionLatestStrategy<T>>(
+            thisObservable, subscriber);
+        break;
+      case BackpressureStrategy::MISSING:
+        subscription = make_ref<
+            flowable::details::FlowableFromObservableSubscriptionMissingStrategy<T>>(
+            thisObservable, subscriber);
+        break;
+      default: CHECK(false); // unknown value for strategy
+    }
+    subscriber->onSubscribe(std::move(subscription));
   });
 }
 

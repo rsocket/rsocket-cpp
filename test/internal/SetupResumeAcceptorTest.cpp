@@ -8,7 +8,7 @@
 #include "rsocket/internal/SetupResumeAcceptor.h"
 #include "test/test_utils/MockDuplexConnection.h"
 #include "test/test_utils/MockFrameProcessor.h"
-#include "test/test_utils/Mocks.h"
+#include "yarpl/test_utils/Mocks.h"
 
 using namespace rsocket;
 using namespace testing;

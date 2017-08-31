@@ -17,8 +17,8 @@
 #include "rsocket/framing/FrameSerializer.h"
 #include "rsocket/framing/FrameTransport.h"
 #include "rsocket/internal/ClientResumeStatusCallback.h"
-#include "rsocket/internal/InMemResumeManager.h"
 #include "rsocket/internal/ScheduledSubscriber.h"
+#include "rsocket/internal/WarmResumeManager.h"
 #include "rsocket/statemachine/ChannelResponder.h"
 #include "rsocket/statemachine/StreamState.h"
 #include "rsocket/statemachine/StreamStateMachineBase.h"
@@ -28,7 +28,7 @@ namespace rsocket {
 RSocketStateMachine::RSocketStateMachine(
     std::shared_ptr<RSocketResponder> requestResponder,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer,
-    ReactiveSocketMode mode,
+    RSocketMode mode,
     std::shared_ptr<RSocketStats> stats,
     std::shared_ptr<RSocketConnectionEvents> connectionEvents,
     std::shared_ptr<ResumeManager> resumeManager,
@@ -38,7 +38,7 @@ RSocketStateMachine::RSocketStateMachine(
       streamState_(*stats_),
       resumeManager_(
           resumeManager ? resumeManager
-                        : std::make_shared<InMemResumeManager>(stats_)),
+                        : std::make_shared<WarmResumeManager>(stats_)),
       requestResponder_(std::move(requestResponder)),
       keepaliveTimer_(std::move(keepaliveTimer)),
       coldResumeHandler_(std::move(coldResumeHandler)),
@@ -288,7 +288,7 @@ void RSocketStateMachine::reconnect(
   CHECK(resumeCallback);
   CHECK(!resumeCallback_);
   CHECK(isResumable_);
-  CHECK(mode_ == ReactiveSocketMode::CLIENT);
+  CHECK(mode_ == RSocketMode::CLIENT);
 
   // TODO: output frame buffer should not be written to the new connection until
   // we receive resume ok
@@ -353,6 +353,10 @@ void RSocketStateMachine::closeStreams(StreamCompletionSignal signal) {
 void RSocketStateMachine::processFrame(std::unique_ptr<folly::IOBuf> frame) {
   CHECK(!isClosed());
 
+  // Necessary in case the only stream state machine closes itself, and takes
+  // the RSocketStateMachine with it.
+  auto self = shared_from_this();
+
   if (!ensureOrAutodetectFrameSerializer(*frame)) {
     constexpr folly::StringPiece message{"Cannot detect protocol version"};
     closeWithError(Frame_ERROR::connectionError(message.str()));
@@ -410,9 +414,9 @@ void RSocketStateMachine::handleConnectionFrame(
               remoteResumeable_, frame, std::move(payload))) {
         return;
       }
-      VLOG(3) << "In: " << frame;
+      VLOG(3) << mode_ << " In: " << frame;
       resumeManager_->resetUpToPosition(frame.position_);
-      if (mode_ == ReactiveSocketMode::SERVER) {
+      if (mode_ == RSocketMode::SERVER) {
         if (!!(frame.header_.flags_ & FrameFlags::KEEPALIVE_RESPOND)) {
           sendKeepalive(FrameFlags::EMPTY, std::move(frame.data_));
         } else {
@@ -433,7 +437,7 @@ void RSocketStateMachine::handleConnectionFrame(
     case FrameType::METADATA_PUSH: {
       Frame_METADATA_PUSH frame;
       if (deserializeFrameOrError(frame, std::move(payload))) {
-        VLOG(3) << "In: " << frame;
+        VLOG(3) << mode_ << " In: " << frame;
         requestResponder_->handleMetadataPush(std::move(frame.metadata_));
       }
       return;
@@ -443,7 +447,7 @@ void RSocketStateMachine::handleConnectionFrame(
       if (!deserializeFrameOrError(frame, std::move(payload))) {
         return;
       }
-      VLOG(3) << "In: " << frame;
+      VLOG(3) << mode_ << " In: " << frame;
 
       if (!resumeCallback_) {
         constexpr folly::StringPiece message{
@@ -461,28 +465,27 @@ void RSocketStateMachine::handleConnectionFrame(
       }
 
       if (coldResumeInProgress_) {
-        auto streamIds = resumeManager_->getRequesterRequestStreamIds();
-        for (auto streamId : streamIds) {
-          auto consumerAllowance =
-              resumeManager_->getConsumerAllowance(streamId);
-          auto streamToken = resumeManager_->getStreamToken(streamId);
-          auto subscriber = coldResumeHandler_->handleRequesterResumeStream(
-              streamToken, consumerAllowance);
-          // TODO(somatsun): ensure that subscription is called from the correct
-          // thread (eventBase) without using EventBaseManager
-          streamsFactory().createStreamRequester(
-              yarpl::make_ref<ScheduledSubscriptionSubscriber<Payload>>(
-                  std::move(subscriber),
-                  *folly::EventBaseManager::get()->getEventBase()),
-              streamId,
-              consumerAllowance);
-        }
-
         streamsFactory().setNextStreamId(
             resumeManager_->getLargestUsedStreamId());
-
+        for (const auto& it : resumeManager_->getStreamResumeInfos()) {
+          auto streamId = it.first;
+          const StreamResumeInfo& streamResumeInfo = it.second;
+          if (streamResumeInfo.requester == RequestOriginator::LOCAL &&
+              streamResumeInfo.streamType == StreamType::STREAM) {
+            auto subscriber = coldResumeHandler_->handleRequesterResumeStream(
+                streamResumeInfo.streamToken,
+                streamResumeInfo.consumerAllowance);
+            streamsFactory().createStreamRequester(
+                yarpl::make_ref<ScheduledSubscriptionSubscriber<Payload>>(
+                    std::move(subscriber),
+                    *folly::EventBaseManager::get()->getEventBase()),
+                streamId,
+                streamResumeInfo.consumerAllowance);
+          }
+        }
         coldResumeInProgress_ = false;
       }
+
       resumeCallback_->onResumeOk();
       resumeCallback_.reset();
       resumeFromPosition(frame.position_);
@@ -493,7 +496,7 @@ void RSocketStateMachine::handleConnectionFrame(
       if (!deserializeFrameOrError(frame, std::move(payload))) {
         return;
       }
-      VLOG(3) << "In: " << frame;
+      VLOG(3) << mode_ << " In: " << frame;
 
       // TODO: handle INVALID_SETUP, UNSUPPORTED_SETUP, REJECTED_SETUP
 
@@ -553,12 +556,12 @@ void RSocketStateMachine::handleStreamFrame(
       if (!deserializeFrameOrError(frameRequestN, std::move(serializedFrame))) {
         return;
       }
-      VLOG(3) << "In: " << frameRequestN;
+      VLOG(3) << mode_ << " In: " << frameRequestN;
       stateMachine->handleRequestN(frameRequestN.requestN_);
       break;
     }
     case FrameType::CANCEL: {
-      VLOG(3) << "In: " << Frame_CANCEL();
+      VLOG(3) << mode_ << " In: " << Frame_CANCEL(streamId);
       stateMachine->handleCancel();
       break;
     }
@@ -567,7 +570,7 @@ void RSocketStateMachine::handleStreamFrame(
       if (!deserializeFrameOrError(framePayload, std::move(serializedFrame))) {
         return;
       }
-      VLOG(3) << "In: " << framePayload;
+      VLOG(3) << mode_ << " In: " << framePayload;
       stateMachine->handlePayload(
           std::move(framePayload.payload_),
           framePayload.header_.flagsComplete(),
@@ -579,7 +582,7 @@ void RSocketStateMachine::handleStreamFrame(
       if (!deserializeFrameOrError(frameError, std::move(serializedFrame))) {
         return;
       }
-      VLOG(3) << "In: " << frameError;
+      VLOG(3) << mode_ << " In: " << frameError;
       stateMachine->handleError(
           std::runtime_error(frameError.payload_.moveDataToString()));
       break;
@@ -620,74 +623,67 @@ void RSocketStateMachine::handleUnknownStream(
     return;
   }
 
-  switch (frameType) {
-    case FrameType::REQUEST_CHANNEL: {
-      Frame_REQUEST_CHANNEL frame;
-      if (!deserializeFrameOrError(frame, std::move(serializedFrame))) {
-        return;
-      }
-      VLOG(3) << "In: " << frame;
-      auto stateMachine =
-          streamsFactory_.createChannelResponder(frame.requestN_, streamId);
-      auto requestSink = requestResponder_->handleRequestChannelCore(
-          std::move(frame.payload_), streamId, stateMachine);
-      stateMachine->subscribe(requestSink);
-      break;
-    }
-    case FrameType::REQUEST_STREAM: {
-      Frame_REQUEST_STREAM frame;
-      if (!deserializeFrameOrError(frame, std::move(serializedFrame))) {
-        return;
-      }
-      VLOG(3) << "In: " << frame;
-      auto stateMachine =
-          streamsFactory_.createStreamResponder(frame.requestN_, streamId);
-      requestResponder_->handleRequestStreamCore(
-          std::move(frame.payload_), streamId, stateMachine);
-      break;
-    }
-    case FrameType::REQUEST_RESPONSE: {
-      Frame_REQUEST_RESPONSE frame;
-      if (!deserializeFrameOrError(frame, std::move(serializedFrame))) {
-        return;
-      }
-      VLOG(3) << "In: " << frame;
-      auto stateMachine =
-          streamsFactory_.createRequestResponseResponder(streamId);
-      requestResponder_->handleRequestResponseCore(
-          std::move(frame.payload_), streamId, stateMachine);
-      break;
-    }
-    case FrameType::REQUEST_FNF: {
-      Frame_REQUEST_FNF frame;
-      if (!deserializeFrameOrError(frame, std::move(serializedFrame))) {
-        return;
-      }
-      VLOG(3) << "In: " << frame;
-      // no stream tracking is necessary
-      requestResponder_->handleFireAndForget(
-          std::move(frame.payload_), streamId);
-      break;
-    }
+  if (!isNewStreamFrame(frameType)) {
+    std::stringstream msg;
+    msg << "Unexpected frame " << frameType << " for stream " << streamId;
+    VLOG(1) << msg.str();
+    closeWithError(Frame_ERROR::connectionError(msg.str()));
+    return;
+  }
 
-    case FrameType::RESUME:
-    case FrameType::SETUP:
-    case FrameType::METADATA_PUSH:
-    case FrameType::LEASE:
-    case FrameType::KEEPALIVE:
-    case FrameType::RESERVED:
-    case FrameType::REQUEST_N:
-    case FrameType::CANCEL:
-    case FrameType::PAYLOAD:
-    case FrameType::ERROR:
-    case FrameType::RESUME_OK:
-    case FrameType::EXT:
-    default:
-      std::stringstream message;
-      message << "Unexpected frame " << frameType << " for stream " << streamId;
-      DLOG(ERROR) << message.str();
-      closeWithError(Frame_ERROR::connectionError(message.str()));
-      break;
+  auto saveStreamToken = [&](const Payload& payload) {
+    if (coldResumeHandler_) {
+      auto streamType = getStreamType(frameType);
+      CHECK(streamType != StreamType::FNF);
+      auto streamToken = coldResumeHandler_->generateStreamToken(
+          payload, streamId, streamType);
+      resumeManager_->onStreamOpen(
+          streamId, RequestOriginator::REMOTE, streamToken, streamType);
+    }
+  };
+
+  if (frameType == FrameType::REQUEST_CHANNEL) {
+    Frame_REQUEST_CHANNEL frame;
+    if (!deserializeFrameOrError(frame, std::move(serializedFrame))) {
+      return;
+    }
+    VLOG(3) << mode_ << " In: " << frame;
+    auto stateMachine =
+        streamsFactory_.createChannelResponder(frame.requestN_, streamId);
+    saveStreamToken(frame.payload_);
+    auto requestSink = requestResponder_->handleRequestChannelCore(
+        std::move(frame.payload_), streamId, stateMachine);
+    stateMachine->subscribe(requestSink);
+  } else if (frameType == FrameType::REQUEST_STREAM) {
+    Frame_REQUEST_STREAM frame;
+    if (!deserializeFrameOrError(frame, std::move(serializedFrame))) {
+      return;
+    }
+    VLOG(3) << mode_ << " In: " << frame;
+    auto stateMachine =
+        streamsFactory_.createStreamResponder(frame.requestN_, streamId);
+    saveStreamToken(frame.payload_);
+    requestResponder_->handleRequestStreamCore(
+        std::move(frame.payload_), streamId, stateMachine);
+  } else if (frameType == FrameType::REQUEST_RESPONSE) {
+    Frame_REQUEST_RESPONSE frame;
+    if (!deserializeFrameOrError(frame, std::move(serializedFrame))) {
+      return;
+    }
+    VLOG(3) << mode_ << " In: " << frame;
+    auto stateMachine =
+        streamsFactory_.createRequestResponseResponder(streamId);
+    saveStreamToken(frame.payload_);
+    requestResponder_->handleRequestResponseCore(
+        std::move(frame.payload_), streamId, stateMachine);
+  } else if (frameType == FrameType::REQUEST_FNF) {
+    Frame_REQUEST_FNF frame;
+    if (!deserializeFrameOrError(frame, std::move(serializedFrame))) {
+      return;
+    }
+    VLOG(3) << mode_ << " In: " << frame;
+    // no stream tracking is necessary
+    requestResponder_->handleFireAndForget(std::move(frame.payload_), streamId);
   }
 }
 
@@ -749,7 +745,7 @@ bool RSocketStateMachine::resumeFromPositionOrClose(
     ResumePosition clientPosition) {
   DCHECK(!resumeCallback_);
   DCHECK(!isDisconnectedOrClosed());
-  DCHECK(mode_ == ReactiveSocketMode::SERVER);
+  DCHECK(mode_ == RSocketMode::SERVER);
 
   bool clientPositionExist = (clientPosition == kUnspecifiedResumePosition) ||
       clientPosition <= resumeManager_->impliedPosition();
@@ -824,10 +820,9 @@ void RSocketStateMachine::outputFrame(std::unique_ptr<folly::IOBuf> frame) {
 
   if (isResumable_) {
     auto streamIdPtr = frameSerializer_->peekStreamId(*frame);
-    size_t consumerAllowance =
-        (streamIdPtr) ? getConsumerAllowance(*streamIdPtr) : 0;
+    CHECK(streamIdPtr) << "Error in serialized frame.";
     resumeManager_->trackSentFrame(
-        *frame, frameType, streamIdPtr, consumerAllowance);
+        *frame, frameType, *streamIdPtr, getConsumerAllowance(*streamIdPtr));
   }
   frameTransport_->outputFrameOrDrop(std::move(frame));
 }
@@ -899,7 +894,8 @@ void RSocketStateMachine::writeNewStream(
   if (coldResumeHandler_ && streamType != StreamType::FNF) {
     auto streamToken =
         coldResumeHandler_->generateStreamToken(payload, streamId, streamType);
-    resumeManager_->saveStreamToken(streamId, streamToken);
+    resumeManager_->onStreamOpen(
+        streamId, RequestOriginator::LOCAL, streamToken, streamType);
   }
 
   switch (streamType) {
@@ -992,7 +988,7 @@ bool RSocketStateMachine::ensureOrAutodetectFrameSerializer(
     return true;
   }
 
-  if (mode_ != ReactiveSocketMode::SERVER) {
+  if (mode_ != RSocketMode::SERVER) {
     // this should never happen as clients are initized with FrameSerializer
     // instance
     DCHECK(false);

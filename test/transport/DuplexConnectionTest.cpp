@@ -1,7 +1,7 @@
 #include "DuplexConnectionTest.h"
 
 #include <folly/io/IOBuf.h>
-#include "../test_utils/Mocks.h"
+#include "yarpl/test_utils/Mocks.h"
 
 namespace rsocket {
 namespace tests {
@@ -9,18 +9,19 @@ namespace tests {
 using namespace folly;
 using namespace rsocket;
 using namespace ::testing;
+using namespace yarpl::flowable;
 
 void makeMultipleSetInputGetOutputCalls(
     std::unique_ptr<DuplexConnection> serverConnection,
     EventBase* serverEvb,
     std::unique_ptr<DuplexConnection> clientConnection,
     EventBase* clientEvb) {
-  auto serverSubscriber =
-      yarpl::make_ref<MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
+  auto serverSubscriber = yarpl::make_ref<
+      yarpl::mocks::MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
   EXPECT_CALL(*serverSubscriber, onSubscribe_(_));
   EXPECT_CALL(*serverSubscriber, onNext_(_)).Times(10);
   yarpl::Reference<Subscriber<std::unique_ptr<folly::IOBuf>>> serverOutput;
-  yarpl::Reference<MockSubscription> serverSubscription;
+  yarpl::Reference<yarpl::mocks::MockSubscription> serverSubscription;
 
   serverEvb->runInEventBaseThreadAndWait(
       [&connection = serverConnection,
@@ -31,18 +32,18 @@ void makeMultipleSetInputGetOutputCalls(
         connection->setInput(input);
         // Get another subscriber and send messages
         output = connection->getOutput();
-        subscription = yarpl::make_ref<MockSubscription>();
+        subscription = yarpl::make_ref<yarpl::mocks::MockSubscription>();
         EXPECT_CALL(*subscription, request_(_)).Times(AtLeast(1));
         EXPECT_CALL(*subscription, cancel_());
         output->onSubscribe(subscription);
       });
 
   for (int i = 0; i < 10; ++i) {
-    auto clientSubscriber =
-        yarpl::make_ref<MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
+    auto clientSubscriber = yarpl::make_ref<
+        yarpl::mocks::MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
     EXPECT_CALL(*clientSubscriber, onSubscribe_(_));
     EXPECT_CALL(*clientSubscriber, onNext_(_));
-    yarpl::Reference<MockSubscription> clientSubscription;
+    yarpl::Reference<yarpl::mocks::MockSubscription> clientSubscription;
 
     clientEvb->runInEventBaseThreadAndWait(
         [&connection = clientConnection,
@@ -52,7 +53,7 @@ void makeMultipleSetInputGetOutputCalls(
           connection->setInput(input);
           // Get another subscriber and send messages
           auto output = connection->getOutput();
-          subscription = yarpl::make_ref<MockSubscription>();
+          subscription = yarpl::make_ref<yarpl::mocks::MockSubscription>();
           EXPECT_CALL(*subscription, request_(_)).Times(AtLeast(1));
           EXPECT_CALL(*subscription, cancel_());
           output->onSubscribe(subscription);
@@ -101,12 +102,12 @@ void verifyInputAndOutputIsUntied(
     EventBase* serverEvb,
     std::unique_ptr<DuplexConnection> clientConnection,
     EventBase* clientEvb) {
-  auto serverSubscriber =
-      yarpl::make_ref<MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
+  auto serverSubscriber = yarpl::make_ref<
+      yarpl::mocks::MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
   EXPECT_CALL(*serverSubscriber, onSubscribe_(_));
   EXPECT_CALL(*serverSubscriber, onNext_(_)).Times(3);
   yarpl::Reference<Subscriber<std::unique_ptr<folly::IOBuf>>> serverOutput;
-  auto serverSubscription = yarpl::make_ref<MockSubscription>();
+  auto serverSubscription = yarpl::make_ref<yarpl::mocks::MockSubscription>();
   EXPECT_CALL(*serverSubscription, request_(_)).Times(AtLeast(1));
   EXPECT_CALL(*serverSubscription, cancel_());
 
@@ -120,11 +121,11 @@ void verifyInputAndOutputIsUntied(
         output->onSubscribe(subscription);
       });
 
-  auto clientSubscriber =
-      yarpl::make_ref<MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
+  auto clientSubscriber = yarpl::make_ref<
+      yarpl::mocks::MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
   EXPECT_CALL(*clientSubscriber, onSubscribe_(_));
   yarpl::Reference<Subscriber<std::unique_ptr<folly::IOBuf>>> clientOutput;
-  auto clientSubscription = yarpl::make_ref<MockSubscription>();
+  auto clientSubscription = yarpl::make_ref<yarpl::mocks::MockSubscription>();
   EXPECT_CALL(*clientSubscription, request_(_)).Times(AtLeast(1));
   EXPECT_CALL(*clientSubscription, cancel_());
 
@@ -153,8 +154,8 @@ void verifyInputAndOutputIsUntied(
   serverSubscriber->awaitFrames(1);
 
   // Another client subscriber
-  clientSubscriber =
-      yarpl::make_ref<MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
+  clientSubscriber = yarpl::make_ref<
+      yarpl::mocks::MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
   EXPECT_CALL(*clientSubscriber, onSubscribe_(_));
   EXPECT_CALL(*clientSubscriber, onNext_(_));
   clientEvb->runInEventBaseThreadAndWait(
@@ -208,11 +209,11 @@ void verifyClosingInputAndOutputDoesntCloseConnection(
     folly::EventBase* serverEvb,
     std::unique_ptr<rsocket::DuplexConnection> clientConnection,
     folly::EventBase* clientEvb) {
-  auto serverSubscriber =
-      yarpl::make_ref<MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
+  auto serverSubscriber = yarpl::make_ref<
+      yarpl::mocks::MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
   EXPECT_CALL(*serverSubscriber, onSubscribe_(_));
   yarpl::Reference<Subscriber<std::unique_ptr<folly::IOBuf>>> serverOutput;
-  auto serverSubscription = yarpl::make_ref<MockSubscription>();
+  auto serverSubscription = yarpl::make_ref<yarpl::mocks::MockSubscription>();
   EXPECT_CALL(*serverSubscription, request_(_));
   EXPECT_CALL(*serverSubscription, cancel_());
 
@@ -226,11 +227,11 @@ void verifyClosingInputAndOutputDoesntCloseConnection(
         output->onSubscribe(subscription);
       });
 
-  auto clientSubscriber =
-      yarpl::make_ref<MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
+  auto clientSubscriber = yarpl::make_ref<
+      yarpl::mocks::MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
   EXPECT_CALL(*clientSubscriber, onSubscribe_(_));
   yarpl::Reference<Subscriber<std::unique_ptr<folly::IOBuf>>> clientOutput;
-  auto clientSubscription = yarpl::make_ref<MockSubscription>();
+  auto clientSubscription = yarpl::make_ref<yarpl::mocks::MockSubscription>();
   EXPECT_CALL(*clientSubscription, request_(_));
   EXPECT_CALL(*clientSubscription, cancel_());
 
@@ -264,15 +265,15 @@ void verifyClosingInputAndOutputDoesntCloseConnection(
       });
 
   // Set new subscribers as the connection is not closed
-  serverSubscriber =
-      yarpl::make_ref<MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
+  serverSubscriber = yarpl::make_ref<
+      yarpl::mocks::MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
   EXPECT_CALL(*serverSubscriber, onSubscribe_(_));
   EXPECT_CALL(*serverSubscriber, onNext_(_)).Times(1);
   // The subscriber is to be closed, as the subscription is not cancelled
   // but the connection is closed at the end
   EXPECT_CALL(*serverSubscriber, onComplete_());
 
-  serverSubscription = yarpl::make_ref<MockSubscription>();
+  serverSubscription = yarpl::make_ref<yarpl::mocks::MockSubscription>();
   EXPECT_CALL(*serverSubscription, request_(_));
   EXPECT_CALL(*serverSubscription, cancel_());
 
@@ -286,15 +287,15 @@ void verifyClosingInputAndOutputDoesntCloseConnection(
         output->onSubscribe(subscription);
       });
 
-  clientSubscriber =
-      yarpl::make_ref<MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
+  clientSubscriber = yarpl::make_ref<
+      yarpl::mocks::MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
   EXPECT_CALL(*clientSubscriber, onSubscribe_(_));
   EXPECT_CALL(*clientSubscriber, onNext_(_)).Times(1);
   // The subscriber is to be closed, as the subscription is not cancelled
   // but the connection is closed at the end
   EXPECT_CALL(*clientSubscriber, onComplete_());
 
-  clientSubscription = yarpl::make_ref<MockSubscription>();
+  clientSubscription = yarpl::make_ref<yarpl::mocks::MockSubscription>();
   EXPECT_CALL(*clientSubscription, request_(_));
   EXPECT_CALL(*clientSubscription, cancel_());
 

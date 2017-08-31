@@ -24,7 +24,7 @@ class StreamRequester : public ConsumerBase {
   explicit StreamRequester(const Base::Parameters& params, Payload payload)
       : Base(params), initialPayload_(std::move(payload)) {}
 
-  void setRequested(uint32_t n);
+  void setRequested(size_t n);
 
  private:
   // implementation from ConsumerBase::SubscriptionBase

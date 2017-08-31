@@ -64,11 +64,11 @@ struct GenericRequestResponseHandler : public rsocket::RSocketResponder {
   std::unique_ptr<HandlerFunc> handler_;
 };
 
-Response payload_response(StringPair const& sp) {
+inline Response payload_response(StringPair const& sp) {
   return std::make_unique<ResponseImpl>(sp);
 }
 
-Response payload_response(std::string const& a, std::string const& b) {
+inline Response payload_response(std::string const& a, std::string const& b) {
   return payload_response({a, b});
 }
 
@@ -77,7 +77,7 @@ Response error_response(T const& err) {
   return std::make_unique<ResponseImpl>(err);
 }
 
-StringPair payload_to_stringpair(Payload p) {
+inline StringPair payload_to_stringpair(Payload p) {
   return StringPair(p.moveDataToString(), p.moveMetadataToString());
 }
 }

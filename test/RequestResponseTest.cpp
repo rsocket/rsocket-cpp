@@ -135,6 +135,28 @@ TEST(RequestResponseTest, FailureInResponse) {
   to->assertOnErrorMessage("whew!");
 }
 
+TEST(RequestResponseTest, RequestOnDisconnectedClient) {
+  folly::ScopedEventBaseThread worker;
+  auto client = makeDisconnectedClient(worker.getEventBase());
+
+  auto requester = client->getRequester();
+  bool did_call_on_error = false;
+  folly::Baton<> wait_for_on_error;
+  requester->requestResponse(Payload("foo", "bar"))
+      ->subscribe(
+          [](auto) {
+            // should not call onSuccess
+            FAIL();
+          },
+          [&](folly::exception_wrapper) {
+            did_call_on_error = true;
+            wait_for_on_error.post();
+          });
+
+  wait_for_on_error.timed_wait(std::chrono::milliseconds(100));
+  ASSERT(did_call_on_error);
+}
+
 // TODO: Currently, this hangs when the client sends a request,
 // we should fix this
 TEST(DISABLED_RequestResponseTest, FailureOnRequest) {

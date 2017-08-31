@@ -61,6 +61,33 @@ TEST(RequestChannelTest, Hello) {
   ts->assertValueAt(1, "[/hello] Hello Jane!");
 }
 
+TEST(RequestChannelTest, RequestOnDisconnectedClient) {
+  folly::ScopedEventBaseThread worker;
+  auto client = makeDisconnectedClient(worker.getEventBase());
+  auto requester = client->getRequester();
+
+  bool did_call_on_error = false;
+  folly::Baton<> wait_for_on_error;
+
+  auto instream = Flowables::empty<Payload>();
+  requester->requestChannel(instream)->subscribe(
+      [](auto /* payload */) {
+        // onNext shouldn't be called
+        FAIL();
+      },
+      [&](folly::exception_wrapper) {
+        did_call_on_error = true;
+        wait_for_on_error.post();
+      },
+      []() {
+        // onComplete shouldn't be called
+        FAIL();
+      });
+
+  wait_for_on_error.timed_wait(std::chrono::milliseconds(100));
+  ASSERT(did_call_on_error);
+}
+
 // TODO complete from requester, responder continues
 // TODO complete from responder, requester continues
 // TODO cancel from requester, shuts down

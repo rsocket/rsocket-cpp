@@ -64,7 +64,7 @@ class RSocketStateMachine final
   RSocketStateMachine(
       std::shared_ptr<RSocketResponder> requestResponder,
       std::unique_ptr<KeepaliveTimer> keepaliveTimer_,
-      ReactiveSocketMode mode,
+      RSocketMode mode,
       std::shared_ptr<RSocketStats> stats,
       std::shared_ptr<RSocketConnectionEvents> connectionEvents,
       std::shared_ptr<ResumeManager> resumeManager,
@@ -150,7 +150,7 @@ class RSocketStateMachine final
 
   template<typename T>
   void outputFrameOrEnqueue(T&& frame) {
-    VLOG(3) << "Out: " << frame;
+    VLOG(3) << mode_ << " Out: " << frame;
     outputFrameOrEnqueue(frameSerializer_->serializeOut(std::forward<T>(frame)));
   }
 
@@ -271,7 +271,7 @@ class RSocketStateMachine final
 
   size_t getConsumerAllowance(StreamId streamId) const;
 
-  ReactiveSocketMode mode_;
+  RSocketMode mode_;
   bool isResumable_{false};
   bool remoteResumeable_{false};
   bool isClosed_{false};

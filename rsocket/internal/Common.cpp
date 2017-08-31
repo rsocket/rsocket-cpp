@@ -44,6 +44,17 @@ static const char* getTerminatingSignalErrorMessage(int terminatingSignal) {
   }
 }
 
+std::ostream& operator<<(std::ostream& os, RSocketMode mode) {
+  switch (mode) {
+  case RSocketMode::CLIENT:
+    return os << "CLIENT";
+  case RSocketMode::SERVER:
+    return os << "SERVER";
+  }
+  DLOG(FATAL) << "Invalid RSocketMode";
+  return os << "INVALID_RSOCKET_MODE";
+}
+
 std::string to_string(StreamCompletionSignal signal) {
   switch (signal) {
     case StreamCompletionSignal::COMPLETE:

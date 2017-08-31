@@ -50,13 +50,20 @@ enum class StreamCompletionSignal {
   SOCKET_CLOSED,
 };
 
-enum class ReactiveSocketMode { SERVER, CLIENT };
+enum class RSocketMode { SERVER, CLIENT };
+
+std::ostream& operator<<(std::ostream&, RSocketMode);
 
 enum class StreamType {
   REQUEST_RESPONSE,
   STREAM,
   CHANNEL,
   FNF,
+};
+
+enum class RequestOriginator {
+  LOCAL,
+  REMOTE,
 };
 
 std::string to_string(StreamCompletionSignal);

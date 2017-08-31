@@ -10,22 +10,19 @@
 #include <folly/ExceptionWrapper.h>
 #include <gmock/gmock.h>
 
-#include "rsocket/framing/FrameProcessor.h"
-#include "rsocket/internal/Common.h"
 #include "yarpl/flowable/Flowable.h"
 
-namespace rsocket {
-
-using namespace yarpl::flowable;
+namespace yarpl {
+namespace mocks {
 
 /// GoogleMock-compatible Publisher implementation for fast prototyping.
 /// UnmanagedMockPublisher's lifetime MUST be managed externally.
 template <typename T>
-class MockFlowable : public Flowable<T> {
+class MockFlowable : public flowable::Flowable<T> {
  public:
-  MOCK_METHOD1_T(subscribe_, void(yarpl::Reference<Subscriber<T>> subscriber));
+  MOCK_METHOD1_T(subscribe_, void(yarpl::Reference<flowable::Subscriber<T>> subscriber));
 
-  void subscribe(yarpl::Reference<Subscriber<T>> subscriber) noexcept override {
+  void subscribe(yarpl::Reference<flowable::Subscriber<T>> subscriber) noexcept override {
     subscribe_(std::move(subscriber));
   }
 };
@@ -35,9 +32,9 @@ class MockFlowable : public Flowable<T> {
 /// For the same reason putting mock instance in a smart pointer is a poor idea.
 /// Can only be instanciated for CopyAssignable E type.
 template <typename T>
-class MockSubscriber : public Subscriber<T> {
+class MockSubscriber : public flowable::Subscriber<T> {
  public:
-  MOCK_METHOD1(onSubscribe_, void(yarpl::Reference<Subscription> subscription));
+  MOCK_METHOD1(onSubscribe_, void(yarpl::Reference<flowable::Subscription> subscription));
   MOCK_METHOD1_T(onNext_, void(const T& value));
   MOCK_METHOD0(onComplete_, void());
   MOCK_METHOD1_T(onError_, void(folly::exception_wrapper ex));
@@ -45,7 +42,7 @@ class MockSubscriber : public Subscriber<T> {
   explicit MockSubscriber(int64_t initial = std::numeric_limits<int64_t>::max())
       : initial_(initial) {}
 
-  void onSubscribe(yarpl::Reference<Subscription> subscription) override {
+  void onSubscribe(yarpl::Reference<flowable::Subscription> subscription) override {
     subscription_ = subscription;
     onSubscribe_(subscription);
 
@@ -74,7 +71,7 @@ class MockSubscriber : public Subscriber<T> {
     terminalEventCV_.notify_all();
   }
 
-  Subscription* subscription() const {
+  flowable::Subscription* subscription() const {
     return subscription_.operator->();
   }
 
@@ -86,25 +83,22 @@ class MockSubscriber : public Subscriber<T> {
     // now block this thread
     std::unique_lock<std::mutex> lk(m_);
     // if shutdown gets implemented this would then be released by it
-    bool result = terminalEventCV_.wait_for(
-        lk, timeout, [this] {
-          return terminated_;
-        });
+    bool result =
+        terminalEventCV_.wait_for(lk, timeout, [this] { return terminated_; });
     EXPECT_TRUE(result) << "Timed out";
   }
 
   /**
    * Block the current thread until onNext is called 'count' times.
    */
-  void awaitFrames(uint64_t count,
-       std::chrono::milliseconds timeout = std::chrono::seconds(1)) {
+  void awaitFrames(
+      uint64_t count,
+      std::chrono::milliseconds timeout = std::chrono::seconds(1)) {
     waitedFrameCount_ += count;
     std::unique_lock<std::mutex> lk(mFrame_);
     if (waitedFrameCount_ > 0) {
       bool result = framesEventCV_.wait_for(
-          lk, timeout, [this] {
-            return waitedFrameCount_ <= 0;
-          });
+          lk, timeout, [this] { return waitedFrameCount_ <= 0; });
       EXPECT_TRUE(result) << "Timed out";
     }
   }
@@ -112,7 +106,7 @@ class MockSubscriber : public Subscriber<T> {
  protected:
   // As the 'subscription_' member in the parent class is private,
   // we define it here again.
-  yarpl::Reference<Subscription> subscription_;
+  yarpl::Reference<flowable::Subscription> subscription_;
 
   int64_t initial_;
 
@@ -125,7 +119,7 @@ class MockSubscriber : public Subscriber<T> {
 /// GoogleMock-compatible Subscriber implementation for fast prototyping.
 /// MockSubscriber MUST be heap-allocated, as it manages its own lifetime.
 /// For the same reason putting mock instance in a smart pointer is a poor idea.
-class MockSubscription : public Subscription {
+class MockSubscription : public flowable::Subscription {
  public:
   MOCK_METHOD1(request_, void(int64_t n));
   MOCK_METHOD0(cancel_, void());
@@ -148,5 +142,5 @@ class MockSubscription : public Subscription {
   bool requested_{false};
   testing::MockFunction<void()> checkpoint_;
 };
-
-} // namespace rsocket
+}
+} // namespace yarpl::mocks

@@ -26,6 +26,9 @@ std::shared_ptr<RSocketClient> makeClient(
     folly::EventBase* eventBase,
     uint16_t port);
 
+std::shared_ptr<RSocketClient> makeDisconnectedClient(
+    folly::EventBase* eventBase);
+
 folly::Future<std::shared_ptr<RSocketClient>> makeClientAsync(
     folly::EventBase* eventBase,
     uint16_t port);

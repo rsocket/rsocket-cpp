@@ -5,7 +5,7 @@
 #include <gmock/gmock.h>
 
 #include "rsocket/DuplexConnection.h"
-#include "test/test_utils/Mocks.h"
+#include "yarpl/test_utils/Mocks.h"
 
 namespace rsocket {
 
@@ -15,7 +15,8 @@ public:
 
   MockDuplexConnection() {
     ON_CALL(*this, getOutput_()).WillByDefault(testing::Invoke([] {
-      return yarpl::make_ref<MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
+      return yarpl::make_ref<
+          yarpl::mocks::MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
     }));
   }
 
@@ -27,8 +28,8 @@ public:
         .WillRepeatedly(testing::Invoke(std::move(in)));
     EXPECT_CALL(*this, getOutput_())
         .WillRepeatedly(testing::Invoke([out = std::move(out)] {
-          auto subscriber =
-              yarpl::make_ref<MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
+          auto subscriber = yarpl::make_ref<
+              yarpl::mocks::MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
           out(subscriber);
           return subscriber;
         }));

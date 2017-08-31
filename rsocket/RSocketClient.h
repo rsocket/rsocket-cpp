@@ -45,7 +45,7 @@ class RSocketClient {
   folly::Future<folly::Unit> resume();
 
   // Disconnect the underlying transport
-  void disconnect(folly::exception_wrapper);
+  void disconnect(folly::exception_wrapper = folly::exception_wrapper{});
 
  private:
   // Private constructor.  RSocket class should be used to create instances

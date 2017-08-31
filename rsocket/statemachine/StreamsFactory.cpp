@@ -10,24 +10,48 @@
 #include "rsocket/statemachine/StreamRequester.h"
 #include "rsocket/statemachine/StreamResponder.h"
 
+#include "yarpl/flowable/Flowable.h"
+#include "yarpl/single/Singles.h"
+
 namespace rsocket {
 
 using namespace yarpl;
 
 StreamsFactory::StreamsFactory(
     RSocketStateMachine& connection,
-    ReactiveSocketMode mode)
+    RSocketMode mode)
     : connection_(connection),
       nextStreamId_(
-          mode == ReactiveSocketMode::CLIENT
+          mode == RSocketMode::CLIENT
               ? 1 /*Streams initiated by a client MUST use
                     odd-numbered stream identifiers*/
               : 2 /*streams initiated by the server MUST use
                     even-numbered stream identifiers*/) {}
 
+void subscribeToErrorFlowable(
+    Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
+  yarpl::flowable::Flowables::error<Payload>(
+      std::runtime_error(
+          "state machine is disconnected/closed"))
+      ->subscribe(std::move(responseSink));
+}
+
+void subscribeToErrorSingle(
+    Reference<yarpl::single::SingleObserver<Payload>> responseSink) {
+  yarpl::single::Singles::error<Payload>(
+      std::runtime_error(
+          "state machine is disconnected/closed"))
+      ->subscribe(std::move(responseSink));
+}
+
 Reference<yarpl::flowable::Subscriber<Payload>>
 StreamsFactory::createChannelRequester(
     Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
+  if (connection_.isDisconnectedOrClosed()) {
+    subscribeToErrorFlowable(std::move(responseSink));
+    return nullptr;
+  }
+
   ChannelRequester::Parameters params(
       connection_.shared_from_this(), getNextStreamId());
   auto stateMachine = yarpl::make_ref<ChannelRequester>(params);
@@ -39,6 +63,11 @@ StreamsFactory::createChannelRequester(
 void StreamsFactory::createStreamRequester(
     Payload request,
     Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
+  if (connection_.isDisconnectedOrClosed()) {
+    subscribeToErrorFlowable(std::move(responseSink));
+    return;
+  }
+
   StreamRequester::Parameters params(
       connection_.shared_from_this(), getNextStreamId());
   auto stateMachine =
@@ -50,7 +79,12 @@ void StreamsFactory::createStreamRequester(
 void StreamsFactory::createStreamRequester(
     Reference<yarpl::flowable::Subscriber<Payload>> responseSink,
     StreamId streamId,
-    uint32_t n) {
+    size_t n) {
+  if (connection_.isDisconnectedOrClosed()) {
+    subscribeToErrorFlowable(std::move(responseSink));
+    return;
+  }
+
   StreamRequester::Parameters params(connection_.shared_from_this(), streamId);
   auto stateMachine = yarpl::make_ref<StreamRequester>(params, Payload());
   // Set requested to true (since cold resumption)
@@ -62,6 +96,11 @@ void StreamsFactory::createStreamRequester(
 void StreamsFactory::createRequestResponseRequester(
     Payload payload,
     Reference<yarpl::single::SingleObserver<Payload>> responseSink) {
+  if (connection_.isDisconnectedOrClosed()) {
+    subscribeToErrorSingle(std::move(responseSink));
+    return;
+  }
+
   RequestResponseRequester::Parameters params(
       connection_.shared_from_this(), getNextStreamId());
   auto stateMachine =

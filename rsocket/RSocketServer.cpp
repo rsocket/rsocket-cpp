@@ -137,7 +137,7 @@ void RSocketServer::onRSocketSetup(
   auto rs = std::make_shared<RSocketStateMachine>(
       std::move(responder),
       nullptr,
-      ReactiveSocketMode::SERVER,
+      RSocketMode::SERVER,
       std::move(connectionParams.stats),
       std::move(connectionParams.connectionEvents),
       nullptr, /* resumeManager */

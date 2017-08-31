@@ -8,8 +8,8 @@
 
 #include "rsocket/RSocket.h"
 
-#include "rsocket/internal/InMemResumeManager.h"
 #include "rsocket/transports/tcp/TcpConnectionFactory.h"
+#include "test/test_utils/ColdResumeManager.h"
 
 using namespace rsocket;
 using namespace yarpl;
@@ -104,7 +104,7 @@ int main(int argc, char* argv[]) {
 
   auto token = ResumeIdentificationToken::generateNew();
   auto resumeManager =
-      std::make_shared<InMemResumeManager>(RSocketStats::noop());
+      std::make_shared<ColdResumeManager>(RSocketStats::noop());
 
   std::string firstPayload = "First";
   std::string secondPayload = "Second";

@@ -93,3 +93,30 @@ TEST(RequestStreamTest, HelloAsync) {
   ts->assertValueAt(0, "Hello Bob 1!");
   ts->assertValueAt(39, "Hello Bob 40!");
 }
+
+TEST(RequestStreamTest, RequestOnDisconnectedClient) {
+  folly::ScopedEventBaseThread worker;
+  auto client = makeDisconnectedClient(worker.getEventBase());
+  auto requester = client->getRequester();
+
+  bool did_call_on_error = false;
+  folly::Baton<> wait_for_on_error;
+
+  requester->requestStream(Payload("foo", "bar"))
+      ->subscribe(
+          [](auto /* payload */) {
+            // onNext shouldn't be called
+            FAIL();
+          },
+          [&](folly::exception_wrapper) {
+            did_call_on_error = true;
+            wait_for_on_error.post();
+          },
+          []() {
+            // onComplete shouldn't be called
+            FAIL();
+          });
+
+  wait_for_on_error.timed_wait(std::chrono::milliseconds(100));
+  ASSERT(did_call_on_error);
+}

@@ -452,4 +452,7 @@ class Frame_RESUME_OK {
 };
 std::ostream& operator<<(std::ostream&, const Frame_RESUME_OK&);
 /// @}
+
+StreamType getStreamType(FrameType frameType);
+bool isNewStreamFrame(FrameType frameType);
 }

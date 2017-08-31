@@ -7,8 +7,8 @@
 
 #include "RSocketTests.h"
 
-#include "rsocket/internal/InMemResumeManager.h"
 #include "test/handlers/HelloServiceHandler.h"
+#include "test/test_utils/ColdResumeManager.h"
 
 using namespace rsocket;
 using namespace rsocket::tests;
@@ -122,7 +122,7 @@ TEST(ColdResumptionTest, SuccessfulResumption) {
   folly::ScopedEventBaseThread worker;
   auto token = ResumeIdentificationToken::generateNew();
   auto resumeManager =
-      std::make_shared<InMemResumeManager>(RSocketStats::noop());
+      std::make_shared<ColdResumeManager>(RSocketStats::noop());
   {
     auto firstSub = make_ref<HelloSubscriber>(0);
     {

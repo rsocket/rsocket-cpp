@@ -108,7 +108,7 @@ script:
   - cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DRSOCKET_CC=$COMPILER
           -DRSOCKET_ASAN=$ASAN -DRSOCKET_INSTALL_DEPS=True
           -DRSOCKET_BUILD_WITH_COVERAGE=ON ..
-  - make -j8
+  - make -j4
   - lcov --directory . --zerocounters
   - make test
   - make coverage
