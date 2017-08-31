@@ -33,7 +33,7 @@ class WarmResumeManager : public ResumeManager {
   void trackSentFrame(
       const folly::IOBuf& serializedFrame,
       FrameType frameType,
-      folly::Optional<StreamId> streamIdPtr,
+      StreamId streamId,
       size_t consumerAllowance) override;
 
   void resetUpToPosition(ResumePosition position) override;

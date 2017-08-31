@@ -30,7 +30,7 @@ class ColdResumeManager : public WarmResumeManager {
   void trackSentFrame(
       const folly::IOBuf& serializedFrame,
       FrameType frameType,
-      folly::Optional<StreamId> streamIdPtr,
+      StreamId streamIdPtr,
       size_t consumerAllowance) override;
 
   void onStreamOpen(

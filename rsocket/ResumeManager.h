@@ -69,7 +69,7 @@ class ResumeManager {
   virtual void trackSentFrame(
       const folly::IOBuf& serializedFrame,
       FrameType frameType,
-      folly::Optional<StreamId> streamIdPtr,
+      StreamId streamId,
       size_t consumerAllowance) = 0;
 
   // We have received acknowledgement from the remote-side that it has frames

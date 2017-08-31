@@ -820,10 +820,9 @@ void RSocketStateMachine::outputFrame(std::unique_ptr<folly::IOBuf> frame) {
 
   if (isResumable_) {
     auto streamIdPtr = frameSerializer_->peekStreamId(*frame);
-    size_t consumerAllowance =
-        (streamIdPtr) ? getConsumerAllowance(*streamIdPtr) : 0;
+    CHECK(streamIdPtr) << "Error in serialized frame.";
     resumeManager_->trackSentFrame(
-        *frame, frameType, streamIdPtr, consumerAllowance);
+        *frame, frameType, *streamIdPtr, getConsumerAllowance(*streamIdPtr));
   }
   frameTransport_->outputFrameOrDrop(std::move(frame));
 }

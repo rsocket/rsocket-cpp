@@ -25,7 +25,7 @@ void WarmResumeManager::trackReceivedFrame(
 void WarmResumeManager::trackSentFrame(
     const folly::IOBuf& serializedFrame,
     FrameType frameType,
-    folly::Optional<StreamId>,
+    StreamId,
     size_t consumerAllowance) {
   if (shouldTrackFrame(frameType)) {
     // TODO(tmont): this could be expensive, find a better way to get length

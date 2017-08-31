@@ -29,19 +29,16 @@ void ColdResumeManager::trackReceivedFrame(
 void ColdResumeManager::trackSentFrame(
     const folly::IOBuf& serializedFrame,
     FrameType frameType,
-    folly::Optional<StreamId> streamIdPtr,
+    StreamId streamId,
     size_t consumerAllowance) {
   if (!shouldTrackFrame(frameType)) {
     return;
   }
-  if (streamIdPtr) {
-    const StreamId streamId = *streamIdPtr;
-    auto it = streamResumeInfos_.find(streamId);
-    CHECK(it != streamResumeInfos_.end());
-    it->second.consumerAllowance = consumerAllowance;
-  }
+  auto it = streamResumeInfos_.find(streamId);
+  CHECK(it != streamResumeInfos_.end());
+  it->second.consumerAllowance = consumerAllowance;
   WarmResumeManager::trackSentFrame(
-      std::move(serializedFrame), frameType, streamIdPtr, consumerAllowance);
+      std::move(serializedFrame), frameType, streamId, consumerAllowance);
 }
 
 void ColdResumeManager::onStreamClosed(StreamId streamId) {
