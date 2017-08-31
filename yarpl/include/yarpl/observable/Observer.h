@@ -53,13 +53,8 @@ class Observer : public virtual Refcounted {
   }
 
  protected:
-  Subscription* subscription() {
-    return subscription_.operator->();
-  }
-
-  void unsubscribe() {
-    CHECK(subscription_);
-    subscription_->cancel();
+  Reference<Subscription>& subscription() {
+    return subscription_;
   }
 
  private:
