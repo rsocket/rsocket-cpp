@@ -22,7 +22,9 @@ void ConsumerBase::subscribe(
   }
 
   DCHECK(!consumingSubscriber_);
-  consumingSubscriber_ = std::move(subscriber);
+  // keep a refernce to consumingSubscriber_ on the stack in case
+  // its call to onSubscribe causes us to drop our instance reference to it
+  consumingSubscriber_ = subscriber;
   consumingSubscriber_->onSubscribe(get_ref(this));
 }
 
@@ -48,6 +50,7 @@ void ConsumerBase::generateRequest(size_t n) {
 
 void ConsumerBase::endStream(StreamCompletionSignal signal) {
   VLOG(5) << "ConsumerBase::endStream(" << signal << ")";
+  auto this_ = get_ref(this);
   if (auto subscriber = std::move(consumingSubscriber_)) {
     if (signal == StreamCompletionSignal::COMPLETE ||
         signal == StreamCompletionSignal::CANCEL) { // TODO: remove CANCEL
@@ -71,7 +74,10 @@ void ConsumerBase::processPayload(Payload&& payload, bool onNext) {
     // figuring out flow control allowance.
     if (allowance_.tryAcquire()) {
       sendRequests();
-      consumingSubscriber_->onNext(std::move(payload));
+      // keep a reference to the subscriber on the stack in case it causes us to drop
+      // our instance's reference to it
+      auto ref = consumingSubscriber_;
+      ref->onNext(std::move(payload));
     } else {
       handleFlowControlError();
       return;

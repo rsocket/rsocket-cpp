@@ -51,7 +51,8 @@ class FlowableOperator : public Flowable<D> {
 
     void subscriberOnNext(D value) {
       if (subscriber_) {
-        subscriber_->onNext(std::move(value));
+        auto ref = subscriber_;
+        ref->onNext(std::move(value));
       }
     }
 
@@ -87,7 +88,8 @@ class FlowableOperator : public Flowable<D> {
       }
 
       upstream_ = std::move(subscription);
-      subscriber_->onSubscribe(get_ref(this));
+      auto ref = subscriber_;
+      ref->onSubscribe(get_ref(this));
     }
 
     void onComplete() override {

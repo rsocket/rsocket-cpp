@@ -20,6 +20,7 @@ using namespace rsocket::tests::client_server;
 using namespace yarpl::mocks;
 using namespace ::testing;
 
+namespace {
 struct Batons {
   folly::Baton<> serverFinished;
   folly::Baton<> clientFinished;
@@ -75,12 +76,12 @@ class RaceyRequestAfterCancelTestHandler : public rsocket::RSocketResponder {
   Batons& batons_;
 };
 
+// number to request each request(n) call
+auto const will_request = 100;
+
 TEST(RequestStreamTest, RaceyRequestAfterCancel) {
   std::mt19937 rand(123); // we want a PRNG here
   std::uniform_int_distribution<> dis_0_100(0, 100);
-
-  // number to request each request(n) call
-  auto const will_request = 100;
 
   Batons batons;
   folly::ScopedEventBaseThread worker;
@@ -154,4 +155,5 @@ TEST(RequestStreamTest, RaceyRequestAfterCancel) {
     LOCKSTEP_DEBUG("RUNNER: finished!");
     batons.reset();
   }
+}
 }
