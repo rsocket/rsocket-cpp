@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include <iosfwd>
 #include "rsocket/statemachine/PublisherBase.h"
 #include "rsocket/statemachine/StreamStateMachineBase.h"
 #include "yarpl/flowable/Subscriber.h"
@@ -14,10 +13,12 @@ class StreamResponder : public StreamStateMachineBase,
                         public PublisherBase,
                         public yarpl::flowable::Subscriber<Payload> {
  public:
-  // initialization of the ExecutorBase will be ignored for any of the
-  // derived classes
-  explicit StreamResponder(uint32_t initialRequestN, const Parameters& params)
-      : StreamStateMachineBase(params), PublisherBase(initialRequestN) {}
+  StreamResponder(
+      std::shared_ptr<StreamsWriter> writer,
+      StreamId streamId,
+      uint32_t initialRequestN)
+      : StreamStateMachineBase(std::move(writer), streamId),
+        PublisherBase(initialRequestN) {}
 
  protected:
   void handleCancel() override;
@@ -30,8 +31,6 @@ class StreamResponder : public StreamStateMachineBase,
   void onComplete() noexcept override;
   void onError(folly::exception_wrapper) noexcept override;
 
-//  void pauseStream(RequestHandler&) override;
-//  void resumeStream(RequestHandler&) override;
   void endStream(StreamCompletionSignal) override;
 };
-} // reactivesocket
+}

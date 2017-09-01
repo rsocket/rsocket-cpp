@@ -9,7 +9,7 @@
 namespace rsocket {
 
 PublisherBase::PublisherBase(uint32_t initialRequestN)
-      : initialRequestN_(initialRequestN) {}
+    : initialRequestN_(initialRequestN) {}
 
 void PublisherBase::publisherSubscribe(
     yarpl::Reference<yarpl::flowable::Subscription> subscription) {

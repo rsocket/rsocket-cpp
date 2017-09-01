@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include <iosfwd>
 #include "rsocket/Payload.h"
 #include "rsocket/statemachine/StreamStateMachineBase.h"
 #include "yarpl/single/SingleObserver.h"
@@ -14,11 +13,13 @@ namespace rsocket {
 /// requester
 class RequestResponseRequester : public StreamStateMachineBase,
                                  public yarpl::single::SingleSubscription {
-  using Base = StreamStateMachineBase;
-
  public:
-  explicit RequestResponseRequester(const Parameters& params, Payload payload)
-      : Base(params), initialPayload_(std::move(payload)) {}
+  RequestResponseRequester(
+      std::shared_ptr<StreamsWriter> writer,
+      StreamId streamId,
+      Payload payload)
+      : StreamStateMachineBase(std::move(writer), streamId),
+        initialPayload_(std::move(payload)) {}
 
   void subscribe(
       yarpl::Reference<yarpl::single::SingleObserver<Payload>> subscriber);

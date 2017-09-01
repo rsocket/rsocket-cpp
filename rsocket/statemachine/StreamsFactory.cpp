@@ -31,16 +31,14 @@ StreamsFactory::StreamsFactory(
 void subscribeToErrorFlowable(
     Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
   yarpl::flowable::Flowables::error<Payload>(
-      std::runtime_error(
-          "state machine is disconnected/closed"))
+      std::runtime_error("state machine is disconnected/closed"))
       ->subscribe(std::move(responseSink));
 }
 
 void subscribeToErrorSingle(
     Reference<yarpl::single::SingleObserver<Payload>> responseSink) {
   yarpl::single::Singles::error<Payload>(
-      std::runtime_error(
-          "state machine is disconnected/closed"))
+      std::runtime_error("state machine is disconnected/closed"))
       ->subscribe(std::move(responseSink));
 }
 
@@ -52,10 +50,10 @@ StreamsFactory::createChannelRequester(
     return nullptr;
   }
 
-  ChannelRequester::Parameters params(
-      connection_.shared_from_this(), getNextStreamId());
-  auto stateMachine = yarpl::make_ref<ChannelRequester>(params);
-  connection_.addStream(params.streamId, stateMachine);
+  auto const streamId = getNextStreamId();
+  auto stateMachine = yarpl::make_ref<ChannelRequester>(
+      connection_.shared_from_this(), streamId);
+  connection_.addStream(streamId, stateMachine);
   stateMachine->subscribe(std::move(responseSink));
   return stateMachine;
 }
@@ -68,11 +66,10 @@ void StreamsFactory::createStreamRequester(
     return;
   }
 
-  StreamRequester::Parameters params(
-      connection_.shared_from_this(), getNextStreamId());
-  auto stateMachine =
-      yarpl::make_ref<StreamRequester>(params, std::move(request));
-  connection_.addStream(params.streamId, stateMachine);
+  auto const streamId = getNextStreamId();
+  auto stateMachine = yarpl::make_ref<StreamRequester>(
+      connection_.shared_from_this(), streamId, std::move(request));
+  connection_.addStream(streamId, stateMachine);
   stateMachine->subscribe(std::move(responseSink));
 }
 
@@ -85,11 +82,11 @@ void StreamsFactory::createStreamRequester(
     return;
   }
 
-  StreamRequester::Parameters params(connection_.shared_from_this(), streamId);
-  auto stateMachine = yarpl::make_ref<StreamRequester>(params, Payload());
+  auto stateMachine = yarpl::make_ref<StreamRequester>(
+      connection_.shared_from_this(), streamId, Payload());
   // Set requested to true (since cold resumption)
   stateMachine->setRequested(n);
-  connection_.addStream(params.streamId, stateMachine);
+  connection_.addStream(streamId, stateMachine);
   stateMachine->subscribe(std::move(responseSink));
 }
 
@@ -101,11 +98,10 @@ void StreamsFactory::createRequestResponseRequester(
     return;
   }
 
-  RequestResponseRequester::Parameters params(
-      connection_.shared_from_this(), getNextStreamId());
-  auto stateMachine =
-      yarpl::make_ref<RequestResponseRequester>(params, std::move(payload));
-  connection_.addStream(params.streamId, stateMachine);
+  auto const streamId = getNextStreamId();
+  auto stateMachine = yarpl::make_ref<RequestResponseRequester>(
+      connection_.shared_from_this(), streamId, std::move(payload));
+  connection_.addStream(streamId, stateMachine);
   stateMachine->subscribe(std::move(responseSink));
 }
 
@@ -140,9 +136,8 @@ bool StreamsFactory::registerNewPeerStreamId(StreamId streamId) {
 Reference<ChannelResponder> StreamsFactory::createChannelResponder(
     uint32_t initialRequestN,
     StreamId streamId) {
-  ChannelResponder::Parameters params(connection_.shared_from_this(), streamId);
-  auto stateMachine =
-      yarpl::make_ref<ChannelResponder>(initialRequestN, params);
+  auto stateMachine = yarpl::make_ref<ChannelResponder>(
+      connection_.shared_from_this(), streamId, initialRequestN);
   connection_.addStream(streamId, stateMachine);
   return stateMachine;
 }
@@ -151,19 +146,17 @@ Reference<yarpl::flowable::Subscriber<Payload>>
 StreamsFactory::createStreamResponder(
     uint32_t initialRequestN,
     StreamId streamId) {
-  StreamResponder::Parameters params(connection_.shared_from_this(), streamId);
-  auto stateMachine = yarpl::make_ref<StreamResponder>(initialRequestN, params);
+  auto stateMachine = yarpl::make_ref<StreamResponder>(
+      connection_.shared_from_this(), streamId, initialRequestN);
   connection_.addStream(streamId, stateMachine);
   return stateMachine;
 }
 
 Reference<yarpl::single::SingleObserver<Payload>>
 StreamsFactory::createRequestResponseResponder(StreamId streamId) {
-  RequestResponseResponder::Parameters params(
+  auto stateMachine = yarpl::make_ref<RequestResponseResponder>(
       connection_.shared_from_this(), streamId);
-  auto stateMachine = yarpl::make_ref<RequestResponseResponder>(params);
   connection_.addStream(streamId, stateMachine);
   return stateMachine;
 }
-
-} // reactivesocket
+}

@@ -2,16 +2,10 @@
 
 #pragma once
 
-#include <iosfwd>
-
 #include "rsocket/Payload.h"
 #include "rsocket/statemachine/ConsumerBase.h"
 #include "rsocket/statemachine/PublisherBase.h"
 #include "yarpl/flowable/Subscriber.h"
-
-namespace folly {
-class exception_wrapper;
-}
 
 namespace rsocket {
 
@@ -20,7 +14,9 @@ class ChannelRequester : public ConsumerBase,
                          public PublisherBase,
                          public yarpl::flowable::Subscriber<Payload> {
  public:
-  explicit ChannelRequester(const ConsumerBase::Parameters& params);
+  ChannelRequester(std::shared_ptr<StreamsWriter> writer, StreamId streamId)
+      : ConsumerBase(std::move(writer), streamId),
+        PublisherBase(1 /*initialRequestN*/) {}
 
  private:
   void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
@@ -29,7 +25,6 @@ class ChannelRequester : public ConsumerBase,
   void onComplete() noexcept override;
   void onError(folly::exception_wrapper) noexcept override;
 
-  // implementation from ConsumerBase::SubscriptionBase
   void request(int64_t) noexcept override;
   void cancel() noexcept override;
 
@@ -46,5 +41,4 @@ class ChannelRequester : public ConsumerBase,
   AllowanceSemaphore initialResponseAllowance_;
   bool requested_{false};
 };
-
-} // reactivesocket
+}

@@ -61,9 +61,7 @@ void StreamStateMachineBase::applicationError(std::string errorPayload) {
 
 void StreamStateMachineBase::errorStream(std::string errorPayload) {
   writer_->writeCloseStream(
-      streamId_,
-      StreamCompletionSignal::ERROR,
-      std::move(errorPayload));
+      streamId_, StreamCompletionSignal::ERROR, std::move(errorPayload));
   closeStream(StreamCompletionSignal::ERROR);
 }
 
@@ -79,4 +77,4 @@ void StreamStateMachineBase::closeStream(StreamCompletionSignal signal) {
   writer_->onStreamClosed(streamId_, signal);
   // TODO: set writer_ to nullptr
 }
-} // reactivesocket
+}

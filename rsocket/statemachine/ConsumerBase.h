@@ -4,7 +4,6 @@
 
 #include <folly/ExceptionWrapper.h>
 #include <cstddef>
-#include <iostream>
 
 #include "rsocket/Payload.h"
 #include "rsocket/internal/AllowanceSemaphore.h"
@@ -20,10 +19,8 @@ enum class StreamCompletionSignal;
 /// A class that represents a flow-control-aware consumer of data.
 class ConsumerBase : public StreamStateMachineBase,
                      public yarpl::flowable::Subscription {
-  using Base = StreamStateMachineBase;
-
  public:
-  using Base::Base;
+  using StreamStateMachineBase::StreamStateMachineBase;
 
   /// Adds implicit allowance.
   ///
@@ -33,12 +30,10 @@ class ConsumerBase : public StreamStateMachineBase,
     allowance_.release(n);
   }
 
-  /// @{
   void subscribe(
       yarpl::Reference<yarpl::flowable::Subscriber<Payload>> subscriber);
 
   void generateRequest(size_t n);
-  /// @}
 
   size_t getConsumerAllowance() const override;
 
@@ -51,9 +46,6 @@ class ConsumerBase : public StreamStateMachineBase,
   }
 
   void endStream(StreamCompletionSignal signal) override;
-
-//  void pauseStream(RequestHandler& requestHandler) override;
-//  void resumeStream(RequestHandler& requestHandler) override;
 
   void processPayload(Payload&&, bool onNext);
 

@@ -14,13 +14,13 @@ void StreamResponder::onSubscribe(
 
 void StreamResponder::onNext(Payload response) noexcept {
   checkPublisherOnNext();
-  if(!publisherClosed()) {
+  if (!publisherClosed()) {
     writePayload(std::move(response), false);
   }
 }
 
 void StreamResponder::onComplete() noexcept {
-  if(!publisherClosed()) {
+  if (!publisherClosed()) {
     publisherComplete();
     completeStream();
     closeStream(StreamCompletionSignal::COMPLETE);
@@ -28,20 +28,12 @@ void StreamResponder::onComplete() noexcept {
 }
 
 void StreamResponder::onError(folly::exception_wrapper ex) noexcept {
-  if(!publisherClosed()) {
+  if (!publisherClosed()) {
     publisherComplete();
     applicationError(ex.get_exception()->what());
     closeStream(StreamCompletionSignal::ERROR);
   }
 }
-
-//void StreamResponder::pauseStream(RequestHandler& requestHandler) {
-//  pausePublisherStream(requestHandler);
-//}
-//
-//void StreamResponder::resumeStream(RequestHandler& requestHandler) {
-//  resumePublisherStream(requestHandler);
-//}
 
 void StreamResponder::endStream(StreamCompletionSignal signal) {
   terminatePublisher();

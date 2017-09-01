@@ -15,10 +15,12 @@ class ChannelResponder : public ConsumerBase,
                          public PublisherBase,
                          public yarpl::flowable::Subscriber<Payload> {
  public:
-  explicit ChannelResponder(
-      uint32_t initialRequestN,
-      const ConsumerBase::Parameters& params)
-      : ConsumerBase(params), PublisherBase(initialRequestN) {}
+  ChannelResponder(
+      std::shared_ptr<StreamsWriter> writer,
+      StreamId streamId,
+      uint32_t initialRequestN)
+      : ConsumerBase(std::move(writer), streamId),
+        PublisherBase(initialRequestN) {}
 
   void processInitialFrame(Frame_REQUEST_CHANNEL&&);
 
@@ -29,7 +31,6 @@ class ChannelResponder : public ConsumerBase,
   void onComplete() noexcept override;
   void onError(folly::exception_wrapper) noexcept override;
 
-  // implementation from ConsumerBase::SubscriptionBase
   void request(int64_t n) noexcept override;
   void cancel() noexcept override;
 
@@ -48,4 +49,4 @@ class ChannelResponder : public ConsumerBase,
 
   void tryCompleteChannel();
 };
-} // reactivesocket
+}

@@ -50,14 +50,6 @@ void RequestResponseResponder::onError(folly::exception_wrapper ex) noexcept {
   }
 }
 
-//void RequestResponseResponder::pauseStream(RequestHandler& requestHandler) {
-//  pausePublisherStream(requestHandler);
-//}
-//
-//void RequestResponseResponder::resumeStream(RequestHandler& requestHandler) {
-//  resumePublisherStream(requestHandler);
-//}
-
 void RequestResponseResponder::endStream(StreamCompletionSignal signal) {
   switch (state_) {
     case State::RESPONDING:
@@ -85,5 +77,4 @@ void RequestResponseResponder::handleCancel() {
       break;
   }
 }
-
-} // reactivesocket
+}

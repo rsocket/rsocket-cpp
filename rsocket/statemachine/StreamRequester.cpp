@@ -38,13 +38,13 @@ void StreamRequester::request(int64_t n) noexcept {
     // Pump the remaining allowance into the ConsumerBase _after_ sending the
     // initial request.
     if (remainingN) {
-      Base::generateRequest(remainingN);
+      generateRequest(remainingN);
     }
     return;
   }
 
   checkConsumerRequest();
-  ConsumerBase::generateRequest(n);
+  generateRequest(n);
 }
 
 void StreamRequester::cancel() noexcept {

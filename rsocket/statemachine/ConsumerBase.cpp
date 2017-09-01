@@ -2,8 +2,9 @@
 
 #include "rsocket/statemachine/ConsumerBase.h"
 
-#include <glog/logging.h>
 #include <algorithm>
+
+#include <glog/logging.h>
 
 #include "rsocket/Payload.h"
 #include "yarpl/flowable/Subscription.h"
@@ -15,7 +16,7 @@ using namespace yarpl::flowable;
 
 void ConsumerBase::subscribe(
     Reference<yarpl::flowable::Subscriber<Payload>> subscriber) {
-  if (Base::isTerminated()) {
+  if (isTerminated()) {
     subscriber->onSubscribe(yarpl::flowable::Subscription::empty());
     subscriber->onComplete();
     return;
@@ -39,7 +40,6 @@ void ConsumerBase::cancelConsumer() {
   consumingSubscriber_ = nullptr;
 }
 
-
 void ConsumerBase::generateRequest(size_t n) {
   allowance_.release(n);
   pendingAllowance_.release(n);
@@ -58,7 +58,7 @@ void ConsumerBase::endStream(StreamCompletionSignal signal) {
       subscriber->onError(StreamInterruptedException(static_cast<int>(signal)));
     }
   }
-  Base::endStream(signal);
+  StreamStateMachineBase::endStream(signal);
 }
 
 size_t ConsumerBase::getConsumerAllowance() const {
@@ -109,5 +109,4 @@ void ConsumerBase::handleFlowControlError() {
   }
   errorStream("flow control error");
 }
-
 }

@@ -21,13 +21,17 @@ class StreamRequester : public ConsumerBase {
  public:
   // initialization of the ExecutorBase will be ignored for any of the
   // derived classes
-  explicit StreamRequester(const Base::Parameters& params, Payload payload)
-      : Base(params), initialPayload_(std::move(payload)) {}
+  StreamRequester(
+      std::shared_ptr<StreamsWriter> writer,
+      StreamId streamId,
+      Payload payload)
+      : ConsumerBase(std::move(writer), streamId),
+        initialPayload_(std::move(payload)) {}
 
   void setRequested(size_t n);
 
  private:
-  // implementation from ConsumerBase::SubscriptionBase
+  // implementation from ConsumerBase::Subscription
   void request(int64_t) noexcept override;
   void cancel() noexcept override;
 
@@ -44,4 +48,4 @@ class StreamRequester : public ConsumerBase {
   Payload initialPayload_;
   bool requested_{false};
 };
-} // reactivesocket
+}

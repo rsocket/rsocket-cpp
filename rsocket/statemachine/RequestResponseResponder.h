@@ -14,8 +14,10 @@ namespace rsocket {
 class RequestResponseResponder : public StreamStateMachineBase,
                                  public yarpl::single::SingleObserver<Payload> {
  public:
-  explicit RequestResponseResponder(const Parameters& params)
-      : StreamStateMachineBase(params) {}
+  RequestResponseResponder(
+      std::shared_ptr<StreamsWriter> writer,
+      StreamId streamId)
+      : StreamStateMachineBase(std::move(writer), streamId) {}
 
  private:
   void onSubscribe(yarpl::Reference<yarpl::single::SingleSubscription>
@@ -25,8 +27,6 @@ class RequestResponseResponder : public StreamStateMachineBase,
 
   void handleCancel() override;
 
-//  void pauseStream(RequestHandler&) override;
-//  void resumeStream(RequestHandler&) override;
   void endStream(StreamCompletionSignal) override;
 
   /// State of the Subscription responder.
@@ -37,5 +37,4 @@ class RequestResponseResponder : public StreamStateMachineBase,
 
   yarpl::Reference<yarpl::single::SingleSubscription> producingSubscription_;
 };
-
-} // reactivesocket
+}

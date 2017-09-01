@@ -7,9 +7,6 @@ namespace rsocket {
 using namespace yarpl;
 using namespace yarpl::flowable;
 
-ChannelRequester::ChannelRequester(const ConsumerBase::Parameters& params)
-    : ConsumerBase(params), PublisherBase(/*initialRequestN=*/1) {}
-
 void ChannelRequester::onSubscribe(
     Reference<Subscription> subscription) noexcept {
   CHECK(!requested_);
@@ -17,11 +14,11 @@ void ChannelRequester::onSubscribe(
 }
 
 void ChannelRequester::onNext(Payload request) noexcept {
-  if(!requested_) {
+  if (!requested_) {
     requested_ = true;
 
-    size_t initialN = initialResponseAllowance_.drainWithLimit(
-        Frame_REQUEST_N::kMaxRequestN);
+    size_t initialN =
+        initialResponseAllowance_.drainWithLimit(Frame_REQUEST_N::kMaxRequestN);
     size_t remainingN = initialResponseAllowance_.drain();
     // Send as much as possible with the initial request.
     CHECK_GE(Frame_REQUEST_N::kMaxRequestN, initialN);
@@ -42,7 +39,7 @@ void ChannelRequester::onNext(Payload request) noexcept {
   }
 
   checkPublisherOnNext();
-  if(!publisherClosed()) {
+  if (!publisherClosed()) {
     writePayload(std::move(request), false);
   }
 }
@@ -53,7 +50,7 @@ void ChannelRequester::onComplete() noexcept {
     closeStream(StreamCompletionSignal::CANCEL);
     return;
   }
-  if(!publisherClosed()) {
+  if (!publisherClosed()) {
     publisherComplete();
     completeStream();
     tryCompleteChannel();
@@ -65,7 +62,7 @@ void ChannelRequester::onError(folly::exception_wrapper ex) noexcept {
     closeStream(StreamCompletionSignal::CANCEL);
     return;
   }
-  if(!publisherClosed()) {
+  if (!publisherClosed()) {
     publisherComplete();
     applicationError(ex.get_exception()->what());
     tryCompleteChannel();
@@ -135,4 +132,4 @@ void ChannelRequester::handleCancel() {
   publisherComplete();
   tryCompleteChannel();
 }
-} // reactivesocket
+}

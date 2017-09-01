@@ -2,8 +2,6 @@
 
 #include "rsocket/statemachine/RequestResponseRequester.h"
 
-#include <folly/ExceptionWrapper.h>
-
 #include "rsocket/internal/Common.h"
 #include "rsocket/statemachine/RSocketStateMachine.h"
 

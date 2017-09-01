@@ -2,8 +2,6 @@
 
 #pragma once
 
-#include <functional>
-#include <iosfwd>
 #include <memory>
 
 #include <folly/ExceptionWrapper.h>
@@ -20,27 +18,16 @@ namespace rsocket {
 class StreamsWriter;
 struct Payload;
 
-///
 /// A common base class of all state machines.
 ///
 /// The instances might be destroyed on a different thread than they were
 /// created.
 class StreamStateMachineBase : public virtual yarpl::Refcounted {
  public:
-  /// A dependent type which encapsulates all parameters needed to initialise
-  /// any of the classes and the final automata. Must be the only argument to
-  /// the
-  /// constructor of any class and must be passed by const& to class's Base.
-  struct Parameters {
-    Parameters(std::shared_ptr<StreamsWriter> _writer, StreamId _streamId)
-        : writer(std::move(_writer)), streamId(_streamId) {}
-
-    std::shared_ptr<StreamsWriter> writer;
-    StreamId streamId{0};
-  };
-
-  explicit StreamStateMachineBase(Parameters params)
-      : writer_(std::move(params.writer)), streamId_(params.streamId) {}
+  StreamStateMachineBase(
+      std::shared_ptr<StreamsWriter> writer,
+      StreamId streamId)
+      : writer_{std::move(writer)}, streamId_(streamId) {}
   virtual ~StreamStateMachineBase() = default;
 
   virtual void handlePayload(Payload&& payload, bool complete, bool flagsNext);
@@ -62,10 +49,6 @@ class StreamStateMachineBase : public virtual yarpl::Refcounted {
   /// corresponding
   ///   terminal signal to the connection.
   virtual void endStream(StreamCompletionSignal signal);
-  /// @}
-
-//  virtual void pauseStream(RequestHandler& requestHandler) = 0;
-//  virtual void resumeStream(RequestHandler& requestHandler) = 0;
 
  protected:
   bool isTerminated() const {

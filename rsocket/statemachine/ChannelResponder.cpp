@@ -14,13 +14,13 @@ void ChannelResponder::onSubscribe(
 
 void ChannelResponder::onNext(Payload response) noexcept {
   checkPublisherOnNext();
-  if(!publisherClosed()) {
+  if (!publisherClosed()) {
     writePayload(std::move(response), false);
   }
 }
 
 void ChannelResponder::onComplete() noexcept {
-  if(!publisherClosed()) {
+  if (!publisherClosed()) {
     publisherComplete();
     completeStream();
     tryCompleteChannel();
@@ -28,7 +28,7 @@ void ChannelResponder::onComplete() noexcept {
 }
 
 void ChannelResponder::onError(folly::exception_wrapper ex) noexcept {
-  if(!publisherClosed()) {
+  if (!publisherClosed()) {
     publisherComplete();
     applicationError(ex.get_exception()->what());
     tryCompleteChannel();
@@ -96,8 +96,7 @@ void ChannelResponder::handleRequestN(uint32_t n) {
   processRequestN(n);
 }
 
-void ChannelResponder::handleError(
-    folly::exception_wrapper ex) {
+void ChannelResponder::handleError(folly::exception_wrapper ex) {
   errorConsumer(std::move(ex));
   tryCompleteChannel();
 }
