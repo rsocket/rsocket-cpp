@@ -166,5 +166,7 @@ BENCHMARK(StreamThroughput, n) {
       ->requestStream(Payload("InMemoryStream"))
       ->subscribe(subscriber);
 
-  subscriber->awaitTerminalEvent();
+  if (!subscriber->timedWait(std::chrono::minutes{5})) {
+    LOG(ERROR) << "Timed out!";
+  }
 }

@@ -13,6 +13,10 @@ class Latch {
     baton_.wait();
   }
 
+  bool timed_wait(std::chrono::milliseconds timeout) {
+    return baton_.timed_wait(timeout);
+  }
+
   void post() {
     auto const old = count_.fetch_add(1);
     if (old == limit_ - 1) {

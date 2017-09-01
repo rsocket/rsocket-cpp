@@ -58,8 +58,12 @@ class BoundedSubscriber : public yarpl::flowable::Subscriber<Payload> {
     baton_.post();
   }
 
-  void awaitTerminalEvent() {
+  void wait() {
     baton_.wait();
+  }
+
+  bool timedWait(std::chrono::milliseconds timeout) {
+    return baton_.timed_wait(timeout);
   }
 
  private:

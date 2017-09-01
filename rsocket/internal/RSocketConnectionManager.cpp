@@ -61,9 +61,12 @@ RSocketConnectionManager::~RSocketConnectionManager() {
   VLOG(2) << "Blocking on shutdown baton";
 
   // Wait for all connections to close.
-  shutdownBaton_->wait();
-
-  VLOG(2) << "Unblocked off of shutdown baton";
+  constexpr std::chrono::minutes kTimeout{1};
+  if (!shutdownBaton_->timed_wait(kTimeout)) {
+    LOG(ERROR) << "~RSocketConnectionManager timed out closing all connections";
+  } else {
+    VLOG(2) << "Unblocked off of shutdown baton";
+  }
 
   DCHECK(sockets_.lock()->empty());
   DCHECK_EQ(shutdownCounter_.load(), 0);

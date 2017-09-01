@@ -99,5 +99,8 @@ BENCHMARK(RequestResponseThroughput, n) {
         ->subscribe(observer);
   }
 
-  latch.wait();
+  constexpr std::chrono::minutes timeout{5};
+  if (!latch.timed_wait(timeout)) {
+    LOG(ERROR) << "Timed out!";
+  }
 }

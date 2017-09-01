@@ -96,6 +96,8 @@ BENCHMARK(StreamThroughput, n) {
 
   // TODO: Use a latch, don't serialize all waits.
   for (auto& subscriber : subscribers) {
-    subscriber->awaitTerminalEvent();
+    if (!subscriber->timedWait(std::chrono::minutes{5})) {
+      LOG(ERROR) << "Timed out!";
+    }
   }
 }
