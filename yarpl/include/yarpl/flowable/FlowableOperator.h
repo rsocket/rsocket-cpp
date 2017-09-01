@@ -127,18 +127,14 @@ class FlowableOperator : public Flowable<D> {
     void terminateImpl(
         TerminateState state,
         folly::exception_wrapper ex = folly::exception_wrapper{nullptr}) {
-      if (isTerminated()) {
-        return;
-      }
-
-      if (auto upstream = std::move(upstream_)) {
-        if (state.up) {
+      if (state.up) {
+        if (auto upstream = std::move(upstream_)) {
           upstream->cancel();
         }
       }
 
-      if (auto subscriber = std::move(subscriber_)) {
-        if (state.down) {
+      if (state.down) {
+        if (auto subscriber = std::move(subscriber_)) {
           if (ex) {
             subscriber->onError(std::move(ex));
           } else {
