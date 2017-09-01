@@ -20,7 +20,7 @@ ProtocolVersion FrameSerializerV1_0::protocolVersion() {
 }
 
 static folly::IOBufQueue createBufferQueue(size_t bufferSize) {
-  auto buf = rsocket::FrameBufferAllocator::allocate(bufferSize);
+  auto buf = folly::IOBuf::createCombined(bufferSize);
   folly::IOBufQueue queue(folly::IOBufQueue::cacheChainLength());
   queue.append(std::move(buf));
   return queue;
@@ -678,5 +678,4 @@ ProtocolVersion FrameSerializerV1_0::detectProtocolVersion(
   }
   return ProtocolVersion::Unknown;
 }
-
-} // reactivesocket
+}

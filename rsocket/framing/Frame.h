@@ -51,17 +51,6 @@ class FrameHeader {
 
 std::ostream& operator<<(std::ostream&, const FrameHeader&);
 
-class FrameBufferAllocator {
- public:
-  static std::unique_ptr<folly::IOBuf> allocate(size_t size);
-
-  virtual ~FrameBufferAllocator() = default;
-
- private:
-  virtual std::unique_ptr<folly::IOBuf> allocateBuffer(size_t size);
-};
-
-/// @{
 /// Frames do not form hierarchy, as we never perform type erasure on a frame.
 /// We use inheritance only to save code duplication.
 ///

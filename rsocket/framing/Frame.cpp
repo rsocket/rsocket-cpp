@@ -16,19 +16,6 @@ const uint32_t Frame_LEASE::kMaxNumRequests;
 const uint32_t Frame_SETUP::kMaxKeepaliveTime;
 const uint32_t Frame_SETUP::kMaxLifetime;
 
-std::unique_ptr<folly::IOBuf> FrameBufferAllocator::allocate(size_t size) {
-  // Purposely leak the allocator, since it's hard to deterministically
-  // guarantee that threads will stop using it before it would get statically
-  // destructed.
-  static auto* singleton = new FrameBufferAllocator;
-  return singleton->allocateBuffer(size);
-}
-
-std::unique_ptr<folly::IOBuf> FrameBufferAllocator::allocateBuffer(
-    size_t size) {
-  return folly::IOBuf::createCombined(size);
-}
-
 std::ostream&
 writeFlags(std::ostream& os, FrameFlags frameFlags, FrameType frameType) {
   constexpr const char* kEmpty = "0x00";

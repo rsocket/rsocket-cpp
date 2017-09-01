@@ -72,5 +72,4 @@ std::unique_ptr<FrameSerializer> FrameSerializer::createAutodetectedSerializer(
 std::ostream& operator<<(std::ostream& os, const ProtocolVersion& version) {
   return os << version.major << "." << version.minor;
 }
-
-} // reactivesocket
+}

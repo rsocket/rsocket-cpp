@@ -3,9 +3,9 @@
 #pragma once
 
 #include <folly/Optional.h>
-#include <iosfwd>
+
 #include <memory>
-#include <string>
+
 #include "rsocket/framing/Frame.h"
 
 namespace rsocket {
@@ -86,5 +86,4 @@ class FrameSerializer {
       Frame_RESUME_OK&,
       std::unique_ptr<folly::IOBuf>) = 0;
 };
-
-} // reactivesocket
+}
