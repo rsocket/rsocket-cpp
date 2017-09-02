@@ -93,6 +93,8 @@ class EmiterSubscription : public Subscription, public Subscriber<T> {
   }
 
   void onComplete() override {
+    requested_ = kCanceled;
+
     DCHECK(!hasFinished_) << "onComplete() or onError() already called";
     hasFinished_ = true;
 
@@ -100,6 +102,8 @@ class EmiterSubscription : public Subscription, public Subscriber<T> {
   }
 
   void onError(folly::exception_wrapper error) override {
+    requested_ = kCanceled;
+
     DCHECK(!hasFinished_) << "onComplete() or onError() already called";
     hasFinished_ = true;
 
