@@ -48,7 +48,6 @@ matrix:
             - llvm-toolchain-trusty-4.0
           packages:
             - *common_deps
-            - clang-4.0
             - libstdc++-4.9-dev
 
     - env: COMPILER=gcc-4.9
