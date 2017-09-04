@@ -2,8 +2,12 @@
 
 #pragma once
 
+#include "yarpl/utils/credits.h"
+
+#include <folly/ScopeGuard.h>
+
+#include <atomic>
 #include <memory>
-#include <mutex>
 #include <utility>
 
 namespace yarpl {
@@ -116,13 +120,12 @@ class EmiterSubscription : public Subscription, public Subscriber<T> {
   // request(n) calls: no more than one instance of either of these
   // can be outstanding at any time.
   void process() {
-    // This lock guards against re-entrancy in request(n) calls.  By
-    // the strict terms of the subscriber guarantees, this could be
-    // replaced by a re-entrancy count.
-    std::unique_lock<std::mutex> lock(processing_, std::defer_lock);
-    if (!lock.try_lock()) {
+    // Guards against re-entrancy in request(n) calls.
+    if (processing_.exchange(true)) {
       return;
     }
+
+    auto guard = folly::makeGuard([this] { processing_ = false; });
 
     // Keep a reference to ourselves here in case the emit() call
     // frees all other references to 'this'
@@ -133,9 +136,7 @@ class EmiterSubscription : public Subscription, public Subscriber<T> {
 
       // Subscription was canceled, completed, or had an error.
       if (current == kCanceled) {
-        // Don't destroy a locked mutex.
-        lock.unlock();
-
+        guard.dismiss();
         release();
         return;
       }
@@ -179,7 +180,7 @@ class EmiterSubscription : public Subscription, public Subscriber<T> {
   bool hasFinished_{false}; // onComplete or onError called
 
   // We don't want to recursively invoke process(); one loop should do.
-  std::mutex processing_;
+  std::atomic_bool processing_{false};
 
   Reference<EmiterBase<T>> emiter_;
   Reference<Subscriber<T>> subscriber_;
