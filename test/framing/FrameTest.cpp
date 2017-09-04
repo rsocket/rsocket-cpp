@@ -17,7 +17,8 @@ template <typename Frame, typename... Args>
 Frame reserialize_resume(bool resumable, Args... args) {
   Frame givenFrame, newFrame;
   givenFrame = Frame(std::forward<Args>(args)...);
-  auto frameSerializer = FrameSerializer::createCurrentVersion();
+  auto frameSerializer = FrameSerializer::createFrameSerializer(
+      ProtocolVersion::Current());
   EXPECT_TRUE(frameSerializer->deserializeFrom(
       newFrame,
       frameSerializer->serializeOut(std::move(givenFrame), resumable),
@@ -28,7 +29,8 @@ Frame reserialize_resume(bool resumable, Args... args) {
 template <typename Frame, typename... Args>
 Frame reserialize(Args... args) {
   Frame givenFrame = Frame(std::forward<Args>(args)...);
-  auto frameSerializer = FrameSerializer::createCurrentVersion();
+  auto frameSerializer = FrameSerializer::createFrameSerializer(
+      ProtocolVersion::Current());
   auto serializedFrame = frameSerializer->serializeOut(std::move(givenFrame));
   Frame newFrame;
   EXPECT_TRUE(
@@ -157,7 +159,7 @@ TEST(FrameTest, Frame_KEEPALIVE) {
   expectHeader(
       FrameType::KEEPALIVE, FrameFlags::KEEPALIVE_RESPOND, streamId, frame);
   // Default position
-  auto currProtVersion = FrameSerializer::getCurrentProtocolVersion();
+  auto currProtVersion = ProtocolVersion::Current();
   if (currProtVersion == ProtocolVersion(0, 1)) {
     EXPECT_EQ(0, frame.position_);
   } else if (currProtVersion == ProtocolVersion(1, 0)) {

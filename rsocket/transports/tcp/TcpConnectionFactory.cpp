@@ -41,7 +41,6 @@ class ConnectCallback : public folly::AsyncSocket::ConnectCallback {
 
   void connectSuccess() noexcept override {
     std::unique_ptr<ConnectCallback> deleter(this);
-
     VLOG(4) << "connectSuccess() on " << address_;
 
     auto connection = TcpConnectionFactory::createDuplexConnectionFromSocket(
@@ -54,7 +53,6 @@ class ConnectCallback : public folly::AsyncSocket::ConnectCallback {
 
   void connectErr(const folly::AsyncSocketException& ex) noexcept override {
     std::unique_ptr<ConnectCallback> deleter(this);
-
     VLOG(4) << "connectErr(" << ex.what() << ") on " << address_;
     connectPromise_.setException(ex);
   }
@@ -87,7 +85,6 @@ TcpConnectionFactory::connect() {
       [ this, connectPromise = std::move(connectPromise) ]() mutable {
         new ConnectCallback(address_, std::move(connectPromise));
       });
-
   return connectFuture;
 }
 

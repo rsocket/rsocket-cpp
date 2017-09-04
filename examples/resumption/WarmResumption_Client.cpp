@@ -67,7 +67,7 @@ class HelloSubscriber : public virtual yarpl::Refcounted,
 };
 }
 
-std::shared_ptr<RSocketClient> getClientAndRequestStream(
+std::unique_ptr<RSocketClient> getClientAndRequestStream(
     folly::EventBase* eventBase,
     yarpl::Reference<HelloSubscriber> subscriber) {
   folly::SocketAddress address;

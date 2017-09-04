@@ -51,34 +51,28 @@ class RSocketClient {
   // Private constructor.  RSocket class should be used to create instances
   // of RSocketClient.
   explicit RSocketClient(
-      std::unique_ptr<ConnectionFactory>,
-      SetupParameters setupParameters = SetupParameters(),
-      std::shared_ptr<RSocketResponder> responder =
-          std::make_shared<RSocketResponder>(),
-      std::unique_ptr<KeepaliveTimer> keepaliveTimer =
-          std::unique_ptr<KeepaliveTimer>(),
-      std::shared_ptr<RSocketStats> stats = RSocketStats::noop(),
-      std::shared_ptr<RSocketConnectionEvents> connectionEvents =
-          std::shared_ptr<RSocketConnectionEvents>(),
-      std::shared_ptr<ResumeManager> resumeManager = nullptr,
-      std::shared_ptr<ColdResumeHandler> coldResumeHandler = nullptr,
-      OnRSocketResume onRSocketResume =
-          [](std::vector<StreamId>, std::vector<StreamId>) { return false; });
-
-  // Connects to the remote side and creates state.
-  folly::Future<folly::Unit> connect();
+      std::shared_ptr<ConnectionFactory>,
+      ProtocolVersion protocolVersion,
+      ResumeIdentificationToken token,
+      std::shared_ptr<RSocketResponder> responder,
+      std::unique_ptr<KeepaliveTimer> keepaliveTimer,
+      std::shared_ptr<RSocketStats> stats,
+      std::shared_ptr<RSocketConnectionEvents> connectionEvents,
+      std::shared_ptr<ResumeManager> resumeManager,
+      std::shared_ptr<ColdResumeHandler> coldResumeHandler);
 
   // Create stateMachine with the given DuplexConnection
   void fromConnection(
       std::unique_ptr<DuplexConnection> connection,
-      folly::EventBase& eventBase);
+      folly::EventBase& eventBase,
+      SetupParameters setupParameters
+  );
 
   // Creates RSocketStateMachine and RSocketRequester
   void createState(folly::EventBase& eventBase);
 
-  std::unique_ptr<ConnectionFactory> connectionFactory_;
+  std::shared_ptr<ConnectionFactory> connectionFactory_;
   std::unique_ptr<RSocketConnectionManager> connectionManager_;
-  SetupParameters setupParameters_;
   std::shared_ptr<RSocketResponder> responder_;
   std::unique_ptr<KeepaliveTimer> keepaliveTimer_;
   std::shared_ptr<RSocketStats> stats_;

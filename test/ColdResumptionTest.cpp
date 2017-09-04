@@ -91,13 +91,6 @@ class HelloResumeHandler : public ColdResumeHandler {
  private:
   HelloSubscribers subscribers_;
 };
-
-SetupParameters getSetupParams(ResumeIdentificationToken token) {
-  SetupParameters setupParameters;
-  setupParameters.resumable = true;
-  setupParameters.token = token;
-  return setupParameters;
-}
 }
 
 // There are three sessions and three streams.
@@ -162,7 +155,7 @@ TEST(ColdResumptionTest, SuccessfulResumption) {
               RSocket::createResumedClient(
                   getConnFactory(
                       worker.getEventBase(), *server->listeningPort()),
-                  getSetupParams(token),
+                  token,
                   resumeManager,
                   coldResumeHandler)
                   .get());
@@ -197,7 +190,7 @@ TEST(ColdResumptionTest, SuccessfulResumption) {
         thirdClient =
             RSocket::createResumedClient(
                 getConnFactory(worker.getEventBase(), *server->listeningPort()),
-                getSetupParams(token),
+                token,
                 resumeManager,
                 coldResumeHandler)
                 .get());

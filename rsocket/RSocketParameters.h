@@ -31,8 +31,7 @@ class SetupParameters : public RSocketParameters {
       bool _resumable = false,
       const ResumeIdentificationToken& _token =
           ResumeIdentificationToken::generateNew(),
-      ProtocolVersion _protocolVersion =
-          FrameSerializer::getCurrentProtocolVersion())
+      ProtocolVersion _protocolVersion = ProtocolVersion::Current())
       : RSocketParameters(_resumable, _protocolVersion),
         metadataMimeType(std::move(_metadataMimeType)),
         dataMimeType(std::move(_dataMimeType)),

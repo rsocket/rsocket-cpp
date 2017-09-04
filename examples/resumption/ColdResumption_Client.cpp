@@ -142,7 +142,7 @@ int main(int argc, char* argv[]) {
         HelloSubscribers({{firstPayload, firstSub}}));
     auto secondClient = RSocket::createResumedClient(
                             getConnFactory(worker.getEventBase()),
-                            getSetupParams(token),
+                            token,
                             resumeManager,
                             coldResumeHandler)
                             .get();
@@ -172,7 +172,7 @@ int main(int argc, char* argv[]) {
             {{firstPayload, firstSub}, {secondPayload, secondSub}}));
     auto thirdClient = RSocket::createResumedClient(
                            getConnFactory(worker.getEventBase()),
-                           getSetupParams(token),
+                           token,
                            resumeManager,
                            coldResumeHandler)
                            .get();

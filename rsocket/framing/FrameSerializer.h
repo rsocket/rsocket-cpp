@@ -17,10 +17,8 @@ class FrameSerializer {
 
   virtual ProtocolVersion protocolVersion() = 0;
 
-  static ProtocolVersion getCurrentProtocolVersion();
   static std::unique_ptr<FrameSerializer> createFrameSerializer(
       const ProtocolVersion& protocolVersion);
-  static std::unique_ptr<FrameSerializer> createCurrentVersion();
 
   static std::unique_ptr<FrameSerializer> createAutodetectedSerializer(
       const folly::IOBuf& firstFrame);

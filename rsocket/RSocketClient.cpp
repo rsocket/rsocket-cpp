@@ -14,52 +14,33 @@ using namespace folly;
 
 namespace rsocket {
 
-RSocketClient::~RSocketClient() {
-  VLOG(4) << "RSocketClient destroyed ..";
-}
-
-const std::shared_ptr<RSocketRequester>& RSocketClient::getRequester() const {
-  return requester_;
-}
-
 RSocketClient::RSocketClient(
-    std::unique_ptr<ConnectionFactory> connectionFactory,
-    SetupParameters setupParameters,
+    std::shared_ptr<ConnectionFactory> connectionFactory,
+    ProtocolVersion protocolVersion,
+    ResumeIdentificationToken token,
     std::shared_ptr<RSocketResponder> responder,
     std::unique_ptr<KeepaliveTimer> keepaliveTimer,
     std::shared_ptr<RSocketStats> stats,
     std::shared_ptr<RSocketConnectionEvents> connectionEvents,
     std::shared_ptr<ResumeManager> resumeManager,
-    std::shared_ptr<ColdResumeHandler> coldResumeHandler,
-    OnRSocketResume)
+    std::shared_ptr<ColdResumeHandler> coldResumeHandler)
     : connectionFactory_(std::move(connectionFactory)),
       connectionManager_(std::make_unique<RSocketConnectionManager>()),
-      setupParameters_(std::move(setupParameters)),
       responder_(std::move(responder)),
       keepaliveTimer_(std::move(keepaliveTimer)),
       stats_(stats),
       connectionEvents_(connectionEvents),
       resumeManager_(resumeManager),
       coldResumeHandler_(coldResumeHandler),
-      protocolVersion_(setupParameters_.protocolVersion),
-      token_(setupParameters_.token) {}
+      protocolVersion_(protocolVersion),
+      token_(token) {}
 
-folly::Future<folly::Unit> RSocketClient::connect() {
-  VLOG(2) << "Starting connection";
+RSocketClient::~RSocketClient() {
+  VLOG(4) << "RSocketClient destroyed ..";
+}
 
-  return connectionFactory_->connect().then([this](
-      ConnectionFactory::ConnectedDuplexConnection connection) mutable {
-    VLOG(3) << "onConnect received DuplexConnection";
-
-    // fromConnection method must be called from the eventBase and since
-    // there is no guarantee that the Future returned from the factory::connect
-    // method is executed on the event base, we have to ensure it by using
-    // folly::via
-    return via(&connection.eventBase).then([this, connection = std::move(
-        connection.connection), eventBase = &connection.eventBase]() mutable {
-      fromConnection(std::move(connection), *eventBase);
-    });
-  });
+const std::shared_ptr<RSocketRequester>& RSocketClient::getRequester() const {
+  return requester_;
 }
 
 folly::Future<folly::Unit> RSocketClient::resume() {
@@ -131,7 +112,9 @@ void RSocketClient::disconnect(folly::exception_wrapper ex) {
 
 void RSocketClient::fromConnection(
     std::unique_ptr<DuplexConnection> connection,
-    folly::EventBase& eventBase) {
+    folly::EventBase& eventBase,
+    SetupParameters setupParameters
+) {
   evb_ = &eventBase;
   createState(eventBase);
   std::unique_ptr<DuplexConnection> framedConnection;
@@ -139,10 +122,10 @@ void RSocketClient::fromConnection(
     framedConnection = std::move(connection);
   } else {
     framedConnection = std::make_unique<FramedDuplexConnection>(
-        std::move(connection), setupParameters_.protocolVersion);
+        std::move(connection), setupParameters.protocolVersion);
   }
   stateMachine_->connectClientSendSetup(
-      std::move(framedConnection), std::move(setupParameters_));
+      std::move(framedConnection), std::move(setupParameters));
 }
 
 void RSocketClient::createState(folly::EventBase& eventBase) {

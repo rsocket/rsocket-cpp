@@ -19,7 +19,7 @@ namespace {
  * Make a legitimate-looking SETUP frame.
  */
 Frame_SETUP makeSetup() {
-  auto version = FrameSerializer::getCurrentProtocolVersion();
+  auto version = ProtocolVersion::Current();
 
   Frame_SETUP frame;
   frame.header_ = FrameHeader{FrameType::SETUP, FrameFlags::EMPTY, 0};
@@ -112,7 +112,8 @@ TEST(SetupResumeAcceptor, SingleSetup) {
 
   auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
       [](auto input) {
-        auto serializer = FrameSerializer::createCurrentVersion();
+        auto serializer = FrameSerializer::createFrameSerializer(
+            ProtocolVersion::Current());
         input->onNext(serializer->serializeOut(makeSetup()));
       },
       [](auto output) {
@@ -141,7 +142,8 @@ TEST(SetupResumeAcceptor, InvalidSetup) {
 
   auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
       [](auto input) {
-        auto serializer = FrameSerializer::createCurrentVersion();
+        auto serializer = FrameSerializer::createFrameSerializer(
+            ProtocolVersion::Current());
 
         // Bogus keepalive time that can't be deserialized.
         auto setup = makeSetup();
@@ -152,7 +154,8 @@ TEST(SetupResumeAcceptor, InvalidSetup) {
       [](auto output) {
         EXPECT_CALL(*output, onSubscribe_(_));
         EXPECT_CALL(*output, onNext_(_)).WillOnce(Invoke([](auto const& buf) {
-          auto serializer = FrameSerializer::createCurrentVersion();
+          auto serializer = FrameSerializer::createFrameSerializer(
+              ProtocolVersion::Current());
           Frame_ERROR frame;
           EXPECT_TRUE(serializer->deserializeFrom(frame, buf->clone()));
           EXPECT_EQ(frame.errorCode_, ErrorCode::CONNECTION_ERROR);
@@ -171,13 +174,15 @@ TEST(SetupResumeAcceptor, RejectedSetup) {
 
   auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
       [](auto input) {
-        auto serializer = FrameSerializer::createCurrentVersion();
+        auto serializer = FrameSerializer::createFrameSerializer(
+            ProtocolVersion::Current());
         input->onNext(serializer->serializeOut(makeSetup()));
       },
       [](auto output) {
         EXPECT_CALL(*output, onSubscribe_(_));
         EXPECT_CALL(*output, onNext_(_)).WillOnce(Invoke([](auto const& buf) {
-          auto serializer = FrameSerializer::createCurrentVersion();
+          auto serializer = FrameSerializer::createFrameSerializer(
+              ProtocolVersion::Current());
           Frame_ERROR frame;
           EXPECT_TRUE(serializer->deserializeFrom(frame, buf->clone()));
           EXPECT_EQ(frame.errorCode_, ErrorCode::REJECTED_SETUP);
@@ -206,13 +211,15 @@ TEST(SetupResumeAcceptor, RejectedResume) {
 
   auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
       [](auto input) {
-        auto serializer = FrameSerializer::createCurrentVersion();
+        auto serializer = FrameSerializer::createFrameSerializer(
+            ProtocolVersion::Current());
         input->onNext(serializer->serializeOut(makeResume()));
       },
       [](auto output) {
         EXPECT_CALL(*output, onSubscribe_(_));
         EXPECT_CALL(*output, onNext_(_)).WillOnce(Invoke([](auto const& buf) {
-          auto serializer = FrameSerializer::createCurrentVersion();
+          auto serializer = FrameSerializer::createFrameSerializer(
+              ProtocolVersion::Current());
           Frame_ERROR frame;
           EXPECT_TRUE(serializer->deserializeFrom(frame, buf->clone()));
           EXPECT_EQ(frame.errorCode_, ErrorCode::REJECTED_RESUME);

@@ -716,9 +716,9 @@ void RSocketStateMachine::tryClientResume(
     CHECK(coldResumeHandler_);
     coldResumeInProgress_ = true;
     setFrameSerializer(
-        protocolVersion == ProtocolVersion::Unknown
-            ? FrameSerializer::createCurrentVersion()
-            : FrameSerializer::createFrameSerializer(protocolVersion));
+        FrameSerializer::createFrameSerializer(
+            protocolVersion == ProtocolVersion::Unknown
+            ? ProtocolVersion::Current() : protocolVersion));
   }
 
   Frame_RESUME resumeFrame(
@@ -853,10 +853,9 @@ void RSocketStateMachine::connectClientSendSetup(
     std::unique_ptr<DuplexConnection> connection,
     SetupParameters setupParams) {
   setFrameSerializer(
-      setupParams.protocolVersion == ProtocolVersion::Unknown
-          ? FrameSerializer::createCurrentVersion()
-          : FrameSerializer::createFrameSerializer(
-                setupParams.protocolVersion));
+      FrameSerializer::createFrameSerializer(
+          setupParams.protocolVersion == ProtocolVersion::Unknown
+          ? ProtocolVersion::Current() : setupParams.protocolVersion));
 
   setResumable(setupParams.resumable);
 

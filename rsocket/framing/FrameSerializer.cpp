@@ -20,7 +20,7 @@ namespace rsocket {
 constexpr const ProtocolVersion ProtocolVersion::Latest =
     FrameSerializerV1_0::Version;
 
-ProtocolVersion FrameSerializer::getCurrentProtocolVersion() {
+const ProtocolVersion ProtocolVersion::Current() {
   if (FLAGS_rs_use_protocol_version.empty()) {
     return ProtocolVersion::Latest;
   }
@@ -54,10 +54,6 @@ std::unique_ptr<FrameSerializer> FrameSerializer::createFrameSerializer(
   LOG_IF(ERROR, protocolVersion != ProtocolVersion::Unknown)
       << "unknown protocol version " << protocolVersion;
   return nullptr;
-}
-
-std::unique_ptr<FrameSerializer> FrameSerializer::createCurrentVersion() {
-  return createFrameSerializer(getCurrentProtocolVersion());
 }
 
 std::unique_ptr<FrameSerializer> FrameSerializer::createAutodetectedSerializer(
