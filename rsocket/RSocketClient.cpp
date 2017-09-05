@@ -74,9 +74,14 @@ folly::Future<folly::Unit> RSocketClient::resume() {
   //
   return connectionFactory_->connect().then([this](
       ConnectionFactory::ConnectedDuplexConnection connection) mutable {
-    CHECK(
-        !evb_ /* cold-resumption */ ||
-        evb_ == &connection.eventBase /* warm-resumption */);
+
+    if (!evb_) {
+      // cold-resumption
+      evb_ = &connection.eventBase;
+    } else {
+      // warm-resumption
+      CHECK(evb_ == &connection.eventBase);
+    }
 
     class ResumeCallback : public ClientResumeStatusCallback {
      public:
@@ -108,16 +113,25 @@ folly::Future<folly::Unit> RSocketClient::resume() {
     auto frameTransport =
         yarpl::make_ref<FrameTransport>(std::move(framedConnection));
 
-    if (!stateMachine_) {
-      createState(connection.eventBase);
-    }
+    connection.eventBase.runInEventBaseThread([
+      this,
+      frameTransport = std::move(frameTransport),
+      resumeCallback = std::move(resumeCallback),
+      connection = std::move(connection)
+    ]() mutable {
+      if (!stateMachine_) {
+        createState(connection.eventBase);
+      }
 
-    stateMachine_->tryClientResume(
-        token_,
-        std::move(frameTransport),
-        std::move(resumeCallback),
-        protocolVersion_);
+      stateMachine_->tryClientResume(
+          token_,
+          std::move(frameTransport),
+          std::move(resumeCallback),
+          protocolVersion_);
+    });
+
     return future;
+
   });
 }
 
