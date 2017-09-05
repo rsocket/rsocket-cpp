@@ -20,7 +20,7 @@ namespace rsocket {
 constexpr const ProtocolVersion ProtocolVersion::Latest =
     FrameSerializerV1_0::Version;
 
-const ProtocolVersion ProtocolVersion::Current() {
+ProtocolVersion ProtocolVersion::Current() {
   if (FLAGS_rs_use_protocol_version.empty()) {
     return ProtocolVersion::Latest;
   }

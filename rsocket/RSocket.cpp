@@ -45,7 +45,7 @@ folly::Future<std::unique_ptr<RSocketClient>> RSocket::createConnectedClient(
         // connectionFactory::connect method is executed on the event base,
         // we have to ensure it by using folly::via
         auto* eventBase = &connection.eventBase;
-        return via(eventBase).then(
+        return via(eventBase,
             [connection = std::move(
                 connection), createRSC = std::move(createRSC)]() mutable {
               return createRSC(std::move(connection));

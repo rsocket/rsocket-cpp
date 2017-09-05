@@ -33,7 +33,7 @@ RSocketClient::RSocketClient(
       resumeManager_(resumeManager),
       coldResumeHandler_(coldResumeHandler),
       protocolVersion_(protocolVersion),
-      token_(token) {}
+      token_(std::move(token)) {}
 
 RSocketClient::~RSocketClient() {
   VLOG(4) << "RSocketClient destroyed ..";
