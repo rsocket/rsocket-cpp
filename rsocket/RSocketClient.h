@@ -27,10 +27,10 @@ class RSocketClient {
  public:
   ~RSocketClient();
 
-  RSocketClient(const RSocketClient&) = delete; // copy
-  RSocketClient(RSocketClient&&) = default; // move
-  RSocketClient& operator=(const RSocketClient&) = delete; // copy
-  RSocketClient& operator=(RSocketClient&&) = default; // move
+  RSocketClient(const RSocketClient&) = delete;
+  RSocketClient(RSocketClient&&) = default;
+  RSocketClient& operator=(const RSocketClient&) = delete;
+  RSocketClient& operator=(RSocketClient&&) = default;
 
   friend class RSocket;
 
@@ -44,8 +44,8 @@ class RSocketClient {
   // is raised.
   folly::Future<folly::Unit> resume();
 
-  // Disconnect the underlying transport
-  void disconnect(folly::exception_wrapper = folly::exception_wrapper{});
+  // Disconnect the underlying transport.
+  folly::Future<folly::Unit> disconnect(folly::exception_wrapper = {});
 
  private:
   // Private constructor.  RSocket class should be used to create instances

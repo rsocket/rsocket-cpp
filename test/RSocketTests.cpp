@@ -97,12 +97,7 @@ std::shared_ptr<RSocketClient> makeDisconnectedClient(
       makeServer(std::make_shared<DisconnectedResponder>());
 
   auto client = makeClient(eventBase, *server->listeningPort());
-
-  client->disconnect();
-  folly::Baton<> wait_for_disconnect;
-  eventBase->runInEventBaseThread([&] { wait_for_disconnect.post(); });
-  // force all other operations to complete, including the disconnect
-  wait_for_disconnect.timed_wait(std::chrono::milliseconds(100));
+  client->disconnect().get();
   return client;
 }
 

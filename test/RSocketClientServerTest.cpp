@@ -50,7 +50,6 @@ TEST(RSocketClientServer, ConnectManyAsync) {
             workers[workerId].getEventBase(), *server->listeningPort())
             .then([&executed](std::shared_ptr<rsocket::RSocketClient> client) {
               auto requester = client->getRequester();
-              client->disconnect(folly::exception_wrapper());
               ++executed;
               return client;
             }).onError([&](folly::exception_wrapper ex) {

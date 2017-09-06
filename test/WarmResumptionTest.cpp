@@ -30,8 +30,10 @@ TEST(WarmResumptionTest, SuccessfulResumption) {
   while (ts->getValueCount() < 3) {
     std::this_thread::yield();
   }
-  client->disconnect(std::runtime_error("Test triggered disconnect"));
-  EXPECT_NO_THROW(client->resume().get());
+  auto result =
+      client->disconnect(std::runtime_error("Test triggered disconnect"))
+          .then([&] { return client->resume(); });
+  EXPECT_NO_THROW(result.get());
   ts->request(3);
   ts->awaitTerminalEvent();
   ts->assertSuccess();
@@ -55,8 +57,9 @@ TEST(WarmResumptionTest, FailedResumption1) {
   while (ts->getValueCount() < 3) {
     std::this_thread::yield();
   }
-  client->disconnect(std::runtime_error("Test triggered disconnect"));
-  client->resume()
+
+  client->disconnect(std::runtime_error("Test triggered disconnect"))
+      .then([&] { return client->resume(); })
       .then([] { FAIL() << "Resumption succeeded when it should not"; })
       .onError([listeningPort, &worker](folly::exception_wrapper) {
         folly::ScopedEventBaseThread worker2;
@@ -98,10 +101,12 @@ TEST(WarmResumptionTest, FailedResumption2) {
   while (ts->getValueCount() < 3) {
     std::this_thread::yield();
   }
-  client->disconnect(std::runtime_error("Test triggered disconnect"));
+
   auto newTs = TestSubscriber<std::string>::create(6 /* initialRequestN */);
   std::shared_ptr<RSocketClient> newClient;
-  client->resume()
+
+  client->disconnect(std::runtime_error("Test triggered disconnect"))
+      .then([&] { return client->resume(); })
       .then([] { FAIL() << "Resumption succeeded when it should not"; })
       .onError([listeningPort, newTs, &newClient, &worker2](
           folly::exception_wrapper) {

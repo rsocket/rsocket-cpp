@@ -37,6 +37,7 @@ RSocketClient::RSocketClient(
 
 RSocketClient::~RSocketClient() {
   VLOG(4) << "RSocketClient destroyed ..";
+  disconnect().get();
 }
 
 const std::shared_ptr<RSocketRequester>& RSocketClient::getRequester() const {
@@ -116,13 +117,25 @@ folly::Future<folly::Unit> RSocketClient::resume() {
   });
 }
 
-void RSocketClient::disconnect(folly::exception_wrapper ex) {
-  CHECK(stateMachine_);
-  evb_->runInEventBaseThread(
-      [ stateMachine = stateMachine_, ex = std::move(ex) ]() mutable {
-        VLOG(2) << "Disconnecting RSocketStateMachine on EventBase";
-        stateMachine->disconnect(std::move(ex));
-      });
+folly::Future<folly::Unit> RSocketClient::disconnect(
+    folly::exception_wrapper ew) {
+  if (!stateMachine_) {
+    return folly::makeFuture<folly::Unit>(
+        std::runtime_error{"RSocketClient must always have a state machine"});
+  }
+
+  auto work = [ sm = stateMachine_, e = std::move(ew) ]() mutable {
+    sm->disconnect(std::move(e));
+  };
+
+  if (evb_->isInEventBaseThread()) {
+    VLOG(2) << "Running RSocketClient disconnect synchronously";
+    work();
+    return folly::unit;
+  }
+
+  VLOG(2) << "Scheduling RSocketClient disconnect";
+  return folly::via(evb_, work);
 }
 
 void RSocketClient::fromConnection(
