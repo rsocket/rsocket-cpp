@@ -135,7 +135,7 @@ if (NOT FOLLY_INSTALL_DIR)
 endif ()
 
 # Check if the correct version of folly is already installed.
-set(FOLLY_VERSION v2017.07.10.00)
+set(FOLLY_VERSION v2017.09.04.00)
 set(FOLLY_VERSION_FILE ${FOLLY_INSTALL_DIR}/${FOLLY_VERSION})
 if (RSOCKET_INSTALL_DEPS)
   if (NOT EXISTS ${FOLLY_VERSION_FILE})
