@@ -142,7 +142,9 @@ void FramedReader::parseFrames() {
 void FramedReader::onComplete() noexcept {
   completed_ = true;
   payloadQueue_.move(); // equivalent to clear(), releases the buffers
-  DuplexConnection::Subscriber::onComplete();
+  if (DuplexConnection::Subscriber::subscription()) {
+    DuplexConnection::Subscriber::onComplete();
+  }
   if (auto subscriber = std::move(frames_)) {
     // after this call the instance can be destroyed!
     subscriber->onComplete();
@@ -153,7 +155,7 @@ void FramedReader::onError(folly::exception_wrapper ex) noexcept {
   completed_ = true;
   payloadQueue_.move(); // equivalent to clear(), releases the buffers
   if (DuplexConnection::Subscriber::subscription()) {
-    DuplexConnection::Subscriber::onError(folly::exception_wrapper());
+    DuplexConnection::Subscriber::onError({});
   }
   if (auto subscriber = std::move(frames_)) {
     // after this call the instance can be destroyed!

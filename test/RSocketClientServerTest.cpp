@@ -82,3 +82,25 @@ TEST(RSocketClientServer, ClientClosesOnWorker) {
   // Move the client to the worker thread.
   worker.getEventBase()->runInEventBaseThread([c = std::move(client)] {});
 }
+
+/// Test that sending garbage to the server doesn't crash it.
+TEST(RSocketClientServer, ServerGetsGarbage) {
+  auto server = makeServer(std::make_shared<HelloStreamRequestHandler>());
+  folly::SocketAddress address{"::1", *server->listeningPort()};
+
+  folly::ScopedEventBaseThread worker{"rsocket-client"};
+  auto factory =
+      std::make_shared<TcpConnectionFactory>(*worker.getEventBase(), address);
+
+  auto result = factory->connect().get();
+  auto connection = std::move(result.connection);
+  auto evb = &result.eventBase;
+
+  evb->runInEventBaseThreadAndWait([conn = std::move(connection)]() mutable {
+    auto output = conn->getOutput();
+    output->onSubscribe(yarpl::flowable::Subscription::empty());
+    output->onNext(folly::IOBuf::copyBuffer("ABCDEFGHIJKLMNOP"));
+    output->onComplete();
+    conn.reset();
+  });
+}
