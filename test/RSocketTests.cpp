@@ -41,14 +41,14 @@ std::unique_ptr<RSocketServer> makeResumableServer(
   return rs;
 }
 
-folly::Future<std::shared_ptr<RSocketClient>> makeClientAsync(
+folly::Future<std::unique_ptr<RSocketClient>> makeClientAsync(
     folly::EventBase* eventBase,
     uint16_t port) {
   CHECK(eventBase);
   return RSocket::createConnectedClient(getConnFactory(eventBase, port));
 }
 
-std::shared_ptr<RSocketClient> makeClient(
+std::unique_ptr<RSocketClient> makeClient(
     folly::EventBase* eventBase,
     uint16_t port) {
   return makeClientAsync(eventBase, port).get();
@@ -91,7 +91,7 @@ struct DisconnectedResponder : public rsocket::RSocketResponder {
 };
 }
 
-std::shared_ptr<RSocketClient> makeDisconnectedClient(
+std::unique_ptr<RSocketClient> makeDisconnectedClient(
     folly::EventBase* eventBase) {
   auto server =
       makeServer(std::make_shared<DisconnectedResponder>());
@@ -106,7 +106,7 @@ std::shared_ptr<RSocketClient> makeDisconnectedClient(
   return client;
 }
 
-std::shared_ptr<RSocketClient> makeWarmResumableClient(
+std::unique_ptr<RSocketClient> makeWarmResumableClient(
     folly::EventBase* eventBase,
     uint16_t port,
     std::shared_ptr<RSocketConnectionEvents> connectionEvents) {
@@ -123,7 +123,7 @@ std::shared_ptr<RSocketClient> makeWarmResumableClient(
       .get();
 }
 
-std::shared_ptr<RSocketClient> makeColdResumableClient(
+std::unique_ptr<RSocketClient> makeColdResumableClient(
     folly::EventBase* eventBase,
     uint16_t port,
     ResumeIdentificationToken token,
