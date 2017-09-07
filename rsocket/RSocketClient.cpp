@@ -95,7 +95,8 @@ folly::Future<folly::Unit> RSocketClient::resume() {
     auto frameTransport =
         yarpl::make_ref<FrameTransport>(std::move(framedConnection));
 
-    connection.eventBase.runInEventBaseThread([
+    auto& eb = connection.eventBase;
+    eb.runInEventBaseThread([
       this,
       frameTransport = std::move(frameTransport),
       resumeCallback = std::move(resumeCallback),
