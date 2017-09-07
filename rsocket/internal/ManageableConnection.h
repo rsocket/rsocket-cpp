@@ -27,7 +27,7 @@ public:
   /// more functionality with `then` function.
   ///
   /// \return a Future to bind to.
-  folly::Future<folly::Unit> listenCloseEvent() {
+  virtual folly::Future<folly::Unit> listenCloseEvent() {
     return closePromise_.getFuture();
   }
 
@@ -38,8 +38,15 @@ public:
   virtual void close(folly::exception_wrapper,
                      StreamCompletionSignal) = 0;
 
+  /// If the connection is already disconnected, then there is
+  /// no need to close it in the given eventbase, we can call
+  /// close() function inline.
+  /// As the eventbase might be deleted when the application code
+  /// disconnects, we can save ourselves for that case too.
+  virtual bool isDisconnectedOrClosed() const = 0;
+
 protected:
-  void onClose(folly::exception_wrapper) {
+  virtual void onClose(folly::exception_wrapper) {
     // ignore the exception
     closePromise_.setValue();
   }

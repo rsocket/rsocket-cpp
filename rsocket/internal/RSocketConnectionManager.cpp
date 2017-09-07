@@ -39,6 +39,7 @@ RSocketConnectionManager::~RSocketConnectionManager() {
   for (auto& kv : map) {
     auto rsocket = std::move(kv.first);
     auto& evb = kv.second;
+    bool disconnectedOrClosed = rsocket->isDisconnectedOrClosed();
 
     auto close = [rs = std::move(rsocket)] {
       rs->close({}, StreamCompletionSignal::SOCKET_CLOSED);
@@ -46,7 +47,9 @@ RSocketConnectionManager::~RSocketConnectionManager() {
 
     // We could be closing on the same thread as the state machine.  In that
     // case, close the state machine inline, otherwise we hang.
-    if (evb.isInEventBaseThread()) {
+    // If the rsocket is already disconnected, no need to defer the close()
+    // to the evb, as the evb might already be deleted at this point.
+    if (disconnectedOrClosed || evb.isInEventBaseThread()) {
       VLOG(3) << "Closing connection inline";
       close();
     } else {

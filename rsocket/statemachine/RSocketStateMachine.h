@@ -186,7 +186,7 @@ class RSocketStateMachine final
       ResumePosition clientPosition);
 
   uint32_t getKeepaliveTime() const;
-  bool isDisconnectedOrClosed() const;
+  bool isDisconnectedOrClosed() const override;
   bool isClosed() const;
 
   StreamsFactory& streamsFactory() {
