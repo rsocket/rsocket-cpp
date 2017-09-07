@@ -29,7 +29,7 @@ class HelloSubscriber : public Subscriber<Payload> {
   }
 
   void awaitLatestValue(size_t value) {
-    auto count = 100;
+    auto count = 1000;
     while (value != latestValue_ && count > 0) {
       VLOG(1) << "Waiting " << count << " ticks for latest value...";
       std::this_thread::sleep_for(std::chrono::milliseconds(10));

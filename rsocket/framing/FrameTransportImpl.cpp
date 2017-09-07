@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "rsocket/framing/FrameTransport.h"
+#include "rsocket/framing/FrameTransportImpl.h"
 
 #include <folly/ExceptionWrapper.h>
 #include <folly/io/IOBuf.h>
@@ -13,16 +13,17 @@ namespace rsocket {
 
 using namespace yarpl::flowable;
 
-FrameTransport::FrameTransport(std::unique_ptr<DuplexConnection> connection)
+FrameTransportImpl::FrameTransportImpl(
+    std::unique_ptr<DuplexConnection> connection)
     : connection_(std::move(connection)) {
   CHECK(connection_);
 }
 
-FrameTransport::~FrameTransport() {
+FrameTransportImpl::~FrameTransportImpl() {
   VLOG(1) << "~FrameTransport";
 }
 
-void FrameTransport::connect() {
+void FrameTransportImpl::connect() {
   CHECK(connection_);
 
   if (connectionOutput_) {
@@ -47,7 +48,7 @@ void FrameTransport::connect() {
   }
 }
 
-void FrameTransport::setFrameProcessor(
+void FrameTransportImpl::setFrameProcessor(
     std::shared_ptr<FrameProcessor> frameProcessor) {
   frameProcessor_ = std::move(frameProcessor);
   if (frameProcessor_) {
@@ -56,19 +57,20 @@ void FrameTransport::setFrameProcessor(
   }
 }
 
-void FrameTransport::close() {
+void FrameTransportImpl::close() {
   closeImpl(folly::exception_wrapper());
 }
 
-void FrameTransport::closeWithError(folly::exception_wrapper ew) {
+void FrameTransportImpl::closeWithError(folly::exception_wrapper ew) {
   if (!ew) {
-    VLOG(1) << "FrameTransport::closeWithError() called with empty exception";
+    VLOG(1)
+        << "FrameTransportImpl::closeWithError() called with empty exception";
     ew = std::runtime_error("Undefined error");
   }
   closeImpl(std::move(ew));
 }
 
-void FrameTransport::closeImpl(folly::exception_wrapper ew) {
+void FrameTransportImpl::closeImpl(folly::exception_wrapper ew) {
   // Make sure we never try to call back into the processor.
   frameProcessor_ = nullptr;
 
@@ -93,7 +95,8 @@ void FrameTransport::closeImpl(folly::exception_wrapper ew) {
   }
 }
 
-void FrameTransport::onSubscribe(yarpl::Reference<Subscription> subscription) {
+void FrameTransportImpl::onSubscribe(
+    yarpl::Reference<Subscription> subscription) {
   if (!connection_) {
     return;
   }
@@ -104,12 +107,12 @@ void FrameTransport::onSubscribe(yarpl::Reference<Subscription> subscription) {
   connectionInputSub_->request(std::numeric_limits<int64_t>::max());
 }
 
-void FrameTransport::onNext(std::unique_ptr<folly::IOBuf> frame) {
+void FrameTransportImpl::onNext(std::unique_ptr<folly::IOBuf> frame) {
   CHECK(frameProcessor_);
   frameProcessor_->processFrame(std::move(frame));
 }
 
-void FrameTransport::terminateProcessor(folly::exception_wrapper ex) {
+void FrameTransportImpl::terminateProcessor(folly::exception_wrapper ex) {
   // This method can be executed multiple times while terminating.
 
   if(!frameProcessor_) {
@@ -126,27 +129,28 @@ void FrameTransport::terminateProcessor(folly::exception_wrapper ex) {
   frameProcessor->onTerminal(std::move(ex));
 }
 
-void FrameTransport::onComplete() {
+void FrameTransportImpl::onComplete() {
   VLOG(6) << "onComplete";
   terminateProcessor(folly::exception_wrapper());
 }
 
-void FrameTransport::onError(folly::exception_wrapper ex) {
+void FrameTransportImpl::onError(folly::exception_wrapper ex) {
   VLOG(6) << "onError" << ex;
   terminateProcessor(std::move(ex));
 }
 
-void FrameTransport::request(int64_t n) {
+void FrameTransportImpl::request(int64_t n) {
   // we are expecting we can write output without back pressure
   CHECK_EQ(n, std::numeric_limits<int64_t>::max());
 }
 
-void FrameTransport::cancel() {
+void FrameTransportImpl::cancel() {
   VLOG(6) << "cancel";
   terminateProcessor(folly::exception_wrapper());
 }
 
-void FrameTransport::outputFrameOrDrop(std::unique_ptr<folly::IOBuf> frame) {
+void FrameTransportImpl::outputFrameOrDrop(
+    std::unique_ptr<folly::IOBuf> frame) {
   if (!connection_) {
     // if the connection was closed we will drop the frame
     return;

@@ -4,7 +4,7 @@
 #include "rsocket/RSocketRequester.h"
 #include "rsocket/RSocketResponder.h"
 #include "rsocket/RSocketStats.h"
-#include "rsocket/framing/FrameTransport.h"
+#include "rsocket/framing/FrameTransportImpl.h"
 #include "rsocket/framing/FramedDuplexConnection.h"
 #include "rsocket/internal/ClientResumeStatusCallback.h"
 #include "rsocket/internal/FollyKeepaliveTimer.h"
@@ -93,7 +93,7 @@ folly::Future<folly::Unit> RSocketClient::resume() {
           std::move(connection.connection), protocolVersion_);
     }
     auto frameTransport =
-        yarpl::make_ref<FrameTransport>(std::move(framedConnection));
+        yarpl::make_ref<FrameTransportImpl>(std::move(framedConnection));
 
     auto& eb = connection.eventBase;
     eb.runInEventBaseThread([

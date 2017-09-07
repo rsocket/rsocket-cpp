@@ -4,6 +4,7 @@
 
 #include <folly/ThreadName.h>
 #include <folly/futures/Future.h>
+#include <folly/io/async/EventBaseManager.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 
 #include "rsocket/framing/FramedDuplexConnection.h"
@@ -72,8 +73,10 @@ void TcpConnectionAcceptor::start(OnDuplexConnectionAccept onAccept) {
   callbacks_.reserve(options_.threads);
   for (size_t i = 0; i < options_.threads; ++i) {
     callbacks_.push_back(std::make_unique<SocketCallback>(onAccept_));
-    callbacks_[i]->eventBase()->runInEventBaseThread(
-        [] { folly::setThreadName("TcpConnectionAcceptor.Worker"); });
+    callbacks_[i]->eventBase()->runInEventBaseThread([i] {
+      folly::EventBaseManager::get()->getEventBase()->setName(
+          folly::sformat("TCPAcceptor.Worker.{}", i));
+    });
   }
 
   VLOG(1) << "Starting TCP listener on port " << options_.address.getPort()

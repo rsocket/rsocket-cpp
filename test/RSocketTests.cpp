@@ -33,7 +33,7 @@ std::unique_ptr<RSocketServer> makeServer(
 std::unique_ptr<RSocketServer> makeResumableServer(
     std::shared_ptr<RSocketServiceHandler> serviceHandler) {
   TcpConnectionAcceptor::Options opts;
-  opts.threads = 1;
+  opts.threads = 3;
   opts.address = folly::SocketAddress("::", 0);
   auto rs = RSocket::createServer(
       std::make_unique<TcpConnectionAcceptor>(std::move(opts)));

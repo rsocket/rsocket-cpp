@@ -7,7 +7,7 @@
 #include <folly/Optional.h>
 
 #include "rsocket/framing/Frame.h"
-#include "rsocket/framing/FrameTransport.h"
+#include "rsocket/framing/FrameTransportImpl.h"
 
 namespace folly {
 class IOBuf;

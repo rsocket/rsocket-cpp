@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
 
   TcpConnectionAcceptor::Options opts;
   opts.address = folly::SocketAddress("::", FLAGS_port);
-  opts.threads = 1;
+  opts.threads = 3;
 
   auto rs = RSocket::createServer(
       std::make_unique<TcpConnectionAcceptor>(std::move(opts)));

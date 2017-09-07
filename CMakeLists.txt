@@ -329,8 +329,8 @@ add_library(
   rsocket/framing/FrameProcessor.h
   rsocket/framing/FrameSerializer.cpp
   rsocket/framing/FrameSerializer.h
-  rsocket/framing/FrameTransport.cpp
-  rsocket/framing/FrameTransport.h
+  rsocket/framing/FrameTransportImpl.cpp
+  rsocket/framing/FrameTransportImpl.h
   rsocket/framing/FrameType.cpp
   rsocket/framing/FrameType.h
   rsocket/framing/FramedDuplexConnection.cpp
@@ -374,7 +374,12 @@ add_library(
   rsocket/RSocketServiceHandler.cpp
   rsocket/RSocketServiceHandler.h
   rsocket/RSocketServerState.h
-  rsocket/RSocketException.h)
+  rsocket/RSocketException.h
+  rsocket/framing/FrameTransport.h
+  rsocket/framing/ScheduledFrameTransport.h
+  rsocket/framing/ScheduledFrameTransport.cpp
+  rsocket/framing/ScheduledFrameProcessor.h
+  rsocket/framing/ScheduledFrameProcessor.cpp)
 
 target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/include")
 target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/src")

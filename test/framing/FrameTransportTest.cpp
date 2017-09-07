@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-#include "rsocket/framing/FrameTransport.h"
+#include "rsocket/framing/FrameTransportImpl.h"
 #include "test/test_utils/MockDuplexConnection.h"
 #include "test/test_utils/MockFrameProcessor.h"
 
@@ -28,7 +28,7 @@ TEST(FrameTransport, Close) {
         EXPECT_CALL(*output, onComplete_());
       });
 
-  auto transport = yarpl::make_ref<FrameTransport>(std::move(connection));
+  auto transport = yarpl::make_ref<FrameTransportImpl>(std::move(connection));
   transport->setFrameProcessor(
       std::make_shared<StrictMock<MockFrameProcessor>>());
   transport->close();
@@ -42,7 +42,7 @@ TEST(FrameTransport, CloseWithError) {
         EXPECT_CALL(*output, onError_(_));
       });
 
-  auto transport = yarpl::make_ref<FrameTransport>(std::move(connection));
+  auto transport = yarpl::make_ref<FrameTransportImpl>(std::move(connection));
   transport->setFrameProcessor(
       std::make_shared<StrictMock<MockFrameProcessor>>());
   transport->closeWithError(std::runtime_error("Uh oh"));
@@ -60,7 +60,7 @@ TEST(FrameTransport, SimpleNoQueue) {
         EXPECT_CALL(*output, onComplete_());
       });
 
-  auto transport = yarpl::make_ref<FrameTransport>(std::move(connection));
+  auto transport = yarpl::make_ref<FrameTransportImpl>(std::move(connection));
 
   transport->setFrameProcessor(
       std::make_shared<StrictMock<MockFrameProcessor>>());
@@ -87,7 +87,7 @@ TEST(FrameTransport, InputSendsError) {
         EXPECT_CALL(*output, onComplete_());
       });
 
-  auto transport = yarpl::make_ref<FrameTransport>(std::move(connection));
+  auto transport = yarpl::make_ref<FrameTransportImpl>(std::move(connection));
 
   auto processor = std::make_shared<StrictMock<MockFrameProcessor>>();
   EXPECT_CALL(*processor, onTerminal_(_));

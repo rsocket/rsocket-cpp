@@ -9,7 +9,7 @@
 #include "rsocket/framing/Frame.h"
 #include "rsocket/framing/FrameProcessor.h"
 #include "rsocket/framing/FrameSerializer.h"
-#include "rsocket/framing/FrameTransport.h"
+#include "rsocket/framing/FrameTransportImpl.h"
 
 namespace rsocket {
 
@@ -192,7 +192,7 @@ void SetupResumeAcceptor::accept(
     std::unique_ptr<DuplexConnection> connection,
     OnSetup onSetup,
     OnResume onResume) {
-  auto transport = yarpl::make_ref<FrameTransport>(std::move(connection));
+  auto transport = yarpl::make_ref<FrameTransportImpl>(std::move(connection));
   auto processor = std::make_shared<OneFrameProcessor>(
       *this, transport, std::move(onSetup), std::move(onResume));
   connections_.insert(transport);

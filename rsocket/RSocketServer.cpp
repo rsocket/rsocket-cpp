@@ -2,11 +2,12 @@
 
 #include "rsocket/RSocketServer.h"
 #include <folly/io/async/EventBaseManager.h>
+
 #include <rsocket/internal/ScheduledRSocketResponder.h>
 #include "rsocket/RSocketErrors.h"
 #include "rsocket/RSocketStats.h"
-#include "rsocket/framing/FrameTransport.h"
 #include "rsocket/framing/FramedDuplexConnection.h"
+#include "rsocket/framing/ScheduledFrameTransport.h"
 #include "rsocket/internal/RSocketConnectionManager.h"
 
 namespace rsocket {
@@ -119,8 +120,8 @@ void RSocketServer::onRSocketSetup(
     std::shared_ptr<RSocketServiceHandler> serviceHandler,
     yarpl::Reference<FrameTransport> frameTransport,
     SetupParameters setupParams) {
-  VLOG(1) << "Received new setup payload";
   auto* eventBase = folly::EventBaseManager::get()->getExistingEventBase();
+  VLOG(2) << "Received new setup payload on " << eventBase->getName();
   CHECK(eventBase);
   auto result = serviceHandler->onNewSetup(setupParams);
   if (result.hasError()) {
@@ -161,11 +162,32 @@ void RSocketServer::onRSocketResume(
   }
   auto serverState = std::move(result.value());
   CHECK(serverState);
+  auto* eventBase = folly::EventBaseManager::get()->getExistingEventBase();
+  VLOG(2) << "Resuming client on " << eventBase->getName();
   if (!serverState->eventBase_.isInEventBaseThread()) {
-    throw RSocketException("Trying to RESUME in a different worker thread");
+    // If the resumed connection is on a different EventBase, then use
+    // ScheduledFrameTransport and ScheduledFrameProcessor to ensure the
+    // RSocketStateMachine continues to live on the same EventBase and the
+    // IO happens in the new EventBase
+    auto scheduledFT = yarpl::make_ref<ScheduledFrameTransport>(
+        std::move(frameTransport),
+        eventBase, /* Transport EventBase */
+        &serverState->eventBase_); /* StateMachine EventBase */
+    serverState->eventBase_.runInEventBaseThread([
+      serverState,
+      scheduledFT = std::move(scheduledFT),
+      resumeParams = std::move(resumeParams)
+    ]() {
+      serverState->rSocketStateMachine_->resumeServer(
+          std::move(scheduledFT), resumeParams);
+    });
+  } else {
+    // If the resumed connection is on the same EventBase, then the
+    // RSocketStateMachine and Transport can continue living in the same
+    // EventBase without any thread hopping between them.
+    serverState->rSocketStateMachine_->resumeServer(
+        std::move(frameTransport), resumeParams);
   }
-  serverState->rSocketStateMachine_->resumeServer(
-      std::move(frameTransport), resumeParams);
 }
 
 void RSocketServer::startAndPark(

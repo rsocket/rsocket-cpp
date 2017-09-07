@@ -4,7 +4,7 @@
 
 #include <folly/io/async/EventBase.h>
 
-#include "rsocket/framing/FrameTransport.h"
+#include "rsocket/framing/FrameTransportImpl.h"
 #include "rsocket/internal/SetupResumeAcceptor.h"
 #include "test/test_utils/MockDuplexConnection.h"
 #include "test/test_utils/MockFrameProcessor.h"

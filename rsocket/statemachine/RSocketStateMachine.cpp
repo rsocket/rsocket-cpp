@@ -15,7 +15,7 @@
 #include "rsocket/RSocketStats.h"
 #include "rsocket/framing/Frame.h"
 #include "rsocket/framing/FrameSerializer.h"
-#include "rsocket/framing/FrameTransport.h"
+#include "rsocket/framing/FrameTransportImpl.h"
 #include "rsocket/internal/ClientResumeStatusCallback.h"
 #include "rsocket/internal/ManageableConnection.h"
 #include "rsocket/internal/ScheduledSubscriber.h"
@@ -101,7 +101,6 @@ bool RSocketStateMachine::connect(
     ProtocolVersion protocolVersion) {
   CHECK(isDisconnectedOrClosed());
   CHECK(frameTransport);
-  CHECK(!frameTransport->isClosed());
   if (protocolVersion != ProtocolVersion::Unknown) {
     if (frameSerializer_) {
       if (frameSerializer_->protocolVersion() != protocolVersion) {
@@ -862,7 +861,8 @@ void RSocketStateMachine::connectClientSendSetup(
 
   setResumable(setupParams.resumable);
 
-  auto frameTransport = yarpl::make_ref<FrameTransport>(std::move(connection));
+  auto frameTransport =
+      yarpl::make_ref<FrameTransportImpl>(std::move(connection));
 
   auto protocolVersion = frameSerializer_->protocolVersion();
 
