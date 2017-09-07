@@ -10,6 +10,10 @@
 
 auto const default_baton_timeout = std::chrono::milliseconds(100);
 #define CHECK_WAIT(baton) CHECK(baton.timed_wait(default_baton_timeout))
+#define CHECK_WAIT_FOR(baton, ms) \
+  CHECK(baton.timed_wait(std::chrono::milliseconds(ms)))
+
+#define LOCKSTEP_DEBUG(expr) VLOG(1) << expr
 
 namespace rsocket {
 namespace tests {

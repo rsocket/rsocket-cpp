@@ -62,6 +62,23 @@ class Subscribers {
         std::move(next), std::move(error), std::move(complete), batch);
   }
 
+  template <
+      typename T,
+      typename Sub,
+      typename Next,
+      typename Error,
+      typename Complete,
+      typename = typename std::enable_if<
+          std::is_callable<Sub(Reference<Subscription>), void>::value &&
+          std::is_callable<Next(T), void>::value &&
+          std::is_callable<Error(folly::exception_wrapper), void>::value &&
+          std::is_callable<Complete(), void>::value>::type>
+  static Reference<Subscriber<T>>
+  create(Sub sub, Next next, Error error, Complete complete) {
+    return make_ref<WithSubAndErrorAndComplete<T, Sub, Next, Error, Complete>>(
+        std::move(sub), std::move(next), std::move(error), std::move(complete));
+  }
+
  private:
   template <typename T, typename Next>
   class Base : public Subscriber<T> {
@@ -119,12 +136,54 @@ class Subscribers {
               batch),
           complete_(std::move(complete)) {}
 
-    void onComplete() {
+    void onComplete() override {
       Subscriber<T>::onComplete();
       complete_();
     }
 
    private:
+    Complete complete_;
+  };
+
+  template <
+      typename T,
+      typename Sub,
+      typename Next,
+      typename Error,
+      typename Complete>
+  class WithSubAndErrorAndComplete : public Subscriber<T> {
+   public:
+    WithSubAndErrorAndComplete(
+        Sub sub,
+        Next next,
+        Error error,
+        Complete complete)
+        : sub_(std::move(sub)),
+          next_(std::move(next)),
+          error_(std::move(error)),
+          complete_(std::move(complete)) {}
+
+    void onSubscribe(Reference<Subscription> s) override {
+      Subscriber<T>::onSubscribe(s);
+      sub_(s);
+    }
+
+    void onNext(T elem) override {
+      next_(std::move(elem));
+    }
+
+    void onComplete() override {
+      complete_();
+    }
+
+    void onError(folly::exception_wrapper ex) override {
+      error_(std::move(ex));
+    }
+
+   private:
+    Sub sub_;
+    Next next_;
+    Error error_;
     Complete complete_;
   };
 

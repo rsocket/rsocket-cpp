@@ -30,8 +30,6 @@ struct LockstepBatons {
 using namespace yarpl::mocks;
 using namespace ::testing;
 
-#define LOCKSTEP_DEBUG(expr) VLOG(3) << expr
-
 class LockstepAsyncHandler : public rsocket::RSocketResponder {
   LockstepBatons& batons_;
   Sequence& subscription_seq_;
