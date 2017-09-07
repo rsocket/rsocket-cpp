@@ -17,12 +17,16 @@ using namespace rsocket;
 
 constexpr size_t kMessageLen = 32;
 
-DEFINE_int32(port, 0, "port to connect to");
-
+DEFINE_int32(server_threads, 8, "number of server threads to run");
+DEFINE_int32(
+    override_client_threads,
+    0,
+    "control the number of client threads (defaults to the number of clients)");
+DEFINE_int32(clients, 10, "number of clients to run");
 DEFINE_int32(
     items,
     1000000,
-    "number of request-response requests to send, in total across all clients");
+    "number of request-response requests to send, in total");
 
 class Observer : public yarpl::single::SingleObserver<Payload> {
  public:
@@ -50,9 +54,9 @@ class Observer : public yarpl::single::SingleObserver<Payload> {
 std::unique_ptr<RSocketServer> makeServer(folly::SocketAddress address) {
   TcpConnectionAcceptor::Options opts;
   opts.address = std::move(address);
+  opts.threads = FLAGS_server_threads;
 
   auto acceptor = std::make_unique<TcpConnectionAcceptor>(std::move(opts));
-
   auto server = std::make_unique<RSocketServer>(std::move(acceptor));
 
   auto responder =
@@ -71,32 +75,48 @@ std::shared_ptr<RSocketClient> makeClient(
 }
 
 BENCHMARK(RequestResponseThroughput, n) {
-  folly::ScopedEventBaseThread worker;
-
   std::unique_ptr<RSocketServer> server;
-  std::shared_ptr<RSocketClient> client;
+
+  std::deque<std::unique_ptr<folly::ScopedEventBaseThread>> workers;
+  std::vector<std::shared_ptr<RSocketClient>> clients;
   std::vector<yarpl::Reference<Observer>> observers;
 
   Latch latch{static_cast<size_t>(FLAGS_items)};
 
   BENCHMARK_SUSPEND {
-    LOG(INFO) << "  Running with " << FLAGS_items << " items";
-
-    folly::SocketAddress address{"::1", static_cast<uint16_t>(FLAGS_port)};
+    folly::SocketAddress address{"::1", 0};
     server = makeServer(std::move(address));
 
     folly::SocketAddress actual{"::1", *server->listeningPort()};
 
-    client = makeClient(worker.getEventBase(), std::move(actual));
+    auto const numWorkers = FLAGS_override_client_threads > 0
+        ? FLAGS_override_client_threads
+        : FLAGS_clients;
+
+    for (int i = 0; i < numWorkers; ++i) {
+      workers.push_back(std::make_unique<folly::ScopedEventBaseThread>(
+          "rsocket-client-thread"));
+    }
+
+    for (int i = 0; i < FLAGS_clients; ++i) {
+      auto worker = std::move(workers.front());
+      workers.pop_front();
+      clients.push_back(makeClient(worker->getEventBase(), actual));
+      workers.push_back(std::move(worker));
+    }
+
+    LOG(INFO) << "Running:";
+    LOG(INFO) << "  Server with " << FLAGS_server_threads << " threads.";
+    LOG(INFO) << "  " << FLAGS_clients << " clients across " << numWorkers
+              << " threads.";
+    LOG(INFO) << "  Running " << FLAGS_items << " requests in total";
   }
 
   for (int i = 0; i < FLAGS_items; ++i) {
-    auto observer = yarpl::make_ref<Observer>(latch);
-    observers.push_back(observer);
-
+    auto& client = clients[i % clients.size()];
     client->getRequester()
         ->requestResponse(Payload("RequestResponseTcp"))
-        ->subscribe(observer);
+        ->subscribe(yarpl::make_ref<Observer>(latch));
   }
 
   constexpr std::chrono::minutes timeout{5};

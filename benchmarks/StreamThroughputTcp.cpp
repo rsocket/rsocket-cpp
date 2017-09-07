@@ -18,7 +18,6 @@ using namespace rsocket;
 
 constexpr size_t kMessageLen = 32;
 
-DEFINE_int32(port, 0, "port to connect to");
 DEFINE_int32(server_threads, 8, "number of server threads to run");
 DEFINE_int32(
     override_client_threads,
@@ -58,7 +57,7 @@ BENCHMARK(StreamThroughput, n) {
   std::vector<yarpl::Reference<BoundedSubscriber>> subscribers;
 
   BENCHMARK_SUSPEND {
-    folly::SocketAddress address{"::1", static_cast<uint16_t>(FLAGS_port)};
+    folly::SocketAddress address{"::1", 0};
     server = makeServer(std::move(address));
 
     folly::SocketAddress actual{"::1", *server->listeningPort()};
