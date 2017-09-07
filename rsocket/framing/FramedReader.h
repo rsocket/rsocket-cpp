@@ -4,54 +4,46 @@
 
 #include <folly/io/IOBufQueue.h>
 
-#include "rsocket/internal/AllowanceSemaphore.h"
 #include "rsocket/DuplexConnection.h"
+#include "rsocket/internal/AllowanceSemaphore.h"
+#include "rsocket/internal/Common.h"
 #include "yarpl/flowable/Subscription.h"
 
 namespace rsocket {
 
-struct ProtocolVersion;
-
 class FramedReader : public DuplexConnection::Subscriber,
                      public yarpl::flowable::Subscription {
  public:
-  explicit FramedReader(std::shared_ptr<ProtocolVersion> protocolVersion)
-      : payloadQueue_(folly::IOBufQueue::cacheChainLength()),
-        protocolVersion_(std::move(protocolVersion)) {}
+  explicit FramedReader(std::shared_ptr<ProtocolVersion> version)
+      : version_{std::move(version)} {}
 
-  void setInput(yarpl::Reference<DuplexConnection::Subscriber> frames);
+  void setInput(yarpl::Reference<DuplexConnection::Subscriber>);
+
+  // Subscriber.
+
+  void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>) override;
+  void onNext(std::unique_ptr<folly::IOBuf>) override;
+  void onComplete() override;
+  void onError(folly::exception_wrapper) override;
+
+  // Subscription.
+
+  void request(int64_t) override;
+  void cancel() override;
 
  private:
-  // Subscriber methods
-  void onSubscribe(
-      yarpl::Reference<yarpl::flowable::Subscription> subscription) noexcept override;
-  void onNext(std::unique_ptr<folly::IOBuf> element) noexcept override;
-  void onComplete() noexcept override;
-  void onError(folly::exception_wrapper ex) noexcept override;
-
-  // Subscription methods
-  void request(int64_t n) noexcept override;
-  void cancel() noexcept override;
-
   void error(std::string errorMsg);
   void parseFrames();
   bool ensureOrAutodetectProtocolVersion();
 
-  size_t getFrameSizeFieldLength() const;
-  size_t getFrameMinimalLength() const;
-  size_t getFrameSizeWithLengthField(size_t frameSize) const;
-  size_t getPayloadSize(size_t frameSize) const;
   size_t readFrameLength() const;
 
-  yarpl::Reference<DuplexConnection::Subscriber> frames_;
+  yarpl::Reference<DuplexConnection::Subscriber> inner_;
 
-  AllowanceSemaphore allowance_{0};
-
-  bool completed_{false};
+  AllowanceSemaphore allowance_;
   bool dispatchingFrames_{false};
 
-  folly::IOBufQueue payloadQueue_;
-  std::shared_ptr<ProtocolVersion> protocolVersion_;
+  folly::IOBufQueue payloadQueue_{folly::IOBufQueue::cacheChainLength()};
+  std::shared_ptr<ProtocolVersion> version_;
 };
-
-} // reactivesocket
+}

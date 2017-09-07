@@ -396,36 +396,37 @@ install(DIRECTORY yarpl/include/yarpl DESTINATION include FILES_MATCHING PATTERN
 
 add_executable(
   tests
+  test/ColdResumptionTest.cpp
+  test/ConnectionEventsTest.cpp
   test/PayloadTest.cpp
   test/RSocketClientServerTest.cpp
-  test/RSocketTests.h
-  test/RSocketTests.cpp
-  test/RequestChannelTest.cpp
   test/RSocketClientTest.cpp
+  test/RSocketTests.cpp
+  test/RSocketTests.h
+  test/RequestChannelTest.cpp
   test/RequestResponseTest.cpp
   test/RequestStreamTest.cpp
   test/RequestStreamTest_concurrency.cpp
-  test/WarmResumptionTest.cpp
-  test/ColdResumptionTest.cpp
-  test/ConnectionEventsTest.cpp
   test/Test.cpp
+  test/WarmResumptionTest.cpp
   test/framing/FrameTest.cpp
   test/framing/FrameTransportTest.cpp
-  test/handlers/HelloStreamRequestHandler.cpp
-  test/handlers/HelloStreamRequestHandler.h
+  test/framing/FramedReaderTest.cpp
   test/handlers/HelloServiceHandler.cpp
   test/handlers/HelloServiceHandler.h
+  test/handlers/HelloStreamRequestHandler.cpp
+  test/handlers/HelloStreamRequestHandler.h
   test/internal/AllowanceSemaphoreTest.cpp
   test/internal/FollyKeepaliveTimerTest.cpp
-  test/internal/SwappableEventBaseTest.cpp
   test/internal/SetupResumeAcceptorTest.cpp
+  test/internal/SwappableEventBaseTest.cpp
+  test/test_utils/ColdResumeManager.cpp
+  test/test_utils/ColdResumeManager.h
   test/test_utils/GenericRequestResponseHandler.h
   test/test_utils/MockDuplexConnection.h
   test/test_utils/MockKeepaliveTimer.h
   test/test_utils/MockRequestHandler.h
   test/test_utils/MockStats.h
-  test/test_utils/ColdResumeManager.cpp
-  test/test_utils/ColdResumeManager.h
   test/transport/DuplexConnectionTest.cpp
   test/transport/DuplexConnectionTest.h
   test/transport/TcpDuplexConnectionTest.cpp)

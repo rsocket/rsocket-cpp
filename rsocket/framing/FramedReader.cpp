@@ -12,78 +12,70 @@ namespace rsocket {
 using namespace yarpl::flowable;
 
 namespace {
-constexpr auto kFrameLengthFieldLengthV0_1 = sizeof(int32_t);
-constexpr auto kFrameLengthFieldLengthV1_0 = 3; // bytes
-} // namespace
 
-size_t FramedReader::getFrameSizeFieldLength() const {
-  DCHECK(*protocolVersion_ != ProtocolVersion::Unknown);
-  if (*protocolVersion_ < FrameSerializerV1_0::Version) {
-    return kFrameLengthFieldLengthV0_1;
-  } else {
-    return kFrameLengthFieldLengthV1_0; // bytes
-  }
+constexpr size_t kFrameLengthFieldLengthV0_1 = sizeof(int32_t);
+constexpr size_t kFrameLengthFieldLengthV1_0 = 3;
+
+/// Get the byte size of the frame length field in an RSocket frame.
+size_t frameSizeFieldLength(ProtocolVersion version) {
+  DCHECK_NE(version, ProtocolVersion::Unknown);
+  return version < FrameSerializerV1_0::Version ? kFrameLengthFieldLengthV0_1
+                                                : kFrameLengthFieldLengthV1_0;
 }
 
-size_t FramedReader::getFrameMinimalLength() const {
-  DCHECK(*protocolVersion_ != ProtocolVersion::Unknown);
-  if (*protocolVersion_ < FrameSerializerV1_0::Version) {
-    return FrameSerializerV0::kFrameHeaderSize + getFrameSizeFieldLength();
-  } else {
-    return FrameSerializerV1_0::kFrameHeaderSize;
-  }
+/// Get the minimum size for a valid RSocket frame (including its frame length
+/// field).
+size_t minimalFrameLength(ProtocolVersion version) {
+  DCHECK_NE(version, ProtocolVersion::Unknown);
+  return version < FrameSerializerV1_0::Version
+      ? FrameSerializerV0::kFrameHeaderSize + frameSizeFieldLength(version)
+      : FrameSerializerV1_0::kFrameHeaderSize;
 }
 
-size_t FramedReader::getFrameSizeWithLengthField(size_t frameSize) const {
-  DCHECK(*protocolVersion_ != ProtocolVersion::Unknown);
-  if (*protocolVersion_ < FrameSerializerV1_0::Version) {
-    return frameSize;
-  } else {
-    return frameSize + getFrameSizeFieldLength();
-  }
+/// Compute the length of the entire frame (including its frame length field),
+/// if given only its frame length field.
+size_t frameSizeWithLengthField(ProtocolVersion version, size_t frameSize) {
+  return version < FrameSerializerV1_0::Version
+      ? frameSize
+      : frameSize + frameSizeFieldLength(version);
 }
 
-size_t FramedReader::getPayloadSize(size_t frameSize) const {
-  DCHECK(*protocolVersion_ != ProtocolVersion::Unknown);
-  if (*protocolVersion_ < FrameSerializerV1_0::Version) {
-    return frameSize - getFrameSizeFieldLength();
-  } else {
-    return frameSize;
-  }
+/// Compute the length of the frame (excluding its frame length field), if given
+/// only its frame length field.
+size_t frameSizeWithoutLengthField(ProtocolVersion version, size_t frameSize) {
+  DCHECK_NE(version, ProtocolVersion::Unknown);
+  return version < FrameSerializerV1_0::Version
+      ? frameSize - frameSizeFieldLength(version)
+      : frameSize;
+}
 }
 
 size_t FramedReader::readFrameLength() const {
-  auto frameSizeFieldLength = getFrameSizeFieldLength();
-  DCHECK(frameSizeFieldLength > 0);
+  auto fieldLength = frameSizeFieldLength(*version_);
+  DCHECK_GT(fieldLength, 0);
 
-  folly::io::Cursor cur(payloadQueue_.front());
+  folly::io::Cursor cur{payloadQueue_.front()};
   size_t frameLength = 0;
 
-  // start reading the highest byte
-  // frameSizeFieldLength == 3 => shift = [16,8,0]
-  // frameSizeFieldLength == 4 => shift = [24,16,8,0]
-  auto shift = (frameSizeFieldLength - 1) * 8;
-
-  while (frameSizeFieldLength--) {
-    frameLength |= static_cast<size_t>(cur.read<uint8_t>() << shift);
-    shift -= 8;
+  // Reading of arbitrary-sized big-endian integer.
+  for (size_t i = 0; i < fieldLength; ++i) {
+    frameLength <<= 8;
+    frameLength |= cur.read<uint8_t>();
   }
+
   return frameLength;
 }
 
-void FramedReader::onSubscribe(
-    yarpl::Reference<Subscription> subscription) noexcept {
+void FramedReader::onSubscribe(yarpl::Reference<Subscription> subscription) {
   DuplexConnection::Subscriber::onSubscribe(subscription);
   subscription->request(std::numeric_limits<int64_t>::max());
 }
 
-void FramedReader::onNext(std::unique_ptr<folly::IOBuf> payload) noexcept {
-  if (payload) {
-    VLOG(4) << "incoming bytes length=" << payload->length() << std::endl
-            << hexDump(payload->clone()->moveToFbString());
-    payloadQueue_.append(std::move(payload));
-    parseFrames();
-  }
+void FramedReader::onNext(std::unique_ptr<folly::IOBuf> payload) {
+  VLOG(4) << "incoming bytes length=" << payload->length() << '\n'
+          << hexDump(payload->clone()->moveToFbString());
+  payloadQueue_.append(std::move(payload));
+  parseFrames();
 }
 
 void FramedReader::parseFrames() {
@@ -91,135 +83,135 @@ void FramedReader::parseFrames() {
     return;
   }
 
-  // delivering onNext can trigger termination and destroying this instance
-  // while in this method so we will make sure we survive
+  // Delivering onNext can trigger termination and destroy this instance.
   auto thisPtr = this->ref_from_this(this);
 
   dispatchingFrames_ = true;
 
-  while (allowance_.canAcquire() && frames_) {
+  while (allowance_.canAcquire() && inner_) {
     if (!ensureOrAutodetectProtocolVersion()) {
-      // at this point we dont have enough bytes on the wire
-      // or we errored out
+      // At this point we dont have enough bytes on the wire or we errored out.
       break;
     }
 
-    if (payloadQueue_.chainLength() < getFrameSizeFieldLength()) {
-      // we don't even have the next frame size value
+    auto const frameSizeFieldLen = frameSizeFieldLength(*version_);
+    if (payloadQueue_.chainLength() < frameSizeFieldLen) {
+      // We don't even have the next frame size value.
       break;
     }
 
-    const auto nextFrameSize = readFrameLength();
-
-    // so if the size value is less than minimal frame length something is wrong
-    if (nextFrameSize < getFrameMinimalLength()) {
-      error("invalid data stream");
+    auto const nextFrameSize = readFrameLength();
+    if (nextFrameSize < minimalFrameLength(*version_)) {
+      error("Invalid frame - Frame size smaller than minimum");
       break;
     }
 
     if (payloadQueue_.chainLength() <
-        getFrameSizeWithLengthField(nextFrameSize)) {
-      // need to accumulate more data
+        frameSizeWithLengthField(*version_, nextFrameSize)) {
+      // Need to accumulate more data.
       break;
     }
-    payloadQueue_.trimStart(getFrameSizeFieldLength());
-    auto payloadSize = getPayloadSize(nextFrameSize);
-    // IOBufQueue::split(0) returns a null unique_ptr, so we create an empty
-    // IOBuf object and pass a unique_ptr to it instead. This simplifies
-    // clients' code because they can assume the pointer is non-null.
-    auto nextFrame = payloadSize != 0 ? payloadQueue_.split(payloadSize)
-                                      : folly::IOBuf::create(0);
+
+    payloadQueue_.trimStart(frameSizeFieldLen);
+    auto payloadSize = frameSizeWithoutLengthField(*version_, nextFrameSize);
+
+    DCHECK_GT(payloadSize, 0)
+        << "folly::IOBufQueue::split(0) returns a nullptr, can't have that";
+    auto nextFrame = payloadQueue_.split(payloadSize);
 
     CHECK(allowance_.tryAcquire(1));
 
-    VLOG(4) << "parsed frame length=" << nextFrame->length() << std::endl
+    VLOG(4) << "parsed frame length=" << nextFrame->length() << '\n'
             << hexDump(nextFrame->clone()->moveToFbString());
-    frames_->onNext(std::move(nextFrame));
+    inner_->onNext(std::move(nextFrame));
   }
+
   dispatchingFrames_ = false;
 }
 
-void FramedReader::onComplete() noexcept {
-  completed_ = true;
-  payloadQueue_.move(); // equivalent to clear(), releases the buffers
+void FramedReader::onComplete() {
+  payloadQueue_.move();
   if (DuplexConnection::Subscriber::subscription()) {
     DuplexConnection::Subscriber::onComplete();
   }
-  if (auto subscriber = std::move(frames_)) {
-    // after this call the instance can be destroyed!
+  if (auto subscriber = std::move(inner_)) {
+    // After this call the instance can be destroyed!
     subscriber->onComplete();
   }
 }
 
-void FramedReader::onError(folly::exception_wrapper ex) noexcept {
-  completed_ = true;
-  payloadQueue_.move(); // equivalent to clear(), releases the buffers
+void FramedReader::onError(folly::exception_wrapper ex) {
+  payloadQueue_.move();
   if (DuplexConnection::Subscriber::subscription()) {
     DuplexConnection::Subscriber::onError({});
   }
-  if (auto subscriber = std::move(frames_)) {
-    // after this call the instance can be destroyed!
+  if (auto subscriber = std::move(inner_)) {
+    // After this call the instance can be destroyed!
     subscriber->onError(std::move(ex));
   }
 }
 
-void FramedReader::request(int64_t n) noexcept {
+void FramedReader::request(int64_t n) {
   allowance_.release(n);
   parseFrames();
 }
 
-void FramedReader::cancel() noexcept {
+void FramedReader::cancel() {
   allowance_.drain();
-  frames_ = nullptr;
+  inner_ = nullptr;
 }
 
 void FramedReader::setInput(
-    yarpl::Reference<DuplexConnection::Subscriber> frames) {
-  CHECK(!frames_)
-      << "FrameReader should be closed before setting another input.";
-  frames_ = std::move(frames);
-  frames_->onSubscribe(this->ref_from_this(this));
+    yarpl::Reference<DuplexConnection::Subscriber> inner) {
+  CHECK(!inner_)
+      << "Must cancel original input to FramedReader before setting a new one";
+  inner_ = std::move(inner);
+  inner_->onSubscribe(this->ref_from_this(this));
 }
 
 bool FramedReader::ensureOrAutodetectProtocolVersion() {
-  if (*protocolVersion_ != ProtocolVersion::Unknown) {
+  if (*version_ != ProtocolVersion::Unknown) {
     return true;
   }
 
   auto minBytesNeeded = std::max(
       FrameSerializerV0_1::kMinBytesNeededForAutodetection,
       FrameSerializerV1_0::kMinBytesNeededForAutodetection);
-  DCHECK(minBytesNeeded > 0);
+  DCHECK_GT(minBytesNeeded, 0);
   if (payloadQueue_.chainLength() < minBytesNeeded) {
     return false;
   }
 
-  DCHECK(minBytesNeeded > kFrameLengthFieldLengthV0_1);
-  DCHECK(minBytesNeeded > kFrameLengthFieldLengthV1_0);
+  DCHECK_GT(minBytesNeeded, kFrameLengthFieldLengthV0_1);
+  DCHECK_GT(minBytesNeeded, kFrameLengthFieldLengthV1_0);
 
-  bool recognized = FrameSerializerV1_0::detectProtocolVersion(
-                        *payloadQueue_.front(), kFrameLengthFieldLengthV1_0) !=
-      ProtocolVersion::Unknown;
-  if (recognized) {
-    *protocolVersion_ = FrameSerializerV1_0::Version;
+  auto const& firstFrame = *payloadQueue_.front();
+
+  auto detected = FrameSerializerV1_0::detectProtocolVersion(
+      firstFrame, kFrameLengthFieldLengthV1_0);
+  if (detected != ProtocolVersion::Unknown) {
+    *version_ = FrameSerializerV1_0::Version;
     return true;
   }
 
-  recognized = FrameSerializerV0_1::detectProtocolVersion(
-                   *payloadQueue_.front(), kFrameLengthFieldLengthV0_1) !=
-      ProtocolVersion::Unknown;
-  if (recognized) {
-    *protocolVersion_ = FrameSerializerV0_1::Version;
+  detected = FrameSerializerV0_1::detectProtocolVersion(
+      firstFrame, kFrameLengthFieldLengthV0_1);
+  if (detected != ProtocolVersion::Unknown) {
+    *version_ = FrameSerializerV0_1::Version;
     return true;
   }
 
-  error("could not detect protocol version from framing");
+  error("Could not detect protocol version from framing");
   return false;
 }
 
 void FramedReader::error(std::string errorMsg) {
   VLOG(1) << "error: " << errorMsg;
-  onError(std::runtime_error(std::move(errorMsg)));
+
+  if (DuplexConnection::Subscriber::subscription()) {
+    onError(std::runtime_error(std::move(errorMsg)));
+  }
+
   if (DuplexConnection::Subscriber::subscription()) {
     DuplexConnection::Subscriber::subscription()->cancel();
   }
