@@ -131,9 +131,7 @@ void FramedReader::parseFrames() {
 
 void FramedReader::onComplete() {
   payloadQueue_.move();
-  if (DuplexConnection::Subscriber::subscription()) {
-    DuplexConnection::Subscriber::onComplete();
-  }
+  DuplexConnection::Subscriber::onComplete();
   if (auto subscriber = std::move(inner_)) {
     // After this call the instance can be destroyed!
     subscriber->onComplete();
@@ -142,9 +140,7 @@ void FramedReader::onComplete() {
 
 void FramedReader::onError(folly::exception_wrapper ex) {
   payloadQueue_.move();
-  if (DuplexConnection::Subscriber::subscription()) {
-    DuplexConnection::Subscriber::onError({});
-  }
+  DuplexConnection::Subscriber::onError({});
   if (auto subscriber = std::move(inner_)) {
     // After this call the instance can be destroyed!
     subscriber->onError(std::move(ex));
@@ -208,12 +204,13 @@ bool FramedReader::ensureOrAutodetectProtocolVersion() {
 void FramedReader::error(std::string errorMsg) {
   VLOG(1) << "error: " << errorMsg;
 
-  if (DuplexConnection::Subscriber::subscription()) {
-    onError(std::runtime_error(std::move(errorMsg)));
-  }
-
+  payloadQueue_.move();
   if (DuplexConnection::Subscriber::subscription()) {
     DuplexConnection::Subscriber::subscription()->cancel();
+  }
+  if (auto subscriber = std::move(inner_)) {
+    // After this call the instance can be destroyed!
+    subscriber->onError(std::runtime_error{std::move(errorMsg)});
   }
 }
 }

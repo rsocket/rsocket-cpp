@@ -53,3 +53,49 @@ TEST(FramedReader, CantDetectVersion) {
   subscriber->awaitTerminalEvent();
   reader->onComplete();
 }
+
+TEST(FramedReader, SubscriberCompleteAfterError) {
+  auto version = std::make_shared<ProtocolVersion>(ProtocolVersion::Latest);
+  auto reader = yarpl::make_ref<FramedReader>(version);
+
+  auto subscription = yarpl::make_ref<StrictMock<MockSubscription>>();
+  EXPECT_CALL(*subscription, request_(_));
+  EXPECT_CALL(*subscription, cancel_());
+
+  reader->onSubscribe(subscription);
+
+  auto subscriber = yarpl::make_ref<
+      StrictMock<MockSubscriber<std::unique_ptr<folly::IOBuf>>>>();
+  EXPECT_CALL(*subscriber, onSubscribe_(_));
+  EXPECT_CALL(*subscriber, onError_(_))
+      .WillOnce(Invoke([](folly::exception_wrapper ew) {
+        EXPECT_EQ(ew.get_exception()->what(), std::string{"Oops"});
+      }));
+
+  reader->setInput(subscriber);
+  reader->error("Oops");
+  reader->onComplete();
+}
+
+TEST(FramedReader, SubscriberErrorAfterError) {
+  auto version = std::make_shared<ProtocolVersion>(ProtocolVersion::Latest);
+  auto reader = yarpl::make_ref<FramedReader>(version);
+
+  auto subscription = yarpl::make_ref<StrictMock<MockSubscription>>();
+  EXPECT_CALL(*subscription, request_(_));
+  EXPECT_CALL(*subscription, cancel_());
+
+  reader->onSubscribe(subscription);
+
+  auto subscriber = yarpl::make_ref<
+      StrictMock<MockSubscriber<std::unique_ptr<folly::IOBuf>>>>();
+  EXPECT_CALL(*subscriber, onSubscribe_(_));
+  EXPECT_CALL(*subscriber, onError_(_))
+      .WillOnce(Invoke([](folly::exception_wrapper ew) {
+        EXPECT_EQ(ew.get_exception()->what(), std::string{"Oops"});
+      }));
+
+  reader->setInput(subscriber);
+  reader->error("Oops");
+  reader->onError(std::runtime_error{"Not oops"});
+}

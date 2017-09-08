@@ -17,7 +17,11 @@ class FramedReader : public DuplexConnection::Subscriber,
   explicit FramedReader(std::shared_ptr<ProtocolVersion> version)
       : version_{std::move(version)} {}
 
+  /// Set the inner subscriber which will be getting full frame payloads.
   void setInput(yarpl::Reference<DuplexConnection::Subscriber>);
+
+  /// Cancel the subscription and error the inner subscriber.
+  void error(std::string);
 
   // Subscriber.
 
@@ -32,7 +36,6 @@ class FramedReader : public DuplexConnection::Subscriber,
   void cancel() override;
 
  private:
-  void error(std::string errorMsg);
   void parseFrames();
   bool ensureOrAutodetectProtocolVersion();
 
