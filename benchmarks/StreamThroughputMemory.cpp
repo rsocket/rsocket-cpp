@@ -155,18 +155,20 @@ BENCHMARK(StreamThroughput, n) {
 
   folly::ScopedEventBaseThread worker;
 
+  Latch latch{1};
+
   BENCHMARK_SUSPEND {
     LOG(INFO) << "  Running with " << FLAGS_items << " items";
 
     client = makeClient();
-    subscriber = yarpl::make_ref<BoundedSubscriber>(FLAGS_items);
   }
 
   client->getRequester()
       ->requestStream(Payload("InMemoryStream"))
-      ->subscribe(subscriber);
+      ->subscribe(yarpl::make_ref<BoundedSubscriber>(latch, FLAGS_items));
 
-  if (!subscriber->timedWait(std::chrono::minutes{5})) {
+  constexpr std::chrono::minutes timeout{5};
+  if (!latch.timed_wait(timeout)) {
     LOG(ERROR) << "Timed out!";
   }
 }

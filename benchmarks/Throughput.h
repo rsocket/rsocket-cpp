@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "benchmarks/Latch.h"
 #include "rsocket/RSocketResponder.h"
 
 namespace rsocket {
@@ -32,44 +33,47 @@ class FixedResponder : public RSocketResponder {
 };
 
 /// Subscriber that requests N items and cancels the subscription once all of
-/// them arrive.
+/// them arrive.  Signals a latch when it terminates.
 class BoundedSubscriber : public yarpl::flowable::Subscriber<Payload> {
  public:
-  explicit BoundedSubscriber(size_t requested) : requested_{requested} {}
+  BoundedSubscriber(Latch& latch, size_t requested)
+      : latch_{latch}, requested_{requested} {}
 
   void onSubscribe(
       yarpl::Reference<yarpl::flowable::Subscription> subscription) override {
-    subscription_ = std::move(subscription);
-    subscription_->request(requested_);
+    yarpl::flowable::Subscriber<Payload>::onSubscribe(std::move(subscription));
+    yarpl::flowable::Subscriber<Payload>::subscription()->request(requested_);
   }
 
   void onNext(Payload) override {
     if (received_.fetch_add(1) == requested_ - 1) {
-      subscription_->cancel();
-      baton_.post();
+      DCHECK(!terminated_.exchange(true));
+      latch_.post();
+
+      // After this cancel we could be destroyed.
+      yarpl::flowable::Subscriber<Payload>::subscription()->cancel();
     }
   }
 
   void onComplete() override {
-    baton_.post();
+    yarpl::flowable::Subscriber<Payload>::onComplete();
+    if (!terminated_.exchange(true)) {
+      latch_.post();
+    }
   }
 
   void onError(folly::exception_wrapper) override {
-    baton_.post();
-  }
-
-  void wait() {
-    baton_.wait();
-  }
-
-  bool timedWait(std::chrono::milliseconds timeout) {
-    return baton_.timed_wait(timeout);
+    yarpl::flowable::Subscriber<Payload>::onError({});
+    if (!terminated_.exchange(true)) {
+      latch_.post();
+    }
   }
 
  private:
+  Latch& latch_;
+
+  std::atomic_bool terminated_{false};
   size_t requested_{0};
-  yarpl::Reference<yarpl::flowable::Subscription> subscription_;
-  folly::Baton<std::atomic, false /* SinglePoster */> baton_;
   std::atomic<size_t> received_{0};
 };
 }

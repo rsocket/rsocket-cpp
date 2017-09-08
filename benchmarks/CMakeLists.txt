@@ -1,10 +1,11 @@
-##########################################################
-# Google benchmark
+add_library(fixture Fixture.cpp Fixture.h)
+target_link_libraries(fixture ReactiveSocket folly)
 
 function(benchmark NAME FILE)
   add_executable(${NAME} ${FILE} Benchmarks.cpp)
   target_link_libraries(
     ${NAME}
+    fixture
     ReactiveSocket
     folly-benchmark
     ${GFLAGS_LIBRARY}
