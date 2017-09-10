@@ -880,6 +880,8 @@ void RSocketStateMachine::connectClientSendSetup(
   // TODO: when the server returns back that it doesn't support resumability, we
   // should retry without resumability
 
+  VLOG(3) << "Out: " << frame;
+
   CHECK(connect(std::move(frameTransport), ProtocolVersion::Unknown));
   // making sure we send setup frame first
   outputFrame(frameSerializer_->serializeOut(std::move(frame)));

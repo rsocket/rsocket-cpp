@@ -37,7 +37,7 @@ class RSocketRequester {
       std::shared_ptr<rsocket::RSocketStateMachine> srs,
       folly::EventBase& eventBase);
 
-  ~RSocketRequester(); // implementing for logging right now
+  virtual ~RSocketRequester(); // implementing for logging right now
 
   RSocketRequester(const RSocketRequester&) = delete;
   RSocketRequester(RSocketRequester&&) = delete;
@@ -51,7 +51,7 @@ class RSocketRequester {
    * Interaction model details can be found at
    * https://github.com/ReactiveSocket/reactivesocket/blob/master/Protocol.md#request-stream
    */
-  yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>> requestStream(
+  virtual yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>> requestStream(
       rsocket::Payload request);
 
   /**
@@ -60,7 +60,7 @@ class RSocketRequester {
    * Interaction model details can be found at
    * https://github.com/ReactiveSocket/reactivesocket/blob/master/Protocol.md#request-channel
    */
-  yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>> requestChannel(
+  virtual yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>> requestChannel(
       yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>> requests);
 
   /**
@@ -69,7 +69,7 @@ class RSocketRequester {
    * Interaction model details can be found at
    * https://github.com/ReactiveSocket/reactivesocket/blob/master/Protocol.md#stream-sequences-request-response
    */
-  yarpl::Reference<yarpl::single::Single<rsocket::Payload>> requestResponse(
+  virtual yarpl::Reference<yarpl::single::Single<rsocket::Payload>> requestResponse(
       rsocket::Payload request);
 
   /**
@@ -84,15 +84,15 @@ class RSocketRequester {
    * Interaction model details can be found at
    * https://github.com/ReactiveSocket/reactivesocket/blob/master/Protocol.md#request-fire-n-forget
    */
-  yarpl::Reference<yarpl::single::Single<void>> fireAndForget(
+  virtual yarpl::Reference<yarpl::single::Single<void>> fireAndForget(
       rsocket::Payload request);
 
   /**
    * Send metadata without response.
    */
-  void metadataPush(std::unique_ptr<folly::IOBuf> metadata);
+  virtual void metadataPush(std::unique_ptr<folly::IOBuf> metadata);
 
-  void closeSocket();
+  virtual void closeSocket();
 
  private:
   std::shared_ptr<rsocket::RSocketStateMachine> stateMachine_;

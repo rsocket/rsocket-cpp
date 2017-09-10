@@ -12,7 +12,11 @@ namespace rsocket {
 
 class RSocketServerState {
  public:
-  void close();
+  void close() {
+    eventBase_.runInEventBaseThread([this]() {
+      rSocketStateMachine_->close({}, StreamCompletionSignal::SOCKET_CLOSED);
+    });
+  }
 
   std::shared_ptr<RSocketRequester> getRequester() {
     return rSocketRequester_;

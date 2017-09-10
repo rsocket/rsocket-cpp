@@ -194,7 +194,8 @@ std::ostream& operator<<(std::ostream& os, const Frame_ERROR& frame) {
 
   std::ostream& operator<<(std::ostream& os, const Frame_SETUP& frame) {
     return os << frame.header_ << ", Version: " << frame.versionMajor_ << "."
-              << frame.versionMinor_ << ", " << frame.payload_;
+        << frame.versionMinor_ << ", "
+        << "Token: " << frame.token_ << ", " << frame.payload_;
   }
 
   void Frame_SETUP::moveToSetupPayload(SetupParameters & setupPayload) {
