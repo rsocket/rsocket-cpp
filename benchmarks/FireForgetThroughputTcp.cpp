@@ -2,18 +2,13 @@
 
 #include "benchmarks/Fixture.h"
 #include "benchmarks/Latch.h"
-#include "benchmarks/Throughput.h"
 
 #include <folly/Benchmark.h>
-#include <folly/init/Init.h>
 #include <folly/portability/GFlags.h>
 
 #include "rsocket/RSocket.h"
-#include "yarpl/Single.h"
 
 using namespace rsocket;
-
-constexpr size_t kMessageLen = 32;
 
 DEFINE_int32(server_threads, 8, "number of server threads to run");
 DEFINE_int32(
@@ -21,31 +16,16 @@ DEFINE_int32(
     0,
     "control the number of client threads (defaults to the number of clients)");
 DEFINE_int32(clients, 10, "number of clients to run");
-DEFINE_int32(
-    items,
-    1000000,
-    "number of request-response requests to send, in total");
+DEFINE_int32(items, 1000000, "number of items to fire-and-forget, in total");
 
 namespace {
 
-class Observer : public yarpl::single::SingleObserver<Payload> {
+class Responder : public RSocketResponder {
  public:
-  explicit Observer(Latch& latch) : latch_{latch} {}
+  Responder(Latch& latch) : latch_{latch} {}
 
-  void onSubscribe(yarpl::Reference<yarpl::single::SingleSubscription>
-                       subscription) override {
-    yarpl::single::SingleObserver<Payload>::onSubscribe(
-        std::move(subscription));
-  }
-
-  void onSuccess(Payload) override {
+  void handleFireAndForget(Payload, StreamId) override {
     latch_.post();
-    yarpl::single::SingleObserver<Payload>::onSuccess({});
-  }
-
-  void onError(folly::exception_wrapper) override {
-    latch_.post();
-    yarpl::single::SingleObserver<Payload>::onError({});
   }
 
  private:
@@ -53,7 +33,7 @@ class Observer : public yarpl::single::SingleObserver<Payload> {
 };
 }
 
-BENCHMARK(RequestResponseThroughput, n) {
+BENCHMARK(FireForgetThroughput, n) {
   (void)n;
 
   std::unique_ptr<Fixture> fixture;
@@ -62,8 +42,7 @@ BENCHMARK(RequestResponseThroughput, n) {
   Latch latch{static_cast<size_t>(FLAGS_items)};
 
   BENCHMARK_SUSPEND {
-    auto responder =
-        std::make_shared<FixedResponder>(std::string(kMessageLen, 'a'));
+    auto responder = std::make_shared<Responder>(latch);
 
     opts.serverThreads = FLAGS_server_threads;
     opts.clients = FLAGS_clients;
@@ -77,14 +56,15 @@ BENCHMARK(RequestResponseThroughput, n) {
     LOG(INFO) << "  Server with " << opts.serverThreads << " threads.";
     LOG(INFO) << "  " << opts.clients << " clients across "
               << fixture->workers.size() << " threads.";
-    LOG(INFO) << "  Running " << FLAGS_items << " requests in total";
+    LOG(INFO) << "  Running " << FLAGS_items << " requests in total.";
   }
 
   for (int i = 0; i < FLAGS_items; ++i) {
-    auto& client = fixture->clients[i % opts.clients];
-    client->getRequester()
-        ->requestResponse(Payload("RequestResponseTcp"))
-        ->subscribe(yarpl::make_ref<Observer>(latch));
+    for (auto& client : fixture->clients) {
+      client->getRequester()
+          ->fireAndForget(Payload("TcpFireAndForget"))
+          ->subscribe(yarpl::make_ref<yarpl::single::SingleObserver<void>>());
+    }
   }
 
   constexpr std::chrono::minutes timeout{5};

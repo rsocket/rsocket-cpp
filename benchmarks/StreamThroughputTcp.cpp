@@ -3,17 +3,11 @@
 #include "benchmarks/Fixture.h"
 #include "benchmarks/Throughput.h"
 
-#include <deque>
-
 #include <folly/Baton.h>
 #include <folly/Benchmark.h>
-#include <folly/io/async/ScopedEventBaseThread.h>
 #include <folly/portability/GFlags.h>
 
 #include "rsocket/RSocket.h"
-#include "rsocket/transports/tcp/TcpConnectionAcceptor.h"
-#include "rsocket/transports/tcp/TcpConnectionFactory.h"
-#include "yarpl/Flowable.h"
 
 using namespace rsocket;
 
@@ -29,6 +23,8 @@ DEFINE_int32(items, 1000000, "number of items in stream, per client");
 DEFINE_int32(streams, 1, "number of streams, per client");
 
 BENCHMARK(StreamThroughput, n) {
+  (void)n;
+
   std::unique_ptr<Fixture> fixture;
   Fixture::Options opts;
 

@@ -150,6 +150,8 @@ std::shared_ptr<RSocketClient> makeClient() {
 }
 
 BENCHMARK(StreamThroughput, n) {
+  (void)n;
+
   std::shared_ptr<RSocketClient> client;
   yarpl::Reference<BoundedSubscriber> subscriber;
 
