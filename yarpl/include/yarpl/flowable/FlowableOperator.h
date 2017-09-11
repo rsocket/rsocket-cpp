@@ -129,20 +129,17 @@ class FlowableOperator : public Flowable<D> {
         folly::exception_wrapper ex = folly::exception_wrapper{nullptr}) {
       auto self = this->ref_from_this(this);
 
-      if (state.up) {
-        if (auto upstream = std::move(upstream_)) {
-          upstream->cancel();
-        }
-        subscriber_.reset();
+      auto upstream = std::move(upstream_);
+      if(state.up && upstream) {
+        upstream->cancel();
       }
 
-      if (state.down) {
-        if (auto subscriber = std::move(subscriber_)) {
-          if (ex) {
-            subscriber->onError(std::move(ex));
-          } else {
-            subscriber->onComplete();
-          }
+      auto subscriber = std::move(subscriber_);
+      if(state.down && subscriber) {
+        if (ex) {
+          subscriber->onError(std::move(ex));
+        } else {
+          subscriber->onComplete();
         }
       }
     }

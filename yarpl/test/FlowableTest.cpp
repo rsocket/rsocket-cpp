@@ -553,7 +553,7 @@ TEST(FlowableTest, SubscribeMultipleTimes) {
     return std::make_tuple(req, true);
   });
 
-  auto setup_mock = [](auto request_num, auto& resps, bool isCanceled = false) {
+  auto setup_mock = [](auto request_num, auto& resps) {
     auto mock = make_ref<StrictMockSubscriber>(request_num);
 
     Sequence seq;
@@ -562,9 +562,7 @@ TEST(FlowableTest, SubscribeMultipleTimes) {
         .InSequence(seq)
         .WillRepeatedly(
             Invoke([&resps](int64_t value) { resps.push_back(value); }));
-    if (!isCanceled) {
-      EXPECT_CALL(*mock, onComplete_()).InSequence(seq);
-    }
+    EXPECT_CALL(*mock, onComplete_()).InSequence(seq);
     return mock;
   };
 
@@ -572,7 +570,7 @@ TEST(FlowableTest, SubscribeMultipleTimes) {
   auto mock1 = setup_mock(5, results[0]);
   auto mock2 = setup_mock(5, results[1]);
   auto mock3 = setup_mock(5, results[2]);
-  auto mock4 = setup_mock(5, results[3], true);
+  auto mock4 = setup_mock(5, results[3]);
   auto mock5 = setup_mock(5, results[4]);
 
   // map on the same flowable twice
