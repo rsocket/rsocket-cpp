@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include <folly/io/async/EventBase.h>
+#include <folly/io/async/ScopedEventBaseThread.h>
 #include <rsocket/internal/Common.h>
 #include <rsocket/internal/RSocketConnectionManager.h>
 #include <test/test_utils/MockManageableConnection.h>
@@ -17,6 +18,7 @@ TEST(RSocketConnectionManagerTest, None) {
 
 TEST(RSocketConnectionManagerTest, TerminateConnectionManager) {
   auto spCon = std::make_shared<StrictMock<MockManageableConnection>>();
+  EXPECT_CALL(*spCon, listenCloseEvent_());
   EXPECT_CALL(*spCon, onClose_(_));
   EXPECT_CALL(*spCon, close_(_, StreamCompletionSignal::SOCKET_CLOSED));
   folly::EventBase evb;
@@ -32,10 +34,24 @@ TEST(RSocketConnectionManagerTest, TerminateConnectionWithDestruction) {
     RSocketConnectionManager conMgr;
     {
       auto spCon = std::make_shared<StrictMock<MockManageableConnection>>();
+      EXPECT_CALL(*spCon, listenCloseEvent_());
       EXPECT_CALL(*spCon, onClose_(_));
       EXPECT_CALL(*spCon, close_(_, StreamCompletionSignal::SOCKET_CLOSED));
       conMgr.manageConnection(spCon, evb);
     }
+  }
+}
+
+TEST(RSocketConnectionManagerTest, EventBaseIsDeletedWithTheConnection) {
+  RSocketConnectionManager conMgr;
+  {
+    auto spCon = std::make_shared<StrictMock<MockManageableConnection>>();
+    EXPECT_CALL(*spCon, listenCloseEvent_());
+    EXPECT_CALL(*spCon, onClose_(_));
+    EXPECT_CALL(*spCon, close_(_, StreamCompletionSignal::SOCKET_CLOSED));
+    folly::ScopedEventBaseThread thread; // for a lingering event base!
+    conMgr.manageConnection(spCon, *thread.getEventBase());
+    spCon->disconnected_ = true; // Only inform that it is disconnected.
   }
 }
 
@@ -56,6 +72,7 @@ TEST(RSocketConnectionManagerTest, ManagedConnectionClosesItself) {
   folly::EventBase evb;
   {
     auto spCon = std::make_shared<StrictMock<MockManageableConnection>>();
+    EXPECT_CALL(*spCon, listenCloseEvent_());
     EXPECT_CALL(*spCon, onClose_(_));
     EXPECT_CALL(*spCon, close_(_, StreamCompletionSignal::CANCEL));
     conMgr.manageConnection(spCon, evb);
