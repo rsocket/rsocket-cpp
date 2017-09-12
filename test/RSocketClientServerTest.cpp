@@ -61,7 +61,7 @@ TEST(RSocketClientServer, ConnectManyAsync) {
   }
 
   CHECK_EQ(clients.size(), connectionCount);
-  auto results = folly::collectAll(clients).get(folly::Duration(5000));
+  auto results = folly::collectAll(clients).get(std::chrono::minutes{1});
   CHECK_EQ(results.size(), connectionCount);
 
   results.clear();
