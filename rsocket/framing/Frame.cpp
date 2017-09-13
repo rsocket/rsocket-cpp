@@ -16,7 +16,7 @@ const uint32_t Frame_LEASE::kMaxNumRequests;
 const uint32_t Frame_SETUP::kMaxKeepaliveTime;
 const uint32_t Frame_SETUP::kMaxLifetime;
 
-std::ostream&
+static std::ostream&
 writeFlags(std::ostream& os, FrameFlags frameFlags, FrameType frameType) {
   constexpr const char* kEmpty = "0x00";
   constexpr const char* kMetadata = "METADATA";

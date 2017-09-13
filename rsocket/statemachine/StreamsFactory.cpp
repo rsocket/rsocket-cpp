@@ -28,14 +28,14 @@ StreamsFactory::StreamsFactory(
               : 2 /*streams initiated by the server MUST use
                     even-numbered stream identifiers*/) {}
 
-void subscribeToErrorFlowable(
+static void subscribeToErrorFlowable(
     Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
   yarpl::flowable::Flowables::error<Payload>(
       std::runtime_error("state machine is disconnected/closed"))
       ->subscribe(std::move(responseSink));
 }
 
-void subscribeToErrorSingle(
+static void subscribeToErrorSingle(
     Reference<yarpl::single::SingleObserver<Payload>> responseSink) {
   yarpl::single::Singles::error<Payload>(
       std::runtime_error("state machine is disconnected/closed"))

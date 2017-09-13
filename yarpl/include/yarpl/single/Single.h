@@ -90,7 +90,7 @@ class Single<void> : public virtual Refcounted {
   void subscribe(Success s) {
     class SuccessSingleObserver : public SingleObserver<void> {
      public:
-      SuccessSingleObserver(Success s) : success_{std::move(s)} {}
+      SuccessSingleObserver(Success success) : success_{std::move(success)} {}
 
       void onSubscribe(Reference<SingleSubscription> subscription) override {
         SingleObserver<void>::onSubscribe(std::move(subscription));
