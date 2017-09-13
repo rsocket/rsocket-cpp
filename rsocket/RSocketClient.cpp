@@ -36,7 +36,7 @@ RSocketClient::RSocketClient(
       token_(std::move(token)) {}
 
 RSocketClient::~RSocketClient() {
-  VLOG(4) << "RSocketClient destroyed ..";
+  VLOG(3) << "RSocketClient destroyed ..";
   disconnect().get();
 }
 

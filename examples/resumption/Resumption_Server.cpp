@@ -23,10 +23,7 @@ class HelloStreamRequestResponder : public RSocketResponder {
     auto requestString = request.moveDataToString();
     return Flowables::range(1, 1000)->map([name = std::move(requestString)](
         int64_t v) {
-      std::stringstream ss;
-      ss << "Hello " << name << " " << v << "!";
-      std::string s = ss.str();
-      return Payload(s, "metadata");
+      return Payload(folly::to<std::string>(v), "metadata");
     });
   }
 };

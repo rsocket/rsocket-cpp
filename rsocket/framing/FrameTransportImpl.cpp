@@ -20,7 +20,7 @@ FrameTransportImpl::FrameTransportImpl(
 }
 
 FrameTransportImpl::~FrameTransportImpl() {
-  VLOG(1) << "~FrameTransport";
+  VLOG(1) << "~FrameTransport (" << this << ")";
 }
 
 void FrameTransportImpl::connect() {
@@ -130,12 +130,12 @@ void FrameTransportImpl::terminateProcessor(folly::exception_wrapper ex) {
 }
 
 void FrameTransportImpl::onComplete() {
-  VLOG(6) << "onComplete";
+  VLOG(3) << "FrameTransport received onComplete";
   terminateProcessor(folly::exception_wrapper());
 }
 
 void FrameTransportImpl::onError(folly::exception_wrapper ex) {
-  VLOG(6) << "onError" << ex;
+  VLOG(3) << "FrameTransport received onError: " << ex.what();
   terminateProcessor(std::move(ex));
 }
 
@@ -145,7 +145,7 @@ void FrameTransportImpl::request(int64_t n) {
 }
 
 void FrameTransportImpl::cancel() {
-  VLOG(6) << "cancel";
+  VLOG(3) << "FrameTransport received cancel";
   terminateProcessor(folly::exception_wrapper());
 }
 

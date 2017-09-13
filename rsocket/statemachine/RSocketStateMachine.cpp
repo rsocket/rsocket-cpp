@@ -87,8 +87,11 @@ bool RSocketStateMachine::resumeServer(
     yarpl::Reference<FrameTransport> frameTransport,
     const ResumeParameters& resumeParams) {
   if (!isDisconnectedOrClosed()) {
-    disconnect(folly::exception_wrapper(
-        std::runtime_error("A new transport is resuming the session")));
+    VLOG(1) << "Old connection (" << frameTransport_.get() << ") exists. "
+            << "Terminating new connection (" << frameTransport.get() << ")";
+    frameTransport->closeWithError(folly::exception_wrapper(
+        std::runtime_error("Old connection still exists")));
+    return false;
   }
   CHECK(connect(std::move(frameTransport), resumeParams.protocolVersion));
   return resumeFromPositionOrClose(
@@ -99,6 +102,7 @@ bool RSocketStateMachine::resumeServer(
 bool RSocketStateMachine::connect(
     yarpl::Reference<FrameTransport> frameTransport,
     ProtocolVersion protocolVersion) {
+  VLOG(2) << "Connecting to transport " << frameTransport.get();
   CHECK(isDisconnectedOrClosed());
   CHECK(frameTransport);
   if (protocolVersion != ProtocolVersion::Unknown) {
@@ -157,7 +161,7 @@ void RSocketStateMachine::sendPendingFrames() {
 }
 
 void RSocketStateMachine::disconnect(folly::exception_wrapper ex) {
-  VLOG(6) << "disconnect";
+  VLOG(2) << "Disconnecting transport";
   if (isDisconnectedOrClosed()) {
     return;
   }
@@ -186,10 +190,9 @@ void RSocketStateMachine::close(
 
   VLOG(6) << "close";
 
-  if (resumeCallback_) {
-    resumeCallback_->onResumeError(
+  if (auto resumeCallback = std::move(resumeCallback_)) {
+    resumeCallback->onResumeError(
         ConnectionException(ex ? ex.get_exception()->what() : "RS closing"));
-    resumeCallback_.reset();
   }
 
   closeStreams(signal);
@@ -218,22 +221,23 @@ void RSocketStateMachine::closeFrameTransport(
     keepaliveTimer_->stop();
   }
 
-  if (resumeCallback_) {
-    resumeCallback_->onResumeError(ConnectionException(
+  if (auto resumeCallback = std::move(resumeCallback_)) {
+    resumeCallback->onResumeError(ConnectionException(
         ex ? ex.get_exception()->what() : "connection closing"));
-    resumeCallback_.reset();
   }
 
   // Echo the exception to the frameTransport only if the frameTransport started
   // closing with error.  Otherwise we sent some error frame over the wire and
   // we are closing the transport cleanly.
-  if (signal == StreamCompletionSignal::CONNECTION_ERROR) {
-    frameTransport_->closeWithError(std::move(ex));
-  } else {
-    frameTransport_->close();
+  if (frameTransport_) {
+    if (signal == StreamCompletionSignal::CONNECTION_ERROR) {
+      frameTransport_->closeWithError(std::move(ex));
+    } else {
+      frameTransport_->close();
+    }
+    frameTransport_ = nullptr;
   }
 
-  frameTransport_ = nullptr;
 }
 
 void RSocketStateMachine::disconnectOrCloseWithError(Frame_ERROR&& errorFrame) {
@@ -490,8 +494,8 @@ void RSocketStateMachine::handleConnectionFrame(
         coldResumeInProgress_ = false;
       }
 
-      resumeCallback_->onResumeOk();
-      resumeCallback_.reset();
+      auto resumeCallback = std::move(resumeCallback_);
+      resumeCallback->onResumeOk();
       resumeFromPosition(frame.position_);
       return;
     }
@@ -507,9 +511,9 @@ void RSocketStateMachine::handleConnectionFrame(
       if ((frame.errorCode_ == ErrorCode::CONNECTION_ERROR ||
            frame.errorCode_ == ErrorCode::REJECTED_RESUME) &&
           resumeCallback_) {
-        resumeCallback_->onResumeError(
+        auto resumeCallback = std::move(resumeCallback_);
+        resumeCallback->onResumeError(
             ResumptionException(frame.payload_.moveDataToString()));
-        resumeCallback_.reset();
         // fall through
       }
 

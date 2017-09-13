@@ -217,9 +217,9 @@ std::ostream& operator<<(std::ostream& os, const Frame_ERROR& frame) {
 
   std::ostream& operator<<(std::ostream& os, const Frame_RESUME& frame) {
     return os << frame.header_ << ", ("
-              << "token"
-              << ", @server " << frame.lastReceivedServerPosition_
-              << ", @client " << frame.clientPosition_ << ")";
+              << "token " << frame.token_ << ", @server "
+              << frame.lastReceivedServerPosition_ << ", @client "
+              << frame.clientPosition_ << ")";
   }
 
   std::ostream& operator<<(std::ostream& os, const Frame_RESUME_OK& frame) {
