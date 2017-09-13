@@ -50,8 +50,8 @@ BENCHMARK(StreamThroughput, n) {
     LOG(INFO) << "  Server with " << opts.serverThreads << " threads.";
     LOG(INFO) << "  " << opts.clients << " clients across "
               << fixture->workers.size() << " threads.";
-    LOG(INFO) << "  Each client running " << FLAGS_streams
-              << " streams that each get " << FLAGS_items << " items.";
+    LOG(INFO) << "  Running " << FLAGS_streams
+              << " streams of " << FLAGS_items << " items each.";
   }
 
   for (size_t i = 0; i < FLAGS_streams; ++i) {
