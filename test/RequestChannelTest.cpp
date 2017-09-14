@@ -88,22 +88,18 @@ TEST(RequestChannelTest, RequestOnDisconnectedClient) {
   ASSERT(did_call_on_error);
 }
 
-class ResponderLongOutPut : public rsocket::RSocketResponder {
+class ResponderLongStream : public rsocket::RSocketResponder {
  public:
   yarpl::Reference<Flowable<rsocket::Payload>> handleRequestChannel(
       rsocket::Payload,
       yarpl::Reference<Flowable<rsocket::Payload>> requestStream,
       rsocket::StreamId) override {
     auto ts = TestSubscriber<std::string>::create();
-    requestStream
-        ->map([](auto p) { LOG(INFO) << "received: " << p;
-          return p.moveDataToString(); })
+    requestStream->map([](auto p) { return p.moveDataToString(); })
         ->subscribe(ts);
 
     // output 1 - 100
-    return Flowables::range(1, 1000)->map([](
-        int64_t v) {
-      wait();
+    return Flowables::range(1, 100)->map([](int64_t v) {
       std::stringstream ss;
       ss << "Server stream: " << v;
       std::string s = ss.str();
@@ -113,39 +109,91 @@ class ResponderLongOutPut : public rsocket::RSocketResponder {
 };
 
 
+class ResponderShortStream : public rsocket::RSocketResponder {
+ public:
+  yarpl::Reference<Flowable<rsocket::Payload>> handleRequestChannel(
+      rsocket::Payload,
+      yarpl::Reference<Flowable<rsocket::Payload>> requestStream,
+      rsocket::StreamId) override {
+    auto ts = TestSubscriber<std::string>::create();
+    requestStream->map([](auto p) { return p.moveDataToString(); })
+                 ->subscribe(ts);
+
+    return Flowable<Payload>::create(
+        [&](Reference<Subscriber<Payload>> subscriber, int64_t) {
+          subscriber->onNext(Payload("some data", "meta"));
+          subscriber->onNext(Payload("more data", "meta"));
+          subscriber->onComplete();
+          return std::make_tuple(int64_t(2), true);
+        });
+  }
+};
+
 TEST(RequestChannelTest, CompleteRequesterResponderContinues) {
-  LOG(ERR) << "CompleteRequesterResponderContinues";
   folly::ScopedEventBaseThread worker;
-  auto server = makeServer(std::make_shared<ResponderLongOutPut>());
+  auto server = makeServer(std::make_shared<ResponderLongStream>());
+  auto client = makeClient(worker.getEventBase(), *server->listeningPort());
+  auto requester = client->getRequester();
+
+  auto ts = TestSubscriber<std::string>::create(5);
+
+  folly::Baton<> wait_for_on_complete;
+
+  auto shortFlowable = Flowable<Payload>::create(
+      [&](Reference<Subscriber<Payload>> subscriber, int64_t) {
+        subscriber->onNext(Payload("some data", "meta"));
+        subscriber->onNext(Payload("more data", "meta"));
+        subscriber->onComplete();
+        wait_for_on_complete.post();
+        return std::make_tuple(int64_t(2), true);
+      });
+
+  requester->requestChannel(shortFlowable)
+      ->map([](auto p) { return p.moveDataToString(); })
+      ->subscribe(ts);
+
+  // client stream closes before Responder can finish
+  wait_for_on_complete.timed_wait(std::chrono::milliseconds(100));
+
+  ts->request(5);
+
+  ts->awaitTerminalEvent();
+  ts->assertSuccess();
+  ts->assertValueCount(100);
+  ts->assertValueAt(0, "Server stream: 1");
+  ts->assertValueAt(99, "Server stream: 100");
+}
+
+
+TEST(RequestChannelTest, CompleteResponderRequesterContinues) {
+  folly::ScopedEventBaseThread worker;
+  auto server = makeServer(std::make_shared<ResponderLongStream>());
   auto client = makeClient(worker.getEventBase(), *server->listeningPort());
   auto requester = client->getRequester();
 
   auto ts = TestSubscriber<std::string>::create();
 
-  auto shortFlowable = Flowable<Payload>::create([](
-      Reference<Subscriber<Payload>> subscriber, int64_t) {
-    subscriber->onNext(Payload("some data", "meta"));
-    subscriber->onNext(Payload("more data", "meta"));
-    subscriber->onComplete();
-    LOG(INFO) << "client stream completed()";
-    return std::make_tuple(int64_t(1), true);
+  folly::Baton<> wait_for_on_complete;
+
+  auto longFlowable = Flowables::range(1, 100)->map([](int64_t v) {
+    std::stringstream ss;
+    ss << "Client stream: " << v;
+    std::string s = ss.str();
+    return Payload(s, "metadata");
   });
 
-  requester
-      ->requestChannel(
-          shortFlowable)
-      ->map([](auto p) { return p.moveDataToString(); })
-      ->subscribe(ts);
-  LOG(INFO) << "still waiting for server stream to end";
+  requester->requestChannel(longFlowable)
+           ->map([](auto p) { return p.moveDataToString(); })
+           ->subscribe(ts);
+
+  // server stream closes before Requester can finish
+  
   ts->awaitTerminalEvent();
-  LOG(INFO) << "server stream ended";
   ts->assertSuccess();
-  ts->assertValueCount(1000);
+  ts->assertValueCount(100);
   ts->assertValueAt(0, "Server stream: 1");
-  ts->assertValueAt(999, "Server stream: 1000");
+  ts->assertValueAt(99, "Server stream: 100");
 }
-
-
 
 // Sandbox REMOVE BEFORE MAKING A PULL REQUEST
 
