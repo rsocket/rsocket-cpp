@@ -270,56 +270,33 @@ add_subdirectory(yarpl)
 
 add_library(
   ReactiveSocket
-  rsocket/RSocket.cpp
-  rsocket/RSocket.h
-  rsocket/RSocketServer.h
-  rsocket/RSocketServer.cpp
-  rsocket/RSocketClient.h
-  rsocket/RSocketClient.cpp
-  rsocket/RSocketRequester.h
-  rsocket/RSocketRequester.cpp
-  rsocket/RSocketErrors.h
-  rsocket/RSocketParameters.cpp
-  rsocket/RSocketParameters.h
+  rsocket/ColdResumeHandler.cpp
+  rsocket/ColdResumeHandler.h
   rsocket/ConnectionAcceptor.h
   rsocket/ConnectionFactory.h
-  rsocket/transports/tcp/TcpConnectionAcceptor.h
-  rsocket/transports/tcp/TcpConnectionAcceptor.cpp
-  rsocket/transports/tcp/TcpConnectionFactory.h
-  rsocket/transports/tcp/TcpConnectionFactory.cpp
+  rsocket/DuplexConnection.h
+  rsocket/Payload.cpp
+  rsocket/Payload.h
+  rsocket/RSocket.cpp
+  rsocket/RSocket.h
+  rsocket/RSocketClient.cpp
+  rsocket/RSocketClient.h
+  rsocket/RSocketErrors.h
+  rsocket/RSocketException.h
+  rsocket/RSocketParameters.cpp
+  rsocket/RSocketParameters.h
+  rsocket/RSocketRequester.cpp
+  rsocket/RSocketRequester.h
   rsocket/RSocketResponder.cpp
   rsocket/RSocketResponder.h
-  rsocket/statemachine/ChannelRequester.cpp
-  rsocket/statemachine/ChannelRequester.h
-  rsocket/statemachine/ChannelResponder.cpp
-  rsocket/statemachine/ChannelResponder.h
-  rsocket/statemachine/ConsumerBase.cpp
-  rsocket/statemachine/ConsumerBase.h
-  rsocket/statemachine/PublisherBase.cpp
-  rsocket/statemachine/PublisherBase.h
-  rsocket/statemachine/RequestResponseRequester.cpp
-  rsocket/statemachine/RequestResponseRequester.h
-  rsocket/statemachine/RequestResponseResponder.cpp
-  rsocket/statemachine/RequestResponseResponder.h
-  rsocket/statemachine/StreamStateMachineBase.cpp
-  rsocket/statemachine/StreamStateMachineBase.h
-  rsocket/statemachine/StreamRequester.cpp
-  rsocket/statemachine/StreamRequester.h
-  rsocket/statemachine/StreamResponder.cpp
-  rsocket/statemachine/StreamResponder.h
-  rsocket/statemachine/StreamsFactory.cpp
-  rsocket/statemachine/StreamsFactory.h
-  rsocket/statemachine/StreamsWriter.h
-  rsocket/statemachine/StreamState.cpp
-  rsocket/statemachine/StreamState.h
-  rsocket/internal/ClientResumeStatusCallback.h
-  rsocket/internal/Common.cpp
-  rsocket/internal/Common.h
-  rsocket/statemachine/RSocketStateMachine.cpp
-  rsocket/statemachine/RSocketStateMachine.h
-  rsocket/DuplexConnection.h
-  rsocket/internal/FollyKeepaliveTimer.cpp
-  rsocket/internal/FollyKeepaliveTimer.h
+  rsocket/RSocketServer.cpp
+  rsocket/RSocketServer.h
+  rsocket/RSocketServerState.h
+  rsocket/RSocketServiceHandler.cpp
+  rsocket/RSocketServiceHandler.h
+  rsocket/RSocketStats.cpp
+  rsocket/RSocketStats.h
+  rsocket/ResumeManager.h
   rsocket/framing/ErrorCode.cpp
   rsocket/framing/ErrorCode.h
   rsocket/framing/Frame.cpp
@@ -329,6 +306,13 @@ add_library(
   rsocket/framing/FrameProcessor.h
   rsocket/framing/FrameSerializer.cpp
   rsocket/framing/FrameSerializer.h
+  rsocket/framing/FrameSerializer_v0.cpp
+  rsocket/framing/FrameSerializer_v0.h
+  rsocket/framing/FrameSerializer_v0_1.cpp
+  rsocket/framing/FrameSerializer_v0_1.h
+  rsocket/framing/FrameSerializer_v1_0.cpp
+  rsocket/framing/FrameSerializer_v1_0.h
+  rsocket/framing/FrameTransport.h
   rsocket/framing/FrameTransportImpl.cpp
   rsocket/framing/FrameTransportImpl.h
   rsocket/framing/FrameType.cpp
@@ -339,47 +323,62 @@ add_library(
   rsocket/framing/FramedReader.h
   rsocket/framing/FramedWriter.cpp
   rsocket/framing/FramedWriter.h
-  rsocket/Payload.cpp
-  rsocket/Payload.h
-  rsocket/internal/SetupResumeAcceptor.cpp
-  rsocket/internal/SetupResumeAcceptor.h
-  rsocket/RSocketStats.cpp
-  rsocket/RSocketStats.h
-  rsocket/transports/tcp/TcpDuplexConnection.cpp
-  rsocket/transports/tcp/TcpDuplexConnection.h
-  rsocket/framing/FrameSerializer_v0.cpp
-  rsocket/framing/FrameSerializer_v0.h
-  rsocket/framing/FrameSerializer_v0_1.cpp
-  rsocket/framing/FrameSerializer_v0_1.h
-  rsocket/framing/FrameSerializer_v1_0.cpp
-  rsocket/framing/FrameSerializer_v1_0.h
-  rsocket/internal/WarmResumeManager.h
-  rsocket/internal/WarmResumeManager.cpp
-  rsocket/internal/ScheduledSubscription.cpp
-  rsocket/internal/ScheduledSubscription.h
-  rsocket/internal/ScheduledSubscriber.h
+  rsocket/framing/ScheduledFrameProcessor.cpp
+  rsocket/framing/ScheduledFrameProcessor.h
+  rsocket/framing/ScheduledFrameTransport.cpp
+  rsocket/framing/ScheduledFrameTransport.h
+  rsocket/internal/ClientResumeStatusCallback.h
+  rsocket/internal/Common.cpp
+  rsocket/internal/Common.h
+  rsocket/internal/ConnectionSet.cpp
+  rsocket/internal/ConnectionSet.h
+  rsocket/internal/FollyKeepaliveTimer.cpp
+  rsocket/internal/FollyKeepaliveTimer.h
   rsocket/internal/ScheduledRSocketResponder.cpp
   rsocket/internal/ScheduledRSocketResponder.h
   rsocket/internal/ScheduledSingleObserver.h
   rsocket/internal/ScheduledSingleSubscription.cpp
   rsocket/internal/ScheduledSingleSubscription.h
-  rsocket/internal/ManageableConnection.h
-  rsocket/internal/RSocketConnectionManager.cpp
-  rsocket/internal/RSocketConnectionManager.h
+  rsocket/internal/ScheduledSubscriber.h
+  rsocket/internal/ScheduledSubscription.cpp
+  rsocket/internal/ScheduledSubscription.h
+  rsocket/internal/SetupResumeAcceptor.cpp
+  rsocket/internal/SetupResumeAcceptor.h
   rsocket/internal/SwappableEventBase.cpp
   rsocket/internal/SwappableEventBase.h
-  rsocket/ResumeManager.h
-  rsocket/ColdResumeHandler.cpp
-  rsocket/ColdResumeHandler.h
-  rsocket/RSocketServiceHandler.cpp
-  rsocket/RSocketServiceHandler.h
-  rsocket/RSocketServerState.h
-  rsocket/RSocketException.h
-  rsocket/framing/FrameTransport.h
-  rsocket/framing/ScheduledFrameTransport.h
-  rsocket/framing/ScheduledFrameTransport.cpp
-  rsocket/framing/ScheduledFrameProcessor.h
-  rsocket/framing/ScheduledFrameProcessor.cpp)
+  rsocket/internal/WarmResumeManager.cpp
+  rsocket/internal/WarmResumeManager.h
+  rsocket/statemachine/ChannelRequester.cpp
+  rsocket/statemachine/ChannelRequester.h
+  rsocket/statemachine/ChannelResponder.cpp
+  rsocket/statemachine/ChannelResponder.h
+  rsocket/statemachine/ConsumerBase.cpp
+  rsocket/statemachine/ConsumerBase.h
+  rsocket/statemachine/PublisherBase.cpp
+  rsocket/statemachine/PublisherBase.h
+  rsocket/statemachine/RSocketStateMachine.cpp
+  rsocket/statemachine/RSocketStateMachine.h
+  rsocket/statemachine/RequestResponseRequester.cpp
+  rsocket/statemachine/RequestResponseRequester.h
+  rsocket/statemachine/RequestResponseResponder.cpp
+  rsocket/statemachine/RequestResponseResponder.h
+  rsocket/statemachine/StreamRequester.cpp
+  rsocket/statemachine/StreamRequester.h
+  rsocket/statemachine/StreamResponder.cpp
+  rsocket/statemachine/StreamResponder.h
+  rsocket/statemachine/StreamState.cpp
+  rsocket/statemachine/StreamState.h
+  rsocket/statemachine/StreamStateMachineBase.cpp
+  rsocket/statemachine/StreamStateMachineBase.h
+  rsocket/statemachine/StreamsFactory.cpp
+  rsocket/statemachine/StreamsFactory.h
+  rsocket/statemachine/StreamsWriter.h
+  rsocket/transports/tcp/TcpConnectionAcceptor.cpp
+  rsocket/transports/tcp/TcpConnectionAcceptor.h
+  rsocket/transports/tcp/TcpConnectionFactory.cpp
+  rsocket/transports/tcp/TcpConnectionFactory.h
+  rsocket/transports/tcp/TcpDuplexConnection.cpp
+  rsocket/transports/tcp/TcpDuplexConnection.h)
 
 target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/include")
 target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/src")
@@ -423,6 +422,7 @@ add_executable(
   test/handlers/HelloStreamRequestHandler.cpp
   test/handlers/HelloStreamRequestHandler.h
   test/internal/AllowanceSemaphoreTest.cpp
+  test/internal/ConnectionSetTest.cpp
   test/internal/FollyKeepaliveTimerTest.cpp
   test/internal/SetupResumeAcceptorTest.cpp
   test/internal/SwappableEventBaseTest.cpp
@@ -431,13 +431,11 @@ add_executable(
   test/test_utils/GenericRequestResponseHandler.h
   test/test_utils/MockDuplexConnection.h
   test/test_utils/MockKeepaliveTimer.h
-  test/test_utils/MockManageableConnection.h
   test/test_utils/MockRequestHandler.h
   test/test_utils/MockStats.h
   test/transport/DuplexConnectionTest.cpp
   test/transport/DuplexConnectionTest.h
-  test/transport/TcpDuplexConnectionTest.cpp
-  test/RSocketConnectionManagerTest.cpp)
+  test/transport/TcpDuplexConnectionTest.cpp)
 
 target_link_libraries(
   tests

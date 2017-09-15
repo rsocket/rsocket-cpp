@@ -21,7 +21,6 @@ TEST(RSocketClientServer, ConnectOne) {
   folly::ScopedEventBaseThread worker;
   auto server = makeServer(std::make_shared<HelloStreamRequestHandler>());
   auto client = makeClient(worker.getEventBase(), *server->listeningPort());
-  auto requester = client->getRequester();
 }
 
 TEST(RSocketClientServer, ConnectManySync) {
@@ -30,7 +29,6 @@ TEST(RSocketClientServer, ConnectManySync) {
 
   for (size_t i = 0; i < 100; ++i) {
     auto client = makeClient(worker.getEventBase(), *server->listeningPort());
-    auto requester = client->getRequester();
   }
 }
 
@@ -49,14 +47,14 @@ TEST(RSocketClientServer, ConnectManyAsync) {
         makeClientAsync(
             workers[workerId].getEventBase(), *server->listeningPort())
             .then([&executed](std::shared_ptr<rsocket::RSocketClient> client) {
-              auto requester = client->getRequester();
               ++executed;
               return client;
-            }).onError([&](folly::exception_wrapper ex) {
-          LOG(ERROR) << "error: " << ex.what();
-          ++executed;
-          return std::shared_ptr<RSocketClient>(nullptr);
-        });
+            })
+            .onError([&](folly::exception_wrapper ex) {
+              LOG(ERROR) << "error: " << ex.what();
+              ++executed;
+              return std::shared_ptr<RSocketClient>(nullptr);
+            });
     clients.emplace_back(std::move(clientFuture));
   }
 
@@ -76,10 +74,9 @@ TEST(RSocketClientServer, ClientClosesOnWorker) {
   folly::ScopedEventBaseThread worker;
   auto server = makeServer(std::make_shared<HelloStreamRequestHandler>());
   auto client = makeClient(worker.getEventBase(), *server->listeningPort());
-  auto requester = client->getRequester();
 
   // Move the client to the worker thread.
-  worker.getEventBase()->runInEventBaseThread([c = std::move(client)] {});
+  worker.getEventBase()->runInEventBaseThread([c = std::move(client)]{});
 }
 
 /// Test that sending garbage to the server doesn't crash it.
@@ -102,4 +99,18 @@ TEST(RSocketClientServer, ServerGetsGarbage) {
     output->onComplete();
     conn.reset();
   });
+}
+
+/// Test closing a server with a bunch of open connections.
+TEST(RSocketClientServer, CloseServerWithConnections) {
+  folly::ScopedEventBaseThread worker;
+  auto server = makeServer(std::make_shared<HelloStreamRequestHandler>());
+  std::vector<std::shared_ptr<RSocketClient>> clients;
+
+  for (size_t i = 0; i < 100; ++i) {
+    clients.push_back(
+        makeClient(worker.getEventBase(), *server->listeningPort()));
+  }
+
+  server.reset();
 }

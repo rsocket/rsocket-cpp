@@ -15,8 +15,6 @@
 
 namespace rsocket {
 
-class RSocketConnectionManager;
-
 /**
  * API for starting an RSocket server. Returned from RSocket::createServer.
  *
@@ -102,6 +100,6 @@ class RSocketServer {
   folly::Baton<> waiting_;
   std::atomic<bool> isShutdown_{false};
 
-  std::unique_ptr<RSocketConnectionManager> connectionManager_;
+  std::shared_ptr<ConnectionSet> connectionSet_;
 };
 } // namespace rsocket

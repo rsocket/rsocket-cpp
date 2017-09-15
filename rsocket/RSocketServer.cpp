@@ -8,7 +8,7 @@
 #include "rsocket/RSocketStats.h"
 #include "rsocket/framing/FramedDuplexConnection.h"
 #include "rsocket/framing/ScheduledFrameTransport.h"
-#include "rsocket/internal/RSocketConnectionManager.h"
+#include "rsocket/internal/ConnectionSet.h"
 
 namespace rsocket {
 
@@ -21,7 +21,7 @@ RSocketServer::RSocketServer(
             folly::EventBaseManager::get()->getExistingEventBase(),
             std::this_thread::get_id()};
       }),
-      connectionManager_(std::make_unique<RSocketConnectionManager>()) {}
+      connectionSet_(std::make_shared<ConnectionSet>()) {}
 
 RSocketServer::~RSocketServer() {
   shutdownAndWait();
@@ -43,21 +43,20 @@ void RSocketServer::shutdownAndWait() {
 
   std::vector<folly::Future<folly::Unit>> closingFutures;
   for (auto& acceptor : setupResumeAcceptors_.accessAllThreads()) {
-    // this call will queue up the cleanup on the eventBase
+    // This call will queue up the cleanup on the eventBase.
     closingFutures.push_back(acceptor.close());
   }
 
   folly::collectAll(closingFutures).get();
 
-  connectionManager_.reset(); // will close all existing RSockets and wait
-
-  // All requests are fully finished, worker threads can be safely killed off.
+  // Close off all outstanding connections.
+  connectionSet_.reset();
 }
 
 void RSocketServer::start(
     std::shared_ptr<RSocketServiceHandler> serviceHandler) {
   CHECK(duplexConnectionAcceptor_); // RSocketServer has to be initialized with
-                                    // the acceptor
+  // the acceptor
 
   if (started) {
     throw std::runtime_error("RSocketServer::start() already called.");
@@ -120,7 +119,7 @@ void RSocketServer::onRSocketSetup(
     std::shared_ptr<RSocketServiceHandler> serviceHandler,
     yarpl::Reference<FrameTransport> frameTransport,
     SetupParameters setupParams) {
-  auto* eventBase = folly::EventBaseManager::get()->getExistingEventBase();
+  auto eventBase = folly::EventBaseManager::get()->getExistingEventBase();
   VLOG(2) << "Received new setup payload on " << eventBase->getName();
   CHECK(eventBase);
   auto result = serviceHandler->onNewSetup(setupParams);
@@ -143,7 +142,10 @@ void RSocketServer::onRSocketSetup(
       std::move(connectionParams.connectionEvents),
       nullptr, /* resumeManager */
       nullptr /* coldResumeHandler */);
-  connectionManager_->manageConnection(rs, *eventBase);
+
+  connectionSet_->insert(rs, eventBase);
+  rs->registerSet(connectionSet_);
+
   auto requester = std::make_shared<RSocketRequester>(rs, *eventBase);
   auto serverState = std::shared_ptr<RSocketServerState>(
       new RSocketServerState(*eventBase, rs, requester));

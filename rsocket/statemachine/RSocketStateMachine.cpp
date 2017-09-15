@@ -17,7 +17,7 @@
 #include "rsocket/framing/FrameSerializer.h"
 #include "rsocket/framing/FrameTransportImpl.h"
 #include "rsocket/internal/ClientResumeStatusCallback.h"
-#include "rsocket/internal/ManageableConnection.h"
+#include "rsocket/internal/ConnectionSet.h"
 #include "rsocket/internal/ScheduledSubscriber.h"
 #include "rsocket/internal/WarmResumeManager.h"
 #include "rsocket/statemachine/ChannelResponder.h"
@@ -200,7 +200,9 @@ void RSocketStateMachine::close(
     connectionEvents->onClosed(ex);
   }
 
-  ManageableConnection::onClose(ex);
+  if (auto set = connectionSet_.lock()) {
+    set->remove(shared_from_this());
+  }
 }
 
 void RSocketStateMachine::closeFrameTransport(
@@ -717,10 +719,9 @@ void RSocketStateMachine::tryClientResume(
     // Cold-resumption.  Set the frameSerializer.
     CHECK(coldResumeHandler_);
     coldResumeInProgress_ = true;
-    setFrameSerializer(
-        FrameSerializer::createFrameSerializer(
-            protocolVersion == ProtocolVersion::Unknown
-            ? ProtocolVersion::Current() : protocolVersion));
+    setFrameSerializer(FrameSerializer::createFrameSerializer(
+        protocolVersion == ProtocolVersion::Unknown ? ProtocolVersion::Current()
+                                                    : protocolVersion));
   }
 
   Frame_RESUME resumeFrame(
@@ -854,10 +855,10 @@ void RSocketStateMachine::setFrameSerializer(
 void RSocketStateMachine::connectClientSendSetup(
     std::unique_ptr<DuplexConnection> connection,
     SetupParameters setupParams) {
-  setFrameSerializer(
-      FrameSerializer::createFrameSerializer(
-          setupParams.protocolVersion == ProtocolVersion::Unknown
-          ? ProtocolVersion::Current() : setupParams.protocolVersion));
+  setFrameSerializer(FrameSerializer::createFrameSerializer(
+      setupParams.protocolVersion == ProtocolVersion::Unknown
+          ? ProtocolVersion::Current()
+          : setupParams.protocolVersion));
 
   setResumable(setupParams.resumable);
 
@@ -1017,6 +1018,10 @@ size_t RSocketStateMachine::getConsumerAllowance(StreamId streamId) const {
     consumerAllowance = it->second->getConsumerAllowance();
   }
   return consumerAllowance;
+}
+
+void RSocketStateMachine::registerSet(std::shared_ptr<ConnectionSet> set) {
+  connectionSet_ = std::move(set);
 }
 
 } // namespace rsocket

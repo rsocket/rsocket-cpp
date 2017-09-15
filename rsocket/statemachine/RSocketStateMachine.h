@@ -12,7 +12,6 @@
 #include "rsocket/ResumeManager.h"
 #include "rsocket/framing/FrameProcessor.h"
 #include "rsocket/internal/Common.h"
-#include "rsocket/internal/ManageableConnection.h"
 #include "rsocket/statemachine/StreamState.h"
 #include "rsocket/statemachine/StreamsFactory.h"
 #include "rsocket/statemachine/StreamsWriter.h"
@@ -20,17 +19,18 @@
 namespace rsocket {
 
 class ClientResumeStatusCallback;
+class ConnectionSet;
 class DuplexConnection;
-class Frame_ERROR;
 class FrameSerializer;
 class FrameTransport;
+class Frame_ERROR;
 class KeepaliveTimer;
-class ResumeManager;
 class RSocketConnectionEvents;
 class RSocketParameters;
 class RSocketResponder;
 class RSocketStateMachine;
 class RSocketStats;
+class ResumeManager;
 class StreamState;
 class StreamStateMachineBase;
 
@@ -59,7 +59,6 @@ class FrameSink {
 class RSocketStateMachine final
     : public FrameSink,
       public FrameProcessor,
-      public ManageableConnection,
       public StreamsWriter,
       public std::enable_shared_from_this<RSocketStateMachine> {
  public:
@@ -95,7 +94,7 @@ class RSocketStateMachine final
   ///
   /// This may synchronously deliver terminal signals to all
   /// StreamAutomatonBase attached to this ConnectionAutomaton.
-  void close(folly::exception_wrapper, StreamCompletionSignal) override;
+  void close(folly::exception_wrapper, StreamCompletionSignal);
 
   /// Terminate underlying connection and connect new connection
   void reconnect(
@@ -150,10 +149,11 @@ class RSocketStateMachine final
   /// disconnected or in the process of resuming.
   void outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf>);
 
-  template<typename T>
+  template <typename T>
   void outputFrameOrEnqueue(T&& frame) {
     VLOG(3) << mode_ << " Out: " << frame;
-    outputFrameOrEnqueue(frameSerializer_->serializeOut(std::forward<T>(frame)));
+    outputFrameOrEnqueue(
+        frameSerializer_->serializeOut(std::forward<T>(frame)));
   }
 
   void requestFireAndForget(Payload request);
@@ -211,8 +211,10 @@ class RSocketStateMachine final
     return *stats_;
   }
 
- private:
+  /// Register the connection set that's holding this state machine.
+  void registerSet(std::shared_ptr<ConnectionSet>);
 
+ private:
   bool connect(
       yarpl::Reference<FrameTransport>,
       ProtocolVersion protocolVersion);
@@ -295,5 +297,8 @@ class RSocketStateMachine final
   StreamsFactory streamsFactory_;
 
   std::shared_ptr<RSocketConnectionEvents> connectionEvents_;
+
+  /// Back reference to the set that's holding this state machine.
+  std::weak_ptr<ConnectionSet> connectionSet_;
 };
 }

@@ -7,8 +7,8 @@
 #include "rsocket/framing/FrameTransportImpl.h"
 #include "rsocket/framing/FramedDuplexConnection.h"
 #include "rsocket/internal/ClientResumeStatusCallback.h"
+#include "rsocket/internal/ConnectionSet.h"
 #include "rsocket/internal/FollyKeepaliveTimer.h"
-#include "rsocket/internal/RSocketConnectionManager.h"
 
 using namespace folly;
 
@@ -25,7 +25,7 @@ RSocketClient::RSocketClient(
     std::shared_ptr<ResumeManager> resumeManager,
     std::shared_ptr<ColdResumeHandler> coldResumeHandler)
     : connectionFactory_(std::move(connectionFactory)),
-      connectionManager_(std::make_unique<RSocketConnectionManager>()),
+      connectionSet_(std::make_shared<ConnectionSet>()),
       responder_(std::move(responder)),
       keepaliveTimer_(std::move(keepaliveTimer)),
       stats_(stats),
@@ -77,6 +77,7 @@ folly::Future<folly::Unit> RSocketClient::resume() {
       void onResumeError(folly::exception_wrapper ex) noexcept override {
         promise_.setException(ex);
       }
+
      private:
       folly::Promise<folly::Unit> promise_;
     };
@@ -142,8 +143,7 @@ folly::Future<folly::Unit> RSocketClient::disconnect(
 void RSocketClient::fromConnection(
     std::unique_ptr<DuplexConnection> connection,
     folly::EventBase& eventBase,
-    SetupParameters setupParameters
-) {
+    SetupParameters setupParameters) {
   evb_ = &eventBase;
   createState(eventBase);
   std::unique_ptr<DuplexConnection> framedConnection;
@@ -185,7 +185,8 @@ void RSocketClient::createState(folly::EventBase& eventBase) {
 
   requester_ = std::make_shared<RSocketRequester>(stateMachine_, eventBase);
 
-  connectionManager_->manageConnection(stateMachine_, eventBase);
+  connectionSet_->insert(stateMachine_, &eventBase);
+  stateMachine_->registerSet(connectionSet_);
 }
 
 } // namespace rsocket

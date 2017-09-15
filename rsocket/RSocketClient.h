@@ -16,8 +16,8 @@
 
 namespace rsocket {
 
+class ConnectionSet;
 class RSocket;
-class RSocketConnectionManager;
 
 /**
  * API for connecting to an RSocket server. Created with RSocket class.
@@ -72,7 +72,7 @@ class RSocketClient {
   void createState(folly::EventBase& eventBase);
 
   std::shared_ptr<ConnectionFactory> connectionFactory_;
-  std::unique_ptr<RSocketConnectionManager> connectionManager_;
+  std::shared_ptr<ConnectionSet> connectionSet_;
   std::shared_ptr<RSocketResponder> responder_;
   std::unique_ptr<KeepaliveTimer> keepaliveTimer_;
   std::shared_ptr<RSocketStats> stats_;
