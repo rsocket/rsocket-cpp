@@ -74,7 +74,6 @@ class TestSubscriber : public Subscriber<T> {
   }
 
   void onNext(T t) override {
-//    LOG(INFO) << t;
     if (delegate_) {
       values_.push_back(t);
       delegate_->onNext(std::move(t));
