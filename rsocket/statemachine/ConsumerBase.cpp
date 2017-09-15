@@ -31,6 +31,7 @@ void ConsumerBase::subscribe(
 // completeConsumer exists)
 void ConsumerBase::cancelConsumer() {
   state_ = State::CLOSED;
+  VLOG(5) << "ConsumerBase::cancelConsumer()";
   consumingSubscriber_ = nullptr;
 }
 
@@ -64,8 +65,11 @@ void ConsumerBase::processPayload(Payload&& payload, bool onNext) {
     // Frames carry application-level payloads are taken into account when
     // figuring out flow control allowance.
     if (allowance_.tryAcquire()) {
-      sendRequests();
-      consumingSubscriber_->onNext(std::move(payload));
+      VLOG(5) << "ConsumerBase::processPayload("<<onNext<<")";
+      if(consumingSubscriber_) {
+        sendRequests();
+        consumingSubscriber_->onNext(std::move(payload));
+      }
     } else {
       handleFlowControlError();
       return;
@@ -75,6 +79,7 @@ void ConsumerBase::processPayload(Payload&& payload, bool onNext) {
 
 void ConsumerBase::completeConsumer() {
   state_ = State::CLOSED;
+  VLOG(5) << "ConsumerBase::completeConsumer()";
   if (auto subscriber = std::move(consumingSubscriber_)) {
     subscriber->onComplete();
   }
@@ -82,6 +87,7 @@ void ConsumerBase::completeConsumer() {
 
 void ConsumerBase::errorConsumer(folly::exception_wrapper ex) {
   state_ = State::CLOSED;
+  VLOG(5) << "ConsumerBase::errorConsumer()";
   if (auto subscriber = std::move(consumingSubscriber_)) {
     subscriber->onError(std::move(ex));
   }
