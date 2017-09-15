@@ -1,8 +1,8 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include <thread>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <gtest/gtest.h>
+#include <thread>
 
 #include "RSocketTests.h"
 #include "yarpl/Flowable.h"
@@ -88,156 +88,295 @@ TEST(RequestChannelTest, RequestOnDisconnectedClient) {
   ASSERT(did_call_on_error);
 }
 
-class ResponderLongStream : public rsocket::RSocketResponder {
+class TestChannelResponder : public rsocket::RSocketResponder {
  public:
+  TestChannelResponder(
+      int64_t rangeEnd = 10,
+      int64_t initialSubReq = credits::kNoFlowControl)
+      : rangeEnd_{rangeEnd},
+        testSubscriber_{TestSubscriber<std::string>::create(initialSubReq)} {}
+
   yarpl::Reference<Flowable<rsocket::Payload>> handleRequestChannel(
-      rsocket::Payload,
+      rsocket::Payload initialPayload,
       yarpl::Reference<Flowable<rsocket::Payload>> requestStream,
       rsocket::StreamId) override {
-    auto ts = TestSubscriber<std::string>::create();
-    requestStream->map([](auto p) { return p.moveDataToString(); })->subscribe(ts);
+    // add initial payload to testSubscriber values list
+    testSubscriber_->onNext(initialPayload.moveDataToString());
 
-    // output 1 - 100
-    return Flowables::range(1, 100)->map([](int64_t v) {
+    requestStream->map([](auto p) { return p.moveDataToString(); })
+        ->subscribe(testSubscriber_);
+
+    return Flowables::range(1, rangeEnd_)->map([&](int64_t v) {
       std::stringstream ss;
-      ss << "Server stream: " << v;
+      ss << "Responder stream: " << v << " of " << rangeEnd_;
       std::string s = ss.str();
       return Payload(s, "metadata");
     });
   }
-};
 
+  Reference<TestSubscriber<std::string>> getChannelSubscriber() {
+    return testSubscriber_;
+  }
+
+ private:
+  int64_t rangeEnd_;
+  Reference<TestSubscriber<std::string>> testSubscriber_;
+};
 
 TEST(RequestChannelTest, CompleteRequesterResponderContinues) {
+  int64_t responderRange = 100;
+  int64_t responderSubscriberInitialRequest = credits::kNoFlowControl;
+
+  auto responder = std::make_shared<TestChannelResponder>(
+      responderRange, responderSubscriberInitialRequest);
+
   folly::ScopedEventBaseThread worker;
-  auto server = makeServer(std::make_shared<ResponderLongStream>());
+  auto server = makeServer(responder);
   auto client = makeClient(worker.getEventBase(), *server->listeningPort());
   auto requester = client->getRequester();
 
-  auto ts = TestSubscriber<std::string>::create(50);
+  auto requestSubscriber = TestSubscriber<std::string>::create(50);
+  auto responderSubscriber = responder->getChannelSubscriber();
 
-  folly::Baton<> wait_for_on_complete;
+  int64_t requesterRangeEnd = 10;
 
-  auto shortFlowable = Flowable<Payload>::create(
-      [&](Reference<Subscriber<Payload>> subscriber, int64_t) {
-        subscriber->onNext(Payload("some data", "meta"));
-        subscriber->onNext(Payload("more data", "meta"));
-        subscriber->onComplete();
-        wait_for_on_complete.post();
-        return std::make_tuple(int64_t(2), true);
+  auto requesterFlowable =
+      Flowables::range(1, requesterRangeEnd)->map([&](int64_t v) {
+        std::stringstream ss;
+        ss << "Requester stream: " << v << " of " << requesterRangeEnd;
+        std::string s = ss.str();
+        return Payload(s, "metadata");
       });
 
-  requester->requestChannel(shortFlowable)
+  requester->requestChannel(requesterFlowable)
       ->map([](auto p) { return p.moveDataToString(); })
-      ->subscribe(ts);
+      ->subscribe(requestSubscriber);
 
-  // client stream closes before Responder can finish
-  wait_for_on_complete.timed_wait(std::chrono::milliseconds(100));
+  // finish streaming from Requester
+  responderSubscriber->awaitTerminalEvent();
+  responderSubscriber->assertSuccess();
+  responderSubscriber->assertValueCount(10);
+  responderSubscriber->assertValueAt(0, "Requester stream: 1 of 10");
+  responderSubscriber->assertValueAt(9, "Requester stream: 10 of 10");
 
-  ts->request(50);
-
-  ts->awaitTerminalEvent();
-  ts->assertSuccess();
-  ts->assertValueCount(100);
-  ts->assertValueAt(0, "Server stream: 1");
-  ts->assertValueAt(99, "Server stream: 100");
+  // Requester stream is closed, Responder continues
+  requestSubscriber->request(50);
+  requestSubscriber->awaitTerminalEvent();
+  requestSubscriber->assertSuccess();
+  requestSubscriber->assertValueCount(100);
+  requestSubscriber->assertValueAt(0, "Responder stream: 1 of 100");
+  requestSubscriber->assertValueAt(99, "Responder stream: 100 of 100");
 }
-
-
-class ResponderShortStream : public rsocket::RSocketResponder {
- public:
-  yarpl::Reference<Flowable<rsocket::Payload>> handleRequestChannel(
-      rsocket::Payload,
-      yarpl::Reference<Flowable<rsocket::Payload>> requestStream,
-      rsocket::StreamId) override {
-    auto ts = TestSubscriber<std::string>::create();
-    requestStream->map([](auto p) { return p.moveDataToString(); })->subscribe(ts);
-
-    // output 1 - 3
-    return Flowables::range(1, 300)->map([](int64_t v) {
-      std::stringstream ss;
-      ss << "Server stream: " << v;
-      std::string s = ss.str();
-      return Payload(s, "metadata");
-    });
-  }
-};
 
 TEST(RequestChannelTest, CompleteResponderRequesterContinues) {
+  int64_t responderRange = 10;
+  int64_t responderSubscriberInitialRequest = 50;
+
+  auto responder = std::make_shared<TestChannelResponder>(
+      responderRange, responderSubscriberInitialRequest);
+
   folly::ScopedEventBaseThread worker;
-  auto server = makeServer(std::make_shared<ResponderShortStream>());
+  auto server = makeServer(responder);
   auto client = makeClient(worker.getEventBase(), *server->listeningPort());
   auto requester = client->getRequester();
 
-  auto ts = TestSubscriber<std::string>::create();
+  auto requestSubscriber = TestSubscriber<std::string>::create();
+  auto responderSubscriber = responder->getChannelSubscriber();
 
-  auto longFlowable = Flowables::range(1, 3)->map([&](int64_t v) {
-     std::stringstream ss;
-    ss << "Client stream: " << v;
-    std::string s = ss.str();
-    return Payload(s, "metadata");
-  });
+  int64_t requesterRangeEnd = 100;
 
-  requester->requestChannel(longFlowable)
-           ->map([](auto p) { return p.moveDataToString(); })
-           ->subscribe(ts);
+  auto requesterFlowable =
+      Flowables::range(1, requesterRangeEnd)->map([&](int64_t v) {
+        std::stringstream ss;
+        ss << "Requester stream: " << v << " of " << requesterRangeEnd;
+        std::string s = ss.str();
+        return Payload(s, "metadata");
+      });
 
-  // server stream closes before Requester can finish
-  ts->awaitTerminalEvent();
-  ts->assertSuccess();
-//  ts->assertValueCount(3);
-//  ts->assertValueAt(0, "Server stream: 1");
-//  ts->assertValueAt(2, "Server stream: 3");
+  requester->requestChannel(requesterFlowable)
+      ->map([](auto p) { return p.moveDataToString(); })
+      ->subscribe(requestSubscriber);
 
+  // finish streaming from Responder
+  requestSubscriber->awaitTerminalEvent();
+  requestSubscriber->assertSuccess();
+  requestSubscriber->assertValueCount(10);
+  requestSubscriber->assertValueAt(0, "Responder stream: 1 of 10");
+  requestSubscriber->assertValueAt(9, "Responder stream: 10 of 10");
+
+  // Responder stream is closed, Requester continues
+  responderSubscriber->request(50);
+  responderSubscriber->awaitTerminalEvent();
+  responderSubscriber->assertSuccess();
+  responderSubscriber->assertValueCount(100);
+  responderSubscriber->assertValueAt(0, "Requester stream: 1 of 100");
+  responderSubscriber->assertValueAt(99, "Requester stream: 100 of 100");
 }
 
+TEST(RequestChannelTest, FlowControl) {
+  int64_t responderRange = 10;
+  int64_t responderSubscriberInitialRequest = 0;
 
-TEST(RequestChannelTest, FlowControlFromRequesterToResponder) {
+  auto responder = std::make_shared<TestChannelResponder>(
+      responderRange, responderSubscriberInitialRequest);
+
   folly::ScopedEventBaseThread worker;
-  auto server = makeServer(std::make_shared<ResponderLongStream>());
+  auto server = makeServer(responder);
   auto client = makeClient(worker.getEventBase(), *server->listeningPort());
   auto requester = client->getRequester();
 
-  auto ts = TestSubscriber<std::string>::create(25);
+  auto requestSubscriber = TestSubscriber<std::string>::create(1);
+  auto responderSubscriber = responder->getChannelSubscriber();
 
-  auto longFlowable = Flowables::range(1, 100)->map([&](int64_t v) {
-    std::stringstream ss;
-    ss << "Client stream: " << v;
-    std::string s = ss.str();
-    return Payload(s, "metadata");
-  });
+  int64_t requesterRangeEnd = 10;
 
-  requester->requestChannel(longFlowable)
-           ->map([](auto p) { return p.moveDataToString(); })
-           ->subscribe(ts);
+  auto requesterFlowable =
+      Flowables::range(1, requesterRangeEnd)->map([&](int64_t v) {
+        std::stringstream ss;
+        ss << "Requester stream: " << v << " of " << requesterRangeEnd;
+        std::string s = ss.str();
+        return Payload(s, "metadata");
+      });
 
-  ts->awaitValueCount(25);
-  ts->assertValueCount(25);
-  ts->assertValueAt(24, "Server stream: 25");
+  requester->requestChannel(requesterFlowable)
+      ->map([](auto p) { return p.moveDataToString(); })
+      ->subscribe(requestSubscriber);
 
-  ts->request(25);
-  ts->awaitValueCount(50);
-  ts->assertValueCount(50);
-  ts->assertValueAt(49, "Server stream: 50");
+  responderSubscriber->awaitValueCount(1);
+  requestSubscriber->awaitValueCount(1);
 
-  ts->request(25);
-  ts->awaitValueCount(75);
-  ts->assertValueCount(75);
+  for (int i = 2; i <= 10; i++) {
+    requestSubscriber->request(1);
+    responderSubscriber->request(1);
 
-  ts->request(25);
-  ts->awaitTerminalEvent();
-  ts->assertSuccess();
-  ts->assertValueCount(100);
+    responderSubscriber->awaitValueCount(i);
+    requestSubscriber->awaitValueCount(i);
+
+    requestSubscriber->assertValueCount(i);
+    responderSubscriber->assertValueCount(i);
+  }
+
+  requestSubscriber->awaitTerminalEvent();
+  responderSubscriber->awaitTerminalEvent();
+
+  requestSubscriber->assertSuccess();
+  responderSubscriber->assertSuccess();
+
+  requestSubscriber->assertValueAt(0, "Responder stream: 1 of 10");
+  requestSubscriber->assertValueAt(9, "Responder stream: 10 of 10");
+
+  responderSubscriber->assertValueAt(0, "Requester stream: 1 of 10");
+  responderSubscriber->assertValueAt(9, "Requester stream: 10 of 10");
+}
+
+TEST(RequestChannelTest, DISABLED_CancelFromRequester) {
+  int64_t responderRange = 100;
+  int64_t responderSubscriberInitialRequest = 100;
+
+  auto responder = std::make_shared<TestChannelResponder>(
+      responderRange, responderSubscriberInitialRequest);
+
+  folly::ScopedEventBaseThread worker;
+  auto server = makeServer(responder);
+  auto client = makeClient(worker.getEventBase(), *server->listeningPort());
+  auto requester = client->getRequester();
+
+  auto requestSubscriber = TestSubscriber<std::string>::create(100);
+  auto responderSubscriber = responder->getChannelSubscriber();
+
+  int64_t requesterRangeEnd = 100;
+
+  auto requesterFlowable =
+      Flowables::range(1, requesterRangeEnd)->map([&](int64_t v) {
+        std::stringstream ss;
+        ss << "Requester stream: " << v << " of " << requesterRangeEnd;
+        std::string s = ss.str();
+        return Payload(s, "metadata");
+      });
+
+  requester->requestChannel(requesterFlowable)
+      ->map([](auto p) { return p.moveDataToString(); })
+      ->subscribe(requestSubscriber);
+
+  requestSubscriber->awaitValueCount(20);
+  requestSubscriber->cancel();
+
+  responderSubscriber->awaitTerminalEvent();
+
+  // Responder Subscriber should be at 100
+  // Requester Subscriber should be 20 - 30ish, depending on timing
+  LOG(INFO) << "Responder Subscriber: " << responderSubscriber->getValueCount();
+  LOG(INFO) << "Requester Subscriber: " << requestSubscriber->getValueCount();
+
+  // This crashes with a memory error (NULL PTR), I don't think it should?
 
 }
 
-// TODO complete from requester, responder continues
-// TODO complete from responder, requester continues
-// TODO flow control from requester to responder
+class TestChannelResponderFailure : public rsocket::RSocketResponder {
+ public:
+  TestChannelResponderFailure()
+      : testSubscriber_{TestSubscriber<std::string>::create()} {}
 
-// TODO cancel from requester, shuts down
+  yarpl::Reference<Flowable<rsocket::Payload>> handleRequestChannel(
+      rsocket::Payload initialPayload,
+      yarpl::Reference<Flowable<rsocket::Payload>> requestStream,
+      rsocket::StreamId) override {
+    // add initial payload to testSubscriber values list
+    testSubscriber_->onNext(initialPayload.moveDataToString());
 
-// TODO flow control from responder to requester
-// TODO failure on responder, requester sees
-// TODO failure on request, requester sees
-// TODO failure from requester ... what happens?
+    requestStream->map([](auto p) { return p.moveDataToString(); })
+        ->subscribe(testSubscriber_);
+
+    return Flowables::error<Payload>(
+        std::runtime_error("A wild Error appeared!"));
+  }
+
+  Reference<TestSubscriber<std::string>> getChannelSubscriber() {
+    return testSubscriber_;
+  }
+
+ private:
+  Reference<TestSubscriber<std::string>> testSubscriber_;
+};
+
+TEST(RequestChannelTest, FailureOnResponderRequesterSees) {
+  auto responder = std::make_shared<TestChannelResponderFailure>();
+
+  folly::ScopedEventBaseThread worker;
+  auto server = makeServer(responder);
+  auto client = makeClient(worker.getEventBase(), *server->listeningPort());
+  auto requester = client->getRequester();
+
+  auto requestSubscriber = TestSubscriber<std::string>::create();
+  auto responderSubscriber = responder->getChannelSubscriber();
+
+  int64_t requesterRangeEnd = 10;
+
+  auto requesterFlowable =
+      Flowables::range(1, requesterRangeEnd)->map([&](int64_t v) {
+        std::stringstream ss;
+        ss << "Requester stream: " << v << " of " << requesterRangeEnd;
+        std::string s = ss.str();
+        return Payload(s, "metadata");
+      });
+
+  requester->requestChannel(requesterFlowable)
+      ->map([](auto p) { return p.moveDataToString(); })
+      ->subscribe(requestSubscriber);
+
+  // failure streaming from Responder
+  requestSubscriber->awaitTerminalEvent();
+  requestSubscriber->assertOnErrorMessage("A wild Error appeared!");
+
+  responderSubscriber->awaitTerminalEvent();
+  responderSubscriber->assertValueAt(0, "Requester stream: 1 of 10");
+  responderSubscriber->assertValueAt(9, "Requester stream: 10 of 10");
+}
+
+TEST(RequestChannelTest, FailureOnRequestRequesterSees) {
+  // ???
+}
+
+TEST(RequestChannelTest, FailureFromRequester) {
+  // ???
+}
