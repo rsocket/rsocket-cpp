@@ -6,6 +6,8 @@
 #include <mutex>
 #include <utility>
 
+#include <folly/Conv.h>
+
 namespace yarpl {
 namespace flowable {
 namespace details {
@@ -43,7 +45,7 @@ class EmiterSubscription : public Subscription, public Subscriber<T> {
 
   void request(int64_t delta) override {
     if (delta <= 0) {
-      auto message = "request(n): " + std::to_string(delta) + " <= 0";
+      auto message = "request(n): " + folly::to<std::string>(delta) + " <= 0";
       throw std::logic_error(message);
     }
 
