@@ -269,7 +269,7 @@ TEST(RequestChannelTest, FlowControl) {
   responderSubscriber->assertValueAt(9, "Requester stream: 10 of 10");
 }
 
-TEST(RequestChannelTest, DISABLED_CancelFromRequester) {
+TEST(RequestChannelTest, CancelFromRequester) {
   int64_t responderRange = 100;
   int64_t responderSubscriberInitialRequest = 100;
 
@@ -298,10 +298,14 @@ TEST(RequestChannelTest, DISABLED_CancelFromRequester) {
       ->map([](auto p) { return p.moveDataToString(); })
       ->subscribe(requestSubscriber);
 
-  requestSubscriber->awaitValueCount(20);
-  requestSubscriber->cancel();
+  requestSubscriber->awaitValueCount(10);
+
+  worker.getEventBase()->runInEventBaseThread([=]() {
+    requestSubscriber->cancel();
+  });
 
   responderSubscriber->awaitTerminalEvent();
+  EXPECT_LT(requestSubscriber->getValueCount(), 100);
 
   // Responder Subscriber should be at 100
   // Requester Subscriber should be 20 - 30ish, depending on timing
