@@ -41,11 +41,37 @@ std::unique_ptr<RSocketServer> makeResumableServer(
   return rs;
 }
 
+// This server will have no Acceptor, so we will provide the connections
+// to this server. Here is an example:
+//
+// folly::AsyncSocket::UniquePtr sock : <given as parameter>
+// shared_ptr<RSocketServiceHandler> serviceHandler : <given as parameter>
+//
+// auto connection = std::make_unique<TcpDuplexConnection>(std::move(socket));
+//
+// server->acceptConnection(
+//    std::move(connection), dummyEventBase, serviceHandler);
+//
+std::unique_ptr<RSocketServer> makeServerWithNoAcceptor() {
+  // Note that we have no Acceptor but we still have all rest in the created
+  // server, like ConnectionManager instance.
+  return RSocket::createServer(nullptr);
+}
+
 folly::Future<std::unique_ptr<RSocketClient>> makeClientAsync(
     folly::EventBase* eventBase,
     uint16_t port) {
   CHECK(eventBase);
   return RSocket::createConnectedClient(getConnFactory(eventBase, port));
+}
+
+// If we already have a connection, we can utilize it.
+folly::Future<std::unique_ptr<RSocketClient>> makeClientFromConnectionAsync(
+    folly::AsyncSocket::UniquePtr socket,
+    folly::EventBase& eventBase) {
+  auto dupCon =
+      TcpConnectionFactory::createDuplexConnectionFromSocket(std::move(socket));
+  return RSocket::createClientFromConnection(std::move(dupCon), eventBase);
 }
 
 std::unique_ptr<RSocketClient> makeClient(
@@ -54,18 +80,24 @@ std::unique_ptr<RSocketClient> makeClient(
   return makeClientAsync(eventBase, port).get();
 }
 
+std::unique_ptr<RSocketClient> makeClientFromConnection(
+    folly::AsyncSocket::UniquePtr socket,
+    folly::EventBase& eventBase) {
+  return makeClientFromConnectionAsync(std::move(socket), eventBase).get();
+}
+
 namespace {
 struct DisconnectedResponder : public rsocket::RSocketResponder {
-  DisconnectedResponder() {}
-
-  yarpl::Reference<yarpl::single::Single<rsocket::Payload>>
-  handleRequestResponse(rsocket::Payload, rsocket::StreamId) override {
+  yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
+  handleRequestStream(rsocket::Payload, rsocket::StreamId) override {
     CHECK(false);
     return nullptr;
   }
 
-  yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
-  handleRequestStream(rsocket::Payload, rsocket::StreamId) override {
+  DisconnectedResponder() {}
+
+  yarpl::Reference<yarpl::single::Single<rsocket::Payload>>
+  handleRequestResponse(rsocket::Payload, rsocket::StreamId) override {
     CHECK(false);
     return nullptr;
   }
@@ -89,12 +121,11 @@ struct DisconnectedResponder : public rsocket::RSocketResponder {
 
   ~DisconnectedResponder() {}
 };
-}
+} // namespace
 
 std::unique_ptr<RSocketClient> makeDisconnectedClient(
     folly::EventBase* eventBase) {
-  auto server =
-      makeServer(std::make_shared<DisconnectedResponder>());
+  auto server = makeServer(std::make_shared<DisconnectedResponder>());
 
   auto client = makeClient(eventBase, *server->listeningPort());
   client->disconnect().get();

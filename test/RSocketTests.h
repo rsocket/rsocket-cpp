@@ -23,6 +23,8 @@ std::unique_ptr<RSocketServer> makeServer(
 std::unique_ptr<RSocketServer> makeResumableServer(
     std::shared_ptr<RSocketServiceHandler> serviceHandler);
 
+std::unique_ptr<RSocketServer> makeServerWithNoAcceptor();
+
 std::unique_ptr<RSocketClient> makeClient(
     folly::EventBase* eventBase,
     uint16_t port);
@@ -46,6 +48,13 @@ std::unique_ptr<RSocketClient> makeColdResumableClient(
     std::shared_ptr<ResumeManager> resumeManager,
     std::shared_ptr<ColdResumeHandler> resumeHandler);
 
+std::unique_ptr<RSocketClient> makeClientFromConnection(
+    folly::AsyncSocket::UniquePtr socket,
+    folly::EventBase& eventBase);
+
+folly::Future<std::unique_ptr<RSocketClient>> makeClientFromConnectionAsync(
+    folly::AsyncSocket::UniquePtr socket,
+    folly::EventBase& eventBase);
 } // namespace client_server
 } // namespace tests
 } // namespace rsocket
