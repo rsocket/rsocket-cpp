@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "test/test_utils/ColdResumeManager.h"
+#include "ColdResumeManager.h"
 
 namespace rsocket {
 

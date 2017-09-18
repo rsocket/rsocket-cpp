@@ -51,8 +51,8 @@ class RSocketRequester {
    * Interaction model details can be found at
    * https://github.com/ReactiveSocket/reactivesocket/blob/master/Protocol.md#request-stream
    */
-  virtual yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>> requestStream(
-      rsocket::Payload request);
+  virtual yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
+  requestStream(rsocket::Payload request);
 
   /**
    * Start a channel (streams in both directions).
@@ -60,7 +60,8 @@ class RSocketRequester {
    * Interaction model details can be found at
    * https://github.com/ReactiveSocket/reactivesocket/blob/master/Protocol.md#request-channel
    */
-  virtual yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>> requestChannel(
+  virtual yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
+  requestChannel(
       yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>> requests);
 
   /**
@@ -69,8 +70,8 @@ class RSocketRequester {
    * Interaction model details can be found at
    * https://github.com/ReactiveSocket/reactivesocket/blob/master/Protocol.md#stream-sequences-request-response
    */
-  virtual yarpl::Reference<yarpl::single::Single<rsocket::Payload>> requestResponse(
-      rsocket::Payload request);
+  virtual yarpl::Reference<yarpl::single::Single<rsocket::Payload>>
+  requestResponse(rsocket::Payload request);
 
   /**
    * Send a single Payload with no response.

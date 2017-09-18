@@ -125,7 +125,7 @@ TEST(RequestStreamTest, OperationsAfterCancel) {
         batons.clientFinished.post();
       }));
 
-  // shouldn't recieve 'bar', we canceled syncronously with the Subscriber
+  // shouldn't receive 'bar', we canceled syncronously with the Subscriber
   // had 'cancel' been called in a different thread with no synchronization,
   // the client's Subscriber _could_ have received 'bar'
 
