@@ -196,11 +196,11 @@ void RSocketStateMachine::close(
   }
 
   closeStreams(signal);
-  closeFrameTransport(std::move(ex), signal);
+  closeFrameTransport(ex, signal);
 
   auto connectionEvents = std::move(connectionEvents_);
   if (connectionEvents) {
-    connectionEvents->onClosed(ex);
+    connectionEvents->onClosed(std::move(ex));
   }
 
   if (auto set = connectionSet_.lock()) {
