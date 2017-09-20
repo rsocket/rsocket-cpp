@@ -513,7 +513,7 @@ void RSocketStateMachine::handleConnectionFrame(
           resumeCallback_) {
         auto resumeCallback = std::move(resumeCallback_);
         resumeCallback->onResumeError(
-            ResumptionException(frame.payload_.moveDataToString()));
+            ResumptionException(frame.payload_.cloneDataToString()));
         // fall through
       }
 
