@@ -2,9 +2,148 @@
 
 #include "ColdResumeManager.h"
 
+#include <fstream>
+
+#include <folly/json.h>
+
+namespace {
+const std::string FIRST_SENT_POSITION = "FirstSentPosition";
+const std::string LAST_SENT_POSITION = "LastSentPosition";
+const std::string IMPLIED_POSITION = "ImpliedPosition";
+const std::string LARGEST_USED_STREAMID = "LargestUsedStreamId";
+const std::string STREAM_RESUME_INFOS = "StreamResumeInfos";
+const std::string FRAMES = "Frames";
+const std::string STREAM_TYPE = "StreamType";
+const std::string REQUESTER = "Requester";
+const std::string STREAM_TOKEN = "StreamToken";
+const std::string PROD_ALLOWANCE = "ProducerAllowance";
+const std::string CONS_ALLOWANCE = "ConsumerAllowance";
+}
+
 namespace rsocket {
 
-ColdResumeManager::~ColdResumeManager() {}
+ColdResumeManager::ColdResumeManager(
+    std::shared_ptr<RSocketStats> stats,
+    std::string inputFile,
+    std::string outputFile)
+    : WarmResumeManager(std::move(stats)), outputFile_(outputFile) {
+  if (inputFile.empty()) {
+    return;
+  }
+  LOG(INFO) << "Reading state from " << inputFile;
+
+  try {
+    std::ifstream f(inputFile);
+    std::stringstream buffer;
+    buffer << f.rdbuf();
+    auto state = folly::parseJson(buffer.str());
+    f.close();
+
+    if (!state.isObject() || state.size() != 6) {
+      throw std::runtime_error(
+          "Invalid file content.  Expected dynamic object of 6 elements");
+    }
+
+    if (state.count(FIRST_SENT_POSITION) != 1 ||
+        state.count(LAST_SENT_POSITION) != 1 ||
+        state.count(IMPLIED_POSITION) != 1 ||
+        state.count(LARGEST_USED_STREAMID) != 1 ||
+        state.count(STREAM_RESUME_INFOS) != 1 || state.count(FRAMES) != 1) {
+      throw std::runtime_error("Invalid file content.  Keys Missing");
+    }
+
+    firstSentPosition_ = state[FIRST_SENT_POSITION].getInt();
+    lastSentPosition_ = state[LAST_SENT_POSITION].getInt();
+    impliedPosition_ = state[IMPLIED_POSITION].getInt();
+    largestUsedStreamId_ = state[LARGEST_USED_STREAMID].getInt();
+
+    for (const auto& item : state[STREAM_RESUME_INFOS].items()) {
+      auto streamId = folly::to<int64_t>(item.first.getString());
+      auto streamResumeInfoObj = item.second;
+      if (streamResumeInfoObj.count(STREAM_TYPE) != 1 ||
+          streamResumeInfoObj.count(STREAM_TOKEN) != 1 ||
+          streamResumeInfoObj.count(PROD_ALLOWANCE) != 1 ||
+          streamResumeInfoObj.count(CONS_ALLOWANCE) != 1 ||
+          streamResumeInfoObj.count(CONS_ALLOWANCE) != 1) {
+        throw std::runtime_error(
+            "Invalid file content.  StreamResumeInfo Keys Missing");
+      }
+      StreamResumeInfo streamResumeInfo(
+          static_cast<StreamType>(streamResumeInfoObj[STREAM_TYPE].getInt()),
+          static_cast<RequestOriginator>(
+              streamResumeInfoObj[REQUESTER].getInt()),
+          streamResumeInfoObj[STREAM_TOKEN].getString());
+      streamResumeInfo.producerAllowance =
+          streamResumeInfoObj[PROD_ALLOWANCE].getInt();
+      streamResumeInfo.consumerAllowance =
+          streamResumeInfoObj[CONS_ALLOWANCE].getInt();
+      streamResumeInfos_.emplace(streamId, std::move(streamResumeInfo));
+    }
+
+    auto framesObj = state[FRAMES];
+    if (!framesObj.isArray()) {
+      throw std::runtime_error(
+          "Invalid file content. Frames not in right format");
+    }
+
+    for (const auto& item : framesObj) {
+      if (!item.isObject() || item.size() != 1) {
+        throw std::runtime_error(
+            "Invalid file content.  Expected dynamic object of 1 element");
+      }
+      auto ioBuf = folly::IOBuf::copyBuffer(
+          item.values().begin()->getString().c_str(),
+          item.values().begin()->getString().size());
+      frames_.emplace_back(
+          folly::to<int64_t>(item.keys().begin()->getString()),
+          std::move(ioBuf));
+    }
+  } catch (const std::exception& ex) {
+    throw std::runtime_error(
+        folly::sformat("Failed parsing file {}. {}", inputFile, ex.what()));
+  }
+}
+
+ColdResumeManager::~ColdResumeManager() {
+  VLOG(1) << "~ColdResumeManager";
+  if (outputFile_.empty()) {
+    return;
+  }
+  LOG(INFO) << "Persisting state to " << outputFile_;
+  try {
+    folly::dynamic state = folly::dynamic::object();
+    state[FIRST_SENT_POSITION] = firstSentPosition_;
+    state[LAST_SENT_POSITION] = lastSentPosition_;
+    state[IMPLIED_POSITION] = impliedPosition_;
+    state[LARGEST_USED_STREAMID] = largestUsedStreamId_;
+    state[STREAM_RESUME_INFOS] = folly::dynamic::object();
+    for (const auto& streamResumeInfo : streamResumeInfos_) {
+      folly::dynamic val = folly::dynamic::object();
+      val[STREAM_TYPE] = folly::to<int>(streamResumeInfo.second.streamType);
+      val[STREAM_TOKEN] = streamResumeInfo.second.streamToken;
+      val[REQUESTER] = folly::to<int>(streamResumeInfo.second.requester);
+      val[CONS_ALLOWANCE] = streamResumeInfo.second.consumerAllowance;
+      val[PROD_ALLOWANCE] = streamResumeInfo.second.producerAllowance;
+      state[STREAM_RESUME_INFOS].insert(
+          folly::to<std::string>(streamResumeInfo.first), val);
+    }
+    state[FRAMES] = folly::dynamic::array();
+    for (const auto& frame : frames_) {
+      state[FRAMES].push_back(folly::dynamic::object(
+          folly::to<std::string>(frame.first),
+          frame.second->moveToFbString().toStdString()));
+    }
+    std::string jsonState = folly::toPrettyJson(state);
+    std::ofstream f(outputFile_);
+    f << jsonState;
+    f.close();
+  } catch (const std::exception& ex) {
+    LOG(ERROR) << "Persisting state to " << outputFile_ << " failed. "
+               << ex.what();
+    return;
+  }
+  LOG(INFO) << "Done persisting state to " << outputFile_;
+}
 
 void ColdResumeManager::trackReceivedFrame(
     size_t frameLength,

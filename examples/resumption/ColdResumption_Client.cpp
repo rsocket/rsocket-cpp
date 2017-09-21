@@ -103,68 +103,100 @@ int main(int argc, char* argv[]) {
   folly::ScopedEventBaseThread worker;
 
   auto token = ResumeIdentificationToken::generateNew();
-  auto resumeManager =
-      std::make_shared<ColdResumeManager>(RSocketStats::noop());
 
   std::string firstPayload = "First";
   std::string secondPayload = "Second";
   std::string thirdPayload = "Third";
 
   {
-    auto firstSub = yarpl::make_ref<HelloSubscriber>();
-    auto coldResumeHandler = std::make_shared<HelloResumeHandler>(
-        HelloSubscribers({{firstPayload, firstSub}}));
-    auto firstClient = RSocket::createConnectedClient(
-                           getConnFactory(worker.getEventBase()),
-                           getSetupParams(token),
-                           nullptr, // responder
-                           nullptr, // keepAliveTimer
-                           nullptr, // stats
-                           nullptr, // connectionEvents
-                           resumeManager,
-                           coldResumeHandler)
-                           .get();
-    firstClient->getRequester()
-        ->requestStream(Payload(firstPayload))
-        ->subscribe(firstSub);
-    firstSub->request(7);
-    while (firstSub->rcvdCount() < 3) {
-      std::this_thread::yield();
+    auto resumeManager = std::make_shared<ColdResumeManager>(
+        RSocketStats::noop(),
+        "" /* inputFile */,
+        "/tmp/firstResumption.json" /* outputFile */);
+    {
+      auto firstSub = yarpl::make_ref<HelloSubscriber>();
+      auto coldResumeHandler = std::make_shared<HelloResumeHandler>(
+          HelloSubscribers({{firstPayload, firstSub}}));
+      auto firstClient = RSocket::createConnectedClient(
+                             getConnFactory(worker.getEventBase()),
+                             getSetupParams(token),
+                             nullptr, // responder
+                             nullptr, // keepAliveTimer
+                             nullptr, // stats
+                             nullptr, // connectionEvents
+                             resumeManager,
+                             coldResumeHandler)
+                             .get();
+      firstClient->getRequester()
+          ->requestStream(Payload(firstPayload))
+          ->subscribe(firstSub);
+      firstSub->request(7);
+      while (firstSub->rcvdCount() < 3) {
+        std::this_thread::yield();
+      }
+      firstClient->disconnect(std::runtime_error("disconnect from client"));
     }
-    firstClient->disconnect(std::runtime_error("disconnect from client"));
+    worker.getEventBase()
+        ->runInEventBaseThreadAndWait([resumeManager = resumeManager](){
+            // ResumeManager can get destroyed in current thread or the worker
+            // thread driving the client (depending on scheduling).  In case
+            // ~ResumeManager is getting scheduled in worker thread, we dont
+            // want to create the second ResumeManager before the first
+            // ResumeManager has got a chance to write to file in
+            // ~ResumeManager.  So ensure ResumeManager gets destroyed before
+            // we exit the scope.  The reason we have to do this is because
+            // RSocketClient destruction can proceed asynchronously on the
+            // worker thread, while this thread continues on to the next scope.
+            // This scheduled event ensures that ResumeManager gets destroyed
+            // after RSocketClient has destroyed.  And then we exit the scope.
+        });
   }
 
   LOG(INFO) << "============== First Cold Resumption ================";
 
   {
-    auto firstSub = yarpl::make_ref<HelloSubscriber>();
-    auto coldResumeHandler = std::make_shared<HelloResumeHandler>(
-        HelloSubscribers({{firstPayload, firstSub}}));
-    auto secondClient = RSocket::createResumedClient(
-                            getConnFactory(worker.getEventBase()),
-                            token,
-                            resumeManager,
-                            coldResumeHandler)
-                            .get();
+    auto resumeManager = std::make_shared<ColdResumeManager>(
+        RSocketStats::noop(),
+        "/tmp/firstResumption.json" /* inputFile */,
+        "/tmp/secondResumption.json" /* outputFile */);
+    {
+      auto firstSub = yarpl::make_ref<HelloSubscriber>();
+      auto coldResumeHandler = std::make_shared<HelloResumeHandler>(
+          HelloSubscribers({{firstPayload, firstSub}}));
+      auto secondClient = RSocket::createResumedClient(
+                              getConnFactory(worker.getEventBase()),
+                              token,
+                              resumeManager,
+                              coldResumeHandler)
+                              .get();
 
-    firstSub->request(3);
+      firstSub->request(3);
 
-    // Create another stream to verify StreamIds are set properly after
-    // resumption
-    auto secondSub = yarpl::make_ref<HelloSubscriber>();
-    secondClient->getRequester()
-        ->requestStream(Payload(secondPayload))
-        ->subscribe(secondSub);
-    secondSub->request(5);
-    firstSub->request(4);
-    while (secondSub->rcvdCount() < 1) {
-      std::this_thread::yield();
+      // Create another stream to verify StreamIds are set properly after
+      // resumption
+      auto secondSub = yarpl::make_ref<HelloSubscriber>();
+      secondClient->getRequester()
+          ->requestStream(Payload(secondPayload))
+          ->subscribe(secondSub);
+      secondSub->request(5);
+      firstSub->request(4);
+      while (secondSub->rcvdCount() < 1) {
+        std::this_thread::yield();
+      }
     }
+    worker.getEventBase()
+        ->runInEventBaseThreadAndWait([resumeManager = resumeManager](){
+            // Refer to comments in the above scope.
+        });
   }
 
   LOG(INFO) << "============== Second Cold Resumption ================";
 
   {
+    auto resumeManager = std::make_shared<ColdResumeManager>(
+        RSocketStats::noop(),
+        "/tmp/secondResumption.json" /* inputFile */,
+        "" /* outputFile */);
     auto firstSub = yarpl::make_ref<HelloSubscriber>();
     auto secondSub = yarpl::make_ref<HelloSubscriber>();
     auto coldResumeHandler =
