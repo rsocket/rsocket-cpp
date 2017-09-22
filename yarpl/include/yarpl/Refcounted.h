@@ -53,6 +53,9 @@ struct set_reference_name;
 template <typename T>
 class Reference;
 
+template <typename T>
+class AtomicReference;
+
 /// Base of refcounted objects.  The intention is the same as that
 /// of boost::intrusive_ptr<>, except that we have virtual methods
 /// anyway, and want to avoid argument-dependent lookup.
@@ -73,6 +76,9 @@ class Refcounted {
  private:
   template <typename U>
   friend class Reference;
+  template <typename U>
+  friend class AtomicReference;
+
 #ifdef YARPL_REFCOUNT_DEBUGGING
   friend struct detail::set_reference_name;
 #endif
@@ -117,10 +123,13 @@ struct set_reference_name {
 /// constructed against a target refcounted object increases its count by 1
 /// during its lifetime.
 template <typename T>
-class Reference {
+class Reference final {
  public:
   template <typename U>
   friend class Reference;
+
+  template <typename U>
+  friend class AtomicReference;
 
   Reference() = default;
   inline /* implicit */ Reference(std::nullptr_t) {}
@@ -130,7 +139,9 @@ class Reference {
     // newly constructed object in `make_ref` already had a refcount of 1,
     // so don't increment it (we take 'ownership' of the reference made in
     // make_ref)
-    assert(pointer->Refcounted::count() >= 1);
+    if(pointer) {
+      assert(pointer->Refcounted::count() >= 1);
+    }
   }
   explicit Reference(T* pointer, detail::do_initial_refcount_check)
       : pointer_(pointer) {
@@ -152,9 +163,11 @@ class Reference {
      * the check below prevents (at runtime) taking a reference in situations
      * like this
      */
-    assert(
-        pointer->count() >= 1 &&
-        "can't take an additional reference to something with a zero refcount");
+    if(pointer) {
+      assert(
+          pointer->Refcounted::count() >= 1 &&
+          "can't take an additional reference to something with a zero refcount");
+    }
     inc();
   }
 
@@ -180,6 +193,14 @@ class Reference {
   template <typename U>
   Reference(Reference<U>&& other) : pointer_(other.pointer_) {
     other.pointer_ = nullptr;
+  }
+
+  Reference(AtomicReference<T> const& other) : pointer_(other.pointer_) {
+    inc();
+  }
+
+  Reference(AtomicReference<T>&& other) {
+    pointer_ = other.pointer_.exchange(nullptr);
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -263,6 +284,97 @@ class Reference {
   }
 
   T* pointer_{nullptr};
+};
+
+template <typename T>
+class AtomicReference final {
+  template <typename U>
+  friend class AtomicReference;
+  template <typename U>
+  friend class Reference;
+
+ public:
+  AtomicReference() = default;
+  AtomicReference(Reference<T> const& other) : pointer_(other.pointer_) {
+    inc();
+  }
+  AtomicReference(AtomicReference<T> const& other) : pointer_(other.pointer_.load()) {
+    inc();
+  }
+
+  template <typename U>
+  AtomicReference(Reference<U>&& other) : pointer_(other.pointer_) {
+    other.pointer_ = nullptr;
+  }
+
+  ~AtomicReference() {
+    dec();
+  }
+
+  template <typename U>
+  AtomicReference& operator=(Reference<U>&& other) {
+    return assign(std::move(other));
+  }
+
+  Reference<T> load() {
+    return Reference<T>(*this);
+  }
+
+  Reference<T> exchange(Reference<T> other) {
+    T* old = pointer_.exchange(other.get());
+    inc();
+    Reference<T> r{old, detail::skip_initial_refcount_check{}};
+    return r;
+  }
+
+  void store(Reference<T> const& other) {
+    dec();
+    pointer_.store(other.get());
+    inc();
+  }
+
+  explicit operator bool() const {
+    return pointer_;
+  }
+
+  T* operator->() const {
+    return pointer_;
+  }
+
+ private:
+  template <typename U>
+  AtomicReference& assign(AtomicReference<U>&& other) {
+    other.pointer_.store(pointer_.exchange(other.pointer_.load()));
+    return *this;
+  }
+
+  template <typename U>
+  AtomicReference& assign(Reference<U>&& other) {
+    AtomicReference<U> atomic_other{std::forward<Reference<U>>(other)};
+    return assign(std::move(atomic_other));
+  }
+
+  void inc() {
+    static_assert(
+        std::is_base_of<Refcounted, T>::value,
+        "Reference must be used with types that virtually derive Refcounted");
+
+    if (auto p = pointer_.load()) {
+      p->incRef();
+    }
+  }
+
+  void dec() {
+    static_assert(
+        std::is_base_of<Refcounted, T>::value,
+        "Reference must be used with types that virtually derive Refcounted");
+
+    if (auto p = pointer_.load()) {
+      p->decRef();
+    }
+  }
+
+  std::atomic<T*> pointer_{nullptr};
 };
 
 template <typename T, typename U>

@@ -10,6 +10,7 @@
 
 using yarpl::Refcounted;
 using yarpl::Reference;
+using yarpl::AtomicReference;
 using yarpl::flowable::Subscriber;
 
 namespace {
@@ -19,6 +20,11 @@ class MySubscriber : public Subscriber<T> {
   void onNext(T) override {}
 };
 }
+
+struct MyRefcounted : virtual Refcounted {
+  MyRefcounted(int i) : i(i) {}
+  int i;
+};
 
 TEST(ReferenceTest, Upcast) {
   Reference<MySubscriber<int>> derived = yarpl::make_ref<MySubscriber<int>>();
@@ -36,7 +42,7 @@ TEST(ReferenceTest, Upcast) {
   base4 = std::move(derivedCopy2);
 }
 
-TEST(RefcountedTest, CopyAssign) {
+TEST(ReferenceTest, CopyAssign) {
   using Sub = MySubscriber<int>;
   Reference<Sub> a = yarpl::make_ref<Sub>();
   Reference<Sub> b(a);
@@ -49,7 +55,7 @@ TEST(RefcountedTest, CopyAssign) {
   EXPECT_EQ(c, b);
 }
 
-TEST(RefcountedTest, MoveAssign) {
+TEST(ReferenceTest, MoveAssign) {
   using Sub = MySubscriber<int>;
   Reference<Sub> a = yarpl::make_ref<Sub>();
   Reference<Sub> b(std::move(a));
@@ -62,7 +68,7 @@ TEST(RefcountedTest, MoveAssign) {
   EXPECT_EQ(1u, c->count());
 }
 
-TEST(RefcountedTest, MoveAssignTemplate) {
+TEST(ReferenceTest, MoveAssignTemplate) {
   using Sub = MySubscriber<int>;
   Reference<Sub> a = yarpl::make_ref<Sub>();
   Reference<Sub> b(a);
@@ -70,4 +76,36 @@ TEST(RefcountedTest, MoveAssignTemplate) {
   using Sub2 = MySubscriber<int>;
   b = yarpl::make_ref<Sub2>();
   EXPECT_EQ(1u, a->count());
+}
+
+TEST(ReferenceTest, Atomic) {
+  auto a = yarpl::make_ref<MyRefcounted>(1);
+  AtomicReference<MyRefcounted> b = a;
+  EXPECT_EQ(2u, a->count());
+  EXPECT_EQ(2u, b->count()); // b and a point to same object
+  EXPECT_EQ(1, a->i);
+  EXPECT_EQ(1, b->i);
+
+  auto c = yarpl::make_ref<MyRefcounted>(2);
+  {
+    auto a_copy = b.exchange(c);
+    EXPECT_EQ(2, b->i);
+    EXPECT_EQ(2u, a->count());
+    EXPECT_EQ(2u, a_copy->count());
+    EXPECT_EQ(1, a_copy->i);
+  }
+  EXPECT_EQ(1u, a->count()); // a_copy destroyed
+
+  EXPECT_EQ(2u, c->count());
+  EXPECT_EQ(2u, b->count()); // b and c point to same object
+}
+
+TEST(ReferenceTest, Construction) {
+  AtomicReference<MyRefcounted> a{yarpl::make_ref<MyRefcounted>(1)};
+  EXPECT_EQ(1u, a->count());
+  EXPECT_EQ(1, a->i);
+
+  AtomicReference<MyRefcounted> b = yarpl::make_ref<MyRefcounted>(2);
+  EXPECT_EQ(1u, b->count());
+  EXPECT_EQ(2, b->i);
 }
