@@ -58,7 +58,18 @@ class Observers {
         Observer<T>>(std::move(next), std::move(error), std::move(complete));
   }
 
+  template <typename T>
+  static auto createNull() {
+    return make_ref<NullObserver<T>>();
+  }
+
  private:
+  template <typename T>
+  class NullObserver : public Observer<T> {
+   public:
+    void onNext(T value) {}
+  };
+
   template <typename T, typename Next>
   class Base : public Observer<T> {
    public:

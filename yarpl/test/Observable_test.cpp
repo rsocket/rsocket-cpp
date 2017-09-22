@@ -639,3 +639,80 @@ TEST(Observable, DISABLED_CancelSubscriptionChain) {
 
   LOG(INFO) << "cancelled after " << emitted << " items";
 }
+
+TEST(Observable, DoOnSubscribeTest) {
+  auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
+    obs->onComplete();
+  });
+
+  MockFunction<void()> checkpoint;
+  EXPECT_CALL(checkpoint, Call());
+
+  a->doOnSubscribe([&]{checkpoint.Call();})->subscribe();
+}
+
+TEST(Observable, DoOnNextTest) {
+  std::vector<int64_t> values;
+  auto observable = Observables::range(10, 14)->doOnNext([&](int64_t v) { values.push_back(v);});
+  auto values2 = run(std::move(observable));
+  EXPECT_EQ(values, values2);
+}
+
+TEST(Observable, DoOnErrorTest) {
+  auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
+    obs->onError(std::runtime_error("something broke!"));
+  });
+
+  MockFunction<void()> checkpoint;
+  EXPECT_CALL(checkpoint, Call());
+
+  a->doOnError([&](auto){checkpoint.Call();})->subscribe();
+}
+
+TEST(Observable, DoOnTerminateTest) {
+  auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
+    obs->onComplete();
+  });
+
+  MockFunction<void()> checkpoint;
+  EXPECT_CALL(checkpoint, Call());
+
+  a->doOnTerminate([&](){checkpoint.Call();})->subscribe();
+}
+
+TEST(Observable, DoOnTerminate2Test) {
+  auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
+    obs->onError(std::runtime_error("something broke!"));
+  });
+
+  MockFunction<void()> checkpoint;
+  EXPECT_CALL(checkpoint, Call());
+
+  a->doOnTerminate([&](){checkpoint.Call();})->subscribe();
+}
+
+TEST(Observable, DoOnEachTest) {
+  auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
+    obs->onNext(5);
+    obs->onError(std::runtime_error("something broke!"));
+  });
+
+  MockFunction<void()> checkpoint;
+  EXPECT_CALL(checkpoint, Call()).Times(2);
+  a->doOnEach([&](){checkpoint.Call();})->subscribe();
+}
+
+TEST(Observable, DoOnTest) {
+  auto a = Observable<int>::create([](Reference<Observer<int>> obs) {
+    obs->onNext(5);
+    obs->onError(std::runtime_error("something broke!"));
+  });
+
+  MockFunction<void()> checkpoint1;
+  EXPECT_CALL(checkpoint1, Call());
+  MockFunction<void()> checkpoint2;
+  EXPECT_CALL(checkpoint2, Call());
+
+  a->doOn([&](int value) { checkpoint1.Call();
+  EXPECT_EQ(value, 5); }, []{FAIL();}, [&](auto){checkpoint2.Call();})->subscribe();
+}

@@ -66,6 +66,7 @@ add_library(
         include/yarpl/observable/Observable.h
         include/yarpl/observable/Observables.h
         include/yarpl/observable/ObservableOperator.h
+        include/yarpl/observable/ObservableDoOperator.h
         include/yarpl/observable/Observer.h
         include/yarpl/observable/Observers.h
         include/yarpl/observable/Subscription.h

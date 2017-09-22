@@ -540,3 +540,5 @@ class FromPublisherOperator : public Observable<T> {
 };
 }
 }
+
+#include "yarpl/observable/ObservableDoOperator.h"
