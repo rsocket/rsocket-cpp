@@ -20,14 +20,9 @@ class ColdResumeManager : public WarmResumeManager {
   // If inputFile is provided, the ColdResumeManager will read state from the
   // file, else it will start with a clean state.
   // The constructor will throw if there is an error reading from the inputFile.
-  // If outputFile is provided, the ColdResumeManager will write to the
-  // outputFile upon destruction.
   ColdResumeManager(
       std::shared_ptr<RSocketStats> stats,
-      std::string inputFile = "",
-      std::string outputFile = "");
-
-  ~ColdResumeManager();
+      std::string inputFile = "");
 
   void trackReceivedFrame(
       size_t frameLength,
@@ -57,9 +52,11 @@ class ColdResumeManager : public WarmResumeManager {
     return largestUsedStreamId_;
   }
 
+  // Persist resumption state to outputFile.  Will throw if write fails.
+  void persistState(std::string outputFile);
+
  private:
   StreamResumeInfos streamResumeInfos_;
-  std::string outputFile_;
 
   // Largest used StreamId so far.
   StreamId largestUsedStreamId_{0};

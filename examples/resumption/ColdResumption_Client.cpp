@@ -110,9 +110,7 @@ int main(int argc, char* argv[]) {
 
   {
     auto resumeManager = std::make_shared<ColdResumeManager>(
-        RSocketStats::noop(),
-        "" /* inputFile */,
-        "/tmp/firstResumption.json" /* outputFile */);
+        RSocketStats::noop(), "" /* inputFile */);
     {
       auto firstSub = yarpl::make_ref<HelloSubscriber>();
       auto coldResumeHandler = std::make_shared<HelloResumeHandler>(
@@ -136,19 +134,14 @@ int main(int argc, char* argv[]) {
       }
       firstClient->disconnect(std::runtime_error("disconnect from client"));
     }
-    worker.getEventBase()
-        ->runInEventBaseThreadAndWait([resumeManager = resumeManager](){
-            // ResumeManager can get destroyed in current thread or the worker
-            // thread driving the client (depending on scheduling).  In case
-            // ~ResumeManager is getting scheduled in worker thread, we dont
-            // want to create the second ResumeManager before the first
-            // ResumeManager has got a chance to write to file in
-            // ~ResumeManager.  So ensure ResumeManager gets destroyed before
-            // we exit the scope.  The reason we have to do this is because
-            // RSocketClient destruction can proceed asynchronously on the
-            // worker thread, while this thread continues on to the next scope.
-            // This scheduled event ensures that ResumeManager gets destroyed
-            // after RSocketClient has destroyed.  And then we exit the scope.
+    worker.getEventBase()->runInEventBaseThreadAndWait(
+        [resumeManager = std::move(resumeManager)]() {
+          // We want to persist state after RSocketStateMachine of the client
+          // has been completely destroyed and before we start the next scope.
+          // Since the RSocketStateMachine's destruction proceeds
+          // asynchronously in worker thread, we have to schedule the
+          // persistence in the worker thread.
+          resumeManager->persistState("/tmp/firstResumption.json");
         });
   }
 
@@ -156,9 +149,7 @@ int main(int argc, char* argv[]) {
 
   {
     auto resumeManager = std::make_shared<ColdResumeManager>(
-        RSocketStats::noop(),
-        "/tmp/firstResumption.json" /* inputFile */,
-        "/tmp/secondResumption.json" /* outputFile */);
+        RSocketStats::noop(), "/tmp/firstResumption.json" /* inputFile */);
     {
       auto firstSub = yarpl::make_ref<HelloSubscriber>();
       auto coldResumeHandler = std::make_shared<HelloResumeHandler>(
@@ -184,9 +175,10 @@ int main(int argc, char* argv[]) {
         std::this_thread::yield();
       }
     }
-    worker.getEventBase()
-        ->runInEventBaseThreadAndWait([resumeManager = resumeManager](){
-            // Refer to comments in the above scope.
+    worker.getEventBase()->runInEventBaseThreadAndWait(
+        [resumeManager = std::move(resumeManager)]() {
+          // Refer to comments in the above scope.
+          resumeManager->persistState("/tmp/secondResumption.json");
         });
   }
 
@@ -194,9 +186,7 @@ int main(int argc, char* argv[]) {
 
   {
     auto resumeManager = std::make_shared<ColdResumeManager>(
-        RSocketStats::noop(),
-        "/tmp/secondResumption.json" /* inputFile */,
-        "" /* outputFile */);
+        RSocketStats::noop(), "/tmp/secondResumption.json" /* inputFile */);
     auto firstSub = yarpl::make_ref<HelloSubscriber>();
     auto secondSub = yarpl::make_ref<HelloSubscriber>();
     auto coldResumeHandler =

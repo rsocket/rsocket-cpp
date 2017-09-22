@@ -7,26 +7,25 @@
 #include <folly/json.h>
 
 namespace {
-const std::string FIRST_SENT_POSITION = "FirstSentPosition";
-const std::string LAST_SENT_POSITION = "LastSentPosition";
-const std::string IMPLIED_POSITION = "ImpliedPosition";
-const std::string LARGEST_USED_STREAMID = "LargestUsedStreamId";
-const std::string STREAM_RESUME_INFOS = "StreamResumeInfos";
-const std::string FRAMES = "Frames";
-const std::string STREAM_TYPE = "StreamType";
-const std::string REQUESTER = "Requester";
-const std::string STREAM_TOKEN = "StreamToken";
-const std::string PROD_ALLOWANCE = "ProducerAllowance";
-const std::string CONS_ALLOWANCE = "ConsumerAllowance";
+constexpr folly::StringPiece FIRST_SENT_POSITION = "FirstSentPosition";
+constexpr folly::StringPiece LAST_SENT_POSITION = "LastSentPosition";
+constexpr folly::StringPiece IMPLIED_POSITION = "ImpliedPosition";
+constexpr folly::StringPiece LARGEST_USED_STREAMID = "LargestUsedStreamId";
+constexpr folly::StringPiece STREAM_RESUME_INFOS = "StreamResumeInfos";
+constexpr folly::StringPiece FRAMES = "Frames";
+constexpr folly::StringPiece STREAM_TYPE = "StreamType";
+constexpr folly::StringPiece REQUESTER = "Requester";
+constexpr folly::StringPiece STREAM_TOKEN = "StreamToken";
+constexpr folly::StringPiece PROD_ALLOWANCE = "ProducerAllowance";
+constexpr folly::StringPiece CONS_ALLOWANCE = "ConsumerAllowance";
 }
 
 namespace rsocket {
 
 ColdResumeManager::ColdResumeManager(
     std::shared_ptr<RSocketStats> stats,
-    std::string inputFile,
-    std::string outputFile)
-    : WarmResumeManager(std::move(stats)), outputFile_(outputFile) {
+    std::string inputFile)
+    : WarmResumeManager(std::move(stats)) {
   if (inputFile.empty()) {
     return;
   }
@@ -104,12 +103,12 @@ ColdResumeManager::ColdResumeManager(
   }
 }
 
-ColdResumeManager::~ColdResumeManager() {
+void ColdResumeManager::persistState(std::string outputFile) {
   VLOG(1) << "~ColdResumeManager";
-  if (outputFile_.empty()) {
-    return;
+  if (outputFile.empty()) {
+    throw std::runtime_error("Persisting to file failed.  Empty filename");
   }
-  LOG(INFO) << "Persisting state to " << outputFile_;
+  LOG(INFO) << "Persisting state to " << outputFile;
   try {
     folly::dynamic state = folly::dynamic::object();
     state[FIRST_SENT_POSITION] = firstSentPosition_;
@@ -134,15 +133,14 @@ ColdResumeManager::~ColdResumeManager() {
           frame.second->moveToFbString().toStdString()));
     }
     std::string jsonState = folly::toPrettyJson(state);
-    std::ofstream f(outputFile_);
+    std::ofstream f(outputFile);
     f << jsonState;
     f.close();
   } catch (const std::exception& ex) {
-    LOG(ERROR) << "Persisting state to " << outputFile_ << " failed. "
-               << ex.what();
-    return;
+    throw std::runtime_error(folly::sformat(
+        "Persisting state to {} failed. {}", outputFile, ex.what()));
   }
-  LOG(INFO) << "Done persisting state to " << outputFile_;
+  LOG(INFO) << "Done persisting state to " << outputFile;
 }
 
 void ColdResumeManager::trackReceivedFrame(
