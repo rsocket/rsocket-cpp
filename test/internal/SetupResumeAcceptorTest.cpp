@@ -79,7 +79,10 @@ TEST(SetupResumeAcceptor, EarlyComplete) {
   SetupResumeAcceptor acceptor{ProtocolVersion::Unknown, &evb};
 
   auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
-      [](auto input) { input->onComplete(); },
+      [](auto input) {
+        input->onSubscribe(yarpl::flowable::Subscription::empty());
+        input->onComplete();
+      },
       [](auto output) {
         EXPECT_CALL(*output, onSubscribe_(_));
         EXPECT_CALL(*output, onComplete_());
@@ -95,7 +98,9 @@ TEST(SetupResumeAcceptor, EarlyError) {
   SetupResumeAcceptor acceptor{ProtocolVersion::Unknown, &evb};
 
   auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
-      [](auto input) { input->onError(std::runtime_error("Whoops")); },
+      [](auto input) {
+        input->onSubscribe(yarpl::flowable::Subscription::empty());
+        input->onError(std::runtime_error("Whoops")); },
       [](auto output) {
         EXPECT_CALL(*output, onSubscribe_(_));
         EXPECT_CALL(*output, onError_(_));
@@ -112,9 +117,11 @@ TEST(SetupResumeAcceptor, SingleSetup) {
 
   auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
       [](auto input) {
-        auto serializer = FrameSerializer::createFrameSerializer(
-            ProtocolVersion::Current());
+        auto serializer =
+            FrameSerializer::createFrameSerializer(ProtocolVersion::Current());
+        input->onSubscribe(yarpl::flowable::Subscription::empty());
         input->onNext(serializer->serializeOut(makeSetup()));
+        input->onComplete();
       },
       [](auto output) {
         EXPECT_CALL(*output, onSubscribe_(_));
@@ -142,14 +149,16 @@ TEST(SetupResumeAcceptor, InvalidSetup) {
 
   auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
       [](auto input) {
-        auto serializer = FrameSerializer::createFrameSerializer(
-            ProtocolVersion::Current());
+        auto serializer =
+            FrameSerializer::createFrameSerializer(ProtocolVersion::Current());
 
         // Bogus keepalive time that can't be deserialized.
         auto setup = makeSetup();
         setup.keepaliveTime_ = -5;
 
+        input->onSubscribe(yarpl::flowable::Subscription::empty());
         input->onNext(serializer->serializeOut(std::move(setup)));
+        input->onComplete();
       },
       [](auto output) {
         EXPECT_CALL(*output, onSubscribe_(_));
@@ -174,9 +183,11 @@ TEST(SetupResumeAcceptor, RejectedSetup) {
 
   auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
       [](auto input) {
-        auto serializer = FrameSerializer::createFrameSerializer(
-            ProtocolVersion::Current());
+        auto serializer =
+            FrameSerializer::createFrameSerializer(ProtocolVersion::Current());
+        input->onSubscribe(yarpl::flowable::Subscription::empty());
         input->onNext(serializer->serializeOut(makeSetup()));
+        input->onComplete();
       },
       [](auto output) {
         EXPECT_CALL(*output, onSubscribe_(_));
@@ -211,9 +222,11 @@ TEST(SetupResumeAcceptor, RejectedResume) {
 
   auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
       [](auto input) {
-        auto serializer = FrameSerializer::createFrameSerializer(
-            ProtocolVersion::Current());
+        auto serializer =
+            FrameSerializer::createFrameSerializer(ProtocolVersion::Current());
+        input->onSubscribe(yarpl::flowable::Subscription::empty());
         input->onNext(serializer->serializeOut(makeResume()));
+        input->onComplete();
       },
       [](auto output) {
         EXPECT_CALL(*output, onSubscribe_(_));

@@ -8,6 +8,7 @@
 #include <folly/Function.h>
 #include <folly/futures/Future.h>
 
+#include "rsocket/DuplexConnection.h"
 #include "rsocket/RSocketParameters.h"
 #include "rsocket/internal/Common.h"
 #include "yarpl/Refcounted.h"
@@ -21,7 +22,6 @@ class exception_wrapper;
 
 namespace rsocket {
 
-class DuplexConnection;
 class FrameSerializer;
 class FrameTransport;
 
@@ -54,20 +54,16 @@ class SetupResumeAcceptor final {
   folly::Future<folly::Unit> close();
 
  private:
-  friend class OneFrameProcessor;
+  friend class OneFrameSubscriber;
 
   void processFrame(
-      yarpl::Reference<FrameTransport>,
+      std::unique_ptr<DuplexConnection>,
       std::unique_ptr<folly::IOBuf>,
       OnSetup,
       OnResume);
 
-  /// Close and remove a FrameTransport from the set.
-  void close(yarpl::Reference<FrameTransport>, folly::exception_wrapper);
-
-  /// Remove a FrameTransport from the set.  Drop the attached OneFrameProcessor
-  /// if it has one.
-  void remove(const yarpl::Reference<FrameTransport>&);
+  /// Remove a OneFrameSubscriber from the set.
+  void remove(const yarpl::Reference<DuplexConnection::Subscriber>&);
 
   /// Close all open connections.
   void closeAll();
@@ -84,7 +80,9 @@ class SetupResumeAcceptor final {
   /// the correct FrameSerializer from the given frame.
   std::shared_ptr<FrameSerializer> createSerializer(const folly::IOBuf&);
 
-  std::unordered_set<yarpl::Reference<FrameTransport>> connections_;
+  std::unordered_set<yarpl::Reference<DuplexConnection::Subscriber>>
+      connections_;
+
   bool closed_{false};
 
   std::shared_ptr<FrameSerializer> defaultSerializer_;
