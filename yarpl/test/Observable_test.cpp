@@ -236,14 +236,14 @@ TEST(Observable, CancelFromDifferentThread) {
 
   std::thread t;
   auto a = Observable<int>::create([&](Reference<Observer<int>> obs) {
-    t = std::thread([obs, &emitted, &cancelled1](){
-      obs->addSubscription([&](){ cancelled1 = true; });
+    t = std::thread([obs, &emitted, &cancelled1]() {
+      obs->addSubscription([&]() { cancelled1 = true; });
       while (!obs->isUnsubscribed()) {
         ++emitted;
         obs->onNext(0);
       }
     });
-    obs->addSubscription([&](){ cancelled2 = true; });
+    obs->addSubscription([&]() { cancelled2 = true; });
   });
 
   auto subscription = a->subscribe([](int) {});
@@ -376,6 +376,22 @@ TEST(Observable, SingleMovable) {
   EXPECT_EQ(values.size(), size_t(1));
 
   EXPECT_EQ(*values[0], 123456);
+}
+
+TEST(Observable, MapWithException) {
+  auto observable = Observables::justN<int>({1, 2, 3, 4})->map([](int n) {
+    if (n > 2) {
+      throw std::runtime_error{"Too big!"};
+    }
+    return n;
+  });
+
+  auto observer = yarpl::make_ref<CollectingObserver<int>>();
+  observable->subscribe(observer);
+
+  EXPECT_EQ(observer->values(), std::vector<int>({1, 2}));
+  EXPECT_TRUE(observer->error());
+  EXPECT_EQ(observer->errorMsg(), "Too big!");
 }
 
 TEST(Observable, Range) {

@@ -69,3 +69,17 @@ TEST(Single, SingleMap) {
   to->awaitTerminalEvent();
   to->assertOnSuccessValue("hello");
 }
+
+TEST(Single, MapWithException) {
+  auto single = Singles::just<int>(3)->map([](int n) {
+    if (n > 2) {
+      throw std::runtime_error{"Too big!"};
+    }
+    return n;
+  });
+
+  auto observer = yarpl::make_ref<SingleTestObserver<int>>();
+  single->subscribe(observer);
+
+  observer->assertOnErrorMessage("Too big!");
+}

@@ -199,8 +199,13 @@ class MapOperator : public ObservableOperator<U, D, MapOperator<U, D, F>> {
         : SuperSub(std::move(observable), std::move(observer)) {}
 
     void onNext(U value) override {
-      auto& map = SuperSub::getObservableOperator();
-      SuperSub::observerOnNext(map->function_(std::move(value)));
+      try {
+        auto& map = this->getObservableOperator();
+        this->observerOnNext(map->function_(std::move(value)));
+      } catch (const std::exception& exn) {
+        folly::exception_wrapper ew{std::current_exception(), exn};
+        this->terminateErr(std::move(ew));
+      }
     }
   };
 

@@ -132,12 +132,12 @@ class FlowableOperator : public Flowable<D> {
       auto self = this->ref_from_this(this);
 
       auto upstream = std::move(upstream_);
-      if(state.up && upstream) {
+      if (state.up && upstream) {
         upstream->cancel();
       }
 
       auto subscriber = std::move(subscriber_);
-      if(state.down && subscriber) {
+      if (state.down && subscriber) {
         if (ex) {
           subscriber->onError(std::move(ex));
         } else {
@@ -179,8 +179,8 @@ class MapOperator : public FlowableOperator<U, D, MapOperator<U, D, F>> {
       : Super(std::move(upstream)), function_(std::move(function)) {}
 
   void subscribe(Reference<Subscriber<D>> subscriber) override {
-    Super::upstream_->subscribe(
-        make_ref<Subscription>(this->ref_from_this(this), std::move(subscriber)));
+    Super::upstream_->subscribe(make_ref<Subscription>(
+        this->ref_from_this(this), std::move(subscriber)));
   }
 
  private:
@@ -193,8 +193,13 @@ class MapOperator : public FlowableOperator<U, D, MapOperator<U, D, F>> {
         : SuperSubscription(std::move(flowable), std::move(subscriber)) {}
 
     void onNext(U value) override {
-      auto&& map = SuperSubscription::getFlowableOperator();
-      SuperSubscription::subscriberOnNext(map->function_(std::move(value)));
+      try {
+        auto&& map = this->getFlowableOperator();
+        this->subscriberOnNext(map->function_(std::move(value)));
+      } catch (const std::exception& exn) {
+        folly::exception_wrapper ew{std::current_exception(), exn};
+        this->terminateErr(std::move(ew));
+      }
     }
   };
 
@@ -216,8 +221,8 @@ class FilterOperator : public FlowableOperator<U, U, FilterOperator<U, F>> {
       : Super(std::move(upstream)), function_(std::move(function)) {}
 
   void subscribe(Reference<Subscriber<U>> subscriber) override {
-    Super::upstream_->subscribe(
-        make_ref<Subscription>(this->ref_from_this(this), std::move(subscriber)));
+    Super::upstream_->subscribe(make_ref<Subscription>(
+        this->ref_from_this(this), std::move(subscriber)));
   }
 
  private:
@@ -258,8 +263,8 @@ class ReduceOperator : public FlowableOperator<U, D, ReduceOperator<U, D, F>> {
       : Super(std::move(upstream)), function_(std::move(function)) {}
 
   void subscribe(Reference<Subscriber<D>> subscriber) override {
-    Super::upstream_->subscribe(
-        make_ref<Subscription>(this->ref_from_this(this), std::move(subscriber)));
+    Super::upstream_->subscribe(make_ref<Subscription>(
+        this->ref_from_this(this), std::move(subscriber)));
   }
 
  private:
@@ -415,8 +420,8 @@ class IgnoreElementsOperator
       : Super(std::move(upstream)) {}
 
   void subscribe(Reference<Subscriber<T>> subscriber) override {
-    Super::upstream_->subscribe(
-        make_ref<Subscription>(this->ref_from_this(this), std::move(subscriber)));
+    Super::upstream_->subscribe(make_ref<Subscription>(
+        this->ref_from_this(this), std::move(subscriber)));
   }
 
  private:

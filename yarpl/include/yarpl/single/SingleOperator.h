@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <folly/Try.h>
 #include <utility>
 
 #include "yarpl/single/Single.h"
@@ -46,30 +47,83 @@ class SingleOperator : public Single<D> {
     }
 
     void observerOnSuccess(D value) {
-      observer_->onSuccess(std::move(value));
-      upstreamSubscription_.reset(); // should break the cycle to this
+      terminateImpl(TerminateState::Down(), folly::Try<D>{std::move(value)});
+    }
+
+    void observerOnError(folly::exception_wrapper ew) {
+      terminateImpl(TerminateState::Down(), folly::Try<D>{std::move(ew)});
     }
 
     Reference<Operator> getOperator() {
       return single_;
     }
 
-   private:
+    void terminateErr(folly::exception_wrapper ew) {
+      terminateImpl(TerminateState::Both(), std::move(ew));
+    }
+
+    // SingleSubscription.
+
+    void cancel() override {
+      terminateImpl(TerminateState::Up(), folly::Try<D>{});
+    }
+
+    // Subscriber.
+
     void onSubscribe(
-        Reference<::yarpl::single::SingleSubscription> subscription) override {
-      upstreamSubscription_ = std::move(subscription);
+        Reference<yarpl::single::SingleSubscription> subscription) override {
+      upstream_ = std::move(subscription);
       observer_->onSubscribe(this->ref_from_this(this));
     }
 
-    void onError(folly::exception_wrapper error) override {
-      observer_->onError(std::move(error));
-      upstreamSubscription_.reset(); // should break the cycle to this
-      observer_.reset();
+    void onError(folly::exception_wrapper ew) override {
+      terminateImpl(TerminateState::Down(), folly::Try<D>{std::move(ew)});
     }
 
-    void cancel() override {
-      upstreamSubscription_->cancel();
-      observer_.reset(); // breaking the cycle
+   private:
+    struct TerminateState {
+      TerminateState(bool u, bool d) : up{u}, down{d} {}
+
+      static TerminateState Down() {
+        return TerminateState{false, true};
+      }
+
+      static TerminateState Up() {
+        return TerminateState{true, false};
+      }
+
+      static TerminateState Both() {
+        return TerminateState{true, true};
+      }
+
+      const bool up{false};
+      const bool down{false};
+    };
+
+    bool isTerminated() const {
+      return !upstream_ && !observer_;
+    }
+
+    void terminateImpl(TerminateState state, folly::Try<D> maybe) {
+      if (isTerminated()) {
+        return;
+      }
+
+      if (auto upstream = std::move(upstream_)) {
+        if (state.up) {
+          upstream->cancel();
+        }
+      }
+
+      if (auto observer = std::move(observer_)) {
+        if (state.down) {
+          if (maybe.hasValue()) {
+            observer->onSuccess(std::move(maybe).value());
+          } else {
+            observer->onError(std::move(maybe).exception());
+          }
+        }
+      }
     }
 
     /// The Single has the lambda, and other creation parameters.
@@ -85,7 +139,7 @@ class SingleOperator : public Single<D> {
     /// calls should be forwarded upstream.  Note that `this` is also a
     /// observer for the upstream stage: thus, there are cycles; all of
     /// the objects drop their references at cancel/complete.
-    Reference<::yarpl::single::SingleSubscription> upstreamSubscription_;
+    Reference<yarpl::single::SingleSubscription> upstream_;
   };
 
   Reference<Single<U>> upstream_;
@@ -109,7 +163,8 @@ class MapOperator : public SingleOperator<U, D> {
   void subscribe(Reference<SingleObserver<D>> observer) override {
     Super::upstream_->subscribe(
         // Note: implicit cast to a reference to a observer.
-        make_ref<MapSubscription>(this->ref_from_this(this), std::move(observer)));
+        make_ref<MapSubscription>(
+            this->ref_from_this(this), std::move(observer)));
   }
 
  private:
@@ -121,9 +176,13 @@ class MapOperator : public SingleOperator<U, D> {
         : OperatorSubscription(std::move(single), std::move(observer)) {}
 
     void onSuccess(U value) override {
-      auto map_operator = OperatorSubscription::getOperator();
-      OperatorSubscription::observerOnSuccess(
-          map_operator->function_(std::move(value)));
+      try {
+        auto map_operator = this->getOperator();
+        this->observerOnSuccess(map_operator->function_(std::move(value)));
+      } catch (const std::exception& exn) {
+        folly::exception_wrapper ew{std::current_exception(), exn};
+        this->observerOnError(std::move(ew));
+      }
     }
   };
 
