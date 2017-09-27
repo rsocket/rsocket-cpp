@@ -75,10 +75,11 @@ void RSocketStateMachine::setResumable(bool resumable) {
 }
 
 void RSocketStateMachine::connectServer(
-    yarpl::Reference<FrameTransport> transport,
-    const SetupParameters& params) {
-  setResumable(params.resumable);
-  connect(std::move(transport), params.protocolVersion);
+    yarpl::Reference<FrameTransport> frameTransport,
+    const SetupParameters& setupParams) {
+  stats_->socketConnected();
+  setResumable(setupParams.resumable);
+  connect(std::move(frameTransport), setupParams.protocolVersion);
   sendPendingFrames();
 }
 
@@ -87,13 +88,14 @@ bool RSocketStateMachine::resumeServer(
     const ResumeParameters& params) {
   if (!isDisconnected()) {
     VLOG(1) << "Old connection (" << frameTransport_.get() << ") exists. "
-            << "Terminating new connection (" << transport.get() << ")";
+            << "Terminating new connection (" << frameTransport.get() << ")";
     std::runtime_error exn{"Old connection still exists"};
     transport->closeWithError(std::move(exn));
+    stats_->resumeFailure();
     return false;
   }
-
-  connect(std::move(transport), params.protocolVersion);
+  connect(std::move(frameTransport), resumeParams.protocolVersion);
+  stats_->resumeSuccess();
   return resumeFromPositionOrClose(
       params.serverPosition, params.clientPosition);
 }

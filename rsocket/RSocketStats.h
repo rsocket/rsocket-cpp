@@ -20,6 +20,7 @@ class RSocketStats {
   static std::shared_ptr<RSocketStats> noop();
 
   virtual void socketCreated() = 0;
+  virtual void socketConnected() = 0;
   virtual void socketDisconnected() = 0;
   virtual void socketClosed(StreamCompletionSignal signal) = 0;
 
@@ -29,6 +30,8 @@ class RSocketStats {
   virtual void duplexConnectionClosed(
       const std::string& type,
       DuplexConnection* connection) = 0;
+  virtual void resumeSuccess() = 0;
+  virtual void resumeFailure() = 0;
 
   virtual void bytesWritten(size_t bytes) = 0;
   virtual void bytesRead(size_t bytes) = 0;
