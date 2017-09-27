@@ -77,7 +77,6 @@ void RSocketStateMachine::setResumable(bool resumable) {
 void RSocketStateMachine::connectServer(
     yarpl::Reference<FrameTransport> frameTransport,
     const SetupParameters& setupParams) {
-  stats_->socketConnected();
   setResumable(setupParams.resumable);
   connect(std::move(frameTransport), setupParams.protocolVersion);
   sendPendingFrames();
@@ -94,10 +93,22 @@ bool RSocketStateMachine::resumeServer(
     stats_->resumeFailure();
     return false;
   }
+<<<<<<< HEAD
   connect(std::move(frameTransport), resumeParams.protocolVersion);
   stats_->resumeSuccess();
   return resumeFromPositionOrClose(
       params.serverPosition, params.clientPosition);
+=======
+  CHECK(connect(std::move(frameTransport), resumeParams.protocolVersion));
+  auto result = resumeFromPositionOrClose(
+      resumeParams.serverPosition, resumeParams.clientPosition);
+  if (!result) {
+    stats_->resumeFailure();
+  } else {
+    stats_->resumeSuccess();
+  }
+  return result;
+>>>>>>> additional resume locations
 }
 
 void RSocketStateMachine::connectClient(
@@ -207,6 +218,11 @@ void RSocketStateMachine::connect(
   // instance.
   auto copyThis = shared_from_this();
   frameTransport_->setFrameProcessor(copyThis);
+<<<<<<< HEAD
+=======
+  stats_->socketConnected();
+  return true;
+>>>>>>> additional resume locations
 }
 
 void RSocketStateMachine::sendPendingFrames() {
