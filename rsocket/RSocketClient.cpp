@@ -107,7 +107,7 @@ folly::Future<folly::Unit> RSocketClient::resume() {
         createState(connection.eventBase);
       }
 
-      stateMachine_->tryClientResume(
+      stateMachine_->resumeClient(
           token_,
           std::move(frameTransport),
           std::move(resumeCallback),
@@ -153,7 +153,7 @@ void RSocketClient::fromConnection(
     framedConnection = std::make_unique<FramedDuplexConnection>(
         std::move(connection), setupParameters.protocolVersion);
   }
-  stateMachine_->connectClientSendSetup(
+  stateMachine_->connectClient(
       std::move(framedConnection), std::move(setupParameters));
 }
 

@@ -71,37 +71,40 @@ class RSocketStateMachine final
       std::shared_ptr<ResumeManager> resumeManager,
       std::shared_ptr<ColdResumeHandler> coldResumeHandler);
 
-  void closeWithError(Frame_ERROR&& error);
-  void disconnectOrCloseWithError(Frame_ERROR&& error) override;
-
-  /// Kicks off connection procedure.
-  ///
-  /// May result, depending on the implementation of the DuplexConnection, in
-  /// processing of one or more frames.
-  void connectServer(
-      yarpl::Reference<FrameTransport>,
-      const SetupParameters& setupParams);
-
-  bool resumeServer(
-      yarpl::Reference<FrameTransport>,
-      const ResumeParameters& resumeParams);
-
-  /// Disconnects DuplexConnection from the stateMachine.
-  /// Existing streams will stay intact.
-  void disconnect(folly::exception_wrapper ex);
-
-  /// Terminates underlying connection.
-  ///
-  /// This may synchronously deliver terminal signals to all
-  /// StreamAutomatonBase attached to this ConnectionAutomaton.
-  void close(folly::exception_wrapper, StreamCompletionSignal);
-
-  /// Terminate underlying connection and connect new connection
-  void reconnect(
-      yarpl::Reference<FrameTransport>,
-      std::unique_ptr<ClientResumeStatusCallback>);
-
   ~RSocketStateMachine();
+
+  /// Create a new connection as a server.
+  void connectServer(yarpl::Reference<FrameTransport>, const SetupParameters&);
+
+  /// Resume a connection as a server.
+  bool resumeServer(yarpl::Reference<FrameTransport>, const ResumeParameters&);
+
+  /// Connect as a client.  Sends a SETUP frame.
+  void connectClient(std::unique_ptr<DuplexConnection>, SetupParameters);
+
+  /// Resume a connection as a client.  Sends a RESUME frame.
+  void resumeClient(
+      ResumeIdentificationToken,
+      yarpl::Reference<FrameTransport>,
+      std::unique_ptr<ClientResumeStatusCallback>,
+      ProtocolVersion);
+
+  /// Disconnect the state machine's connection.  Existing streams will stay
+  /// intact.
+  void disconnect(folly::exception_wrapper);
+
+  /// Whether the connection has been disconnected or closed.
+  bool isDisconnected() const;
+
+  /// Send an ERROR frame, and close the connection and all of its streams.
+  void closeWithError(Frame_ERROR&&);
+
+  /// Disconnect the connection if it is resumable, otherwise send an ERROR
+  /// frame and close the connection and all of its streams.
+  void disconnectOrCloseWithError(Frame_ERROR&&) override;
+
+  /// Close the connection and all of its streams.
+  void close(folly::exception_wrapper, StreamCompletionSignal);
 
   /// A contract exposed to StreamAutomatonBase, modelled after Subscriber
   /// and Subscription contracts, while omitting flow control related signals.
@@ -113,9 +116,7 @@ class RSocketStateMachine final
   /// No frames will be issued as a result of this call. Stream stateMachine
   /// must take care of writing appropriate frames to the connection, using
   /// ::writeFrame after calling this method.
-  void addStream(
-      StreamId streamId,
-      yarpl::Reference<StreamStateMachineBase> stateMachine);
+  void addStream(StreamId, yarpl::Reference<StreamStateMachineBase>);
 
   /// Indicates that the stream should be removed from the connection.
   ///
@@ -137,13 +138,48 @@ class RSocketStateMachine final
   /// 4. the signal bound with a particular StreamId is idempotent and may be
   ///   delivered multiple times as long as the caller holds shared_ptr to
   ///   ConnectionAutomaton.
-  void endStream(StreamId streamId, StreamCompletionSignal signal);
+  void endStream(StreamId, StreamCompletionSignal);
 
-  void sendKeepalive(std::unique_ptr<folly::IOBuf> data) override;
+  /// Send a REQUEST_FNF frame.
+  void fireAndForget(Payload);
 
-  void setResumable(bool resumable);
+  /// Send a METADATA_PUSH frame.
+  void metadataPush(std::unique_ptr<folly::IOBuf>);
 
-  bool isPositionAvailable(ResumePosition position);
+  /// Send a KEEPALIVE frame, with the RESPOND flag set.
+  void sendKeepalive(std::unique_ptr<folly::IOBuf>) override;
+
+  /// Register the connection set that's holding this state machine.
+  void registerSet(std::shared_ptr<ConnectionSet>);
+
+  StreamsFactory& streamsFactory() {
+    return streamsFactory_;
+  }
+
+ private:
+  void connect(yarpl::Reference<FrameTransport>, ProtocolVersion);
+
+  /// Terminate underlying connection and connect new connection
+  void reconnect(
+      yarpl::Reference<FrameTransport>,
+      std::unique_ptr<ClientResumeStatusCallback>);
+
+  void setResumable(bool);
+
+  bool resumeFromPositionOrClose(
+      ResumePosition serverPosition,
+      ResumePosition clientPosition);
+
+  bool isPositionAvailable(ResumePosition) const;
+
+  /// Whether the connection has been closed.
+  bool isClosed() const;
+
+  uint32_t getKeepaliveTime() const;
+
+  void setFrameSerializer(std::unique_ptr<FrameSerializer>);
+
+  void sendPendingFrames();
 
   /// Send a frame to the output.  Will buffer the frame if the state machine is
   /// disconnected or in the process of resuming.
@@ -155,8 +191,6 @@ class RSocketStateMachine final
     outputFrameOrEnqueue(
         frameSerializer_->serializeOut(std::forward<T>(frame)));
   }
-
-  void requestFireAndForget(Payload request);
 
   template <typename TFrame>
   bool deserializeFrameOrError(
@@ -181,75 +215,26 @@ class RSocketStateMachine final
     return false;
   }
 
-  bool resumeFromPositionOrClose(
-      ResumePosition serverPosition,
-      ResumePosition clientPosition);
-
-  uint32_t getKeepaliveTime() const;
-  bool isDisconnectedOrClosed() const;
-  bool isClosed() const;
-
-  StreamsFactory& streamsFactory() {
-    return streamsFactory_;
-  }
-
-  void connectClientSendSetup(
-      std::unique_ptr<DuplexConnection> connection,
-      SetupParameters setupParams);
-
-  void metadataPush(std::unique_ptr<folly::IOBuf> metadata);
-
-  void tryClientResume(
-      const ResumeIdentificationToken& token,
-      yarpl::Reference<FrameTransport> frameTransport,
-      std::unique_ptr<ClientResumeStatusCallback> resumeCallback,
-      ProtocolVersion protocolVersion);
-
-  void setFrameSerializer(std::unique_ptr<FrameSerializer>);
-
-  RSocketStats& stats() {
-    return *stats_;
-  }
-
-  /// Register the connection set that's holding this state machine.
-  void registerSet(std::shared_ptr<ConnectionSet>);
-
- private:
-  bool connect(
-      yarpl::Reference<FrameTransport>,
-      ProtocolVersion protocolVersion);
-
-  void sendPendingFrames();
-
   /// Performs the same actions as ::endStream without propagating closure
   /// signal to the underlying connection.
   ///
   /// The call is idempotent and returns false iff a stream has not been found.
   bool endStreamInternal(StreamId streamId, StreamCompletionSignal signal);
 
+  // FrameProcessor.
   void processFrame(std::unique_ptr<folly::IOBuf>) override;
   void onTerminal(folly::exception_wrapper) override;
 
-  void handleConnectionFrame(
-      FrameType frameType,
-      std::unique_ptr<folly::IOBuf>);
-  void handleStreamFrame(
-      StreamId streamId,
-      FrameType frameType,
-      std::unique_ptr<folly::IOBuf> frame);
-  void handleUnknownStream(
-      StreamId streamId,
-      FrameType frameType,
-      std::unique_ptr<folly::IOBuf> frame);
+  void handleConnectionFrame(FrameType, std::unique_ptr<folly::IOBuf>);
+  void handleStreamFrame(StreamId, FrameType, std::unique_ptr<folly::IOBuf>);
+  void handleUnknownStream(StreamId, FrameType, std::unique_ptr<folly::IOBuf>);
 
   void closeStreams(StreamCompletionSignal);
-  void closeFrameTransport(
-      folly::exception_wrapper,
-      StreamCompletionSignal signal);
+  void closeFrameTransport(folly::exception_wrapper, StreamCompletionSignal);
 
-  void sendKeepalive(FrameFlags flags, std::unique_ptr<folly::IOBuf> data);
+  void sendKeepalive(FrameFlags, std::unique_ptr<folly::IOBuf>);
 
-  void resumeFromPosition(ResumePosition position);
+  void resumeFromPosition(ResumePosition);
   void outputFrame(std::unique_ptr<folly::IOBuf>);
 
   void writeNewStream(
@@ -269,16 +254,23 @@ class RSocketStateMachine final
 
   bool ensureOrAutodetectFrameSerializer(const folly::IOBuf& firstFrame);
 
-  size_t getConsumerAllowance(StreamId streamId) const;
+  size_t getConsumerAllowance(StreamId) const;
 
-  RSocketMode mode_;
+  /// Client/server mode this state machine is operating in.
+  const RSocketMode mode_;
+
+  /// Whether the connection was initialized as resumable.
   bool isResumable_{false};
-  bool remoteResumeable_{false};
+
+  /// Whether the connection has closed.
   bool isClosed_{false};
+
+  /// Whether a cold resume is currently in progress.
+  bool coldResumeInProgress_{false};
 
   std::shared_ptr<RSocketStats> stats_;
 
-  // Per-stream frame buffer between RSocketStateMachine and Transport
+  /// Per-stream frame buffer between the state machine and the FrameTransport.
   StreamState streamState_;
 
   // Manages all state needed for warm/cold resumption.
@@ -292,7 +284,6 @@ class RSocketStateMachine final
 
   std::unique_ptr<ClientResumeStatusCallback> resumeCallback_;
   std::shared_ptr<ColdResumeHandler> coldResumeHandler_;
-  bool coldResumeInProgress_{false};
 
   StreamsFactory streamsFactory_;
 

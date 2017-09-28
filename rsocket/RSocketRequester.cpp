@@ -142,7 +142,7 @@ yarpl::Reference<yarpl::single::Single<void>> RSocketRequester::fireAndForget(
     ]() mutable {
       // TODO pass in SingleSubscriber for underlying layers to
       // call onSuccess/onError once put on network
-      srs->requestFireAndForget(std::move(request));
+      srs->fireAndForget(std::move(request));
       // right now just immediately call onSuccess
       subscriber->onSubscribe(yarpl::single::SingleSubscriptions::empty());
       subscriber->onSuccess();

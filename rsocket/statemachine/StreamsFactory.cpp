@@ -45,7 +45,7 @@ static void subscribeToErrorSingle(
 Reference<yarpl::flowable::Subscriber<Payload>>
 StreamsFactory::createChannelRequester(
     Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
-  if (connection_.isDisconnectedOrClosed()) {
+  if (connection_.isDisconnected()) {
     subscribeToErrorFlowable(std::move(responseSink));
     return nullptr;
   }
@@ -61,7 +61,7 @@ StreamsFactory::createChannelRequester(
 void StreamsFactory::createStreamRequester(
     Payload request,
     Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
-  if (connection_.isDisconnectedOrClosed()) {
+  if (connection_.isDisconnected()) {
     subscribeToErrorFlowable(std::move(responseSink));
     return;
   }
@@ -77,7 +77,7 @@ void StreamsFactory::createStreamRequester(
     Reference<yarpl::flowable::Subscriber<Payload>> responseSink,
     StreamId streamId,
     size_t n) {
-  if (connection_.isDisconnectedOrClosed()) {
+  if (connection_.isDisconnected()) {
     subscribeToErrorFlowable(std::move(responseSink));
     return;
   }
@@ -93,7 +93,7 @@ void StreamsFactory::createStreamRequester(
 void StreamsFactory::createRequestResponseRequester(
     Payload payload,
     Reference<yarpl::single::SingleObserver<Payload>> responseSink) {
-  if (connection_.isDisconnectedOrClosed()) {
+  if (connection_.isDisconnected()) {
     subscribeToErrorSingle(std::move(responseSink));
     return;
   }

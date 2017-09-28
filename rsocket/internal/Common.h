@@ -50,7 +50,7 @@ enum class StreamCompletionSignal {
   SOCKET_CLOSED,
 };
 
-enum class RSocketMode { SERVER, CLIENT };
+enum class RSocketMode : uint8_t { SERVER, CLIENT };
 
 std::ostream& operator<<(std::ostream&, RSocketMode);
 
