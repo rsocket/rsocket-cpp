@@ -164,21 +164,21 @@ static void serializeHeaderInto(
     folly::io::QueueAppender& appender,
     const FrameHeader& header,
     uint16_t extraFlags) {
-  appender.writeBE<uint16_t>(serializeFrameType(header.type_));
-  appender.writeBE<uint16_t>(serializeFrameFlags(header.flags_) | extraFlags);
-  appender.writeBE<uint32_t>(header.streamId_);
+  appender.writeBE<uint16_t>(serializeFrameType(header.type));
+  appender.writeBE<uint16_t>(serializeFrameFlags(header.flags) | extraFlags);
+  appender.writeBE<uint32_t>(header.streamId);
 }
 
 static void deserializeHeaderFrom(
     folly::io::Cursor& cur,
     FrameHeader& header,
     FrameFlags_V0& flags) {
-  header.type_ = deserializeFrameType(cur.readBE<uint16_t>());
+  header.type = deserializeFrameType(cur.readBE<uint16_t>());
 
   flags = static_cast<FrameFlags_V0>(cur.readBE<uint16_t>());
-  header.flags_ = deserializeFrameFlags(flags);
+  header.flags = deserializeFrameFlags(flags);
 
-  header.streamId_ = cur.readBE<uint32_t>();
+  header.streamId = cur.readBE<uint32_t>();
 }
 
 static void serializeMetadataInto(
@@ -264,10 +264,10 @@ static std::unique_ptr<folly::IOBuf> serializeOutInternal(
       FrameSerializerV0::kFrameHeaderSize + sizeof(uint32_t) +
       payloadFramingSize(frame.payload_));
   uint16_t extraFlags = 0;
-  if (!!(frame.header_.flags_ & FrameFlags::FOLLOWS)) {
+  if (!!(frame.header_.flags & FrameFlags::FOLLOWS)) {
     extraFlags |= FrameFlags_V0::FOLLOWS;
   }
-  if (!!(frame.header_.flags_ & FrameFlags::COMPLETE)) {
+  if (!!(frame.header_.flags & FrameFlags::COMPLETE)) {
     extraFlags |= FrameFlags_V0::COMPLETE;
   }
 
@@ -288,14 +288,14 @@ static bool deserializeFromInternal(
     deserializeHeaderFrom(cur, frame.header_, flags);
 
     if (!!(flags & FrameFlags_V0::FOLLOWS)) {
-      frame.header_.flags_ |= FrameFlags::FOLLOWS;
+      frame.header_.flags |= FrameFlags::FOLLOWS;
     }
     if (!!(flags & FrameFlags_V0::COMPLETE)) {
-      frame.header_.flags_ |= FrameFlags::COMPLETE;
+      frame.header_.flags |= FrameFlags::COMPLETE;
     }
 
     frame.requestN_ = cur.readBE<uint32_t>();
-    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags_);
+    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags);
   } catch (...) {
     return false;
   }
@@ -336,7 +336,7 @@ std::unique_ptr<folly::IOBuf> FrameSerializerV0::serializeOut(
 std::unique_ptr<folly::IOBuf> FrameSerializerV0::serializeOut(
     Frame_REQUEST_RESPONSE&& frame) {
   uint16_t extraFlags = 0;
-  if (!!(frame.header_.flags_ & FrameFlags::FOLLOWS)) {
+  if (!!(frame.header_.flags & FrameFlags::FOLLOWS)) {
     extraFlags |= FrameFlags_V0::FOLLOWS;
   }
 
@@ -351,7 +351,7 @@ std::unique_ptr<folly::IOBuf> FrameSerializerV0::serializeOut(
 std::unique_ptr<folly::IOBuf> FrameSerializerV0::serializeOut(
     Frame_REQUEST_FNF&& frame) {
   uint16_t extraFlags = 0;
-  if (!!(frame.header_.flags_ & FrameFlags::FOLLOWS)) {
+  if (!!(frame.header_.flags & FrameFlags::FOLLOWS)) {
     extraFlags |= FrameFlags_V0::FOLLOWS;
   }
 
@@ -392,10 +392,10 @@ std::unique_ptr<folly::IOBuf> FrameSerializerV0::serializeOut(
 std::unique_ptr<folly::IOBuf> FrameSerializerV0::serializeOut(
     Frame_PAYLOAD&& frame) {
   uint16_t extraFlags = 0;
-  if (!!(frame.header_.flags_ & FrameFlags::FOLLOWS)) {
+  if (!!(frame.header_.flags & FrameFlags::FOLLOWS)) {
     extraFlags |= FrameFlags_V0::FOLLOWS;
   }
-  if (!!(frame.header_.flags_ & FrameFlags::COMPLETE)) {
+  if (!!(frame.header_.flags & FrameFlags::COMPLETE)) {
     extraFlags |= FrameFlags_V0::COMPLETE;
   }
 
@@ -422,7 +422,7 @@ std::unique_ptr<folly::IOBuf> FrameSerializerV0::serializeOut(
     Frame_KEEPALIVE&& frame,
     bool resumeable) {
   uint16_t extraFlags = 0;
-  if (!!(frame.header_.flags_ & FrameFlags::KEEPALIVE_RESPOND)) {
+  if (!!(frame.header_.flags & FrameFlags::KEEPALIVE_RESPOND)) {
     extraFlags |= FrameFlags_V0::KEEPALIVE_RESPOND;
   }
 
@@ -447,10 +447,10 @@ std::unique_ptr<folly::IOBuf> FrameSerializerV0::serializeOut(
       frame.metadataMimeType_.length() + frame.dataMimeType_.length() +
       payloadFramingSize(frame.payload_));
   uint16_t extraFlags = 0;
-  if (!!(frame.header_.flags_ & FrameFlags::RESUME_ENABLE)) {
+  if (!!(frame.header_.flags & FrameFlags::RESUME_ENABLE)) {
     extraFlags |= FrameFlags_V0::RESUME_ENABLE;
   }
-  if (!!(frame.header_.flags_ & FrameFlags::LEASE)) {
+  if (!!(frame.header_.flags & FrameFlags::LEASE)) {
     extraFlags |= FrameFlags_V0::LEASE;
   }
 
@@ -467,7 +467,7 @@ std::unique_ptr<folly::IOBuf> FrameSerializerV0::serializeOut(
 
   // TODO: Remove hack:
   // https://github.com/ReactiveSocket/reactivesocket-cpp/issues/243
-  if (!!(frame.header_.flags_ & FrameFlags::RESUME_ENABLE)) {
+  if (!!(frame.header_.flags & FrameFlags::RESUME_ENABLE)) {
     appender.push(frame.token_.data().data(), frame.token_.data().size());
   }
 
@@ -542,10 +542,10 @@ bool FrameSerializerV0::deserializeFrom(
     deserializeHeaderFrom(cur, frame.header_, flags);
 
     if (!!(flags & FrameFlags_V0::FOLLOWS)) {
-      frame.header_.flags_ |= FrameFlags::FOLLOWS;
+      frame.header_.flags |= FrameFlags::FOLLOWS;
     }
 
-    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags_);
+    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags);
   } catch (...) {
     return false;
   }
@@ -561,10 +561,10 @@ bool FrameSerializerV0::deserializeFrom(
     deserializeHeaderFrom(cur, frame.header_, flags);
 
     if (!!(flags & FrameFlags_V0::FOLLOWS)) {
-      frame.header_.flags_ |= FrameFlags::FOLLOWS;
+      frame.header_.flags |= FrameFlags::FOLLOWS;
     }
 
-    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags_);
+    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags);
   } catch (...) {
     return false;
   }
@@ -592,7 +592,7 @@ bool FrameSerializerV0::deserializeFrom(
   try {
     FrameFlags_V0 flags;
     deserializeHeaderFrom(cur, frame.header_, flags);
-    frame.metadata_ = deserializeMetadataFrom(cur, frame.header_.flags_);
+    frame.metadata_ = deserializeMetadataFrom(cur, frame.header_.flags);
   } catch (...) {
     return false;
   }
@@ -621,13 +621,13 @@ bool FrameSerializerV0::deserializeFrom(
     deserializeHeaderFrom(cur, frame.header_, flags);
 
     if (!!(flags & FrameFlags_V0::FOLLOWS)) {
-      frame.header_.flags_ |= FrameFlags::FOLLOWS;
+      frame.header_.flags |= FrameFlags::FOLLOWS;
     }
     if (!!(flags & FrameFlags_V0::COMPLETE)) {
-      frame.header_.flags_ |= FrameFlags::COMPLETE;
+      frame.header_.flags |= FrameFlags::COMPLETE;
     }
 
-    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags_);
+    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags);
   } catch (...) {
     return false;
   }
@@ -642,7 +642,7 @@ bool FrameSerializerV0::deserializeFrom(
     FrameFlags_V0 flags;
     deserializeHeaderFrom(cur, frame.header_, flags);
     frame.errorCode_ = static_cast<ErrorCode>(cur.readBE<uint32_t>());
-    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags_);
+    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags);
   } catch (...) {
     return false;
   }
@@ -659,7 +659,7 @@ bool FrameSerializerV0::deserializeFrom(
     deserializeHeaderFrom(cur, frame.header_, flags);
 
     if (!!(flags & FrameFlags_V0::KEEPALIVE_RESPOND)) {
-      frame.header_.flags_ |= FrameFlags::KEEPALIVE_RESPOND;
+      frame.header_.flags |= FrameFlags::KEEPALIVE_RESPOND;
     }
 
     // TODO: Remove hack:
@@ -685,10 +685,10 @@ bool FrameSerializerV0::deserializeFrom(
     deserializeHeaderFrom(cur, frame.header_, flags);
 
     if (!!(flags & FrameFlags_V0::RESUME_ENABLE)) {
-      frame.header_.flags_ |= FrameFlags::RESUME_ENABLE;
+      frame.header_.flags |= FrameFlags::RESUME_ENABLE;
     }
     if (!!(flags & FrameFlags_V0::LEASE)) {
-      frame.header_.flags_ |= FrameFlags::LEASE;
+      frame.header_.flags |= FrameFlags::LEASE;
     }
 
     frame.versionMajor_ = cur.readBE<uint16_t>();
@@ -710,7 +710,7 @@ bool FrameSerializerV0::deserializeFrom(
 
     // TODO: Remove hack:
     // https://github.com/ReactiveSocket/reactivesocket-cpp/issues/243
-    if (!!(frame.header_.flags_ & FrameFlags::RESUME_ENABLE)) {
+    if (!!(frame.header_.flags & FrameFlags::RESUME_ENABLE)) {
       std::vector<uint8_t> data(16);
       cur.pull(data.data(), data.size());
       frame.token_.set(std::move(data));
@@ -723,7 +723,7 @@ bool FrameSerializerV0::deserializeFrom(
 
     auto dmtLen = cur.readBE<uint8_t>();
     frame.dataMimeType_ = cur.readFixedString(dmtLen);
-    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags_);
+    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags);
   } catch (...) {
     return false;
   }
@@ -740,7 +740,7 @@ bool FrameSerializerV0::deserializeFrom(
     frame.ttl_ = std::min(cur.readBE<uint32_t>(), Frame_LEASE::kMaxTtl);
     frame.numberOfRequests_ =
         std::min(cur.readBE<uint32_t>(), Frame_LEASE::kMaxNumRequests);
-    frame.metadata_ = deserializeMetadataFrom(cur, frame.header_.flags_);
+    frame.metadata_ = deserializeMetadataFrom(cur, frame.header_.flags);
   } catch (...) {
     return false;
   }

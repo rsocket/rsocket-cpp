@@ -425,14 +425,14 @@ void RSocketStateMachine::handleConnectionFrame(
       VLOG(3) << mode_ << " In: " << frame;
       resumeManager_->resetUpToPosition(frame.position_);
       if (mode_ == RSocketMode::SERVER) {
-        if (!!(frame.header_.flags_ & FrameFlags::KEEPALIVE_RESPOND)) {
+        if (!!(frame.header_.flags & FrameFlags::KEEPALIVE_RESPOND)) {
           sendKeepalive(FrameFlags::EMPTY, std::move(frame.data_));
         } else {
           closeWithError(
               Frame_ERROR::connectionError("keepalive without flag"));
         }
       } else {
-        if (!!(frame.header_.flags_ & FrameFlags::KEEPALIVE_RESPOND)) {
+        if (!!(frame.header_.flags & FrameFlags::KEEPALIVE_RESPOND)) {
           closeWithError(Frame_ERROR::connectionError(
               "client received keepalive with respond flag"));
         } else if (keepaliveTimer_) {

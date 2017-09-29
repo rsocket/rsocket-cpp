@@ -44,9 +44,9 @@ void expectHeader(
     FrameFlags flags,
     StreamId streamId,
     const Frame& frame) {
-  EXPECT_EQ(type, frame.header_.type_);
-  EXPECT_EQ(streamId, frame.header_.streamId_);
-  EXPECT_EQ(flags, frame.header_.flags_);
+  EXPECT_EQ(type, frame.header_.type);
+  EXPECT_EQ(streamId, frame.header_.streamId);
+  EXPECT_EQ(flags, frame.header_.flags);
 }
 
 TEST(FrameTest, Frame_REQUEST_STREAM) {

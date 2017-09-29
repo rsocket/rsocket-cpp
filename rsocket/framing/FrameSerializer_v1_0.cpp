@@ -37,12 +37,12 @@ static FrameType deserializeFrameType(uint16_t frameType) {
 static void serializeHeaderInto(
     folly::io::QueueAppender& appender,
     const FrameHeader& header) {
-  appender.writeBE<int32_t>(static_cast<int32_t>(header.streamId_));
+  appender.writeBE<int32_t>(static_cast<int32_t>(header.streamId));
 
-  auto type = static_cast<uint8_t>(header.type_); // 6 bit
-  auto flags = static_cast<uint16_t>(header.flags_); // 10 bit
-  appender.writeBE<uint8_t>(static_cast<uint8_t>((type << 2) | (flags >> 8)));
-  appender.writeBE<uint8_t>(static_cast<uint8_t>(flags)); // lower 8 bits
+  auto type = static_cast<uint8_t>(header.type); // 6 bit
+  auto flags = static_cast<uint16_t>(header.flags); // 10 bit
+  appender.write(static_cast<uint8_t>((type << 2) | (flags >> 8)));
+  appender.write(static_cast<uint8_t>(flags)); // lower 8 bits
 }
 
 static void deserializeHeaderFrom(folly::io::Cursor& cur, FrameHeader& header) {
@@ -50,10 +50,10 @@ static void deserializeHeaderFrom(folly::io::Cursor& cur, FrameHeader& header) {
   if (streamId < 0) {
     throw std::runtime_error("invalid stream id");
   }
-  header.streamId_ = static_cast<StreamId>(streamId);
+  header.streamId = static_cast<StreamId>(streamId);
   uint16_t type = cur.readBE<uint8_t>(); // |Frame Type |I|M|
-  header.type_ = deserializeFrameType(type >> 2);
-  header.flags_ =
+  header.type = deserializeFrameType(type >> 2);
+  header.flags =
       static_cast<FrameFlags>(((type & 0x3) << 8) | cur.readBE<uint8_t>());
 }
 
@@ -159,7 +159,7 @@ static bool deserializeFromInternal(
       throw std::runtime_error("invalid request N");
     }
     frame.requestN_ = static_cast<uint32_t>(requestN);
-    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags_);
+    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags);
   } catch (...) {
     return false;
   }
@@ -296,7 +296,7 @@ std::unique_ptr<folly::IOBuf> FrameSerializerV1_0::serializeOut(
   auto queue = createBufferQueue(
       kFrameHeaderSize + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(int32_t) +
       sizeof(int32_t) +
-      getResumeIdTokenFramingLength(frame.header_.flags_, frame.token_) +
+      getResumeIdTokenFramingLength(frame.header_.flags, frame.token_) +
       +sizeof(uint8_t) + frame.metadataMimeType_.length() + sizeof(uint8_t) +
       frame.dataMimeType_.length() + payloadFramingSize(frame.payload_));
   folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
@@ -310,7 +310,7 @@ std::unique_ptr<folly::IOBuf> FrameSerializerV1_0::serializeOut(
   appender.writeBE(static_cast<int32_t>(frame.keepaliveTime_));
   appender.writeBE(static_cast<int32_t>(frame.maxLifetime_));
 
-  if (!!(frame.header_.flags_ & FrameFlags::RESUME_ENABLE)) {
+  if (!!(frame.header_.flags & FrameFlags::RESUME_ENABLE)) {
     appender.writeBE<uint16_t>(
         static_cast<uint16_t>(frame.token_.data().size()));
     appender.push(frame.token_.data().data(), frame.token_.data().size());
@@ -397,7 +397,7 @@ bool FrameSerializerV1_0::deserializeFrom(
   folly::io::Cursor cur(in.get());
   try {
     deserializeHeaderFrom(cur, frame.header_);
-    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags_);
+    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags);
   } catch (...) {
     return false;
   }
@@ -410,7 +410,7 @@ bool FrameSerializerV1_0::deserializeFrom(
   folly::io::Cursor cur(in.get());
   try {
     deserializeHeaderFrom(cur, frame.header_);
-    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags_);
+    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags);
   } catch (...) {
     return false;
   }
@@ -467,7 +467,7 @@ bool FrameSerializerV1_0::deserializeFrom(
   folly::io::Cursor cur(in.get());
   try {
     deserializeHeaderFrom(cur, frame.header_);
-    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags_);
+    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags);
   } catch (...) {
     return false;
   }
@@ -481,7 +481,7 @@ bool FrameSerializerV1_0::deserializeFrom(
   try {
     deserializeHeaderFrom(cur, frame.header_);
     frame.errorCode_ = static_cast<ErrorCode>(cur.readBE<uint32_t>());
-    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags_);
+    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags);
   } catch (...) {
     return false;
   }
@@ -529,7 +529,7 @@ bool FrameSerializerV1_0::deserializeFrom(
     }
     frame.maxLifetime_ = static_cast<uint32_t>(maxLifetime);
 
-    if (!!(frame.header_.flags_ & FrameFlags::RESUME_ENABLE)) {
+    if (!!(frame.header_.flags & FrameFlags::RESUME_ENABLE)) {
       auto resumeTokenSize = cur.readBE<uint16_t>();
       std::vector<uint8_t> data(resumeTokenSize);
       cur.pull(data.data(), data.size());
@@ -543,7 +543,7 @@ bool FrameSerializerV1_0::deserializeFrom(
 
     auto dmtLen = cur.readBE<uint8_t>();
     frame.dataMimeType_ = cur.readFixedString(dmtLen);
-    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags_);
+    frame.payload_ = deserializePayloadFrom(cur, frame.header_.flags);
   } catch (...) {
     return false;
   }

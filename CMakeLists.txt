@@ -303,6 +303,8 @@ add_library(
   rsocket/framing/Frame.h
   rsocket/framing/FrameFlags.cpp
   rsocket/framing/FrameFlags.h
+  rsocket/framing/FrameHeader.cpp
+  rsocket/framing/FrameHeader.h
   rsocket/framing/FrameProcessor.h
   rsocket/framing/FrameSerializer.cpp
   rsocket/framing/FrameSerializer.h

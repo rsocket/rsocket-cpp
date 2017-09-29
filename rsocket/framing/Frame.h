@@ -12,6 +12,7 @@
 #include "rsocket/Payload.h"
 #include "rsocket/framing/ErrorCode.h"
 #include "rsocket/framing/FrameFlags.h"
+#include "rsocket/framing/FrameHeader.h"
 #include "rsocket/framing/FrameType.h"
 #include "rsocket/internal/Common.h"
 
@@ -25,31 +26,6 @@ class QueueAppender;
 }
 
 namespace rsocket {
-
-class FrameHeader {
- public:
-  FrameHeader() {
-#ifndef NDEBUG
-    type_ = FrameType::RESERVED;
-#endif // NDEBUG
-  }
-  FrameHeader(FrameType type, FrameFlags flags, StreamId streamId)
-      : type_(type), flags_(flags), streamId_(streamId) {}
-
-  bool flagsComplete() const {
-    return !!(flags_ & FrameFlags::COMPLETE);
-  }
-
-  bool flagsNext() const {
-    return !!(flags_ & FrameFlags::NEXT);
-  }
-
-  FrameType type_{};
-  FrameFlags flags_{};
-  StreamId streamId_{};
-};
-
-std::ostream& operator<<(std::ostream&, const FrameHeader&);
 
 /// Frames do not form hierarchy, as we never perform type erasure on a frame.
 /// We use inheritance only to save code duplication.
@@ -95,7 +71,7 @@ class Frame_REQUEST_Base {
         payload_(std::move(payload)) {
     // to verify the client didn't set
     // METADATA and provided none
-    payload_.checkFlags(header_.flags_);
+    payload_.checkFlags(header_.flags);
     // TODO: DCHECK(requestN_ > 0);
     DCHECK(requestN_ <= Frame_REQUEST_N::kMaxRequestN);
   }
@@ -182,7 +158,7 @@ class Frame_REQUEST_RESPONSE {
             (flags & AllowedFlags) | payload.getFlags(),
             streamId),
         payload_(std::move(payload)) {
-    payload_.checkFlags(header_.flags_); // to verify the client didn't set
+    payload_.checkFlags(header_.flags); // to verify the client didn't set
     // METADATA and provided none
   }
 
@@ -203,7 +179,7 @@ class Frame_REQUEST_FNF {
             (flags & AllowedFlags) | payload.getFlags(),
             streamId),
         payload_(std::move(payload)) {
-    payload_.checkFlags(header_.flags_); // to verify the client didn't set
+    payload_.checkFlags(header_.flags); // to verify the client didn't set
     // METADATA and provided none
   }
 
@@ -248,7 +224,7 @@ class Frame_PAYLOAD {
             (flags & AllowedFlags) | payload.getFlags(),
             streamId),
         payload_(std::move(payload)) {
-    payload_.checkFlags(header_.flags_); // to verify the client didn't set
+    payload_.checkFlags(header_.flags); // to verify the client didn't set
     // METADATA and provided none
   }
 
@@ -348,7 +324,7 @@ class Frame_SETUP {
         metadataMimeType_(metadataMimeType),
         dataMimeType_(dataMimeType),
         payload_(std::move(payload)) {
-    payload_.checkFlags(header_.flags_); // to verify the client didn't set
+    payload_.checkFlags(header_.flags); // to verify the client didn't set
     // METADATA and provided none
     DCHECK(keepaliveTime_ > 0);
     DCHECK(maxLifetime_ > 0);
