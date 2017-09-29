@@ -67,7 +67,7 @@ class Observers {
   template <typename T>
   class NullObserver : public Observer<T> {
    public:
-    void onNext(T value) {}
+    void onNext(T) {}
   };
 
   template <typename T, typename Next>

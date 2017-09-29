@@ -205,13 +205,13 @@ Reference<Observable<T>> Observable<T>::subscribeOn(folly::Executor& executor) {
 template <typename T>
 template <typename Function>
 Reference<Observable<T>> Observable<T>::doOnSubscribe(Function function) {
-  return details::createDoOperator(ref_from_this(this), std::move(function), [](const T&){}, [](auto){}, []{});
+  return details::createDoOperator(ref_from_this(this), std::move(function), [](const T&){}, [](const auto&){}, []{});
 }
 
 template <typename T>
 template <typename Function>
 Reference<Observable<T>> Observable<T>::doOnNext(Function function) {
-  return details::createDoOperator(ref_from_this(this), []{}, std::move(function), [](auto){}, []{});
+  return details::createDoOperator(ref_from_this(this), []{}, std::move(function), [](const auto&){}, []{});
 }
 
 template <typename T>
@@ -223,14 +223,14 @@ Reference<Observable<T>> Observable<T>::doOnError(Function function) {
 template <typename T>
 template <typename Function>
 Reference<Observable<T>> Observable<T>::doOnComplete(Function function) {
-  return details::createDoOperator(ref_from_this(this), []{}, [](const T&){}, [](auto){}, std::move(function));
+  return details::createDoOperator(ref_from_this(this), []{}, [](const T&){}, [](const auto&){}, std::move(function));
 }
 
 template <typename T>
 template <typename Function>
 Reference<Observable<T>> Observable<T>::doOnTerminate(Function function) {
   auto sharedFunction = std::make_shared<Function>(std::move(function));
-  return details::createDoOperator(ref_from_this(this), []{}, [](const T&){}, [sharedFunction](auto){(*sharedFunction)();}, [sharedFunction](){(*sharedFunction)();});
+  return details::createDoOperator(ref_from_this(this), []{}, [](const T&){}, [sharedFunction](const auto&){(*sharedFunction)();}, [sharedFunction](){(*sharedFunction)();});
 
 }
 
@@ -238,13 +238,13 @@ template <typename T>
 template <typename Function>
 Reference<Observable<T>> Observable<T>::doOnEach(Function function) {
   auto sharedFunction = std::make_shared<Function>(std::move(function));
-  return details::createDoOperator(ref_from_this(this), []{}, [sharedFunction](const T&){(*sharedFunction)();}, [sharedFunction](auto){(*sharedFunction)();}, [sharedFunction](){(*sharedFunction)();});
+  return details::createDoOperator(ref_from_this(this), []{}, [sharedFunction](const T&){(*sharedFunction)();}, [sharedFunction](const auto&){(*sharedFunction)();}, [sharedFunction](){(*sharedFunction)();});
 }
 
 template <typename T>
 template <typename OnNextFunc, typename OnCompleteFunc>
 Reference<Observable<T>> Observable<T>::doOn(OnNextFunc onNext, OnCompleteFunc onComplete) {
-  return details::createDoOperator(ref_from_this(this), []{}, std::move(onNext), [](auto){}, std::move(onComplete));
+  return details::createDoOperator(ref_from_this(this), []{}, std::move(onNext), [](const auto&){}, std::move(onComplete));
 }
 
 template <typename T>

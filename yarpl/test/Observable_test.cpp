@@ -666,7 +666,7 @@ TEST(Observable, DoOnErrorTest) {
   MockFunction<void()> checkpoint;
   EXPECT_CALL(checkpoint, Call());
 
-  a->doOnError([&](auto){checkpoint.Call();})->subscribe();
+  a->doOnError([&](const auto&){checkpoint.Call();})->subscribe();
 }
 
 TEST(Observable, DoOnTerminateTest) {
@@ -714,5 +714,5 @@ TEST(Observable, DoOnTest) {
   EXPECT_CALL(checkpoint2, Call());
 
   a->doOn([&](int value) { checkpoint1.Call();
-  EXPECT_EQ(value, 5); }, []{FAIL();}, [&](auto){checkpoint2.Call();})->subscribe();
+  EXPECT_EQ(value, 5); }, []{FAIL();}, [&](const auto&){checkpoint2.Call();})->subscribe();
 }

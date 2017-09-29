@@ -62,7 +62,8 @@ class DoOperator : public ObservableOperator<U, U, DoOperator<U, OnSubscribeFunc
 
     void onError(folly::exception_wrapper ex) override {
       auto&& op = SuperSub::getObservableOperator();
-      op->onErrorFunc_(ex);
+      const auto& exRef = ex;
+      op->onErrorFunc_(exRef);
       SuperSub::onError(std::move(ex));
     }
 
