@@ -160,7 +160,6 @@ void RSocketServer::onRSocketResume(
   auto result = serviceHandler->onResume(resumeParams.token);
   if (result.hasError()) {
     VLOG(3) << "Terminating RESUME attempt from client.  No ServerState found";
-    result.value()->rSocketStateMachine_->stats().resumeFailure();
     throw result.error();
   }
   auto serverState = std::move(result.value());

@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <folly/Optional.h>
 
 #include "rsocket/framing/FrameType.h"
 #include "rsocket/internal/Common.h"
