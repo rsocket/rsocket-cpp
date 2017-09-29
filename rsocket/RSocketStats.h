@@ -15,6 +15,8 @@ class DuplexConnection;
 
 class RSocketStats {
  public:
+  enum class ResumeOutcome { SUCCESS, FAILURE };
+
   virtual ~RSocketStats() = default;
 
   static std::shared_ptr<RSocketStats> noop();
@@ -30,9 +32,11 @@ class RSocketStats {
   virtual void duplexConnectionClosed(
       const std::string& type,
       DuplexConnection* connection) = 0;
-  virtual void resumeSuccess() = 0;
-  virtual void resumeFailure() = 0;
-
+  virtual void serverResume(
+      folly::Optional<int64_t> clientAvailable,
+      int64_t serverAvailable,
+      int64_t serverDelta,
+      ResumeOutcome outcome) = 0;
   virtual void bytesWritten(size_t bytes) = 0;
   virtual void bytesRead(size_t bytes) = 0;
   virtual void frameWritten(FrameType frameType) = 0;
@@ -45,4 +49,4 @@ class RSocketStats {
   virtual void keepaliveSent() = 0;
   virtual void keepaliveReceived() = 0;
 };
-}
+} // namespace rsocket

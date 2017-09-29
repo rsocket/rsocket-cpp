@@ -83,6 +83,7 @@ void RSocketStateMachine::connectServer(
 }
 
 bool RSocketStateMachine::resumeServer(
+<<<<<<< HEAD
     yarpl::Reference<FrameTransport> transport,
     const ResumeParameters& params) {
   if (!isDisconnected()) {
@@ -91,6 +92,36 @@ bool RSocketStateMachine::resumeServer(
     std::runtime_error exn{"Old connection still exists"};
     transport->closeWithError(std::move(exn));
     stats_->resumeFailure();
+=======
+    yarpl::Reference<FrameTransport> frameTransport,
+    const ResumeParameters& resumeParams) {
+
+  auto result = resumeFromPositionOrClose(
+      resumeParams.serverPosition, resumeParams.clientPosition);
+
+  folly::Optional<int64_t> clientAvailable =
+      (resumeParams.clientPosition == kUnspecifiedResumePosition)
+      ? folly::none
+      : folly::make_optional(
+            resumeCache_->impliedPosition() - resumeParams.clientPosition);
+
+  int64_t serverAvailable =
+      resumeCache_->position() - resumeCache_->lastResetPosition();
+  int64_t serverDelta =
+      resumeCache_->position() - resumeParams.serverPosition;
+
+  if (!isDisconnectedOrClosed()) {
+    VLOG(1) << "Old connection (" << frameTransport_.get() << ") exists. "
+            << "Terminating new connection (" << frameTransport.get() << ")";
+    frameTransport->closeWithError(folly::exception_wrapper(
+        std::runtime_error("Old connection still exists")));
+
+    stats_->serverResume(
+        clientAvailable,
+        serverAvailable,
+        serverDelta,
+        Stats::ResumeOutcome::FAILURE);
+>>>>>>> add additional information to resume stats
     return false;
   }
 <<<<<<< HEAD
@@ -100,13 +131,13 @@ bool RSocketStateMachine::resumeServer(
       params.serverPosition, params.clientPosition);
 =======
   CHECK(connect(std::move(frameTransport), resumeParams.protocolVersion));
-  auto result = resumeFromPositionOrClose(
-      resumeParams.serverPosition, resumeParams.clientPosition);
-  if (!result) {
-    stats_->resumeFailure();
-  } else {
-    stats_->resumeSuccess();
-  }
+
+  stats_->serverResume(
+      clientAvailable,
+      serverAvailable,
+      serverDelta,
+      result ? Stats::ResumeOutcome::SUCCESS : Stats::ResumeOutcome::FAILURE);
+
   return result;
 >>>>>>> additional resume locations
 }
@@ -218,11 +249,8 @@ void RSocketStateMachine::connect(
   // instance.
   auto copyThis = shared_from_this();
   frameTransport_->setFrameProcessor(copyThis);
-<<<<<<< HEAD
-=======
   stats_->socketConnected();
   return true;
->>>>>>> additional resume locations
 }
 
 void RSocketStateMachine::sendPendingFrames() {
