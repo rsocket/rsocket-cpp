@@ -244,12 +244,12 @@ class RSocketStateMachine final
       uint32_t initialRequestN,
       Payload payload,
       bool completed) override;
-  void writeRequestN(StreamId streamId, uint32_t n) override;
-  void writePayload(StreamId streamId, Payload payload, bool complete) override;
-  void writeCloseStream(
-      StreamId streamId,
-      StreamCompletionSignal signal,
-      std::string message) override;
+  void writeRequestN(Frame_REQUEST_N&&) override;
+  void writeCancel(Frame_CANCEL&&) override;
+
+  void writePayload(Frame_PAYLOAD&&) override;
+  void writeError(Frame_ERROR&&) override;
+
   void onStreamClosed(StreamId streamId, StreamCompletionSignal signal)
       override;
 

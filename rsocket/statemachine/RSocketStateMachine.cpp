@@ -953,53 +953,20 @@ void RSocketStateMachine::writeNewStream(
   }
 }
 
-void RSocketStateMachine::writeRequestN(StreamId streamId, uint32_t n) {
-  outputFrameOrEnqueue(Frame_REQUEST_N(streamId, n));
-}
-
-void RSocketStateMachine::writePayload(
-    StreamId streamId,
-    Payload payload,
-    bool complete) {
-  Frame_PAYLOAD frame(
-      streamId,
-      FrameFlags::NEXT | (complete ? FrameFlags::COMPLETE : FrameFlags::EMPTY),
-      std::move(payload));
+void RSocketStateMachine::writeRequestN(Frame_REQUEST_N&& frame) {
   outputFrameOrEnqueue(std::move(frame));
 }
 
-void RSocketStateMachine::writeCloseStream(
-    StreamId streamId,
-    StreamCompletionSignal signal,
-    std::string message) {
-  switch (signal) {
-    case StreamCompletionSignal::COMPLETE:
-      outputFrameOrEnqueue(Frame_PAYLOAD::complete(streamId));
-      break;
+void RSocketStateMachine::writeCancel(Frame_CANCEL&& frame) {
+  outputFrameOrEnqueue(std::move(frame));
+}
 
-    case StreamCompletionSignal::CANCEL:
-      outputFrameOrEnqueue(Frame_CANCEL(streamId));
-      break;
+void RSocketStateMachine::writePayload(Frame_PAYLOAD&& frame) {
+  outputFrameOrEnqueue(std::move(frame));
+}
 
-    case StreamCompletionSignal::ERROR:
-      outputFrameOrEnqueue(Frame_ERROR::invalid(streamId, std::move(message)));
-      break;
-
-    case StreamCompletionSignal::APPLICATION_ERROR:
-      outputFrameOrEnqueue(
-          Frame_ERROR::applicationError(streamId, std::move(message)));
-      break;
-
-    case StreamCompletionSignal::INVALID_SETUP:
-    case StreamCompletionSignal::UNSUPPORTED_SETUP:
-    case StreamCompletionSignal::REJECTED_SETUP:
-
-    case StreamCompletionSignal::CONNECTION_ERROR:
-    case StreamCompletionSignal::CONNECTION_END:
-    case StreamCompletionSignal::SOCKET_CLOSED:
-    default:
-      CHECK(false); // unexpected value
-  }
+void RSocketStateMachine::writeError(Frame_ERROR&& frame) {
+  outputFrameOrEnqueue(std::move(frame));
 }
 
 void RSocketStateMachine::onStreamClosed(

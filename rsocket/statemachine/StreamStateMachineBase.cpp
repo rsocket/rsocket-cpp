@@ -43,34 +43,31 @@ void StreamStateMachineBase::newStream(
 }
 
 void StreamStateMachineBase::writePayload(Payload&& payload, bool complete) {
-  writer_->writePayload(streamId_, std::move(payload), complete);
+  auto const flags =
+      FrameFlags::NEXT | (complete ? FrameFlags::COMPLETE : FrameFlags::EMPTY);
+  Frame_PAYLOAD frame{streamId_, flags, std::move(payload)};
+  writer_->writePayload(std::move(frame));
 }
 
 void StreamStateMachineBase::writeRequestN(uint32_t n) {
-  writer_->writeRequestN(streamId_, n);
+  writer_->writeRequestN(Frame_REQUEST_N{streamId_, n});
 }
 
-void StreamStateMachineBase::applicationError(std::string errorPayload) {
-  // TODO: a bad frame for a stream should not bring down the whole socket
-  // https://github.com/ReactiveSocket/reactivesocket-cpp/issues/311
-  writer_->writeCloseStream(
-      streamId_,
-      StreamCompletionSignal::APPLICATION_ERROR,
-      std::move(errorPayload));
+void StreamStateMachineBase::applicationError(std::string msg) {
+  writer_->writeError(Frame_ERROR::applicationError(streamId_, std::move(msg)));
 }
 
-void StreamStateMachineBase::errorStream(std::string errorPayload) {
-  writer_->writeCloseStream(
-      streamId_, StreamCompletionSignal::ERROR, std::move(errorPayload));
+void StreamStateMachineBase::errorStream(std::string msg) {
+  writer_->writeError(Frame_ERROR::invalid(streamId_, std::move(msg)));
   closeStream(StreamCompletionSignal::ERROR);
 }
 
 void StreamStateMachineBase::cancelStream() {
-  writer_->writeCloseStream(streamId_, StreamCompletionSignal::CANCEL, "");
+  writer_->writeCancel(Frame_CANCEL{streamId_});
 }
 
 void StreamStateMachineBase::completeStream() {
-  writer_->writeCloseStream(streamId_, StreamCompletionSignal::COMPLETE, "");
+  writer_->writePayload(Frame_PAYLOAD::complete(streamId_));
 }
 
 void StreamStateMachineBase::closeStream(StreamCompletionSignal signal) {

@@ -7,12 +7,7 @@
 
 namespace rsocket {
 
-class FrameSerializer;
-
-///
-/// StreamsWriter is the interface for writing stream related frames
-/// on the wire.
-///
+/// The interface for writing stream related frames on the wire.
 class StreamsWriter {
  public:
   virtual ~StreamsWriter() = default;
@@ -24,18 +19,12 @@ class StreamsWriter {
       Payload payload,
       bool TEMP_completed) = 0;
 
-  virtual void writeRequestN(StreamId streamId, uint32_t n) = 0;
+  virtual void writeRequestN(Frame_REQUEST_N&&) = 0;
+  virtual void writeCancel(Frame_CANCEL&&) = 0;
 
-  virtual void
-  writePayload(StreamId streamId, Payload payload, bool complete) = 0;
+  virtual void writePayload(Frame_PAYLOAD&&) = 0;
+  virtual void writeError(Frame_ERROR&&) = 0;
 
-  virtual void writeCloseStream(
-      StreamId streamId,
-      StreamCompletionSignal signal,
-      std::string message) = 0;
-
-  virtual void onStreamClosed(
-      StreamId streamId,
-      StreamCompletionSignal signal) = 0;
+  virtual void onStreamClosed(StreamId, StreamCompletionSignal) = 0;
 };
 }
