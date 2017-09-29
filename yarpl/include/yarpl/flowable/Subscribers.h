@@ -113,7 +113,13 @@ class Subscribers {
 
     void onError(folly::exception_wrapper error) override {
       Subscriber<T>::onError(error);
-      error_(std::move(error));
+      try {
+        error_(std::move(error));
+      } catch (const std::exception& exn) {
+        auto ew = folly::exception_wrapper{std::current_exception(), exn};
+        DLOG(FATAL) << "'error' method should not throw: " << ew.what();
+        LOG(ERROR) << "'error' method should not throw: " << ew.what();
+      }
     }
 
    private:
@@ -137,7 +143,13 @@ class Subscribers {
     void onComplete() {
       if (!userError_) { // already errored?
         Subscriber<T>::onComplete();
-        complete_();
+        try {
+          complete_();
+        } catch (const std::exception& exn) {
+          auto ew = folly::exception_wrapper{std::current_exception(), exn};
+          DLOG(FATAL) << "'complete' method should not throw: " << ew.what();
+          LOG(ERROR) << "'complete' method should not throw: " << ew.what();
+        }
       }
     }
 
