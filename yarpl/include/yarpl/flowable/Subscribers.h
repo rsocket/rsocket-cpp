@@ -76,13 +76,27 @@ class Subscribers {
     }
 
     void onNext(T value) override {
-      next_(std::move(value));
+      if (userError_) {
+        return;
+      }
+      try {
+        next_(std::move(value));
+      } catch (const std::exception& exn) {
+        userError_ = true;
+        onError(folly::exception_wrapper{std::current_exception(), exn});
+        return;
+      }
+
       if (--pending_ < batch_ / 2) {
         const auto delta = batch_ - pending_;
         pending_ += delta;
         Subscriber<T>::subscription()->request(delta);
       }
     }
+
+   protected:
+    using Subscriber<T>::onError;
+    bool userError_{false};
 
    private:
     Next next_;
@@ -120,11 +134,14 @@ class Subscribers {
           complete_(std::move(complete)) {}
 
     void onComplete() {
-      Subscriber<T>::onComplete();
-      complete_();
+      if (!userError_) { // already errored?
+        Subscriber<T>::onComplete();
+        complete_();
+      }
     }
 
    private:
+    using Base<T, Next>::userError_;
     Complete complete_;
   };
 

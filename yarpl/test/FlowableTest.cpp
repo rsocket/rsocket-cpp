@@ -593,5 +593,20 @@ TEST(FlowableTest, SubscribeMultipleTimes) {
   EXPECT_EQ(results[4], std::vector<int64_t>({1, 2, 3, 4, 5}));
 }
 
+TEST(FlowableTest, ConsumerThrows_OnNext) {
+  auto range = Flowables::range(1, 10);
+  bool onErrorIsCalled {false};
+
+  range->subscribe([](auto){
+    throw std::runtime_error("throw at consumption");
+  }, [&onErrorIsCalled](auto ex) {
+    onErrorIsCalled = true;
+  }, [](){
+    FAIL() << "onError should have been called";
+  });
+
+  EXPECT_TRUE(onErrorIsCalled);
+}
+
 } // flowable
 } // yarpl
