@@ -83,6 +83,7 @@ class Subscribers {
         next_(std::move(value));
       } catch (const std::exception& exn) {
         userError_ = true;
+        Subscriber<T>::subscription()->cancel();
         onError(folly::exception_wrapper{std::current_exception(), exn});
         return;
       }
