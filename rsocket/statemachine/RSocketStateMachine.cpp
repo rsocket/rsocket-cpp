@@ -110,7 +110,7 @@ bool RSocketStateMachine::resumeServer(
         RSocketStats::ResumeOutcome::FAILURE);
     return false;
   }
-  CHECK(connect(std::move(frameTransport), resumeParams.protocolVersion));
+  connect(std::move(frameTransport), resumeParams.protocolVersion);
 
   auto result = resumeFromPositionOrClose(
       resumeParams.serverPosition, resumeParams.clientPosition);
@@ -232,7 +232,6 @@ void RSocketStateMachine::connect(
   auto copyThis = shared_from_this();
   frameTransport_->setFrameProcessor(copyThis);
   stats_->socketConnected();
-  return true;
 }
 
 void RSocketStateMachine::sendPendingFrames() {
