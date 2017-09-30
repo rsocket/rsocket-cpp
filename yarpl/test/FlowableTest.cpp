@@ -594,19 +594,41 @@ TEST(FlowableTest, SubscribeMultipleTimes) {
 }
 
 TEST(FlowableTest, ConsumerThrows_OnNext) {
-  auto range = Flowables::range(1, 10);
-  bool onErrorIsCalled {false};
+  bool onErrorIsCalled{false};
 
-  range->subscribe([](auto){
-    throw std::runtime_error("throw at consumption");
-  }, [&onErrorIsCalled](auto ex) {
-    onErrorIsCalled = true;
-  }, [](){
-    FAIL() << "onError should have been called";
-  });
+  Flowables::range(1, 10)->subscribe(
+      [](auto) { throw std::runtime_error("throw at consumption"); },
+      [&onErrorIsCalled](auto ex) { onErrorIsCalled = true; },
+      []() { FAIL() << "onError should have been called"; });
 
   EXPECT_TRUE(onErrorIsCalled);
 }
 
-} // flowable
-} // yarpl
+TEST(FlowableTest, ConsumerThrows_OnError) {
+  try {
+    Flowables::range(1, 10)->subscribe(
+        [](auto) { throw std::runtime_error("throw at consumption"); },
+        [](auto) { throw std::runtime_error("throw at onError"); },
+        []() { FAIL() << "onError should have been called"; });
+  } catch (const std::runtime_error& exn) {
+    FAIL() << "Error thrown in onError should have been caught.";
+  } catch (...) {
+    LOG(INFO) << "The app crashes in DEBUG mode to inform the implementor.";
+  }
+}
+
+TEST(FlowableTest, ConsumerThrows_OnComplete) {
+  try {
+    Flowables::range(1, 10)->subscribe(
+        [](auto) {},
+        [](auto) { FAIL() << "onComplete should have been called"; },
+        []() { throw std::runtime_error("throw at onComplete"); });
+  } catch (const std::runtime_error&) {
+    FAIL() << "Error thrown in onComplete should have been caught.";
+  } catch (...) {
+    LOG(INFO) << "The app crashes in DEBUG mode to inform the implementor.";
+  }
+}
+
+} // namespace flowable
+} // namespace yarpl

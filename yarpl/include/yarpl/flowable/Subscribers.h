@@ -76,13 +76,12 @@ class Subscribers {
     }
 
     void onNext(T value) override {
-      if (userError_) {
+      if (!Subscriber<T>::subscription()) {
         return;
       }
       try {
         next_(std::move(value));
       } catch (const std::exception& exn) {
-        userError_ = true;
         Subscriber<T>::subscription()->cancel();
         onError(folly::exception_wrapper{std::current_exception(), exn});
         return;
@@ -97,7 +96,6 @@ class Subscribers {
 
    protected:
     using Subscriber<T>::onError;
-    bool userError_{false};
 
    private:
     Next next_;
@@ -117,8 +115,10 @@ class Subscribers {
         error_(std::move(error));
       } catch (const std::exception& exn) {
         auto ew = folly::exception_wrapper{std::current_exception(), exn};
-        DLOG(FATAL) << "'error' method should not throw: " << ew.what();
         LOG(ERROR) << "'error' method should not throw: " << ew.what();
+#ifndef NDEBUG
+        throw ew; // Throw the wrapped exception
+#endif
       }
     }
 
@@ -134,32 +134,30 @@ class Subscribers {
         Error error,
         Complete complete,
         int64_t batch)
-        : WithError<T, Next, Error>(
-              std::move(next),
-              std::move(error),
-              batch),
+        : WithError<T, Next, Error>(std::move(next), std::move(error), batch),
           complete_(std::move(complete)) {}
 
     void onComplete() {
-      if (!userError_) { // already errored?
+      if (Subscriber<T>::subscription()) { // already errored?
         Subscriber<T>::onComplete();
         try {
           complete_();
         } catch (const std::exception& exn) {
           auto ew = folly::exception_wrapper{std::current_exception(), exn};
-          DLOG(FATAL) << "'complete' method should not throw: " << ew.what();
           LOG(ERROR) << "'complete' method should not throw: " << ew.what();
+#ifndef NDEBUG
+          throw ew; // Throw the wrapped exception
+#endif
         }
       }
     }
 
    private:
-    using Base<T, Next>::userError_;
     Complete complete_;
   };
 
   Subscribers() = delete;
 };
 
-} // flowable
-} // yarpl
+} // namespace flowable
+} // namespace yarpl
