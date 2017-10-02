@@ -417,7 +417,11 @@ void RSocketStateMachine::closeStreams(StreamCompletionSignal signal) {
 }
 
 void RSocketStateMachine::processFrame(std::unique_ptr<folly::IOBuf> frame) {
-  CHECK(!isClosed());
+
+  if (isClosed()) {
+    VLOG(4) << "StateMachine has been closed.  Discarding incoming frame";
+    return;
+  }
 
   // Necessary in case the only stream state machine closes itself, and takes
   // the RSocketStateMachine with it.
