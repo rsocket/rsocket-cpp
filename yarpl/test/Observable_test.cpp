@@ -639,3 +639,15 @@ TEST(Observable, DISABLED_CancelSubscriptionChain) {
 
   LOG(INFO) << "cancelled after " << emitted << " items";
 }
+
+TEST(Observable, RangeIteratorObservable) {
+  auto range_observable = make_ref<RangeObservable<int>>(10, 15);
+
+  auto collector = make_ref<CollectingObserver<int>>();
+  auto sub = range_observable->subscribe(collector);
+
+  EXPECT_EQ(sub->isCancelled(), false);
+  EXPECT_EQ(collector->values(), std::vector<int>({10, 11, 12, 13, 14}));
+  EXPECT_EQ(collector->complete(), true);
+  EXPECT_EQ(collector->error(), false);
+}

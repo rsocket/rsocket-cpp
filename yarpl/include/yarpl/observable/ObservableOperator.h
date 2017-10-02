@@ -485,6 +485,73 @@ class SubscribeOnOperator
   folly::Executor& executor_;
 };
 
+template <typename T, typename GeneratorClass>
+class IteratorObservable : public Observable<T> {
+public:
+  Reference<Subscription> subscribe(Reference<Observer<T>> observer) override {
+    static_assert(
+      std::is_base_of<
+        IteratorObservable,
+        GeneratorClass
+      >::value,
+      "Inherit from IteratorObservable like `MyClass : public IteratorObservable<T, MyClass>`"
+    );
+
+    // can be stack allocated; we know nothing escapes
+    GeneratorClass instantiated(*static_cast<GeneratorClass const*>(this));
+    // so we can call protected methods on IteratorObservable even if they were
+    // made private in the subclass
+    IteratorObservable* withvtable = &instantiated;
+
+    auto subscription = make_ref<IteratorObservableSubscription>();
+
+    withvtable->beforeOnSubscribe();
+    observer->onSubscribe(subscription);
+
+    while(!subscription->isCancelled() && withvtable->haveNext()) {
+      observer->onNext(withvtable->getNext());
+    }
+    observer->onComplete();
+    withvtable->afterOnComplete();
+
+    return subscription;
+  }
+
+private:
+  struct IteratorObservableSubscription : public Subscription {
+    void cancel() override {
+      cancelled_ = true;
+    }
+  };
+
+protected:
+  virtual bool haveNext() = 0;
+  virtual T getNext() = 0;
+
+  virtual void beforeOnSubscribe() {};
+  virtual void afterOnComplete() {};
+};
+
+template <typename T>
+class RangeObservable : public IteratorObservable<T, RangeObservable<T>> {
+public:
+  // define a ctor to construct with initial parameters
+  RangeObservable(T from, T to) : from_(from), to_(to) {}
+  // define a ctor to construct from another RangeObservable
+  RangeObservable(RangeObservable<T> const& other) : from_(other.from_), to_(other.to_) {}
+
+private:
+  bool haveNext() override {
+    return from_ < to_;
+  }
+  T getNext() override {
+    DCHECK(haveNext());
+    return from_++;
+  }
+
+  T from_, to_;
+};
+
 template <typename T, typename OnSubscribe>
 class FromPublisherOperator : public Observable<T> {
  public:
