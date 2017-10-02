@@ -6,6 +6,7 @@
 #include "rsocket/RSocketStats.h"
 #include "rsocket/framing/FrameTransportImpl.h"
 #include "rsocket/framing/FramedDuplexConnection.h"
+#include "rsocket/framing/ScheduledFrameTransport.h"
 #include "rsocket/internal/ClientResumeStatusCallback.h"
 #include "rsocket/internal/ConnectionSet.h"
 #include "rsocket/internal/FollyKeepaliveTimer.h"
@@ -44,25 +45,30 @@ const std::shared_ptr<RSocketRequester>& RSocketClient::getRequester() const {
   return requester_;
 }
 
-folly::Future<folly::Unit> RSocketClient::resume() {
+folly::Future<folly::Unit> RSocketClient::resume(folly::EventBase* smEvb) {
   VLOG(2) << "Resuming connection";
 
   CHECK(connectionFactory_)
       << "The client was likely created without ConnectionFactory. Can't "
       << "resume";
 
-  // TODO: CHECK whether the underlying transport is closed before attempting
-  // resumption.
-  //
+  if (smEvb) {
+    if (evb_ /* warm-resumption */ && evb_ != smEvb) {
+      throw ResumptionException(
+          "The requested EventBase is different from the EventBase the"
+          "client is already using");
+    } else { // cold-resumption.  Use the given evb for stateMachine.
+      evb_ = smEvb;
+    }
+  }
+
   return connectionFactory_->connect().then([this](
       ConnectionFactory::ConnectedDuplexConnection connection) mutable {
 
     if (!evb_) {
-      // cold-resumption
+      // cold-resumption.  EventBase hasn't been explicitly set for SM by the
+      // application.  Use the transport's eventBase.
       evb_ = &connection.eventBase;
-    } else {
-      // warm-resumption
-      CHECK(evb_ == &connection.eventBase);
     }
 
     class ResumeCallback : public ClientResumeStatusCallback {
@@ -93,18 +99,31 @@ folly::Future<folly::Unit> RSocketClient::resume() {
       framedConnection = std::make_unique<FramedDuplexConnection>(
           std::move(connection.connection), protocolVersion_);
     }
-    auto frameTransport =
+    auto transport =
         yarpl::make_ref<FrameTransportImpl>(std::move(framedConnection));
 
-    auto& eb = connection.eventBase;
-    eb.runInEventBaseThread([
+    yarpl::Reference<FrameTransport> ft;
+    if (evb_ != &connection.eventBase) {
+      // If the StateMachine EventBase is different from the transport
+      // EventBase, then use ScheduledFrameTransport and
+      // ScheduledFrameProcessor to ensure the RSocketStateMachine and
+      // Transport live on the desired EventBases
+      ft = yarpl::make_ref<ScheduledFrameTransport>(
+          std::move(transport),
+          &connection.eventBase, /* Transport EventBase */
+          evb_); /* StateMachine EventBase */
+    } else {
+      ft = std::move(transport);
+    }
+
+    evb_->runInEventBaseThread([
       this,
-      frameTransport = std::move(frameTransport),
+      frameTransport = std::move(ft),
       resumeCallback = std::move(resumeCallback),
       connection = std::move(connection)
     ]() mutable {
       if (!stateMachine_) {
-        createState(connection.eventBase);
+        createState();
       }
 
       stateMachine_->resumeClient(
@@ -142,10 +161,17 @@ folly::Future<folly::Unit> RSocketClient::disconnect(
 
 void RSocketClient::fromConnection(
     std::unique_ptr<DuplexConnection> connection,
-    folly::EventBase& eventBase,
+    folly::EventBase* smEvb,
+    folly::EventBase& transportEvb,
     SetupParameters setupParameters) {
-  evb_ = &eventBase;
-  createState(eventBase);
+  if (smEvb) {
+    evb_ = smEvb;
+  } else {
+    // If no EventBase is given for the stateMachine, then use the transport's
+    // EventBase to drive the stateMachine.
+    evb_ = &transportEvb;
+  }
+  createState();
   std::unique_ptr<DuplexConnection> framedConnection;
   if (connection->isFramed()) {
     framedConnection = std::move(connection);
@@ -153,21 +179,40 @@ void RSocketClient::fromConnection(
     framedConnection = std::make_unique<FramedDuplexConnection>(
         std::move(connection), setupParameters.protocolVersion);
   }
-  stateMachine_->connectClient(
-      std::move(framedConnection), std::move(setupParameters));
+  auto transport =
+      yarpl::make_ref<FrameTransportImpl>(std::move(framedConnection));
+  if (evb_ != &transportEvb) {
+    // If the StateMachine EventBase is different from the transport
+    // EventBase, then use ScheduledFrameTransport and ScheduledFrameProcessor
+    // to ensure the RSocketStateMachine and Transport live on the desired
+    // EventBases
+    auto scheduledFT = yarpl::make_ref<ScheduledFrameTransport>(
+        std::move(transport),
+        &transportEvb, /* Transport EventBase */
+        evb_); /* StateMachine EventBase */
+    evb_->runInEventBaseThread([
+      stateMachine = stateMachine_,
+      scheduledFT = std::move(scheduledFT),
+      setupParameters = std::move(setupParameters)
+    ]() mutable {
+      stateMachine->connectClient(
+          std::move(scheduledFT), std::move(setupParameters));
+    });
+  } else {
+    stateMachine_->connectClient(
+        std::move(transport), std::move(setupParameters));
+  }
 }
 
-void RSocketClient::createState(folly::EventBase& eventBase) {
-  CHECK(eventBase.isInEventBaseThread());
-
+void RSocketClient::createState() {
   // Creation of state is permitted only once for each RSocketClient.
   // When evb is removed from RSocketStateMachine, the state can be
   // created in constructor
   CHECK(!stateMachine_) << "A stateMachine has already been created";
 
   if (!keepaliveTimer_) {
-    keepaliveTimer_ = std::make_unique<FollyKeepaliveTimer>(
-        eventBase, std::chrono::seconds(5));
+    keepaliveTimer_ =
+        std::make_unique<FollyKeepaliveTimer>(*evb_, std::chrono::seconds(5));
   }
 
   if (!responder_) {
@@ -183,9 +228,9 @@ void RSocketClient::createState(folly::EventBase& eventBase) {
       std::move(resumeManager_),
       std::move(coldResumeHandler_));
 
-  requester_ = std::make_shared<RSocketRequester>(stateMachine_, eventBase);
+  requester_ = std::make_shared<RSocketRequester>(stateMachine_, *evb_);
 
-  connectionSet_->insert(stateMachine_, &eventBase);
+  connectionSet_->insert(stateMachine_, evb_);
   stateMachine_->registerSet(connectionSet_);
 }
 

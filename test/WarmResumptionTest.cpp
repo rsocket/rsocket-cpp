@@ -127,3 +127,33 @@ TEST(WarmResumptionTest, FailedResumption2) {
   newTs->assertSuccess();
   newTs->assertValueCount(10);
 }
+
+// Verify resumption when the stateMachine and Transport run on different
+// EventBase
+TEST(WarmResumptionTest, DifferentEvb) {
+  folly::ScopedEventBaseThread transportWorker;
+  folly::ScopedEventBaseThread SMWorker;
+  auto server = makeResumableServer(std::make_shared<HelloServiceHandler>());
+  auto client = makeWarmResumableClient(
+      transportWorker.getEventBase(),
+      *server->listeningPort(),
+      nullptr, // connectionEvents
+      SMWorker.getEventBase());
+  auto ts = TestSubscriber<std::string>::create(7 /* initialRequestN */);
+  client->getRequester()
+      ->requestStream(Payload("Bob"))
+      ->map([](auto p) { return p.moveDataToString(); })
+      ->subscribe(ts);
+  // Wait for a few frames before disconnecting.
+  while (ts->getValueCount() < 3) {
+    std::this_thread::yield();
+  }
+  auto result =
+      client->disconnect(std::runtime_error("Test triggered disconnect"))
+          .then([&] { return client->resume(SMWorker.getEventBase()); });
+  EXPECT_NO_THROW(result.get());
+  ts->request(3);
+  ts->awaitTerminalEvent();
+  ts->assertSuccess();
+  ts->assertValueCount(10);
+}

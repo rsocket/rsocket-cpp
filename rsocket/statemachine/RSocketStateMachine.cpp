@@ -99,7 +99,7 @@ bool RSocketStateMachine::resumeServer(
 }
 
 void RSocketStateMachine::connectClient(
-    std::unique_ptr<DuplexConnection> connection,
+    yarpl::Reference<FrameTransport> transport,
     SetupParameters params) {
   auto const version = params.protocolVersion == ProtocolVersion::Unknown
       ? ProtocolVersion::Current()
@@ -107,8 +107,6 @@ void RSocketStateMachine::connectClient(
   setFrameSerializer(FrameSerializer::createFrameSerializer(version));
 
   setResumable(params.resumable);
-
-  auto transport = yarpl::make_ref<FrameTransportImpl>(std::move(connection));
 
   Frame_SETUP frame(
       params.resumable ? FrameFlags::RESUME_ENABLE : FrameFlags::EMPTY,

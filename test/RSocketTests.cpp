@@ -44,15 +44,26 @@ std::unique_ptr<RSocketServer> makeResumableServer(
 
 folly::Future<std::unique_ptr<RSocketClient>> makeClientAsync(
     folly::EventBase* eventBase,
-    uint16_t port) {
+    uint16_t port,
+    folly::EventBase* stateMachineEvb) {
   CHECK(eventBase);
-  return RSocket::createConnectedClient(getConnFactory(eventBase, port));
+  return RSocket::createConnectedClient(
+      getConnFactory(eventBase, port),
+      SetupParameters(),
+      std::make_shared<RSocketResponder>(),
+      std::unique_ptr<KeepaliveTimer>(),
+      RSocketStats::noop(),
+      std::shared_ptr<RSocketConnectionEvents>(),
+      std::shared_ptr<ResumeManager>(),
+      std::shared_ptr<ColdResumeHandler>(),
+      stateMachineEvb);
 }
 
 std::unique_ptr<RSocketClient> makeClient(
     folly::EventBase* eventBase,
-    uint16_t port) {
-  return makeClientAsync(eventBase, port).get();
+    uint16_t port,
+    folly::EventBase* stateMachineEvb) {
+  return makeClientAsync(eventBase, port, stateMachineEvb).get();
 }
 
 namespace {
@@ -105,7 +116,8 @@ std::unique_ptr<RSocketClient> makeDisconnectedClient(
 std::unique_ptr<RSocketClient> makeWarmResumableClient(
     folly::EventBase* eventBase,
     uint16_t port,
-    std::shared_ptr<RSocketConnectionEvents> connectionEvents) {
+    std::shared_ptr<RSocketConnectionEvents> connectionEvents,
+    folly::EventBase* stateMachineEvb) {
   CHECK(eventBase);
   SetupParameters setupParameters;
   setupParameters.resumable = true;
@@ -115,7 +127,10 @@ std::unique_ptr<RSocketClient> makeWarmResumableClient(
              std::make_shared<RSocketResponder>(),
              nullptr,
              RSocketStats::noop(),
-             std::move(connectionEvents))
+             std::move(connectionEvents),
+             std::shared_ptr<ResumeManager>(),
+             std::shared_ptr<ColdResumeHandler>(),
+             stateMachineEvb)
       .get();
 }
 
@@ -124,7 +139,8 @@ std::unique_ptr<RSocketClient> makeColdResumableClient(
     uint16_t port,
     ResumeIdentificationToken token,
     std::shared_ptr<ResumeManager> resumeManager,
-    std::shared_ptr<ColdResumeHandler> coldResumeHandler) {
+    std::shared_ptr<ColdResumeHandler> coldResumeHandler,
+    folly::EventBase* stateMachineEvb) {
   SetupParameters setupParameters;
   setupParameters.resumable = true;
   setupParameters.token = token;
@@ -136,7 +152,8 @@ std::unique_ptr<RSocketClient> makeColdResumableClient(
              nullptr, // stats
              nullptr, // connectionEvents
              resumeManager,
-             coldResumeHandler)
+             coldResumeHandler,
+             stateMachineEvb)
       .get();
 }
 

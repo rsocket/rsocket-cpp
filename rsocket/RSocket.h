@@ -25,7 +25,8 @@ class RSocket {
           std::shared_ptr<RSocketConnectionEvents>(),
       std::shared_ptr<ResumeManager> resumeManager = nullptr,
       std::shared_ptr<ColdResumeHandler> coldResumeHandler =
-          std::shared_ptr<ColdResumeHandler>());
+          std::shared_ptr<ColdResumeHandler>(),
+      folly::EventBase* stateMachineEvb = nullptr);
 
   // Creates a RSocketClient which cold-resumes from the provided state
   static folly::Future<std::unique_ptr<RSocketClient>> createResumedClient(
@@ -40,12 +41,13 @@ class RSocket {
       std::shared_ptr<RSocketStats> stats = RSocketStats::noop(),
       std::shared_ptr<RSocketConnectionEvents> connectionEvents =
           std::shared_ptr<RSocketConnectionEvents>(),
-      ProtocolVersion protocolVersion = ProtocolVersion::Current());
+      ProtocolVersion protocolVersion = ProtocolVersion::Current(),
+      folly::EventBase* stateMachineEvb = nullptr);
 
   // Creates a RSocketClient from an existing DuplexConnection
   static std::unique_ptr<RSocketClient> createClientFromConnection(
       std::unique_ptr<DuplexConnection> connection,
-      folly::EventBase& eventBase,
+      folly::EventBase& transportEvb,
       SetupParameters setupParameters = SetupParameters(),
       std::shared_ptr<ConnectionFactory> connectionFactory = nullptr,
       std::shared_ptr<RSocketResponder> responder =
@@ -57,7 +59,8 @@ class RSocket {
           std::shared_ptr<RSocketConnectionEvents>(),
       std::shared_ptr<ResumeManager> resumeManager = nullptr,
       std::shared_ptr<ColdResumeHandler> coldResumeHandler =
-          std::shared_ptr<ColdResumeHandler>());
+          std::shared_ptr<ColdResumeHandler>(),
+      folly::EventBase* stateMachineEvb = nullptr);
 
   // A convenience function to create RSocketServer
   static std::unique_ptr<RSocketServer> createServer(

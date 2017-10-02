@@ -100,7 +100,8 @@ std::unique_ptr<rsocket::RSocketClient> createResumedClient(
     uint32_t port,
     ResumeIdentificationToken token,
     std::shared_ptr<ResumeManager> resumeManager,
-    std::shared_ptr<ColdResumeHandler> coldResumeHandler) {
+    std::shared_ptr<ColdResumeHandler> coldResumeHandler,
+    folly::EventBase* stateMachineEvb = nullptr) {
   auto retries = 10;
   while (true) {
     try {
@@ -108,7 +109,13 @@ std::unique_ptr<rsocket::RSocketClient> createResumedClient(
                  getConnFactory(evb, port),
                  token,
                  resumeManager,
-                 coldResumeHandler)
+                 coldResumeHandler,
+                 nullptr, /* responder */
+                 nullptr, /* keepAliveTimer */
+                 nullptr, /* stats */
+                 nullptr, /* connectionEvents */
+                 ProtocolVersion::Current(),
+                 stateMachineEvb)
           .get();
     } catch (std::exception ex) {
       retries--;
@@ -260,5 +267,73 @@ TEST(ColdResumptionTest, SuccessfulResumption) {
 
   for (auto& client : clients) {
     client.join();
+  }
+}
+
+TEST(ColdResumptionTest, DifferentEvb) {
+  auto server = makeResumableServer(std::make_shared<HelloServiceHandler>());
+  auto port = *server->listeningPort();
+
+  auto payload = "InitialPayload";
+  size_t latestValue;
+
+  folly::ScopedEventBaseThread transportWorker;
+  folly::ScopedEventBaseThread SMWorker;
+  auto token = ResumeIdentificationToken::generateNew();
+  auto resumeManager =
+      std::make_shared<ColdResumeManager>(RSocketStats::noop());
+  {
+    auto firstSub = make_ref<HelloSubscriber>(0);
+    {
+      auto coldResumeHandler = std::make_shared<HelloResumeHandler>(
+          HelloSubscribers({{payload, firstSub}}));
+      std::shared_ptr<RSocketClient> firstClient;
+      EXPECT_NO_THROW(
+          firstClient = makeColdResumableClient(
+              transportWorker.getEventBase(),
+              port,
+              token,
+              resumeManager,
+              coldResumeHandler,
+              SMWorker.getEventBase()));
+      firstClient->getRequester()
+          ->requestStream(Payload(payload))
+          ->subscribe(firstSub);
+      firstSub->request(7);
+      // Ensure reception of few frames before resuming.
+      while (firstSub->valueCount() < 1) {
+        std::this_thread::yield();
+      }
+    }
+    SMWorker.getEventBase()->runInEventBaseThreadAndWait(
+        [&latestValue, firstSub = std::move(firstSub) ]() {
+          latestValue = firstSub->getLatestValue();
+          VLOG(1) << latestValue;
+          VLOG(1) << "First Resume";
+        });
+  }
+
+  {
+    auto firstSub = yarpl::make_ref<HelloSubscriber>(latestValue);
+    {
+      auto coldResumeHandler = std::make_shared<HelloResumeHandler>(
+          HelloSubscribers({{payload, firstSub}}));
+      std::shared_ptr<RSocketClient> secondClient;
+      EXPECT_NO_THROW(
+          secondClient = createResumedClient(
+              transportWorker.getEventBase(),
+              port,
+              token,
+              resumeManager,
+              coldResumeHandler,
+              SMWorker.getEventBase()));
+
+      firstSub->request(3);
+      // Ensure reception of few frames before resuming.
+      while (firstSub->valueCount() < 1) {
+        std::this_thread::yield();
+      }
+      firstSub->awaitLatestValue(10);
+    }
   }
 }

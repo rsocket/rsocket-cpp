@@ -80,7 +80,7 @@ class RSocketStateMachine final
   bool resumeServer(yarpl::Reference<FrameTransport>, const ResumeParameters&);
 
   /// Connect as a client.  Sends a SETUP frame.
-  void connectClient(std::unique_ptr<DuplexConnection>, SetupParameters);
+  void connectClient(yarpl::Reference<FrameTransport>, SetupParameters);
 
   /// Resume a connection as a client.  Sends a RESUME frame.
   void resumeClient(

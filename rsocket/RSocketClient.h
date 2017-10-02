@@ -42,7 +42,7 @@ class RSocketClient {
   // it does a cold-resumption.  The returned future resolves on successful
   // resumption.  Else either a ConnectionException or a ResumptionException
   // is raised.
-  folly::Future<folly::Unit> resume();
+  folly::Future<folly::Unit> resume(folly::EventBase* smEvb = nullptr);
 
   // Disconnect the underlying transport.
   folly::Future<folly::Unit> disconnect(folly::exception_wrapper = {});
@@ -64,12 +64,12 @@ class RSocketClient {
   // Create stateMachine with the given DuplexConnection
   void fromConnection(
       std::unique_ptr<DuplexConnection> connection,
-      folly::EventBase& eventBase,
-      SetupParameters setupParameters
-  );
+      folly::EventBase* smEvb,
+      folly::EventBase& transportEvb,
+      SetupParameters setupParameters);
 
   // Creates RSocketStateMachine and RSocketRequester
-  void createState(folly::EventBase& eventBase);
+  void createState();
 
   std::shared_ptr<ConnectionFactory> connectionFactory_;
   std::shared_ptr<ConnectionSet> connectionSet_;
