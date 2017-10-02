@@ -25,7 +25,7 @@ class HelloSubscriber : public BaseSubscriber<Payload> {
  public:
   explicit HelloSubscriber(size_t latestValue) : latestValue_(latestValue) {}
 
-  void doRequest(int n) {
+  void requestWhenSubscribed(int n) {
     subscribedBaton_.wait();
     this->request(n);
   }
@@ -167,7 +167,7 @@ void coldResumer(uint32_t port, uint32_t client_num) {
       firstClient->getRequester()
           ->requestStream(Payload(firstPayload))
           ->subscribe(firstSub);
-      firstSub->doRequest(4);
+      firstSub->requestWhenSubscribed(4);
       // Ensure reception of few frames before resuming.
       while (firstSub->valueCount() < 1) {
         std::this_thread::yield();
@@ -202,8 +202,8 @@ void coldResumer(uint32_t port, uint32_t client_num) {
       secondClient->getRequester()
           ->requestStream(Payload(secondPayload))
           ->subscribe(secondSub);
-      firstSub->doRequest(3);
-      secondSub->doRequest(5);
+      firstSub->requestWhenSubscribed(3);
+      secondSub->requestWhenSubscribed(5);
       // Ensure reception of few frames before resuming.
       while (secondSub->valueCount() < 1) {
         std::this_thread::yield();
@@ -246,9 +246,9 @@ void coldResumer(uint32_t port, uint32_t client_num) {
     thirdClient->getRequester()
         ->requestStream(Payload(thirdPayload))
         ->subscribe(thirdSub);
-    firstSub->doRequest(3);
-    secondSub->doRequest(5);
-    thirdSub->doRequest(5);
+    firstSub->requestWhenSubscribed(3);
+    secondSub->requestWhenSubscribed(5);
+    thirdSub->requestWhenSubscribed(5);
 
     firstSub->awaitLatestValue(10);
     secondSub->awaitLatestValue(10);
@@ -301,7 +301,7 @@ TEST(ColdResumptionTest, DifferentEvb) {
       firstClient->getRequester()
           ->requestStream(Payload(payload))
           ->subscribe(firstSub);
-      firstSub->request(7);
+      firstSub->requestWhenSubscribed(7);
       // Ensure reception of few frames before resuming.
       while (firstSub->valueCount() < 1) {
         std::this_thread::yield();
@@ -330,7 +330,7 @@ TEST(ColdResumptionTest, DifferentEvb) {
               coldResumeHandler,
               SMWorker.getEventBase()));
 
-      firstSub->request(3);
+      firstSub->requestWhenSubscribed(3);
       // Ensure reception of few frames before resuming.
       while (firstSub->valueCount() < 1) {
         std::this_thread::yield();
