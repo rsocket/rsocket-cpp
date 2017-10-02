@@ -74,6 +74,29 @@ TEST(SetupResumeAcceptor, ImmediateClose) {
   acceptor2.close().get();
 }
 
+TEST(SetupResumeAcceptor, CloseWithActiveConnection) {
+  folly::EventBase evb;
+  SetupResumeAcceptor acceptor{ProtocolVersion::Unknown, &evb};
+
+  yarpl::Reference<DuplexConnection::Subscriber> outerInput;
+
+  auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
+      [&](auto input) {
+        outerInput = input;
+        input->onSubscribe(yarpl::flowable::Subscription::empty());
+      },
+      [](auto) { FAIL(); });
+
+  acceptor.accept(std::move(connection), setupFail, resumeFail);
+  acceptor.close();
+
+  evb.loop();
+
+  // Normally a DuplexConnection impl would complete/error its input subscriber
+  // in the destructor.  Do that manually here.
+  outerInput->onComplete();
+}
+
 TEST(SetupResumeAcceptor, EarlyComplete) {
   folly::EventBase evb;
   SetupResumeAcceptor acceptor{ProtocolVersion::Unknown, &evb};
@@ -100,7 +123,8 @@ TEST(SetupResumeAcceptor, EarlyError) {
   auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
       [](auto input) {
         input->onSubscribe(yarpl::flowable::Subscription::empty());
-        input->onError(std::runtime_error("Whoops")); },
+        input->onError(std::runtime_error("Whoops"));
+      },
       [](auto output) {
         EXPECT_CALL(*output, onSubscribe_(_));
         EXPECT_CALL(*output, onError_(_));
@@ -258,6 +282,3 @@ TEST(SetupResumeAcceptor, EventBaseDisappear) {
   SetupResumeAcceptor acceptor{
       ProtocolVersion::Unknown, evb.get()};
 }
-
-// TODO: Test for whether changing FrameProcessor in on{Resume,Setup} breaks
-// things.

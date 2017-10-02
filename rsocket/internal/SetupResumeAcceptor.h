@@ -37,9 +37,7 @@ class SetupResumeAcceptor final {
   using OnResume =
       folly::Function<void(yarpl::Reference<FrameTransport>, ResumeParameters)>;
 
-  SetupResumeAcceptor(
-      ProtocolVersion,
-      folly::EventBase*);
+  SetupResumeAcceptor(ProtocolVersion, folly::EventBase*);
 
   ~SetupResumeAcceptor();
 
@@ -53,7 +51,37 @@ class SetupResumeAcceptor final {
   folly::Future<folly::Unit> close();
 
  private:
-  friend class OneFrameSubscriber;
+  /// Subscriber that owns a connection, sets itself as that connection's input,
+  /// and reads out a single frame before cancelling.
+  class OneFrameSubscriber final
+      : public yarpl::flowable::BaseSubscriber<std::unique_ptr<folly::IOBuf>> {
+   public:
+    OneFrameSubscriber(
+        SetupResumeAcceptor&,
+        std::unique_ptr<DuplexConnection>,
+        SetupResumeAcceptor::OnSetup,
+        SetupResumeAcceptor::OnResume);
+
+    void setInput();
+
+    /// Shut down the DuplexConnection, breaking the cycle between it and this
+    /// subscriber.  Expects the DuplexConnection's destructor to call
+    /// onComplete/onError on its input subscriber (this).
+    void close();
+
+    // Subscriber.
+    void onSubscribeImpl() override;
+    void onNextImpl(std::unique_ptr<folly::IOBuf>) override;
+    void onCompleteImpl() override;
+    void onErrorImpl(folly::exception_wrapper) override;
+    void onTerminateImpl() override;
+
+   private:
+    SetupResumeAcceptor& acceptor_;
+    std::unique_ptr<DuplexConnection> connection_;
+    SetupResumeAcceptor::OnSetup onSetup_;
+    SetupResumeAcceptor::OnResume onResume_;
+  };
 
   void processFrame(
       std::unique_ptr<DuplexConnection>,
@@ -62,7 +90,7 @@ class SetupResumeAcceptor final {
       OnResume);
 
   /// Remove a OneFrameSubscriber from the set.
-  void remove(const yarpl::Reference<DuplexConnection::Subscriber>&);
+  void remove(const yarpl::Reference<OneFrameSubscriber>&);
 
   /// Close all open connections.
   void closeAll();
@@ -79,8 +107,7 @@ class SetupResumeAcceptor final {
   /// the correct FrameSerializer from the given frame.
   std::shared_ptr<FrameSerializer> createSerializer(const folly::IOBuf&);
 
-  std::unordered_set<yarpl::Reference<DuplexConnection::Subscriber>>
-      connections_;
+  std::unordered_set<yarpl::Reference<OneFrameSubscriber>> connections_;
 
   bool closed_{false};
 
