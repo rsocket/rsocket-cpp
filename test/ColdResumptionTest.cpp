@@ -4,6 +4,7 @@
 
 #include <folly/Conv.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
+#include <folly/portability/GFlags.h>
 
 #include "RSocketTests.h"
 
