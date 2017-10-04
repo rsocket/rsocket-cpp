@@ -165,12 +165,21 @@ class SingleTestObserver : public yarpl::single::SingleObserver<T> {
 
   /**
    * Get a reference to the received value if onSuccess was called.
-   *
-   * @return
    */
   T& getOnSuccessValue() {
     std::lock_guard<std::mutex> g(m_);
     return value_;
+  }
+
+  /**
+   * Get the error received from onError if it was called.
+   */
+  folly::exception_wrapper getError() {
+    std::lock_guard<std::mutex> g(m_);
+    if (!terminated_) {
+      throw std::logic_error{"Must call getError() on a terminated observer"};
+    }
+    return e_;
   }
 
   /**

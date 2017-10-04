@@ -174,13 +174,11 @@ TEST(RequestResponseTest, MultipleRequestsError) {
   auto flowable = requester->requestResponse(Payload("foo", "bar"));
 }
 
-// TODO: Currently, this hangs when the client sends a request,
-// we should fix this
-TEST(DISABLED_RequestResponseTest, FailureOnRequest) {
+TEST(RequestResponseTest, FailureOnRequest) {
   folly::ScopedEventBaseThread worker;
   auto server = makeServer(
       std::make_shared<GenericRequestResponseHandler>([](auto const&) {
-        ASSERT(false); // should never reach
+        ADD_FAILURE();
         return payload_response("", "");
       }));
 
@@ -197,5 +195,5 @@ TEST(DISABLED_RequestResponseTest, FailureOnRequest) {
       ->map(payload_to_stringpair)
       ->subscribe(to);
   to->awaitTerminalEvent();
-  to->assertOnErrorMessage("???"); // ??? this probably isn't correct
+  EXPECT_TRUE(to->getError());
 }
