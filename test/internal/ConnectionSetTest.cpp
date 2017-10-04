@@ -8,7 +8,7 @@
 #include "rsocket/RSocketResponder.h"
 #include "rsocket/RSocketStats.h"
 #include "rsocket/internal/ConnectionSet.h"
-#include "rsocket/internal/FollyKeepaliveTimer.h"
+#include "rsocket/internal/KeepaliveTimer.h"
 #include "rsocket/statemachine/RSocketStateMachine.h"
 
 using namespace rsocket;
@@ -19,7 +19,7 @@ namespace {
 std::shared_ptr<RSocketStateMachine> makeStateMachine(folly::EventBase* evb) {
   return std::make_shared<RSocketStateMachine>(
       std::make_shared<RSocketResponder>(),
-      std::make_unique<FollyKeepaliveTimer>(*evb, std::chrono::seconds{10}),
+      std::make_unique<KeepaliveTimer>(std::chrono::seconds{10}, *evb),
       RSocketMode::SERVER,
       RSocketStats::noop(),
       std::make_shared<RSocketConnectionEvents>(),

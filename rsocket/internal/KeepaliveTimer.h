@@ -8,25 +8,23 @@
 
 namespace rsocket {
 
-class FollyKeepaliveTimer : public KeepaliveTimer {
+class KeepaliveTimer {
  public:
-  FollyKeepaliveTimer(
-      folly::EventBase& eventBase,
-      std::chrono::milliseconds period);
+  KeepaliveTimer(std::chrono::milliseconds period, folly::EventBase& eventBase);
 
-  ~FollyKeepaliveTimer();
+  ~KeepaliveTimer();
 
-  std::chrono::milliseconds keepaliveTime() override;
+  std::chrono::milliseconds keepaliveTime();
 
   void schedule();
 
-  void stop() override;
+  void stop();
 
-  void start(const std::shared_ptr<FrameSink>& connection) override;
+  void start(const std::shared_ptr<FrameSink>& connection);
 
   void sendKeepalive();
 
-  void keepaliveReceived() override;
+  void keepaliveReceived();
 
  private:
   std::shared_ptr<FrameSink> connection_;

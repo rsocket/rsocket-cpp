@@ -49,14 +49,14 @@ void sendRequest(std::string mimeType) {
   address.setFromHostPort(FLAGS_host, FLAGS_port);
   auto connectionEvents = std::make_shared<ChannelConnectionEvents>();
   auto client = RSocket::createConnectedClient(
-      std::make_unique<TcpConnectionFactory>(*worker.getEventBase(),
-                                             std::move(address)),
-      SetupParameters(mimeType, mimeType),
-      std::make_shared<RSocketResponder>(),
-      nullptr,
-      RSocketStats::noop(),
-      connectionEvents)
-      .get();
+                    std::make_unique<TcpConnectionFactory>(
+                        *worker.getEventBase(), std::move(address)),
+                    SetupParameters(mimeType, mimeType),
+                    std::make_shared<RSocketResponder>(),
+                    kDefaultKeepaliveInterval,
+                    RSocketStats::noop(),
+                    connectionEvents)
+                    .get();
 
   std::atomic<int> rcvdCount{0};
 

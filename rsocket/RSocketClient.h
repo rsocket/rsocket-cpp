@@ -55,7 +55,7 @@ class RSocketClient {
       ProtocolVersion protocolVersion,
       ResumeIdentificationToken token,
       std::shared_ptr<RSocketResponder> responder,
-      std::unique_ptr<KeepaliveTimer> keepaliveTimer,
+      std::chrono::milliseconds keepaliveInterval,
       std::shared_ptr<RSocketStats> stats,
       std::shared_ptr<RSocketConnectionEvents> connectionEvents,
       std::shared_ptr<ResumeManager> resumeManager,
@@ -74,7 +74,7 @@ class RSocketClient {
   std::shared_ptr<ConnectionFactory> connectionFactory_;
   std::shared_ptr<ConnectionSet> connectionSet_;
   std::shared_ptr<RSocketResponder> responder_;
-  std::unique_ptr<KeepaliveTimer> keepaliveTimer_;
+  std::chrono::milliseconds keepaliveInterval_;
   std::shared_ptr<RSocketStats> stats_;
   std::shared_ptr<RSocketConnectionEvents> connectionEvents_;
   std::shared_ptr<ResumeManager> resumeManager_;

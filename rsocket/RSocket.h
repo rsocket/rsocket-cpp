@@ -13,13 +13,13 @@ namespace rsocket {
 class RSocket {
  public:
   // Creates a RSocketClient which is connected to the remoteside.
+  // keepaliveInterval of 0 will result in no keepAlives
   static folly::Future<std::unique_ptr<RSocketClient>> createConnectedClient(
       std::shared_ptr<ConnectionFactory>,
       SetupParameters setupParameters = SetupParameters(),
       std::shared_ptr<RSocketResponder> responder =
           std::make_shared<RSocketResponder>(),
-      std::unique_ptr<KeepaliveTimer> keepaliveTimer =
-          std::unique_ptr<KeepaliveTimer>(),
+      std::chrono::milliseconds keepaliveInterval = kDefaultKeepaliveInterval,
       std::shared_ptr<RSocketStats> stats = RSocketStats::noop(),
       std::shared_ptr<RSocketConnectionEvents> connectionEvents =
           std::shared_ptr<RSocketConnectionEvents>(),
@@ -29,6 +29,7 @@ class RSocket {
       folly::EventBase* stateMachineEvb = nullptr);
 
   // Creates a RSocketClient which cold-resumes from the provided state
+  // keepaliveInterval of 0 will result in no keepAlives
   static folly::Future<std::unique_ptr<RSocketClient>> createResumedClient(
       std::shared_ptr<ConnectionFactory>,
       ResumeIdentificationToken token,
@@ -36,8 +37,7 @@ class RSocket {
       std::shared_ptr<ColdResumeHandler> coldResumeHandler,
       std::shared_ptr<RSocketResponder> responder =
           std::make_shared<RSocketResponder>(),
-      std::unique_ptr<KeepaliveTimer> keepaliveTimer =
-          std::unique_ptr<KeepaliveTimer>(),
+      std::chrono::milliseconds keepaliveInterval = kDefaultKeepaliveInterval,
       std::shared_ptr<RSocketStats> stats = RSocketStats::noop(),
       std::shared_ptr<RSocketConnectionEvents> connectionEvents =
           std::shared_ptr<RSocketConnectionEvents>(),
@@ -45,6 +45,7 @@ class RSocket {
       folly::EventBase* stateMachineEvb = nullptr);
 
   // Creates a RSocketClient from an existing DuplexConnection
+  // keepaliveInterval of 0 will result in no keepAlives
   static std::unique_ptr<RSocketClient> createClientFromConnection(
       std::unique_ptr<DuplexConnection> connection,
       folly::EventBase& transportEvb,
@@ -52,8 +53,7 @@ class RSocket {
       std::shared_ptr<ConnectionFactory> connectionFactory = nullptr,
       std::shared_ptr<RSocketResponder> responder =
           std::make_shared<RSocketResponder>(),
-      std::unique_ptr<KeepaliveTimer> keepaliveTimer =
-          std::unique_ptr<KeepaliveTimer>(),
+      std::chrono::milliseconds keepaliveInterval = kDefaultKeepaliveInterval,
       std::shared_ptr<RSocketStats> stats = RSocketStats::noop(),
       std::shared_ptr<RSocketConnectionEvents> connectionEvents =
           std::shared_ptr<RSocketConnectionEvents>(),

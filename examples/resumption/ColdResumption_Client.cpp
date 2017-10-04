@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
                              getConnFactory(worker.getEventBase()),
                              getSetupParams(token),
                              nullptr, // responder
-                             nullptr, // keepAliveTimer
+                             kDefaultKeepaliveInterval,
                              nullptr, // stats
                              nullptr, // connectionEvents
                              resumeManager,

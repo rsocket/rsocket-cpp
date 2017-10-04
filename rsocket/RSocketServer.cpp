@@ -26,6 +26,7 @@ RSocketServer::RSocketServer(
       stats_(std::move(stats)) {}
 
 RSocketServer::~RSocketServer() {
+  VLOG(3) << "~RSocketServer ..";
   shutdownAndWait();
 }
 

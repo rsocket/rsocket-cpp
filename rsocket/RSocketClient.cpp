@@ -9,7 +9,7 @@
 #include "rsocket/framing/ScheduledFrameTransport.h"
 #include "rsocket/internal/ClientResumeStatusCallback.h"
 #include "rsocket/internal/ConnectionSet.h"
-#include "rsocket/internal/FollyKeepaliveTimer.h"
+#include "rsocket/internal/KeepaliveTimer.h"
 
 using namespace folly;
 
@@ -20,7 +20,7 @@ RSocketClient::RSocketClient(
     ProtocolVersion protocolVersion,
     ResumeIdentificationToken token,
     std::shared_ptr<RSocketResponder> responder,
-    std::unique_ptr<KeepaliveTimer> keepaliveTimer,
+    std::chrono::milliseconds keepaliveInterval,
     std::shared_ptr<RSocketStats> stats,
     std::shared_ptr<RSocketConnectionEvents> connectionEvents,
     std::shared_ptr<ResumeManager> resumeManager,
@@ -29,7 +29,7 @@ RSocketClient::RSocketClient(
     : connectionFactory_(std::move(connectionFactory)),
       connectionSet_(std::make_shared<ConnectionSet>()),
       responder_(std::move(responder)),
-      keepaliveTimer_(std::move(keepaliveTimer)),
+      keepaliveInterval_(keepaliveInterval),
       stats_(stats),
       connectionEvents_(connectionEvents),
       resumeManager_(resumeManager),
@@ -39,7 +39,7 @@ RSocketClient::RSocketClient(
       evb_(stateMachineEvb) {}
 
 RSocketClient::~RSocketClient() {
-  VLOG(3) << "RSocketClient destroyed ..";
+  VLOG(3) << "~RSocketClient ..";
   disconnect().get();
 }
 
@@ -199,18 +199,19 @@ void RSocketClient::createState() {
   // created in constructor
   CHECK(!stateMachine_) << "A stateMachine has already been created";
 
-  if (!keepaliveTimer_) {
-    keepaliveTimer_ =
-        std::make_unique<FollyKeepaliveTimer>(*evb_, std::chrono::seconds(5));
-  }
-
   if (!responder_) {
     responder_ = std::make_shared<RSocketResponder>();
   }
 
+  std::unique_ptr<KeepaliveTimer> keepaliveTimer{nullptr};
+  if (keepaliveInterval_ > std::chrono::milliseconds(0)) {
+    keepaliveTimer =
+        std::make_unique<KeepaliveTimer>(keepaliveInterval_, *evb_);
+  }
+
   stateMachine_ = std::make_shared<RSocketStateMachine>(
       std::move(responder_),
-      std::move(keepaliveTimer_),
+      std::move(keepaliveTimer),
       RSocketMode::CLIENT,
       std::move(stats_),
       std::move(connectionEvents_),

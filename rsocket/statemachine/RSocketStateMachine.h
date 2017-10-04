@@ -12,6 +12,7 @@
 #include "rsocket/ResumeManager.h"
 #include "rsocket/framing/FrameProcessor.h"
 #include "rsocket/internal/Common.h"
+#include "rsocket/internal/KeepaliveTimer.h"
 #include "rsocket/statemachine/StreamState.h"
 #include "rsocket/statemachine/StreamsFactory.h"
 #include "rsocket/statemachine/StreamsWriter.h"
@@ -64,7 +65,7 @@ class RSocketStateMachine final
  public:
   RSocketStateMachine(
       std::shared_ptr<RSocketResponder> requestResponder,
-      std::unique_ptr<KeepaliveTimer> keepaliveTimer_,
+      std::unique_ptr<KeepaliveTimer> keepaliveTimer,
       RSocketMode mode,
       std::shared_ptr<RSocketStats> stats,
       std::shared_ptr<RSocketConnectionEvents> connectionEvents,

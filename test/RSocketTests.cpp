@@ -51,7 +51,7 @@ folly::Future<std::unique_ptr<RSocketClient>> makeClientAsync(
       getConnFactory(eventBase, port),
       SetupParameters(),
       std::make_shared<RSocketResponder>(),
-      std::unique_ptr<KeepaliveTimer>(),
+      kDefaultKeepaliveInterval,
       RSocketStats::noop(),
       std::shared_ptr<RSocketConnectionEvents>(),
       std::shared_ptr<ResumeManager>(),
@@ -125,7 +125,7 @@ std::unique_ptr<RSocketClient> makeWarmResumableClient(
              getConnFactory(eventBase, port),
              std::move(setupParameters),
              std::make_shared<RSocketResponder>(),
-             nullptr,
+             kDefaultKeepaliveInterval,
              RSocketStats::noop(),
              std::move(connectionEvents),
              std::shared_ptr<ResumeManager>(),
@@ -148,7 +148,7 @@ std::unique_ptr<RSocketClient> makeColdResumableClient(
              getConnFactory(eventBase, port),
              std::move(setupParameters),
              nullptr, // responder
-             nullptr, // keepAliveTimer
+             kDefaultKeepaliveInterval,
              nullptr, // stats
              nullptr, // connectionEvents
              resumeManager,

@@ -25,6 +25,8 @@ typedef Range<const char*> StringPiece;
 
 namespace rsocket {
 
+constexpr std::chrono::seconds kDefaultKeepaliveInterval{5};
+
 constexpr int64_t kMaxRequestN = std::numeric_limits<int32_t>::max();
 
 /// A unique identifier of a stream.
@@ -163,15 +165,5 @@ constexpr inline bool operator>(
 }
 
 class FrameSink;
-// Client Side Keepalive Timer
-class KeepaliveTimer {
- public:
-  virtual ~KeepaliveTimer() = default;
-
-  virtual std::chrono::milliseconds keepaliveTime() = 0;
-  virtual void stop() = 0;
-  virtual void start(const std::shared_ptr<FrameSink>& connection) = 0;
-  virtual void keepaliveReceived() = 0;
-};
 
 } // reactivesocket

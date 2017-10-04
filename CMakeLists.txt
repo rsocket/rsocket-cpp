@@ -262,8 +262,8 @@ add_library(
   rsocket/internal/Common.h
   rsocket/internal/ConnectionSet.cpp
   rsocket/internal/ConnectionSet.h
-  rsocket/internal/FollyKeepaliveTimer.cpp
-  rsocket/internal/FollyKeepaliveTimer.h
+  rsocket/internal/KeepaliveTimer.cpp
+  rsocket/internal/KeepaliveTimer.h
   rsocket/internal/ScheduledRSocketResponder.cpp
   rsocket/internal/ScheduledRSocketResponder.h
   rsocket/internal/ScheduledSingleObserver.h
@@ -353,7 +353,7 @@ add_executable(
   test/handlers/HelloStreamRequestHandler.h
   test/internal/AllowanceTest.cpp
   test/internal/ConnectionSetTest.cpp
-  test/internal/FollyKeepaliveTimerTest.cpp
+  test/internal/KeepaliveTimerTest.cpp
   test/internal/SetupResumeAcceptorTest.cpp
   test/internal/SwappableEventBaseTest.cpp
   test/test_utils/ColdResumeManager.cpp

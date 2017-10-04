@@ -114,7 +114,7 @@ std::unique_ptr<rsocket::RSocketClient> createResumedClient(
                  resumeManager,
                  coldResumeHandler,
                  nullptr, /* responder */
-                 nullptr, /* keepAliveTimer */
+                 kDefaultKeepaliveInterval,
                  nullptr, /* stats */
                  nullptr, /* connectionEvents */
                  ProtocolVersion::Current(),

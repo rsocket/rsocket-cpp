@@ -1,25 +1,25 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "rsocket/internal/FollyKeepaliveTimer.h"
+#include "rsocket/internal/KeepaliveTimer.h"
 
 namespace rsocket {
 
-FollyKeepaliveTimer::FollyKeepaliveTimer(
-    folly::EventBase& eventBase,
-    std::chrono::milliseconds period)
+KeepaliveTimer::KeepaliveTimer(
+    std::chrono::milliseconds period,
+    folly::EventBase& eventBase)
     : eventBase_(eventBase),
       generation_(std::make_shared<uint32_t>(0)),
       period_(period) {}
 
-FollyKeepaliveTimer::~FollyKeepaliveTimer() {
+KeepaliveTimer::~KeepaliveTimer() {
   stop();
 }
 
-std::chrono::milliseconds FollyKeepaliveTimer::keepaliveTime() {
+std::chrono::milliseconds KeepaliveTimer::keepaliveTime() {
   return period_;
 }
 
-void FollyKeepaliveTimer::schedule() {
+void KeepaliveTimer::schedule() {
   auto scheduledGeneration = *generation_;
   auto generation = generation_;
   eventBase_.runAfterDelay(
@@ -31,7 +31,7 @@ void FollyKeepaliveTimer::schedule() {
       static_cast<uint32_t>(keepaliveTime().count()));
 }
 
-void FollyKeepaliveTimer::sendKeepalive() {
+void KeepaliveTimer::sendKeepalive() {
   if (pending_) {
     // Make sure connection_ is not deleted (via external call to stop)
     // while we still mid-operation
@@ -48,14 +48,14 @@ void FollyKeepaliveTimer::sendKeepalive() {
 }
 
 // must be called from the same thread as start
-void FollyKeepaliveTimer::stop() {
+void KeepaliveTimer::stop() {
   *generation_ += 1;
   pending_ = false;
   connection_ = nullptr;
 }
 
 // must be called from the same thread as stop
-void FollyKeepaliveTimer::start(const std::shared_ptr<FrameSink>& connection) {
+void KeepaliveTimer::start(const std::shared_ptr<FrameSink>& connection) {
   connection_ = connection;
   *generation_ += 1;
   DCHECK(!pending_);
@@ -63,7 +63,7 @@ void FollyKeepaliveTimer::start(const std::shared_ptr<FrameSink>& connection) {
   schedule();
 }
 
-void FollyKeepaliveTimer::keepaliveReceived() {
+void KeepaliveTimer::keepaliveReceived() {
   pending_ = false;
 }
 }

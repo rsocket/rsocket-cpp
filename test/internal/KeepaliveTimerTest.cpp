@@ -9,7 +9,7 @@
 
 #include "rsocket/framing/Frame.h"
 #include "rsocket/framing/FramedDuplexConnection.h"
-#include "rsocket/internal/FollyKeepaliveTimer.h"
+#include "rsocket/internal/KeepaliveTimer.h"
 
 using namespace ::testing;
 using namespace ::rsocket;
@@ -40,7 +40,7 @@ TEST(FollyKeepaliveTimerTest, StartStopWithResponse) {
 
   folly::EventBase eventBase;
 
-  FollyKeepaliveTimer timer(eventBase, std::chrono::milliseconds(100));
+  KeepaliveTimer timer(std::chrono::milliseconds(100), eventBase);
 
   timer.start(connectionAutomaton);
 
@@ -62,7 +62,7 @@ TEST(FollyKeepaliveTimerTest, NoResponse) {
 
   folly::EventBase eventBase;
 
-  FollyKeepaliveTimer timer(eventBase, std::chrono::milliseconds(100));
+  KeepaliveTimer timer(std::chrono::milliseconds(100), eventBase);
 
   timer.start(connectionAutomaton);
 
