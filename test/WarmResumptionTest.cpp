@@ -150,7 +150,7 @@ TEST(WarmResumptionTest, DifferentEvb) {
   }
   auto result =
       client->disconnect(std::runtime_error("Test triggered disconnect"))
-          .then([&] { return client->resume(SMWorker.getEventBase()); });
+          .then([&] { return client->resume(); });
   EXPECT_NO_THROW(result.get());
   ts->request(3);
   ts->awaitTerminalEvent();

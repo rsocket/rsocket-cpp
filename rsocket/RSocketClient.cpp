@@ -24,7 +24,8 @@ RSocketClient::RSocketClient(
     std::shared_ptr<RSocketStats> stats,
     std::shared_ptr<RSocketConnectionEvents> connectionEvents,
     std::shared_ptr<ResumeManager> resumeManager,
-    std::shared_ptr<ColdResumeHandler> coldResumeHandler)
+    std::shared_ptr<ColdResumeHandler> coldResumeHandler,
+    folly::EventBase* stateMachineEvb)
     : connectionFactory_(std::move(connectionFactory)),
       connectionSet_(std::make_shared<ConnectionSet>()),
       responder_(std::move(responder)),
@@ -34,7 +35,8 @@ RSocketClient::RSocketClient(
       resumeManager_(resumeManager),
       coldResumeHandler_(coldResumeHandler),
       protocolVersion_(protocolVersion),
-      token_(std::move(token)) {}
+      token_(std::move(token)),
+      evb_(stateMachineEvb) {}
 
 RSocketClient::~RSocketClient() {
   VLOG(3) << "RSocketClient destroyed ..";
@@ -45,22 +47,12 @@ const std::shared_ptr<RSocketRequester>& RSocketClient::getRequester() const {
   return requester_;
 }
 
-folly::Future<folly::Unit> RSocketClient::resume(folly::EventBase* smEvb) {
+folly::Future<folly::Unit> RSocketClient::resume() {
   VLOG(2) << "Resuming connection";
 
   CHECK(connectionFactory_)
       << "The client was likely created without ConnectionFactory. Can't "
       << "resume";
-
-  if (smEvb) {
-    if (evb_ /* warm-resumption */ && evb_ != smEvb) {
-      throw ResumptionException(
-          "The requested EventBase is different from the EventBase the"
-          "client is already using");
-    } else { // cold-resumption.  Use the given evb for stateMachine.
-      evb_ = smEvb;
-    }
-  }
 
   return connectionFactory_->connect().then([this](
       ConnectionFactory::ConnectedDuplexConnection connection) mutable {
@@ -161,12 +153,9 @@ folly::Future<folly::Unit> RSocketClient::disconnect(
 
 void RSocketClient::fromConnection(
     std::unique_ptr<DuplexConnection> connection,
-    folly::EventBase* smEvb,
     folly::EventBase& transportEvb,
     SetupParameters setupParameters) {
-  if (smEvb) {
-    evb_ = smEvb;
-  } else {
+  if (!evb_) {
     // If no EventBase is given for the stateMachine, then use the transport's
     // EventBase to drive the stateMachine.
     evb_ = &transportEvb;

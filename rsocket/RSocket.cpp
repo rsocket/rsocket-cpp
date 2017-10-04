@@ -74,9 +74,10 @@ folly::Future<std::unique_ptr<RSocketClient>> RSocket::createResumedClient(
       std::move(stats),
       std::move(connectionEvents),
       std::move(resumeManager),
-      std::move(coldResumeHandler));
+      std::move(coldResumeHandler),
+      stateMachineEvb);
 
-  return c->resume(stateMachineEvb)
+  return c->resume()
       .then([client = std::unique_ptr<RSocketClient>(c)]() mutable {
         return std::move(client);
       });
@@ -103,10 +104,10 @@ std::unique_ptr<RSocketClient> RSocket::createClientFromConnection(
       std::move(stats),
       std::move(connectionEvents),
       std::move(resumeManager),
-      std::move(coldResumeHandler)));
+      std::move(coldResumeHandler),
+      stateMachineEvb));
   c->fromConnection(
       std::move(connection),
-      stateMachineEvb,
       transportEvb,
       std::move(setupParameters));
   return c;
