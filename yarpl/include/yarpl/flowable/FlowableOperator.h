@@ -36,7 +36,7 @@ class FlowableOperator : public Flowable<D> {
   /// subscriber for the previous stage; as a subscription for the next one, the
   /// user-supplied subscriber being the last of the pipeline stages.
   class Subscription : public yarpl::flowable::Subscription,
-                       public Subscriber<U> {
+                       public BaseSubscriber<U> {
    protected:
     Subscription(
         Reference<Operator> flowable,
@@ -52,100 +52,59 @@ class FlowableOperator : public Flowable<D> {
     }
 
     void subscriberOnNext(D value) {
-      if (subscriber_) {
-        subscriber_->onNext(std::move(value));
+      if (auto subscriber = subscriber_.load()) {
+        subscriber->onNext(std::move(value));
       }
     }
 
     /// Terminates both ends of an operator normally.
     void terminate() {
-      terminateImpl(TerminateState::Both());
+      auto subscriber = subscriber_.exchange(nullptr);
+      BaseSubscriber<U>::cancel();
+      if (subscriber) {
+        subscriber->onComplete();
+      }
     }
 
     /// Terminates both ends of an operator with an error.
-    void terminateErr(folly::exception_wrapper ex) {
-      terminateImpl(TerminateState::Both(), std::move(ex));
+    void terminateErr(folly::exception_wrapper ew) {
+      auto subscriber = subscriber_.exchange(nullptr);
+      BaseSubscriber<U>::cancel();
+      if (subscriber) {
+        subscriber->onError(std::move(ew));
+      }
     }
 
     // Subscription.
 
-    void request(int64_t delta) override {
-      if (upstream_) {
-        upstream_->request(delta);
-      }
+    void request(int64_t n) override {
+      BaseSubscriber<U>::request(n);
     }
 
     void cancel() override {
-      terminateImpl(TerminateState::Up());
+      auto subscriber = subscriber_.exchange(nullptr);
+      BaseSubscriber<U>::cancel();
     }
 
     // Subscriber.
 
-    void onSubscribe(
-        Reference<yarpl::flowable::Subscription> subscription) override {
-      if (upstream_) {
-        subscription->cancel();
-        return;
-      }
-
-      upstream_ = std::move(subscription);
+    void onSubscribeImpl() override {
       subscriber_->onSubscribe(this->ref_from_this(this));
     }
 
-    void onComplete() override {
-      terminateImpl(TerminateState::Down());
+    void onCompleteImpl() override {
+      if (auto subscriber = subscriber_.exchange(nullptr)) {
+        subscriber->onComplete();
+      }
     }
 
-    void onError(folly::exception_wrapper ex) override {
-      terminateImpl(TerminateState::Down(), std::move(ex));
+    void onErrorImpl(folly::exception_wrapper ew) override {
+      if (auto subscriber = subscriber_.exchange(nullptr)) {
+        subscriber->onError(std::move(ew));
+      }
     }
 
    private:
-    struct TerminateState {
-      TerminateState(bool u, bool d) : up{u}, down{d} {}
-
-      static TerminateState Down() {
-        return TerminateState{false, true};
-      }
-
-      static TerminateState Up() {
-        return TerminateState{true, false};
-      }
-
-      static TerminateState Both() {
-        return TerminateState{true, true};
-      }
-
-      const bool up{false};
-      const bool down{false};
-    };
-
-    bool isTerminated() const {
-      return !upstream_ && !subscriber_;
-    }
-
-    /// Terminates an operator, sending cancel() and on{Complete,Error}()
-    /// signals as necessary.
-    void terminateImpl(
-        TerminateState state,
-        folly::exception_wrapper ex = folly::exception_wrapper{nullptr}) {
-      auto self = this->ref_from_this(this);
-
-      auto upstream = std::move(upstream_);
-      if (state.up && upstream) {
-        upstream->cancel();
-      }
-
-      auto subscriber = std::move(subscriber_);
-      if (state.down && subscriber) {
-        if (ex) {
-          subscriber->onError(std::move(ex));
-        } else {
-          subscriber->onComplete();
-        }
-      }
-    }
-
     /// The Flowable has the lambda, and other creation parameters.
     Reference<Operator> flowableOperator_;
 
@@ -153,13 +112,7 @@ class FlowableOperator : public Flowable<D> {
     /// subscriber is retained as long as calls on it can be made.  (Note: the
     /// subscriber in turn maintains a reference on this subscription object
     /// until cancellation and/or completion.)
-    Reference<Subscriber<D>> subscriber_;
-
-    /// In an active pipeline, cancel and (possibly modified) request(n) calls
-    /// should be forwarded upstream.  Note that `this` is also a subscriber for
-    /// the upstream stage: thus, there are cycles; all of the objects drop
-    /// their references at cancel/complete.
-    Reference<yarpl::flowable::Subscription> upstream_;
+    AtomicReference<Subscriber<D>> subscriber_;
   };
 
   Reference<Flowable<U>> upstream_;
@@ -192,7 +145,7 @@ class MapOperator : public FlowableOperator<U, D, MapOperator<U, D, F>> {
         Reference<Subscriber<D>> subscriber)
         : SuperSubscription(std::move(flowable), std::move(subscriber)) {}
 
-    void onNext(U value) override {
+    void onNextImpl(U value) override {
       try {
         auto&& map = this->getFlowableOperator();
         this->subscriberOnNext(map->function_(std::move(value)));
@@ -234,7 +187,7 @@ class FilterOperator : public FlowableOperator<U, U, FilterOperator<U, F>> {
         Reference<Subscriber<U>> subscriber)
         : SuperSubscription(std::move(flowable), std::move(subscriber)) {}
 
-    void onNext(U value) override {
+    void onNextImpl(U value) override {
       auto&& filter = SuperSubscription::getFlowableOperator();
       if (filter->function_(value)) {
         SuperSubscription::subscriberOnNext(std::move(value));
@@ -278,11 +231,11 @@ class ReduceOperator : public FlowableOperator<U, D, ReduceOperator<U, D, F>> {
           accInitialized_(false) {}
 
     void request(int64_t) override {
-      // Request all of the items
+      // Request all of the items.
       SuperSubscription::request(credits::kNoFlowControl);
     }
 
-    void onNext(U value) override {
+    void onNextImpl(U value) override {
       auto&& reduce = SuperSubscription::getFlowableOperator();
       if (accInitialized_) {
         acc_ = reduce->function_(std::move(acc_), std::move(value));
@@ -292,11 +245,11 @@ class ReduceOperator : public FlowableOperator<U, D, ReduceOperator<U, D, F>> {
       }
     }
 
-    void onComplete() override {
+    void onCompleteImpl() override {
       if (accInitialized_) {
         SuperSubscription::subscriberOnNext(std::move(acc_));
       }
-      SuperSubscription::onComplete();
+      SuperSubscription::onCompleteImpl();
     }
 
    private:
@@ -332,7 +285,7 @@ class TakeOperator : public FlowableOperator<T, T, TakeOperator<T>> {
         : SuperSubscription(std::move(flowable), std::move(subscriber)),
           limit_(limit) {}
 
-    void onNext(T value) override {
+    void onNextImpl(T value) override {
       if (limit_-- > 0) {
         if (pending_ > 0) {
           --pending_;
@@ -385,7 +338,7 @@ class SkipOperator : public FlowableOperator<T, T, SkipOperator<T>> {
         : SuperSubscription(std::move(flowable), std::move(subscriber)),
           offset_(offset) {}
 
-    void onNext(T value) override {
+    void onNextImpl(T value) override {
       if (offset_ > 0) {
         --offset_;
       } else {
@@ -433,7 +386,7 @@ class IgnoreElementsOperator
         Reference<Subscriber<T>> subscriber)
         : SuperSubscription(std::move(flowable), std::move(subscriber)) {}
 
-    void onNext(T) override {}
+    void onNextImpl(T) override {}
   };
 };
 
@@ -477,7 +430,7 @@ class SubscribeOnOperator
       });
     }
 
-    void onNext(T value) override {
+    void onNextImpl(T value) override {
       SuperSubscription::subscriberOnNext(std::move(value));
     }
 
