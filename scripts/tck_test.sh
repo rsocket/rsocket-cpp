@@ -49,7 +49,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
 fi
 
 java_server="java -jar rsocket-tck-drivers-0.9.10.jar --server --host localhost --port 9898 --file tck-test/servertest.txt"
-java_client="java -cp rsocket-tck-drivers-0.9.10.jar --client --host localhost --port 9898 --file tck-test/clienttest.txt"
+java_client="java -jar rsocket-tck-drivers-0.9.10.jar --client --host localhost --port 9898 --file tck-test/clienttest.txt"
 
 cpp_server="./build/tckserver -test_file tck-test/servertest.txt -rs_use_protocol_version 1.0"
 cpp_client="./build/tckclient -test_file tck-test/clienttest.txt -rs_use_protocol_version 1.0"
