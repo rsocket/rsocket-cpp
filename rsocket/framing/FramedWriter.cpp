@@ -91,7 +91,11 @@ void FramedWriter::onNext(std::unique_ptr<folly::IOBuf> payload) {
     error("payload too big");
     return;
   }
-  stream_->onNext(std::move(sizedPayload));
+  if (stream_) {
+    stream_->onNext(std::move(sizedPayload));
+  } else {
+    error("Trying to write to a closed connection.");
+  }
 }
 
 void FramedWriter::onNextMultiple(
@@ -106,24 +110,32 @@ void FramedWriter::onNextMultiple(
     }
     payloadQueue.append(std::move(sizedPayload));
   }
-  stream_->onNext(payloadQueue.move());
+  if (stream_) {
+    stream_->onNext(payloadQueue.move());
+  } else {
+    error("Trying to multiple write to a closed connection.");
+  }
 }
 
 void FramedWriter::error(std::string errorMsg) {
   VLOG(1) << "error: " << errorMsg;
   onError(std::runtime_error(std::move(errorMsg)));
-  DuplexConnection::DuplexSubscriber::subscription()->cancel();
+  if (DuplexConnection::DuplexSubscriber::subscription()) {
+    DuplexConnection::DuplexSubscriber::subscription()->cancel();
+  }
 }
 
 void FramedWriter::onComplete() {
-  DuplexConnection::DuplexSubscriber::onComplete();
-  stream_->onComplete();
-  stream_ = nullptr;
+  if (auto stream = std::move(stream_)) {
+    DuplexConnection::DuplexSubscriber::onComplete();
+    stream->onComplete();
+  }
 }
 
 void FramedWriter::onError(folly::exception_wrapper ex) {
-  DuplexConnection::DuplexSubscriber::onError(ex);
-  stream_->onError(std::move(ex));
-  stream_ = nullptr;
+  if (auto stream = std::move(stream_)){
+    DuplexConnection::DuplexSubscriber::onError(ex);
+    stream->onError(std::move(ex));
+  }
 }
 }
