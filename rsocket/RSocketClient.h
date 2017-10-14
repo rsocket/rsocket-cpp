@@ -34,6 +34,12 @@ class RSocketClient {
 
   friend class RSocket;
 
+  bool isClosed() const;
+
+  size_t getStreamCount() const;
+
+  void setMaxActiveStreams(size_t count);
+
   // Returns the RSocketRequester associated with the RSocketClient.
   const std::shared_ptr<RSocketRequester>& getRequester() const;
 
@@ -86,6 +92,8 @@ class RSocketClient {
   ProtocolVersion protocolVersion_;
   ResumeIdentificationToken token_;
 
+  size_t maxActiveStreams_{std::numeric_limits<size_t>::max()};
+
   // Remember the StateMachine's evb (supplied through constructor).  If no
   // EventBase is provided, the underlying transport's EventBase will be used
   // to drive the StateMachine.
@@ -96,6 +104,5 @@ class RSocketClient {
   // EventBase, but the transport ends up being in different EventBase after
   // resumption, and vice versa.
   folly::EventBase* evb_{nullptr};
-
 };
 }

@@ -157,6 +157,15 @@ class RSocketStateMachine final
     return streamsFactory_;
   }
 
+  /// Whether the connection has been closed.
+  bool isClosed() const;
+
+  size_t getStreamCount() const;
+
+  void setMaxActiveStreams(size_t maxStreams);
+
+  bool canCreateNewStream();
+
  private:
   void connect(yarpl::Reference<FrameTransport>, ProtocolVersion);
 
@@ -172,9 +181,6 @@ class RSocketStateMachine final
       ResumePosition clientPosition);
 
   bool isPositionAvailable(ResumePosition) const;
-
-  /// Whether the connection has been closed.
-  bool isClosed() const;
 
   uint32_t getKeepaliveTime() const;
 
@@ -290,7 +296,11 @@ class RSocketStateMachine final
 
   std::shared_ptr<RSocketConnectionEvents> connectionEvents_;
 
-  /// Back reference to the set that's holding this state machine.
+  // Back reference to the set that's holding this state machine.
   std::weak_ptr<ConnectionSet> connectionSet_;
+
+  // If the number of active requests reach this number, don't allow creating
+  // any more.
+  size_t maxActiveStreams_;
 };
 }
