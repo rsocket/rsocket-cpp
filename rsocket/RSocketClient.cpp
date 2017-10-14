@@ -47,6 +47,24 @@ const std::shared_ptr<RSocketRequester>& RSocketClient::getRequester() const {
   return requester_;
 }
 
+bool RSocketClient::isClosed() const {
+  return !stateMachine_ || stateMachine_->isClosed();
+}
+
+size_t RSocketClient::getStreamCount() const {
+  if (stateMachine_) {
+    return stateMachine_->getStreamCount();
+  }
+  return 0;
+}
+
+void RSocketClient::setMaxActiveStreams(size_t count) {
+  maxActiveStreams_ = count;
+  if (stateMachine_) {
+    stateMachine_->setMaxActiveStreams(maxActiveStreams_);
+  }
+}
+
 folly::Future<folly::Unit> RSocketClient::resume() {
   VLOG(2) << "Resuming connection";
 
@@ -217,6 +235,8 @@ void RSocketClient::createState() {
       std::move(connectionEvents_),
       std::move(resumeManager_),
       std::move(coldResumeHandler_));
+
+  stateMachine_->setMaxActiveStreams(maxActiveStreams_);
 
   requester_ = std::make_shared<RSocketRequester>(stateMachine_, *evb_);
 

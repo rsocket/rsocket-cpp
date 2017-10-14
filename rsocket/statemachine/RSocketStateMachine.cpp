@@ -389,6 +389,18 @@ void RSocketStateMachine::reconnect(
   connect(std::move(newFrameTransport), ProtocolVersion::Unknown);
 }
 
+size_t RSocketStateMachine::getStreamCount() const {
+  return streamState_.streams_.size();
+}
+
+void RSocketStateMachine::setMaxActiveStreams(size_t maxStreams) {
+  maxActiveStreams_ = maxStreams;
+}
+
+bool RSocketStateMachine::canCreateNewStream() {
+  return !isDisconnected() && maxActiveStreams_ > getStreamCount();
+}
+
 void RSocketStateMachine::addStream(
     StreamId streamId,
     yarpl::Reference<StreamStateMachineBase> stateMachine) {

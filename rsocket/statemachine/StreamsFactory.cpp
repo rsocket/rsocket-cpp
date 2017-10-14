@@ -29,23 +29,23 @@ StreamsFactory::StreamsFactory(
                     even-numbered stream identifiers*/) {}
 
 static void subscribeToErrorFlowable(
-    Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
+    Reference<yarpl::flowable::Subscriber<Payload>> responseSink){
   yarpl::flowable::Flowables::error<Payload>(
-      std::runtime_error("state machine is disconnected/closed"))
+      std::runtime_error("it's not possible to create a new stream now"))
       ->subscribe(std::move(responseSink));
 }
 
 static void subscribeToErrorSingle(
     Reference<yarpl::single::SingleObserver<Payload>> responseSink) {
   yarpl::single::Singles::error<Payload>(
-      std::runtime_error("state machine is disconnected/closed"))
+      std::runtime_error("it's not possible to create a new stream now"))
       ->subscribe(std::move(responseSink));
 }
 
 Reference<yarpl::flowable::Subscriber<Payload>>
 StreamsFactory::createChannelRequester(
     Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
-  if (connection_.isDisconnected()) {
+  if (!connection_.canCreateNewStream()) {
     subscribeToErrorFlowable(std::move(responseSink));
     return nullptr;
   }
@@ -61,7 +61,7 @@ StreamsFactory::createChannelRequester(
 void StreamsFactory::createStreamRequester(
     Payload request,
     Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
-  if (connection_.isDisconnected()) {
+  if (!connection_.canCreateNewStream()) {
     subscribeToErrorFlowable(std::move(responseSink));
     return;
   }
@@ -77,7 +77,7 @@ void StreamsFactory::createStreamRequester(
     Reference<yarpl::flowable::Subscriber<Payload>> responseSink,
     StreamId streamId,
     size_t n) {
-  if (connection_.isDisconnected()) {
+  if (!connection_.canCreateNewStream()) {
     subscribeToErrorFlowable(std::move(responseSink));
     return;
   }
@@ -93,7 +93,7 @@ void StreamsFactory::createStreamRequester(
 void StreamsFactory::createRequestResponseRequester(
     Payload payload,
     Reference<yarpl::single::SingleObserver<Payload>> responseSink) {
-  if (connection_.isDisconnected()) {
+  if (!connection_.canCreateNewStream()) {
     subscribeToErrorSingle(std::move(responseSink));
     return;
   }
