@@ -120,10 +120,10 @@ std::unique_ptr<rsocket::RSocketClient> createResumedClient(
                  ProtocolVersion::Current(),
                  stateMachineEvb)
           .get();
-    } catch (std::exception ex) {
+    } catch (RSocketException ex) {
       retries--;
-      LOG(ERROR) << "Creation of resumed client failed. Retries Left: "
-                 << retries;
+      VLOG(1) << "Creation of resumed client failed. Exception " << ex.what()
+              << ". Retries Left: " << retries;
       if (retries <= 0) {
         throw ex;
       }
@@ -340,6 +340,64 @@ TEST(ColdResumptionTest, DifferentEvb) {
       firstSub->awaitLatestValue(10);
     }
   }
+
+  server->shutdownAndWait();
+}
+
+// Attempt a resumption when the previous transport/client hasn't
+// disconnected it.  Verify resumption succeeds after the previous
+// transport is disconnected.
+TEST(ColdResumptionTest, FailedResumption) {
+  auto server = makeResumableServer(std::make_shared<HelloServiceHandler>());
+  auto port = *server->listeningPort();
+
+  auto payload = "InitialPayload";
+
+  folly::ScopedEventBaseThread transportWorker{"transportWorker"};
+
+  auto token = ResumeIdentificationToken::generateNew();
+  auto resumeManager =
+      std::make_shared<ColdResumeManager>(RSocketStats::noop());
+  auto sub = make_ref<HelloSubscriber>(0);
+  auto crh =
+      std::make_shared<HelloResumeHandler>(HelloSubscribers({{payload, sub}}));
+  std::shared_ptr<RSocketClient> client;
+  EXPECT_NO_THROW(
+      client = makeColdResumableClient(
+          transportWorker.getEventBase(), port, token, resumeManager, crh));
+  client->getRequester()->requestStream(Payload(payload))->subscribe(sub);
+  sub->requestWhenSubscribed(7);
+  // Ensure reception of few frames before resuming.
+  while (sub->valueCount() < 7) {
+    std::this_thread::yield();
+  }
+
+  auto resumedSub = make_ref<HelloSubscriber>(7);
+  auto resumedCrh = std::make_shared<HelloResumeHandler>(
+      HelloSubscribers({{payload, resumedSub}}));
+
+  std::shared_ptr<RSocketClient> resumedClient;
+  EXPECT_THROW(
+      resumedClient = createResumedClient(
+          transportWorker.getEventBase(),
+          port,
+          token,
+          resumeManager,
+          resumedCrh),
+      RSocketException);
+
+  client->disconnect().get();
+
+  EXPECT_NO_THROW(
+      resumedClient = createResumedClient(
+          transportWorker.getEventBase(),
+          port,
+          token,
+          resumeManager,
+          resumedCrh));
+
+  resumedSub->requestWhenSubscribed(3);
+  resumedSub->awaitLatestValue(10);
 
   server->shutdownAndWait();
 }

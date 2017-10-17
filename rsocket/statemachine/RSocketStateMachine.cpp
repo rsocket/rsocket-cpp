@@ -100,8 +100,8 @@ bool RSocketStateMachine::resumeServer(
   if (!isDisconnected()) {
     VLOG(1) << "Old connection (" << frameTransport_.get() << ") exists. "
             << "Terminating new connection (" << frameTransport.get() << ")";
-    std::runtime_error exn{"Old connection still exists"};
-    frameTransport_->closeWithError(std::move(exn));
+    frameTransport->closeWithError(
+        ResumptionException{"Old connection still exists"});
 
     stats_->serverResume(
         clientAvailable,
