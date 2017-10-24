@@ -78,7 +78,7 @@ class RSocketResponder {
 
   /// Internal method for handling channel requests, not intended to be used by
   /// application code.
-  virtual yarpl::Reference<yarpl::flowable::Subscriber<Payload>>
+  yarpl::Reference<yarpl::flowable::Subscriber<Payload>>
   handleRequestChannelCore(
       Payload request,
       StreamId streamId,
@@ -87,7 +87,7 @@ class RSocketResponder {
 
   /// Internal method for handling stream requests, not intended to be used
   /// by application code.
-  virtual void handleRequestStreamCore(
+  void handleRequestStreamCore(
       Payload request,
       StreamId streamId,
       const yarpl::Reference<yarpl::flowable::Subscriber<Payload>>&
@@ -95,7 +95,7 @@ class RSocketResponder {
 
   /// Internal method for handling request-response requests, not intended to be
   /// used by application code.
-  virtual void handleRequestResponseCore(
+  void handleRequestResponseCore(
       Payload request,
       StreamId streamId,
       const yarpl::Reference<yarpl::single::SingleObserver<Payload>>&
