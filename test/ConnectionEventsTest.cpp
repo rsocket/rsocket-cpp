@@ -86,3 +86,82 @@ TEST(ConnectionEventsTest, SimpleStream) {
   EXPECT_CALL(*clientConnEvents, onClosed(_));
   EXPECT_CALL(*serverConnEvents, onClosed(_));
 }
+
+// Verify the ConnectionEvents are called back on the right EventBase.
+TEST(ConnectionEventsTest, DifferentEvb) {
+  folly::ScopedEventBaseThread transportWorker{"TransportWkr"};
+  folly::ScopedEventBaseThread SMWorker{"SMWorker"};
+
+  auto clientConnEvents = std::make_shared<StrictMock<MockConnEvents>>();
+
+  EXPECT_CALL(*clientConnEvents, onConnected()).WillOnce(
+      Invoke([evb = SMWorker.getEventBase()]() {
+    EXPECT_TRUE(evb->isInEventBaseThread());
+  }));
+
+  // create server supporting resumption
+  auto server = makeResumableServer(
+      std::make_shared<HelloServiceHandler>());
+
+  // create resumable client
+  auto client = makeWarmResumableClient(
+      transportWorker.getEventBase(),
+      *server->listeningPort(),
+      clientConnEvents,
+      SMWorker.getEventBase());
+
+  // request stream
+  auto requester = client->getRequester();
+  auto ts = TestSubscriber<std::string>::create(7 /* initialRequestN */);
+  requester->requestStream(Payload("Bob"))
+      ->map([](auto p) { return p.moveDataToString(); })
+      ->subscribe(ts);
+  // Wait for a few frames before disconnecting.
+  while (ts->getValueCount() < 3) {
+    std::this_thread::yield();
+  }
+
+  // disconnect
+  EXPECT_CALL(*clientConnEvents, onDisconnected(_)).WillOnce(
+      InvokeWithoutArgs([evb = SMWorker.getEventBase()]() {
+        EXPECT_TRUE(evb->isInEventBaseThread());
+      }));
+  EXPECT_CALL(*clientConnEvents, onStreamsPaused()).WillOnce(
+      Invoke([evb = SMWorker.getEventBase()]() {
+        EXPECT_TRUE(evb->isInEventBaseThread());
+      }));
+  client->disconnect(std::runtime_error("Test triggered disconnect"));
+
+  // resume
+  EXPECT_CALL(*clientConnEvents, onConnected()).WillOnce(
+      Invoke([evb = SMWorker.getEventBase()]() {
+        EXPECT_TRUE(evb->isInEventBaseThread());
+      }));
+  EXPECT_CALL(*clientConnEvents, onStreamsResumed()).WillOnce(
+      Invoke([evb = SMWorker.getEventBase()]() {
+        EXPECT_TRUE(evb->isInEventBaseThread());
+      }));
+  EXPECT_NO_THROW(client->resume().get());
+
+  ts->request(3);
+  ts->awaitTerminalEvent();
+  ts->assertSuccess();
+  ts->assertValueCount(10);
+
+  // disconnect
+  EXPECT_CALL(*clientConnEvents, onDisconnected(_)).WillOnce(
+      InvokeWithoutArgs([evb = SMWorker.getEventBase()]() {
+        EXPECT_TRUE(evb->isInEventBaseThread());
+      }));
+  EXPECT_CALL(*clientConnEvents, onStreamsPaused()).WillOnce(
+      Invoke([evb = SMWorker.getEventBase()]() {
+        EXPECT_TRUE(evb->isInEventBaseThread());
+      }));
+  client->disconnect(std::runtime_error("Test triggered disconnect"));
+
+  // relinquish resources
+  EXPECT_CALL(*clientConnEvents, onClosed(_)).WillOnce(
+      InvokeWithoutArgs([evb = SMWorker.getEventBase()]() {
+        EXPECT_TRUE(evb->isInEventBaseThread());
+      }));
+}
