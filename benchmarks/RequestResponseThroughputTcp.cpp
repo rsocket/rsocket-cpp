@@ -56,10 +56,10 @@ class Observer : public yarpl::single::SingleObserverBase<Payload> {
 BENCHMARK(RequestResponseThroughput, n) {
   (void)n;
 
+  Latch latch{static_cast<size_t>(FLAGS_items)};
+
   std::unique_ptr<Fixture> fixture;
   Fixture::Options opts;
-
-  Latch latch{static_cast<size_t>(FLAGS_items)};
 
   BENCHMARK_SUSPEND {
     auto responder =

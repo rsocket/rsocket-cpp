@@ -25,10 +25,10 @@ DEFINE_int32(streams, 1, "number of streams, per client");
 BENCHMARK(StreamThroughput, n) {
   (void)n;
 
+  Latch latch{static_cast<size_t>(FLAGS_streams)};
+
   std::unique_ptr<Fixture> fixture;
   Fixture::Options opts;
-
-  Latch latch{static_cast<size_t>(FLAGS_streams)};
 
   BENCHMARK_SUSPEND {
     auto responder =

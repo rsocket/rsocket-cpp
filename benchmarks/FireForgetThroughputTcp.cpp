@@ -36,10 +36,10 @@ class Responder : public RSocketResponder {
 BENCHMARK(FireForgetThroughput, n) {
   (void)n;
 
+  Latch latch{static_cast<size_t>(FLAGS_items)};
+
   std::unique_ptr<Fixture> fixture;
   Fixture::Options opts;
-
-  Latch latch{static_cast<size_t>(FLAGS_items)};
 
   BENCHMARK_SUSPEND {
     auto responder = std::make_shared<Responder>(latch);
