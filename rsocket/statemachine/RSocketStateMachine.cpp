@@ -624,9 +624,9 @@ void RSocketStateMachine::handleConnectionFrame(
     case FrameType::PAYLOAD:
     case FrameType::EXT:
     default: {
-      std::stringstream message;
-      message << "Unexpected " << frameType << " frame for stream 0";
-      closeWithError(Frame_ERROR::connectionError(message.str()));
+      auto msg = folly::sformat(
+          "Unexpected {} frame for stream 0", toString(frameType));
+      closeWithError(Frame_ERROR::connectionError(std::move(msg)));
       return;
     }
   }
@@ -696,9 +696,9 @@ void RSocketStateMachine::handleStreamFrame(
     case FrameType::RESUME:
     case FrameType::RESUME_OK:
     case FrameType::EXT: {
-      std::stringstream message;
-      message << "Unexpected " << frameType << " frame for stream " << streamId;
-      closeWithError(Frame_ERROR::connectionError(message.str()));
+      auto msg = folly::sformat(
+          "Unexpected {} frame for stream {}", toString(frameType), streamId);
+      closeWithError(Frame_ERROR::connectionError(std::move(msg)));
       break;
     }
     default:
@@ -721,10 +721,10 @@ void RSocketStateMachine::handleUnknownStream(
   }
 
   if (!isNewStreamFrame(frameType)) {
-    std::stringstream msg;
-    msg << "Unexpected frame " << frameType << " for stream " << streamId;
-    VLOG(1) << msg.str();
-    closeWithError(Frame_ERROR::connectionError(msg.str()));
+    auto msg = folly::sformat(
+        "Unexpected frame {} for stream {}", toString(frameType), streamId);
+    VLOG(1) << msg;
+    closeWithError(Frame_ERROR::connectionError(std::move(msg)));
     return;
   }
 

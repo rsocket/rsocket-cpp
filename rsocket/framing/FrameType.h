@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <iosfwd>
 
+#include <folly/Range.h>
+
 namespace rsocket {
 
 enum class FrameType : uint8_t {
@@ -26,5 +28,8 @@ enum class FrameType : uint8_t {
   EXT = 0x3F,
 };
 
+folly::StringPiece toString(FrameType);
+
 std::ostream& operator<<(std::ostream&, FrameType);
+
 }

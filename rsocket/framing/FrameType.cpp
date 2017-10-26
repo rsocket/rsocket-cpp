@@ -4,45 +4,57 @@
 
 #include <ostream>
 
+#include <glog/logging.h>
+
 namespace rsocket {
 
-std::ostream& operator<<(std::ostream& os, FrameType type) {
+constexpr folly::StringPiece kUnknown{"UNKNOWN_FRAME_TYPE"};
+
+folly::StringPiece toString(FrameType type) {
   switch (type) {
     case FrameType::RESERVED:
-      return os << "RESERVED";
+      return "RESERVED";
     case FrameType::SETUP:
-      return os << "SETUP";
+      return "SETUP";
     case FrameType::LEASE:
-      return os << "LEASE";
+      return "LEASE";
     case FrameType::KEEPALIVE:
-      return os << "KEEPALIVE";
+      return "KEEPALIVE";
     case FrameType::REQUEST_RESPONSE:
-      return os << "REQUEST_RESPONSE";
+      return "REQUEST_RESPONSE";
     case FrameType::REQUEST_FNF:
-      return os << "REQUEST_FNF";
+      return "REQUEST_FNF";
     case FrameType::REQUEST_STREAM:
-      return os << "REQUEST_STREAM";
+      return "REQUEST_STREAM";
     case FrameType::REQUEST_CHANNEL:
-      return os << "REQUEST_CHANNEL";
+      return "REQUEST_CHANNEL";
     case FrameType::REQUEST_N:
-      return os << "REQUEST_N";
+      return "REQUEST_N";
     case FrameType::CANCEL:
-      return os << "CANCEL";
+      return "CANCEL";
     case FrameType::PAYLOAD:
-      return os << "PAYLOAD";
+      return "PAYLOAD";
     case FrameType::ERROR:
-      return os << "ERROR";
+      return "ERROR";
     case FrameType::METADATA_PUSH:
-      return os << "METADATA_PUSH";
+      return "METADATA_PUSH";
     case FrameType::RESUME:
-      return os << "RESUME";
+      return "RESUME";
     case FrameType::RESUME_OK:
-      return os << "RESUME_OK";
+      return "RESUME_OK";
     case FrameType::EXT:
-      return os << "EXT";
+      return "EXT";
     default:
-      break;
+      DLOG(FATAL) << "Unknown frame type";
+      return kUnknown;
   }
-  return os << "Unknown FrameType[" << static_cast<int>(type) << "]";
+}
+
+std::ostream& operator<<(std::ostream& os, FrameType type) {
+  auto const str = toString(type);
+  if (str == kUnknown) {
+    return os << "Unknown FrameType[" << static_cast<int>(type) << "]";
+  }
+  return os << str;
 }
 }
