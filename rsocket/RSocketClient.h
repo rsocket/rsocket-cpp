@@ -16,7 +16,6 @@
 
 namespace rsocket {
 
-class ConnectionSet;
 class RSocket;
 
 /**
@@ -72,7 +71,6 @@ class RSocketClient {
   void createState();
 
   std::shared_ptr<ConnectionFactory> connectionFactory_;
-  std::shared_ptr<ConnectionSet> connectionSet_;
   std::shared_ptr<RSocketResponder> responder_;
   std::chrono::milliseconds keepaliveInterval_;
   std::shared_ptr<RSocketStats> stats_;

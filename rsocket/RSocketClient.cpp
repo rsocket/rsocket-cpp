@@ -8,7 +8,6 @@
 #include "rsocket/framing/FramedDuplexConnection.h"
 #include "rsocket/framing/ScheduledFrameTransport.h"
 #include "rsocket/internal/ClientResumeStatusCallback.h"
-#include "rsocket/internal/ConnectionSet.h"
 #include "rsocket/internal/KeepaliveTimer.h"
 
 using namespace folly;
@@ -27,7 +26,6 @@ RSocketClient::RSocketClient(
     std::shared_ptr<ColdResumeHandler> coldResumeHandler,
     folly::EventBase* stateMachineEvb)
     : connectionFactory_(std::move(connectionFactory)),
-      connectionSet_(std::make_shared<ConnectionSet>()),
       responder_(std::move(responder)),
       keepaliveInterval_(keepaliveInterval),
       stats_(stats),
@@ -40,7 +38,11 @@ RSocketClient::RSocketClient(
 
 RSocketClient::~RSocketClient() {
   VLOG(3) << "~RSocketClient ..";
-  disconnect().get();
+
+  evb_->runImmediatelyOrRunInEventBaseThreadAndWait([sm = stateMachine_] {
+    std::runtime_error exn{"RSocketClient is closing"};
+    sm->close(std::move(exn), StreamCompletionSignal::CONNECTION_END);
+  });
 }
 
 const std::shared_ptr<RSocketRequester>& RSocketClient::getRequester() const {
@@ -54,80 +56,81 @@ folly::Future<folly::Unit> RSocketClient::resume() {
       << "The client was likely created without ConnectionFactory. Can't "
       << "resume";
 
-  return connectionFactory_->connect().then([this](
-      ConnectionFactory::ConnectedDuplexConnection connection) mutable {
+  return connectionFactory_->connect().then(
+      [this](ConnectionFactory::ConnectedDuplexConnection connection) mutable {
 
-    if (!evb_) {
-      // cold-resumption.  EventBase hasn't been explicitly set for SM by the
-      // application.  Use the transport's eventBase.
-      evb_ = &connection.eventBase;
-    }
+        if (!evb_) {
+          // cold-resumption.  EventBase hasn't been explicitly set for SM by
+          // the application.  Use the transport's eventBase.
+          evb_ = &connection.eventBase;
+        }
 
-    class ResumeCallback : public ClientResumeStatusCallback {
-     public:
-      explicit ResumeCallback(folly::Promise<folly::Unit> promise)
-          : promise_(std::move(promise)) {}
+        class ResumeCallback : public ClientResumeStatusCallback {
+         public:
+          explicit ResumeCallback(folly::Promise<folly::Unit> promise)
+              : promise_(std::move(promise)) {}
 
-      void onResumeOk() noexcept override {
-        promise_.setValue();
-      }
+          void onResumeOk() noexcept override {
+            promise_.setValue();
+          }
 
-      void onResumeError(folly::exception_wrapper ex) noexcept override {
-        promise_.setException(ex);
-      }
+          void onResumeError(folly::exception_wrapper ex) noexcept override {
+            promise_.setException(ex);
+          }
 
-     private:
-      folly::Promise<folly::Unit> promise_;
-    };
+         private:
+          folly::Promise<folly::Unit> promise_;
+        };
 
-    folly::Promise<folly::Unit> promise;
-    auto future = promise.getFuture();
+        folly::Promise<folly::Unit> promise;
+        auto future = promise.getFuture();
 
-    auto resumeCallback = std::make_unique<ResumeCallback>(std::move(promise));
-    std::unique_ptr<DuplexConnection> framedConnection;
-    if (connection.connection->isFramed()) {
-      framedConnection = std::move(connection.connection);
-    } else {
-      framedConnection = std::make_unique<FramedDuplexConnection>(
-          std::move(connection.connection), protocolVersion_);
-    }
-    auto transport =
-        yarpl::make_ref<FrameTransportImpl>(std::move(framedConnection));
+        auto resumeCallback =
+            std::make_unique<ResumeCallback>(std::move(promise));
+        std::unique_ptr<DuplexConnection> framedConnection;
+        if (connection.connection->isFramed()) {
+          framedConnection = std::move(connection.connection);
+        } else {
+          framedConnection = std::make_unique<FramedDuplexConnection>(
+              std::move(connection.connection), protocolVersion_);
+        }
+        auto transport =
+            yarpl::make_ref<FrameTransportImpl>(std::move(framedConnection));
 
-    yarpl::Reference<FrameTransport> ft;
-    if (evb_ != &connection.eventBase) {
-      // If the StateMachine EventBase is different from the transport
-      // EventBase, then use ScheduledFrameTransport and
-      // ScheduledFrameProcessor to ensure the RSocketStateMachine and
-      // Transport live on the desired EventBases
-      ft = yarpl::make_ref<ScheduledFrameTransport>(
-          std::move(transport),
-          &connection.eventBase, /* Transport EventBase */
-          evb_); /* StateMachine EventBase */
-    } else {
-      ft = std::move(transport);
-    }
+        yarpl::Reference<FrameTransport> ft;
+        if (evb_ != &connection.eventBase) {
+          // If the StateMachine EventBase is different from the transport
+          // EventBase, then use ScheduledFrameTransport and
+          // ScheduledFrameProcessor to ensure the RSocketStateMachine and
+          // Transport live on the desired EventBases
+          ft = yarpl::make_ref<ScheduledFrameTransport>(
+              std::move(transport),
+              &connection.eventBase, /* Transport EventBase */
+              evb_); /* StateMachine EventBase */
+        } else {
+          ft = std::move(transport);
+        }
 
-    evb_->runInEventBaseThread([
-      this,
-      frameTransport = std::move(ft),
-      resumeCallback = std::move(resumeCallback),
-      connection = std::move(connection)
-    ]() mutable {
-      if (!stateMachine_) {
-        createState();
-      }
+        evb_->runInEventBaseThread([
+          this,
+          frameTransport = std::move(ft),
+          resumeCallback = std::move(resumeCallback),
+          connection = std::move(connection)
+        ]() mutable {
+          if (!stateMachine_) {
+            createState();
+          }
 
-      stateMachine_->resumeClient(
-          token_,
-          std::move(frameTransport),
-          std::move(resumeCallback),
-          protocolVersion_);
-    });
+          stateMachine_->resumeClient(
+              token_,
+              std::move(frameTransport),
+              std::move(resumeCallback),
+              protocolVersion_);
+        });
 
-    return future;
+        return future;
 
-  });
+      });
 }
 
 folly::Future<folly::Unit> RSocketClient::disconnect(
@@ -219,9 +222,6 @@ void RSocketClient::createState() {
       std::move(coldResumeHandler_));
 
   requester_ = std::make_shared<RSocketRequester>(stateMachine_, *evb_);
-
-  connectionSet_->insert(stateMachine_, evb_);
-  stateMachine_->registerSet(connectionSet_);
 }
 
 } // namespace rsocket
