@@ -33,10 +33,13 @@ void WarmResumeManager::trackSentFrame(
 
     VLOG(6) << "Track sent frame " << frameType
             << " Allowance: " << consumerAllowance;
-    // if the frame is too huge, we don't cache it
+    // If the frame is too huge, we don't cache it.
+    // We empty the entire cache instead.
     if (frameDataLength > capacity_) {
       resetUpToPosition(lastSentPosition_);
       lastSentPosition_ += frameDataLength;
+      firstSentPosition_ += frameDataLength;
+      DCHECK(firstSentPosition_ == lastSentPosition_);
       DCHECK(size_ == 0);
       return;
     }

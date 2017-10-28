@@ -71,6 +71,10 @@ class WarmResumeManager : public ResumeManager {
     LOG(FATAL) << "Not Implemented for Warm Resumption";
   }
 
+  size_t size() {
+    return size_;
+  }
+
  protected:
   void addFrame(const folly::IOBuf&, size_t);
   void evictFrame();

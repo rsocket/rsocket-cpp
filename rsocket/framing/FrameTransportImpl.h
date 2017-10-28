@@ -13,12 +13,11 @@ namespace rsocket {
 
 class FrameProcessor;
 
-class FrameTransportImpl final
-    : public FrameTransport,
-      /// Registered as an input in the DuplexConnection.
-      public DuplexConnection::Subscriber,
-      /// Receives signals about connection writability.
-      public yarpl::flowable::Subscription {
+class FrameTransportImpl : public FrameTransport,
+                           /// Registered as an input in the DuplexConnection.
+                           public DuplexConnection::Subscriber,
+                           /// Receives signals about connection writability.
+                           public yarpl::flowable::Subscription {
  public:
   explicit FrameTransportImpl(std::unique_ptr<DuplexConnection> connection);
   ~FrameTransportImpl();

@@ -347,6 +347,7 @@ add_executable(
   test/RequestStreamTest.cpp
   test/RequestStreamTest_concurrency.cpp
   test/Test.cpp
+  test/WarmResumeManagerTest.cpp
   test/WarmResumptionTest.cpp
   test/framing/FrameTest.cpp
   test/framing/FrameTransportTest.cpp
