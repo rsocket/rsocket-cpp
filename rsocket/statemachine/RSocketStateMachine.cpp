@@ -445,7 +445,6 @@ void RSocketStateMachine::closeStreams(StreamCompletionSignal signal) {
 }
 
 void RSocketStateMachine::processFrame(std::unique_ptr<folly::IOBuf> frame) {
-
   if (isClosed()) {
     VLOG(4) << "StateMachine has been closed.  Discarding incoming frame";
     return;
@@ -717,8 +716,7 @@ void RSocketStateMachine::handleUnknownStream(
   // we should change the version to struct
   DCHECK_GT(frameSerializer_->protocolVersion(), ProtocolVersion(0, 0));
 
-  if (frameType != FrameType::REQUEST_FNF &&
-      !streamsFactory_.registerNewPeerStreamId(streamId)) {
+  if (!streamsFactory_.registerNewPeerStreamId(streamId)) {
     return;
   }
 
