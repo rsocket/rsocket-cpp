@@ -715,7 +715,9 @@ void RSocketStateMachine::handleUnknownStream(
   // TODO: comparing string versions is odd because from version
   // 10.0 the lexicographic comparison doesn't work
   // we should change the version to struct
-  if (frameSerializer_->protocolVersion() > ProtocolVersion{0, 0} &&
+  DCHECK_GT(frameSerializer_->protocolVersion(), ProtocolVersion(0, 0));
+
+  if (frameType != FrameType::REQUEST_FNF &&
       !streamsFactory_.registerNewPeerStreamId(streamId)) {
     return;
   }
