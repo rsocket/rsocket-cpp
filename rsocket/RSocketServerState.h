@@ -13,8 +13,8 @@ namespace rsocket {
 class RSocketServerState {
  public:
   void close() {
-    eventBase_.runInEventBaseThread([this]() {
-      rSocketStateMachine_->close({}, StreamCompletionSignal::SOCKET_CLOSED);
+    eventBase_.runInEventBaseThread([sm = rSocketStateMachine_] {
+      sm->close({}, StreamCompletionSignal::SOCKET_CLOSED);
     });
   }
 
