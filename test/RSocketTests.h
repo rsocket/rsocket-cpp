@@ -9,6 +9,8 @@
 #include "rsocket/transports/tcp/TcpConnectionFactory.h"
 #include "yarpl/test_utils/utils.h"
 
+DECLARE_bool(tcp_io_batching);
+
 namespace rsocket {
 namespace tests {
 namespace client_server {

@@ -5,6 +5,11 @@
 #include "rsocket/transports/tcp/TcpConnectionAcceptor.h"
 #include "test/test_utils/GenericRequestResponseHandler.h"
 
+DEFINE_bool(
+    tcp_io_batching,
+    false,
+    "For tcp connections, use an implementation which batches in a seprate I/O thread");
+
 namespace rsocket {
 namespace tests {
 namespace client_server {
@@ -13,7 +18,8 @@ std::unique_ptr<TcpConnectionFactory> getConnFactory(
     folly::EventBase* eventBase,
     uint16_t port) {
   folly::SocketAddress address{"::1", port};
-  return std::make_unique<TcpConnectionFactory>(*eventBase, std::move(address));
+  return std::make_unique<TcpConnectionFactory>(
+      *eventBase, std::move(address), FLAGS_tcp_io_batching);
 }
 
 std::unique_ptr<RSocketServer> makeServer(
@@ -21,6 +27,7 @@ std::unique_ptr<RSocketServer> makeServer(
   TcpConnectionAcceptor::Options opts;
   opts.threads = 2;
   opts.address = folly::SocketAddress("::", 0);
+  opts.batchIo = FLAGS_tcp_io_batching;
 
   // RSocket server accepting on TCP.
   auto rs = RSocket::createServer(

@@ -12,14 +12,16 @@
 
 namespace rsocket {
 
-class TcpReaderWriter;
+class SimpleTcpReaderWriter;
+class BatchingTcpReaderWriter;
 
-class TcpDuplexConnection : public DuplexConnection {
+template <typename ReaderWriter>
+class GenericTcpDuplexConnection : public DuplexConnection {
  public:
-  explicit TcpDuplexConnection(
+  explicit GenericTcpDuplexConnection(
       folly::AsyncTransportWrapper::UniquePtr&& socket,
       std::shared_ptr<RSocketStats> stats = RSocketStats::noop());
-  ~TcpDuplexConnection();
+  ~GenericTcpDuplexConnection();
 
   yarpl::Reference<DuplexConnection::Subscriber> getOutput() override;
 
@@ -29,7 +31,15 @@ class TcpDuplexConnection : public DuplexConnection {
   folly::AsyncTransportWrapper* getTransport();
 
  private:
-  boost::intrusive_ptr<TcpReaderWriter> tcpReaderWriter_;
+  boost::intrusive_ptr<ReaderWriter> tcpReaderWriter_;
   std::shared_ptr<RSocketStats> stats_;
 };
+
+// templated GenericTcpDuplexConnection types are instantiated in
+// TcpDuplexConnection.cpp
+
+// define TcpDuplexConnection as such to maintain backwards compatibility
+using BatchingTcpDuplexConnection =
+    GenericTcpDuplexConnection<BatchingTcpReaderWriter>;
+using TcpDuplexConnection = GenericTcpDuplexConnection<SimpleTcpReaderWriter>;
 }

@@ -19,7 +19,10 @@ class RSocketStats;
  */
 class TcpConnectionFactory : public ConnectionFactory {
  public:
-  TcpConnectionFactory(folly::EventBase& eventBase, folly::SocketAddress);
+  TcpConnectionFactory(
+      folly::EventBase& eventBase,
+      folly::SocketAddress,
+      bool batchIo = false);
   virtual ~TcpConnectionFactory();
 
   /**
@@ -31,10 +34,12 @@ class TcpConnectionFactory : public ConnectionFactory {
 
   static std::unique_ptr<DuplexConnection> createDuplexConnectionFromSocket(
       folly::AsyncTransportWrapper::UniquePtr socket,
+      bool batchIo,
       std::shared_ptr<RSocketStats> stats = std::shared_ptr<RSocketStats>());
 
  private:
   folly::SocketAddress address_;
   folly::EventBase* eventBase_;
+  bool batchIo_;
 };
 } // namespace rsocket
