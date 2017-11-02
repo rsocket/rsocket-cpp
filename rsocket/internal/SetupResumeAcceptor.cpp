@@ -40,7 +40,8 @@ void closeWithError(
   output->onNext(std::move(frame));
   output->onError(std::runtime_error{std::move(message)});
 }
-}
+
+} // namespace
 
 SetupResumeAcceptor::OneFrameSubscriber::OneFrameSubscriber(
     SetupResumeAcceptor& acceptor,
@@ -95,17 +96,9 @@ void SetupResumeAcceptor::OneFrameSubscriber::onTerminateImpl() {
   acceptor_.remove(ref_from_this(this));
 }
 
-SetupResumeAcceptor::SetupResumeAcceptor(
-    ProtocolVersion version,
-    folly::EventBase* eventBase)
+SetupResumeAcceptor::SetupResumeAcceptor(folly::EventBase* eventBase)
     : eventBase_{eventBase} {
   CHECK(eventBase_);
-
-  // If the version is unknown we'll try to autodetect it from the first
-  // frame.
-  if (version != ProtocolVersion::Unknown) {
-    defaultSerializer_ = FrameSerializer::createFrameSerializer(version);
-  }
 }
 
 SetupResumeAcceptor::~SetupResumeAcceptor() {
@@ -126,9 +119,11 @@ void SetupResumeAcceptor::processFrame(
     return;
   }
 
-  auto serializer = createSerializer(*buf);
+  auto serializer = FrameSerializer::createAutodetectedSerializer(*buf);
   if (!serializer) {
-    closeWithError(std::move(connection), "Unable to detect protocol version");
+    std::string msg{"Unable to detect protocol version"};
+    VLOG(2) << msg;
+    closeWithError(std::move(connection), std::move(msg));
     return;
   }
 
@@ -233,22 +228,6 @@ void SetupResumeAcceptor::accept(
   subscriber->setInput();
 }
 
-std::shared_ptr<FrameSerializer> SetupResumeAcceptor::createSerializer(
-    const folly::IOBuf& frame) {
-  if (defaultSerializer_) {
-    return defaultSerializer_;
-  }
-
-  auto serializer = FrameSerializer::createAutodetectedSerializer(frame);
-  if (!serializer) {
-    VLOG(2) << "Unable to detect protocol version";
-    return nullptr;
-  }
-
-  VLOG(3) << "Detected protocol version " << serializer->protocolVersion();
-  return std::move(serializer);
-}
-
 void SetupResumeAcceptor::remove(
     const yarpl::Reference<SetupResumeAcceptor::OneFrameSubscriber>&
         subscriber) {
@@ -278,4 +257,5 @@ void SetupResumeAcceptor::closeAll() {
 bool SetupResumeAcceptor::inOwnerThread() const {
   return eventBase_->isInEventBaseThread();
 }
-}
+
+} // namespace rsocket

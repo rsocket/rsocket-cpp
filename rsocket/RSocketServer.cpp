@@ -18,9 +18,7 @@ RSocketServer::RSocketServer(
     : duplexConnectionAcceptor_(std::move(connectionAcceptor)),
       setupResumeAcceptors_([] {
         return new rsocket::SetupResumeAcceptor{
-            ProtocolVersion::Unknown,
-            folly::EventBaseManager::get()->getExistingEventBase()
-          };
+            folly::EventBaseManager::get()->getExistingEventBase()};
       }),
       connectionSet_(std::make_shared<ConnectionSet>()),
       stats_(std::move(stats)) {}
@@ -66,11 +64,12 @@ void RSocketServer::start(
   }
   started = true;
 
-  duplexConnectionAcceptor_->start([this, serviceHandler](
-      std::unique_ptr<DuplexConnection> connection,
-      folly::EventBase& eventBase) {
-    acceptConnection(std::move(connection), eventBase, serviceHandler);
-  });
+  duplexConnectionAcceptor_->start(
+      [this, serviceHandler](
+          std::unique_ptr<DuplexConnection> connection,
+          folly::EventBase& eventBase) {
+        acceptConnection(std::move(connection), eventBase, serviceHandler);
+      });
 }
 
 void RSocketServer::start(OnNewSetupFn onNewSetupFn) {

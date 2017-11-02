@@ -10,7 +10,6 @@
 
 #include "rsocket/DuplexConnection.h"
 #include "rsocket/RSocketParameters.h"
-#include "rsocket/internal/Common.h"
 #include "yarpl/Refcounted.h"
 
 namespace folly {
@@ -18,11 +17,10 @@ class EventBase;
 class Executor;
 class IOBuf;
 class exception_wrapper;
-}
+} // namespace folly
 
 namespace rsocket {
 
-class FrameSerializer;
 class FrameTransport;
 
 /// Acceptor of DuplexConnections that lets us decide whether the connection is
@@ -37,8 +35,7 @@ class SetupResumeAcceptor final {
   using OnResume =
       folly::Function<void(yarpl::Reference<FrameTransport>, ResumeParameters)>;
 
-  SetupResumeAcceptor(ProtocolVersion, folly::EventBase*);
-
+  explicit SetupResumeAcceptor(folly::EventBase*);
   ~SetupResumeAcceptor();
 
   /// Wait for and process the first frame on a DuplexConnection, calling the
@@ -103,15 +100,11 @@ class SetupResumeAcceptor final {
   /// work within the owner thread.
   bool inOwnerThread() const;
 
-  /// Get the default FrameSerializer if one exists, otherwise try to autodetect
-  /// the correct FrameSerializer from the given frame.
-  std::shared_ptr<FrameSerializer> createSerializer(const folly::IOBuf&);
-
   std::unordered_set<yarpl::Reference<OneFrameSubscriber>> connections_;
 
   bool closed_{false};
 
-  std::shared_ptr<FrameSerializer> defaultSerializer_;
   folly::EventBase* eventBase_;
 };
-}
+
+} // namespace rsocket
