@@ -359,6 +359,7 @@ add_executable(
   test/internal/AllowanceTest.cpp
   test/internal/ConnectionSetTest.cpp
   test/internal/KeepaliveTimerTest.cpp
+  test/internal/ResumeIdentificationToken.cpp
   test/internal/SetupResumeAcceptorTest.cpp
   test/internal/SwappableEventBaseTest.cpp
   test/test_utils/ColdResumeManager.cpp

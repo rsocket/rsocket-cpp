@@ -92,6 +92,30 @@ StreamInterruptedException::StreamInterruptedException(int _terminatingSignal)
 
 ResumeIdentificationToken::ResumeIdentificationToken() {}
 
+ResumeIdentificationToken::ResumeIdentificationToken(const std::string& token) {
+  auto getNibble = [&token](size_t i) {
+    uint8_t nibble;
+    if (token[i] >= '0' && token[i] <= '9') {
+      nibble = token[i] - '0';
+    } else if (token[i] >= 'a' && token[i] <= 'f') {
+      nibble = token[i] - 'a' + 10;
+    } else {
+      throw std::invalid_argument("ResumeToken not in right format: " + token);
+    }
+    return nibble;
+  };
+  if (token.size() < 2 || token[0] != '0' || token[1] != 'x' ||
+      (token.size() % 2) != 0) {
+    throw std::invalid_argument("ResumeToken not in right format: " + token);
+  }
+  size_t i = 2;
+  while (i < token.size()) {
+    uint8_t firstNibble = getNibble(i++);
+    uint8_t secondNibble = getNibble(i++);
+    bits_.push_back((firstNibble << 4) | secondNibble);
+  }
+}
+
 ResumeIdentificationToken ResumeIdentificationToken::generateNew() {
   constexpr size_t kSize = 16;
   std::vector<uint8_t> data;
@@ -105,6 +129,12 @@ ResumeIdentificationToken ResumeIdentificationToken::generateNew() {
 void ResumeIdentificationToken::set(std::vector<uint8_t> newBits) {
   CHECK(newBits.size() <= std::numeric_limits<uint16_t>::max());
   bits_ = std::move(newBits);
+}
+
+std::string ResumeIdentificationToken::str() const {
+  std::stringstream out;
+  out << *this;
+  return out.str();
 }
 
 std::ostream& operator<<(

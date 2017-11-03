@@ -81,6 +81,12 @@ class ResumeIdentificationToken {
  public:
   /// Creates an empty token.
   ResumeIdentificationToken();
+
+  // The stringToken and ::str() function should complement
+  // each other.  The string representation should be of the
+  // format 0x44ab7cf01fd290b63140d01ee789cfb6
+  ResumeIdentificationToken(const std::string& stringToken);
+
   static ResumeIdentificationToken generateNew();
 
   const std::vector<uint8_t>& data() const {
@@ -100,6 +106,8 @@ class ResumeIdentificationToken {
   bool operator<(const ResumeIdentificationToken& right) const {
     return data() < right.data();
   }
+
+  std::string str() const;
 
  private:
   explicit ResumeIdentificationToken(std::vector<uint8_t> bits)
