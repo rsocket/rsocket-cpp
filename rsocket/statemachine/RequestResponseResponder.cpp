@@ -22,8 +22,11 @@ void RequestResponseResponder::onSubscribe(
 }
 
 void RequestResponseResponder::onSuccess(Payload response) noexcept {
-  DCHECK(producingSubscription_) << "didnt call onSubscribe";
-  switch (state_) {
+  if (!producingSubscription_) {
+    // Already closed.
+    return;
+  }
+  switch (state_) l{
     case State::RESPONDING: {
       state_ = State::CLOSED;
       writePayload(std::move(response), true);
