@@ -2,8 +2,6 @@
 
 #include "rsocket/statemachine/RequestResponseResponder.h"
 
-#include <glog/logging.h>
-
 #include "rsocket/Payload.h"
 
 namespace rsocket {
@@ -13,16 +11,26 @@ using namespace yarpl::flowable;
 
 void RequestResponseResponder::onSubscribe(
     Reference<yarpl::single::SingleSubscription> subscription) noexcept {
+#ifdef DEBUG
+  DCHECK(!gotOnSubscribe_.exchange(true)) << "Already called onSubscribe()";
+#endif
+
   if (StreamStateMachineBase::isTerminated()) {
     subscription->cancel();
     return;
   }
-  DCHECK(!producingSubscription_);
   producingSubscription_ = std::move(subscription);
 }
 
 void RequestResponseResponder::onSuccess(Payload response) noexcept {
-  DCHECK(producingSubscription_) << "didnt call onSubscribe";
+#ifdef DEBUG
+  DCHECK(gotOnSubscribe_.load()) << "didnt call onSubscribe";
+  DCHECK(!gotTerminating_.exchange(true)) << "Already called onSuccess/onError";
+#endif
+  if (!producingSubscription_) {
+    return;
+  }
+
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
@@ -37,7 +45,11 @@ void RequestResponseResponder::onSuccess(Payload response) noexcept {
 }
 
 void RequestResponseResponder::onError(folly::exception_wrapper ex) noexcept {
-  DCHECK(producingSubscription_);
+#ifdef DEBUG
+  DCHECK(gotOnSubscribe_.load()) << "didnt call onSubscribe";
+  DCHECK(!gotTerminating_.exchange(true)) << "Already called onSuccess/onError";
+#endif
+
   producingSubscription_ = nullptr;
   switch (state_) {
     case State::RESPONDING: {

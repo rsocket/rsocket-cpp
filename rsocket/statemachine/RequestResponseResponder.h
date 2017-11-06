@@ -7,6 +7,8 @@
 #include "yarpl/single/SingleObserver.h"
 #include "yarpl/single/SingleSubscription.h"
 
+#include <glog/logging.h>
+
 namespace rsocket {
 
 /// Implementation of stream stateMachine that represents a RequestResponse
@@ -36,5 +38,9 @@ class RequestResponseResponder : public StreamStateMachineBase,
   } state_{State::RESPONDING};
 
   yarpl::Reference<yarpl::single::SingleSubscription> producingSubscription_;
+#ifdef DEBUG
+  std::atomic<bool> gotOnSubscribe_{false};
+  std::atomic<bool> gotTerminating_{false};
+#endif
 };
 }
