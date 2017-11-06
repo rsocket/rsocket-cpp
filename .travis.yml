@@ -1,6 +1,6 @@
 # Travis CI config for rsocket-cpp.
 
-sudo: false
+sudo: true
 dist: trusty
 
 language: cpp
