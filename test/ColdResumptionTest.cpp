@@ -6,6 +6,7 @@
 #include <folly/Format.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <folly/portability/GFlags.h>
+#include <folly/system/ThreadName.h>
 
 #include "RSocketTests.h"
 
@@ -149,7 +150,9 @@ void coldResumer(uint32_t port, uint32_t client_num) {
   auto thirdPayload = folly::sformat("client{}_third", client_num);
   size_t firstLatestValue, secondLatestValue;
 
-  folly::ScopedEventBaseThread worker;
+  folly::setThreadName(folly::sformat("coldResumer{}", client_num));
+  folly::ScopedEventBaseThread worker{folly::sformat("CRWorker{}", client_num)};
+
   auto token = ResumeIdentificationToken::generateNew();
   auto resumeManager =
       std::make_shared<ColdResumeManager>(RSocketStats::noop());

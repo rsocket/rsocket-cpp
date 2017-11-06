@@ -17,8 +17,8 @@ namespace rsocket {
 class TcpConnectionAcceptor::SocketCallback
     : public folly::AsyncServerSocket::AcceptCallback {
  public:
-  explicit SocketCallback(OnDuplexConnectionAccept& onAccept)
-      : onAccept_{onAccept} {}
+  explicit SocketCallback(OnDuplexConnectionAccept& onAccept, bool batchIo)
+      : onAccept_{onAccept}, batchIo_{batchIo} {}
 
   void connectionAccepted(
       int fd,
@@ -28,7 +28,14 @@ class TcpConnectionAcceptor::SocketCallback
     folly::AsyncTransportWrapper::UniquePtr socket(
         new folly::AsyncSocket(eventBase(), fd));
 
-    auto connection = std::make_unique<TcpDuplexConnection>(std::move(socket));
+    std::unique_ptr<DuplexConnection> connection;
+    if (batchIo_) {
+      connection =
+          std::make_unique<BatchingTcpDuplexConnection>(std::move(socket));
+    } else {
+      connection = std::make_unique<TcpDuplexConnection>(std::move(socket));
+    }
+
     onAccept_(std::move(connection), *eventBase());
   }
 
@@ -46,6 +53,8 @@ class TcpConnectionAcceptor::SocketCallback
 
   /// Reference to the ConnectionAcceptor's callback.
   OnDuplexConnectionAccept& onAccept_;
+
+  const bool batchIo_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -74,7 +83,8 @@ void TcpConnectionAcceptor::start(OnDuplexConnectionAccept onAccept) {
 
   callbacks_.reserve(options_.threads);
   for (size_t i = 0; i < options_.threads; ++i) {
-    callbacks_.push_back(std::make_unique<SocketCallback>(onAccept_));
+    callbacks_.push_back(
+        std::make_unique<SocketCallback>(onAccept_, options_.batchIo));
     callbacks_[i]->eventBase()->runInEventBaseThread([i] {
       folly::EventBaseManager::get()->getEventBase()->setName(
           folly::sformat("TCPWrk.{}", i));

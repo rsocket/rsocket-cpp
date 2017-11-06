@@ -97,7 +97,7 @@ TEST(RequestResponseTest, CanCtorTypes) {
 }
 
 TEST(RequestResponseTest, Hello) {
-  folly::ScopedEventBaseThread worker;
+  folly::ScopedEventBaseThread worker{"client"};
   auto server = makeServer(std::make_shared<GenericRequestResponseHandler>(
       [](StringPair const& request) {
         return payload_response(

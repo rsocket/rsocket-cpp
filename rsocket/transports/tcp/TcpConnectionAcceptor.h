@@ -23,8 +23,12 @@ class TcpConnectionAcceptor : public ConnectionAcceptor {
     explicit Options(
         uint16_t port_ = 8080,
         size_t threads_ = 2,
-        int backlog_ = 10)
-        : address("::", port_), threads(threads_), backlog(backlog_) {}
+        int backlog_ = 10,
+        bool batchIo_ = false)
+        : address("::", port_),
+          threads(threads_),
+          backlog(backlog_),
+          batchIo(batchIo_) {}
 
     /// Address to listen on
     folly::SocketAddress address;
@@ -34,6 +38,9 @@ class TcpConnectionAcceptor : public ConnectionAcceptor {
 
     /// Number of connections to buffer before accept handlers process them.
     int backlog;
+
+    /// Use a separate I/O thread for sending over the socket
+    bool batchIo;
   };
 
   //////////////////////////////////////////////////////////////////////////////

@@ -390,6 +390,7 @@ add_dependencies(tests gmock yarpl-test-utils ReactiveSocket)
 
 add_test(NAME RSocketTests COMMAND tests)
 add_test(NAME RSocketTests-0.1 COMMAND tests --rs_use_protocol_version=0.1)
+add_test(NAME RSocketTests-Batching COMMAND tests --tcp_io_batching=true)
 
 ### Fuzzer harnesses
 add_executable(
