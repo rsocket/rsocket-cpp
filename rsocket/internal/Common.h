@@ -85,7 +85,7 @@ class ResumeIdentificationToken {
   // The stringToken and ::str() function should complement
   // each other.  The string representation should be of the
   // format 0x44ab7cf01fd290b63140d01ee789cfb6
-  ResumeIdentificationToken(const std::string& stringToken);
+  explicit ResumeIdentificationToken(const std::string& stringToken);
 
   static ResumeIdentificationToken generateNew();
 
