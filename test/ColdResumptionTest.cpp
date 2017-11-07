@@ -348,7 +348,7 @@ TEST(ColdResumptionTest, DifferentEvb) {
 // Attempt a resumption when the previous transport/client hasn't
 // disconnected it.  Verify resumption succeeds after the previous
 // transport is disconnected.
-TEST(ColdResumptionTest, FailedResumption) {
+TEST(ColdResumptionTest, DisconnectResumption) {
   auto server = makeResumableServer(std::make_shared<HelloServiceHandler>());
   auto port = *server->listeningPort();
 
@@ -378,17 +378,6 @@ TEST(ColdResumptionTest, FailedResumption) {
       HelloSubscribers({{payload, resumedSub}}));
 
   std::shared_ptr<RSocketClient> resumedClient;
-  EXPECT_THROW(
-      resumedClient = createResumedClient(
-          transportWorker.getEventBase(),
-          port,
-          token,
-          resumeManager,
-          resumedCrh),
-      RSocketException);
-
-  client->disconnect().get();
-
   EXPECT_NO_THROW(
       resumedClient = createResumedClient(
           transportWorker.getEventBase(),

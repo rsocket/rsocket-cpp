@@ -97,19 +97,9 @@ bool RSocketStateMachine::resumeServer(
   int64_t serverDelta =
       resumeManager_->lastSentPosition() - resumeParams.serverPosition;
 
-  if (!isDisconnected()) {
-    VLOG(1) << "Old connection (" << frameTransport_.get() << ") exists. "
-            << "Terminating new connection (" << frameTransport.get() << ")";
-    frameTransport->closeWithError(
-        ResumptionException{"Old connection still exists"});
+  std::runtime_error exn{"Connection being resumed, dropping old connection"};
+  disconnect(std::move(exn));
 
-    stats_->serverResume(
-        clientAvailable,
-        serverAvailable,
-        serverDelta,
-        RSocketStats::ResumeOutcome::FAILURE);
-    return false;
-  }
   connect(std::move(frameTransport), resumeParams.protocolVersion);
 
   auto result = resumeFromPositionOrClose(
