@@ -7,6 +7,8 @@
 #include "yarpl/observable/Observable.h"
 #include "yarpl/observable/Subscriptions.h"
 
+#include <folly/functional/Invoke.h>
+
 namespace yarpl {
 namespace observable {
 
@@ -70,7 +72,7 @@ class Observables {
       typename T,
       typename OnSubscribe,
       typename = typename std::enable_if<
-          std::is_callable<OnSubscribe(Reference<Observer<T>>), void>::value>::
+          folly::is_invocable<OnSubscribe, Reference<Observer<T>>>::value>::
           type>
   static Reference<Observable<T>> create(OnSubscribe function) {
     return make_ref<FromPublisherOperator<T, OnSubscribe>>(std::move(function));

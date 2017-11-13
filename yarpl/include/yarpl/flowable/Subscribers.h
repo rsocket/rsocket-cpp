@@ -5,6 +5,8 @@
 #include <exception>
 #include <limits>
 
+#include <folly/functional/Invoke.h>
+
 #include "yarpl/flowable/Subscriber.h"
 #include "yarpl/utils/credits.h"
 #include "yarpl/utils/type_traits.h"
@@ -24,7 +26,7 @@ class Subscribers {
       typename T,
       typename Next,
       typename =
-          typename std::enable_if<std::is_callable<Next(T), void>::value>::type>
+          typename std::enable_if<folly::is_invocable<Next, T>::value>::type>
   static Reference<Subscriber<T>> create(
       Next next,
       int64_t batch = kNoFlowControl) {
@@ -36,8 +38,8 @@ class Subscribers {
       typename Next,
       typename Error,
       typename = typename std::enable_if<
-          std::is_callable<Next(T), void>::value &&
-          std::is_callable<Error(folly::exception_wrapper), void>::value>::type>
+          folly::is_invocable<Next, T>::value &&
+          folly::is_invocable<Error, folly::exception_wrapper>::value>::type>
   static Reference<Subscriber<T>>
   create(Next next, Error error, int64_t batch = kNoFlowControl) {
     return make_ref<WithError<T, Next, Error>>(
@@ -50,9 +52,9 @@ class Subscribers {
       typename Error,
       typename Complete,
       typename = typename std::enable_if<
-          std::is_callable<Next(T), void>::value &&
-          std::is_callable<Error(folly::exception_wrapper), void>::value &&
-          std::is_callable<Complete(), void>::value>::type>
+          folly::is_invocable<Next, T>::value &&
+          folly::is_invocable<Error, folly::exception_wrapper>::value &&
+          folly::is_invocable<Complete>::value>::type>
   static Reference<Subscriber<T>> create(
       Next next,
       Error error,

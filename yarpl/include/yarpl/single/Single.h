@@ -3,6 +3,7 @@
 #pragma once
 
 #include <folly/Baton.h>
+#include <folly/functional/Invoke.h>
 
 #include "yarpl/Refcounted.h"
 #include "yarpl/single/SingleObserver.h"
@@ -24,7 +25,7 @@ class Single : public virtual Refcounted, public yarpl::enable_get_ref {
   template <
       typename Success,
       typename = typename std::enable_if<
-          std::is_callable<Success(T), void>::value>::type>
+          folly::is_invocable<Success, T>::value>::type>
   void subscribe(Success next) {
     subscribe(SingleObservers::create<T>(std::move(next)));
   }
@@ -36,8 +37,8 @@ class Single : public virtual Refcounted, public yarpl::enable_get_ref {
       typename Success,
       typename Error,
       typename = typename std::enable_if<
-          std::is_callable<Success(T), void>::value &&
-          std::is_callable<Error(folly::exception_wrapper), void>::value>::type>
+          folly::is_invocable<Success, T>::value &&
+          folly::is_invocable<Error, folly::exception_wrapper>::value>::type>
   void subscribe(Success next, Error error) {
     subscribe(SingleObservers::create<T>(
         std::move(next), std::move(error)));
@@ -51,7 +52,7 @@ class Single : public virtual Refcounted, public yarpl::enable_get_ref {
   template <
       typename Success,
       typename = typename std::enable_if<
-          std::is_callable<Success(T), void>::value>::type>
+          folly::is_invocable<Success, T>::value>::type>
   void subscribeBlocking(Success next) {
     auto waiting_ = std::make_shared<folly::Baton<>>();
     subscribe(SingleObservers::create<T>(
@@ -65,9 +66,8 @@ class Single : public virtual Refcounted, public yarpl::enable_get_ref {
 
   template <
       typename OnSubscribe,
-      typename = typename std::enable_if<std::is_callable<
-          OnSubscribe(Reference<SingleObserver<T>>),
-          void>::value>::type>
+      typename = typename std::enable_if<folly::is_invocable<
+          OnSubscribe, Reference<SingleObserver<T>>>::value>::type>
   static Reference<Single<T>> create(OnSubscribe);
 
   template <typename Function>
@@ -86,7 +86,7 @@ class Single<void> : public virtual Refcounted {
   template <
       typename Success,
       typename = typename std::enable_if<
-          std::is_callable<Success(), void>::value>::type>
+          folly::is_invocable<Success>::value>::type>
   void subscribe(Success s) {
     class SuccessSingleObserver : public SingleObserverBase<void> {
      public:
@@ -115,9 +115,8 @@ class Single<void> : public virtual Refcounted {
 
   template <
       typename OnSubscribe,
-      typename = typename std::enable_if<std::is_callable<
-          OnSubscribe(Reference<SingleObserverBase<void>>),
-          void>::value>::type>
+      typename = typename std::enable_if<folly::is_invocable<
+          OnSubscribe, Reference<SingleObserverBase<void>>>::value>::type>
   static auto create(OnSubscribe);
 };
 

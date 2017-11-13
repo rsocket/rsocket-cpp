@@ -3,6 +3,8 @@
 #pragma once
 
 #include <folly/Try.h>
+#include <folly/functional/Invoke.h>
+
 #include <utility>
 
 #include "yarpl/single/Single.h"
@@ -149,7 +151,7 @@ template <
     typename U,
     typename D,
     typename F,
-    typename = typename std::enable_if<std::is_callable<F(U), D>::value>::type>
+    typename = typename std::enable_if<folly::is_invocable_r<D, F, U>::value>::type>
 class MapOperator : public SingleOperator<U, D> {
   using ThisOperatorT = MapOperator<U, D, F>;
   using Super = SingleOperator<U, D>;

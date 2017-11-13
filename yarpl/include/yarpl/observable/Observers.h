@@ -4,7 +4,9 @@
 
 #include <exception>
 #include <limits>
+
 #include <folly/ExceptionWrapper.h>
+#include <folly/functional/Invoke.h>
 
 #include "yarpl/observable/Observer.h"
 #include "yarpl/utils/type_traits.h"
@@ -26,9 +28,9 @@ class Observers {
       typename Error = void (*)(folly::exception_wrapper),
       typename Complete = void (*)()>
   using EnableIfCompatible = typename std::enable_if<
-      std::is_callable<Next(T), void>::value &&
-      std::is_callable<Error(folly::exception_wrapper), void>::value &&
-      std::is_callable<Complete(), void>::value>::type;
+      folly::is_invocable<Next, T>::value &&
+      folly::is_invocable<Error, folly::exception_wrapper>::value &&
+      folly::is_invocable<Complete>::value>::type;
 
  public:
   template <typename T, typename Next, typename = EnableIfCompatible<T, Next>>

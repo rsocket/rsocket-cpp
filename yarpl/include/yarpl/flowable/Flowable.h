@@ -14,7 +14,8 @@
 #include "yarpl/utils/credits.h"
 #include "yarpl/utils/type_traits.h"
 
-#include "folly/Executor.h"
+#include <folly/Executor.h>
+#include <folly/functional/Invoke.h>
 
 namespace yarpl {
 namespace flowable {
@@ -30,7 +31,7 @@ class Flowable : public virtual Refcounted, public yarpl::enable_get_ref {
   template <
       typename Next,
       typename =
-          typename std::enable_if<std::is_callable<Next(T), void>::value>::type>
+          typename std::enable_if<folly::is_invocable<Next, T>::value>::type>
   void subscribe(Next next, int64_t batch = credits::kNoFlowControl) {
     subscribe(Subscribers::create<T>(std::move(next), batch));
   }
@@ -44,8 +45,8 @@ class Flowable : public virtual Refcounted, public yarpl::enable_get_ref {
       typename Next,
       typename Error,
       typename = typename std::enable_if<
-          std::is_callable<Next(T), void>::value &&
-          std::is_callable<Error(folly::exception_wrapper), void>::value>::type>
+          folly::is_invocable<Next, T>::value &&
+          folly::is_invocable<Error, folly::exception_wrapper>::value>::type>
   void
   subscribe(Next next, Error error, int64_t batch = credits::kNoFlowControl) {
     subscribe(Subscribers::create<T>(std::move(next), std::move(error), batch));
@@ -61,9 +62,9 @@ class Flowable : public virtual Refcounted, public yarpl::enable_get_ref {
       typename Error,
       typename Complete,
       typename = typename std::enable_if<
-          std::is_callable<Next(T), void>::value &&
-          std::is_callable<Error(folly::exception_wrapper), void>::value &&
-          std::is_callable<Complete(), void>::value>::type>
+          folly::is_invocable<Next, T>::value &&
+          folly::is_invocable<Error, folly::exception_wrapper>::value &&
+          folly::is_invocable<Complete>::value>::type>
   void subscribe(
       Next next,
       Error error,
@@ -98,9 +99,10 @@ class Flowable : public virtual Refcounted, public yarpl::enable_get_ref {
 
   template <
       typename Emitter,
-      typename = typename std::enable_if<std::is_callable<
-          Emitter(Reference<Subscriber<T>>, int64_t),
-          std::tuple<int64_t, bool>>::value>::type>
+      typename = typename std::enable_if<folly::is_invocable_r<
+          std::tuple<int64_t, bool>,
+          Emitter, Reference<Subscriber<T>>, int64_t
+          >::value>::type>
   static Reference<Flowable<T>> create(Emitter emitter);
 };
 

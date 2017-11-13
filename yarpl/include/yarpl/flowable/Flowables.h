@@ -10,6 +10,8 @@
 
 #include "yarpl/flowable/Flowable.h"
 
+#include <folly/functional/Invoke.h>
+
 namespace yarpl {
 namespace flowable {
 
@@ -102,9 +104,8 @@ class Flowables {
   template <
       typename T,
       typename OnSubscribe,
-      typename = typename std::enable_if<std::is_callable<
-          OnSubscribe(Reference<Subscriber<T>>),
-          void>::value>::type>
+      typename = typename std::enable_if<folly::is_invocable<
+          OnSubscribe, Reference<Subscriber<T>>>::value>::type>
   static Reference<Flowable<T>> fromPublisher(OnSubscribe function) {
     return make_ref<FromPublisherOperator<T, OnSubscribe>>(std::move(function));
   }

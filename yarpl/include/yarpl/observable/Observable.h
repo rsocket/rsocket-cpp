@@ -19,6 +19,8 @@
 #include "yarpl/Flowable.h"
 #include "yarpl/flowable/Flowable_FromObservable.h"
 
+#include <folly/functional/Invoke.h>
+
 namespace yarpl {
 namespace observable {
 
@@ -38,7 +40,7 @@ class Observable : public virtual Refcounted, public yarpl::enable_get_ref {
   template <
       typename Next,
       typename =
-          typename std::enable_if<std::is_callable<Next(T), void>::value>::type>
+          typename std::enable_if<folly::is_invocable<Next, T>::value>::type>
   Reference<Subscription> subscribe(Next next) {
     return subscribe(Observers::create<T>(std::move(next)));
   }
@@ -50,8 +52,8 @@ class Observable : public virtual Refcounted, public yarpl::enable_get_ref {
       typename Next,
       typename Error,
       typename = typename std::enable_if<
-          std::is_callable<Next(T), void>::value &&
-          std::is_callable<Error(folly::exception_wrapper), void>::value>::type>
+          folly::is_invocable<Next, T>::value &&
+          folly::is_invocable<Error, folly::exception_wrapper>::value>::type>
   Reference<Subscription> subscribe(Next next, Error error) {
     return subscribe(Observers::create<T>(
         std::move(next), std::move(error)));
@@ -65,9 +67,9 @@ class Observable : public virtual Refcounted, public yarpl::enable_get_ref {
       typename Error,
       typename Complete,
       typename = typename std::enable_if<
-          std::is_callable<Next(T), void>::value &&
-          std::is_callable<Error(folly::exception_wrapper), void>::value &&
-          std::is_callable<Complete(), void>::value>::type>
+          folly::is_invocable<Next, T>::value &&
+          folly::is_invocable<Error, folly::exception_wrapper>::value &&
+          folly::is_invocable<Complete>::value>::type>
   Reference<Subscription> subscribe(Next next, Error error, Complete complete) {
     return subscribe(Observers::create<T>(
         std::move(next),
@@ -154,7 +156,7 @@ template <typename T>
 template <typename OnSubscribe>
 Reference<Observable<T>> Observable<T>::create(OnSubscribe function) {
   static_assert(
-      std::is_callable<OnSubscribe(Reference<Observer<T>>), void>(),
+      folly::is_invocable<OnSubscribe, Reference<Observer<T>>>::value,
       "OnSubscribe must have type `void(Reference<Observer<T>>)`");
 
   return make_ref<FromPublisherOperator<T, OnSubscribe>>(

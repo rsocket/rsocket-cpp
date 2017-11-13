@@ -10,7 +10,8 @@
 #include "yarpl/flowable/Subscription.h"
 #include "yarpl/utils/credits.h"
 
-#include "folly/Executor.h"
+#include <folly/Executor.h>
+#include <folly/functional/Invoke.h>
 
 namespace yarpl {
 namespace flowable {
@@ -122,7 +123,7 @@ template <
     typename U,
     typename D,
     typename F,
-    typename = typename std::enable_if<std::is_callable<F(U), D>::value>::type>
+    typename = typename std::enable_if<folly::is_invocable_r<D, F, U>::value>::type>
 class MapOperator : public FlowableOperator<U, D, MapOperator<U, D, F>> {
   using ThisOperatorT = MapOperator<U, D, F>;
   using Super = FlowableOperator<U, D, ThisOperatorT>;
@@ -163,7 +164,7 @@ template <
     typename U,
     typename F,
     typename =
-        typename std::enable_if<std::is_callable<F(U), bool>::value>::type>
+        typename std::enable_if<folly::is_invocable_r<bool, F, U>::value>::type>
 class FilterOperator : public FlowableOperator<U, U, FilterOperator<U, F>> {
   // for use in subclasses
   using ThisOperatorT = FilterOperator<U, F>;
@@ -206,7 +207,7 @@ template <
     typename F,
     typename = typename std::enable_if<std::is_assignable<D, U>::value>,
     typename =
-        typename std::enable_if<std::is_callable<F(D, U), D>::value>::type>
+        typename std::enable_if<folly::is_invocable_r<D, F, D, U>::value>::type>
 class ReduceOperator : public FlowableOperator<U, D, ReduceOperator<U, D, F>> {
   using ThisOperatorT = ReduceOperator<U, D, F>;
   using Super = FlowableOperator<U, D, ThisOperatorT>;

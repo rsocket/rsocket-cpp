@@ -6,6 +6,8 @@
 
 #include "yarpl/single/SingleObserver.h"
 
+#include <folly/functional/Invoke.h>
+
 namespace yarpl {
 namespace single {
 
@@ -22,8 +24,8 @@ class SingleObservers {
       typename Success,
       typename Error = void (*)(folly::exception_wrapper)>
   using EnableIfCompatible = typename std::enable_if<
-      std::is_callable<Success(T), void>::value &&
-      std::is_callable<Error(folly::exception_wrapper), void>::value>::type;
+      folly::is_invocable<Success, T>::value &&
+      folly::is_invocable<Error, folly::exception_wrapper>::value>::type;
 
  public:
   template <typename T, typename Next, typename = EnableIfCompatible<T, Next>>

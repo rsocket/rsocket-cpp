@@ -8,6 +8,8 @@
 #include "yarpl/observable/Observer.h"
 #include "yarpl/observable/Subscriptions.h"
 
+#include <folly/functional/Invoke.h>
+
 namespace yarpl {
 namespace observable {
 
@@ -170,7 +172,7 @@ template <
     typename U,
     typename D,
     typename F,
-    typename = typename std::enable_if<std::is_callable<F(U), D>::value>::type>
+    typename = typename std::enable_if<folly::is_invocable_r<D, F, U>::value>::type>
 class MapOperator : public ObservableOperator<U, D, MapOperator<U, D, F>> {
   using ThisOperatorT = MapOperator<U, D, F>;
   using Super = ObservableOperator<U, D, ThisOperatorT>;
@@ -216,7 +218,7 @@ template <
     typename U,
     typename F,
     typename =
-        typename std::enable_if<std::is_callable<F(U), bool>::value>::type>
+        typename std::enable_if<folly::is_invocable_r<bool, F, U>::value>::type>
 class FilterOperator : public ObservableOperator<U, U, FilterOperator<U, F>> {
   using ThisOperatorT = FilterOperator<U, F>;
   using Super = ObservableOperator<U, U, ThisOperatorT>;
@@ -261,7 +263,7 @@ template <
     typename F,
     typename = typename std::enable_if<std::is_assignable<D, U>::value>,
     typename =
-        typename std::enable_if<std::is_callable<F(D, U), D>::value>::type>
+        typename std::enable_if<folly::is_invocable_r<U, F, D, U>::value>::type>
 class ReduceOperator
     : public ObservableOperator<U, D, ReduceOperator<U, D, F>> {
   using ThisOperatorT = ReduceOperator<U, D, F>;

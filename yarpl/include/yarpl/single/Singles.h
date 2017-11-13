@@ -7,6 +7,8 @@
 #include "yarpl/single/Single.h"
 #include "yarpl/single/SingleSubscriptions.h"
 
+#include <folly/functional/Invoke.h>
+
 namespace yarpl {
 namespace single {
 
@@ -25,9 +27,8 @@ class Singles {
   template <
       typename T,
       typename OnSubscribe,
-      typename = typename std::enable_if<std::is_callable<
-          OnSubscribe(Reference<SingleObserver<T>>),
-          void>::value>::type>
+      typename = typename std::enable_if<folly::is_invocable<
+          OnSubscribe, Reference<SingleObserver<T>>>::value>::type>
   static Reference<Single<T>> create(OnSubscribe function) {
     return make_ref<FromPublisherOperator<T, OnSubscribe>>(std::move(function));
   }
