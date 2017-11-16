@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cassert>
+#include <mutex>
 #include <utility>
 
 #include "yarpl/flowable/Flowable.h"
@@ -10,7 +11,9 @@
 #include "yarpl/flowable/Subscription.h"
 #include "yarpl/utils/credits.h"
 
+#include <boost/intrusive/list.hpp>
 #include <folly/Executor.h>
+#include <folly/Synchronized.h>
 #include <folly/functional/Invoke.h>
 
 namespace yarpl {
@@ -464,6 +467,386 @@ class FromPublisherOperator : public Flowable<T> {
 
  private:
   OnSubscribe function_;
+};
+
+template <typename T, typename R>
+class FlatMapOperator : public FlowableOperator<T, R, FlatMapOperator<T, R>> {
+  using ThisOperatorT = FlatMapOperator<T, R>;
+  using Super = FlowableOperator<T, R, ThisOperatorT>;
+
+ public:
+  FlatMapOperator(
+      Reference<Flowable<T>> upstream,
+      folly::Function<Reference<Flowable<R>>(T)> func)
+      : Super(std::move(upstream)), function_(std::move(func)) {}
+
+  void subscribe(Reference<Subscriber<R>> subscriber) override {
+    Super::upstream_->subscribe(make_ref<FMSubscription>(
+        this->ref_from_this(this), std::move(subscriber)));
+  }
+
+ private:
+  using SuperSubscription = typename Super::Subscription;
+  class FMSubscription : public SuperSubscription {
+    struct MappedStreamSubscriber;
+
+   public:
+    FMSubscription(
+        Reference<ThisOperatorT> flowable,
+        Reference<Subscriber<R>> subscriber)
+        : SuperSubscription(std::move(flowable), std::move(subscriber)) {}
+
+    void onSubscribeImpl() final {
+      liveSubscribers_++;
+      SuperSubscription::onSubscribeImpl();
+      // TODO: make max parallelism configurable a-la RxJava 2.x's
+      // FlowableFlatMapOperator
+      SuperSubscription::request(std::numeric_limits<int64_t>::max());
+    }
+
+    void onNextImpl(T value) final {
+      auto&& flatMapOp = this->getFlowableOperator();
+      Reference<Flowable<R>> mappedStream;
+
+      try {
+        mappedStream = flatMapOp->function_(std::move(value));
+      } catch (const std::exception& exn) {
+        folly::exception_wrapper ew{std::current_exception(), exn};
+        {
+          std::lock_guard<std::mutex> g(onErrorExGuard_);
+          onErrorEx_ = std::move(folly::exception_wrapper{ew});
+        }
+        // next iteration of drainLoop will cancel this subscriber as well
+        drainLoop();
+        return;
+      }
+
+      Reference<MappedStreamSubscriber> mappedSubscriber =
+          yarpl::make_ref<MappedStreamSubscriber>(this->ref_from_this(this));
+      mappedSubscriber->fmReference_ = mappedSubscriber;
+
+      {
+        // put into pendingValue queue because once the mappedSubscriber
+        // is subscribed to, it will request elements. We don't want the
+        // drainLoop to execute while it's on withoutValue, and request
+        // a second element before the first arrives.
+        auto l = lists.wlock();
+        CHECK(!mappedSubscriber->is_linked());
+        l->pendingValue.push_back(*mappedSubscriber.get());
+      }
+
+      liveSubscribers_++;
+      mappedStream->subscribe(mappedSubscriber);
+    }
+
+    void drainImpl() {
+      // phase 1: clear out terminated subscribers
+      {
+        auto clearList = [](auto& list) {
+          while (!list.empty()) {
+            auto& elem = list.front();
+            elem.explicitlyCanceled = true;
+            elem.cancel();
+            elem.unlink();
+            elem.fmReference_ = nullptr;
+          }
+        };
+
+        if (clearAllSubscribers_.load()) {
+          auto l = lists.wlock();
+          clearList(l->withValue);
+          clearList(l->withoutValue);
+          clearList(l->pendingValue);
+        }
+      }
+
+      // phase 2: check if the subscriber should terminate due to error
+      // or all subscribers completing
+      if (!calledDownstreamTerminate_) {
+        folly::exception_wrapper ex;
+        {
+          std::lock_guard<std::mutex> exg(onErrorExGuard_);
+          ex = std::move(onErrorEx_);
+        }
+        if (ex) {
+          calledDownstreamTerminate_ = true;
+          cancel();
+          this->terminateErr(std::move(ex));
+        } else if (liveSubscribers_ == 0) {
+          calledDownstreamTerminate_ = true;
+          this->terminate();
+        }
+      }
+
+      // phase 3: if the downstream has requested elements, pop values out of
+      // subscribers which have received a value and call downstream->onNext
+      while (requested_ != 0) {
+        R val;
+
+        {
+          auto l = lists.wlock();
+          if (l->withValue.empty()) {
+            break;
+          }
+
+          requested_--;
+          auto& elem = l->withValue.front();
+          elem.unlink();
+
+          {
+            auto r = elem.sync.wlock();
+            CHECK(r->hasValue);
+            r->hasValue = false;
+            val = std::move(r->value);
+            l->withoutValue.push_back(elem);
+          }
+        }
+
+        SuperSubscription::subscriberOnNext(std::move(val));
+      }
+
+      // phase 4: ask any upstream flowables which don't have pending
+      // requests for their next element kick off any more requests
+      while (true) {
+        MappedStreamSubscriber* elem;
+        {
+          auto l = lists.wlock();
+          if (l->withoutValue.empty()) {
+            break;
+          }
+          elem = &l->withoutValue.front();
+
+          auto r = elem->sync.wlock();
+          CHECK(!r->hasValue) << "failed for elem=" << elem; // sanity
+
+          elem->unlink();
+          l->pendingValue.push_back(*elem);
+        }
+        elem->request(1);
+      }
+    }
+
+    // called from MappedStreamSubscriber, recieves the R and the
+    // subscriber which generated the R
+    void drainLoop() {
+      if (drainLoopMutex_++ == 0) {
+        do {
+          drainImpl();
+        } while (drainLoopMutex_-- != 1);
+      }
+    }
+
+    void onMappedSubscriberNext(MappedStreamSubscriber* elem, R value) {
+      {
+        // `elem` may not be in a list; it may have been canceled. Push it
+        // on the withValue list and let drainLoop clear it if that's the case.
+        auto l = lists.wlock();
+        auto r = elem->sync.wlock();
+
+        CHECK(!r->hasValue) << "failed for elem=" << elem;
+        r->hasValue = true;
+        r->value = std::move(value);
+
+        elem->unlink();
+        l->withValue.push_back(*elem);
+      }
+
+      drainLoop();
+    }
+    void onMappedSubscriberTerminate(MappedStreamSubscriber* elem) {
+      liveSubscribers_--;
+
+      {
+        auto r = elem->sync.wlock();
+        if (r->onErrorEx) {
+          std::lock_guard<std::mutex> exg(onErrorExGuard_);
+          onErrorEx_ = std::move(r->onErrorEx);
+        }
+
+        if (elem->explicitlyCanceled) {
+          return;
+        }
+      }
+
+      {
+        auto l = lists.wlock();
+        CHECK(elem->is_linked());
+        elem->unlink();
+        elem->fmReference_ = nullptr;
+      }
+
+      drainLoop();
+    }
+
+    // onComplete/onError fall through to onTerminateImpl, which
+    // will call drainLoop and update the liveSubscribers_ count
+    void onCompleteImpl() final {
+    }
+    void onErrorImpl(folly::exception_wrapper ex) final {
+      std::lock_guard<std::mutex> g(onErrorExGuard_);
+      onErrorEx_ = std::move(ex);
+      clearAllSubscribers_.store(true);
+    }
+
+    void onTerminateImpl() final {
+      liveSubscribers_--;
+      drainLoop();
+    }
+
+    void request(int64_t n) override {
+      if((n + requested_) < requested_) {
+        requested_ = std::numeric_limits<int64_t>::max();
+      }
+      else {
+        requested_ += n;
+      }
+      drainLoop();
+    }
+
+    void cancel() override {
+      clearAllSubscribers_.store(true);
+      drainLoop();
+    }
+
+   private:
+    // buffers at most a single element of type R
+    struct MappedStreamSubscriber
+        : public BaseSubscriber<R>,
+          public boost::intrusive::list_base_hook<
+              boost::intrusive::link_mode<boost::intrusive::auto_unlink>> {
+      MappedStreamSubscriber(Reference<FMSubscription> subscription)
+          : flatMapSubscription_(std::move(subscription)) {}
+
+      void onSubscribeImpl() final {
+        {
+          auto l = flatMapSubscription_->lists.wlock();
+          DCHECK(is_in_list(*this, l->pendingValue, l)) << " this=" << this;
+          auto r = sync.wlock();
+          CHECK(!r->hasValue);
+        }
+
+        BaseSubscriber<R>::request(1);
+      };
+
+      void onNextImpl(R value) final {
+        flatMapSubscription_->onMappedSubscriberNext(this, std::move(value));
+      }
+
+      // noop
+      void onCompleteImpl() final {
+      }
+
+      void onErrorImpl(folly::exception_wrapper ex) final {
+        auto r = sync.wlock();
+        r->onErrorEx = std::move(ex);
+      }
+
+      void onTerminateImpl() override {
+        flatMapSubscription_->onMappedSubscriberTerminate(this);
+      }
+
+      struct SyncData {
+        R value;
+        bool hasValue{false};
+        folly::exception_wrapper onErrorEx{nullptr};
+      };
+      folly::Synchronized<SyncData> sync;
+
+      bool explicitlyCanceled{false};
+
+      // FMSubscription's 'reference' to this object. FMSubscription
+      // clears this reference when it drops the MappedStreamSubscriber
+      // from one of its atomic lists
+      Reference<MappedStreamSubscriber> fmReference_{nullptr};
+
+      // this is both a Subscriber and a Subscription<T>
+      Reference<FMSubscription> flatMapSubscription_{nullptr};
+    };
+
+    // used to make sure only one thread at a time is calling subscriberOnNext
+    std::atomic<int64_t> drainLoopMutex_{0};
+
+    using SubscriberList = boost::intrusive::list<
+        MappedStreamSubscriber,
+        boost::intrusive::constant_time_size<false>>;
+
+    struct Lists {
+      // subscribers with a ready R
+      SubscriberList withValue{};
+      // subscribers that have requested 1 R, waiting for it to arrive via
+      // onNext
+      SubscriberList pendingValue{};
+      // idle subscribers
+      SubscriberList withoutValue{};
+    };
+
+    folly::Synchronized<Lists> lists;
+
+    template <typename L>
+    static bool is_in_list(
+        MappedStreamSubscriber const& elem,
+        SubscriberList const& list,
+        L const& lists) {
+      return in_list_impl(elem, list, lists, true);
+    }
+    template <typename L>
+    static bool not_in_list(
+        MappedStreamSubscriber const& elem,
+        SubscriberList const& list,
+        L const& lists) {
+      return in_list_impl(elem, list, lists, false);
+    }
+
+    template <typename L>
+    static bool in_list_impl(
+        MappedStreamSubscriber const& elem,
+        SubscriberList const& list,
+        L const& lists,
+        bool should) {
+      if (is_in_list(elem, list) != should) {
+#ifdef NDEBUG
+        LOG(INFO) << "in without: " << is_in_list(elem, lists->withoutValue);
+        LOG(INFO) << "in pending: " << is_in_list(elem, lists->pendingValue);
+        LOG(INFO) << "in withval: " << is_in_list(elem, lists->withValue);
+#else
+        (void) lists;
+#endif
+        return false;
+      }
+      return true;
+    }
+
+    static bool is_in_list(
+        MappedStreamSubscriber const& elem,
+        SubscriberList const& list) {
+      bool found = false;
+      for (auto& e : list) {
+        if (&e == &elem) {
+          found = true;
+          break;
+        }
+      }
+      return found;
+    }
+
+    // got a terminating signal from the upstream flowable
+    // always modified in the protected drainImpl()
+    bool calledDownstreamTerminate_{false};
+
+    std::mutex onErrorExGuard_;
+    folly::exception_wrapper onErrorEx_{nullptr};
+
+    // clear all lists of
+    std::atomic<bool> clearAllSubscribers_{false};
+
+    std::atomic<int64_t> requested_{0};
+
+    // number of subscribers (FMSubscription + MappedStreamSubscriber) which
+    // have not recieved a terminating signal yet
+    std::atomic<int64_t> liveSubscribers_{0};
+  };
+
+  folly::Function<Reference<Flowable<R>>(T)> function_;
 };
 
 } // namespace flowable

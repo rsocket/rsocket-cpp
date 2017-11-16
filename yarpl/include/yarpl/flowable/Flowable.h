@@ -79,6 +79,9 @@ class Flowable : public virtual Refcounted, public yarpl::enable_get_ref {
       typename R = typename std::result_of<Function(T)>::type>
   Reference<Flowable<R>> map(Function function);
 
+  template <typename R>
+  Reference<Flowable<R>> flatMap(folly::Function<Reference<Flowable<R>>(T)>);
+
   template <typename Function>
   Reference<Flowable<T>> filter(Function function);
 
@@ -166,6 +169,14 @@ template <typename T>
 Reference<Flowable<T>> Flowable<T>::observeOn(folly::Executor& executor) {
   return make_ref<yarpl::flowable::detail::ObserveOnOperator<T>>(
       this->ref_from_this(this), executor);
+}
+
+template <typename T>
+template <typename R>
+Reference<Flowable<R>> Flowable<T>::flatMap(
+    folly::Function<Reference<Flowable<R>>(T)> func) {
+  return make_ref<FlatMapOperator<T, R>>(
+      this->ref_from_this(this), std::move(func));
 }
 
 } // flowable

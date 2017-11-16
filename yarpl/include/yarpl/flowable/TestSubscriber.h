@@ -78,12 +78,17 @@ class TestSubscriber :
   }
 
   void manuallyPush(T t) {
-    if (delegate_) {
-      values_.push_back(t);
-      delegate_->onNext(std::move(t));
+    if (dropValues_) {
+      valueCount_++;
     } else {
-      values_.push_back(std::move(t));
+      if (delegate_) {
+        values_.push_back(t);
+        delegate_->onNext(std::move(t));
+      } else {
+        values_.push_back(std::move(t));
+      }
     }
+
     terminalEventCV_.notify_all();
   }
 
@@ -155,7 +160,11 @@ class TestSubscriber :
   }
 
   int64_t getValueCount() {
-    return values_.size();
+    if (dropValues_) {
+      return valueCount_;
+    } else {
+      return values_.size();
+    }
   }
 
   std::vector<T>& values() {
@@ -218,7 +227,15 @@ class TestSubscriber :
     }
   }
 
+  void dropValues(bool drop) {
+    valueCount_ = getValueCount();
+    dropValues_ = drop;
+  }
+
  private:
+  bool dropValues_{false};
+  std::atomic<int> valueCount_{0};
+
   Reference<Subscriber<T>> delegate_;
   std::vector<T> values_;
   folly::exception_wrapper e_;

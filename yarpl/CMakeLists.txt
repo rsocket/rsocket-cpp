@@ -131,6 +131,7 @@ if (BUILD_TESTS)
     yarpl-tests
     test/MocksTest.cpp
     test/FlowableTest.cpp
+    test/FlowableFlatMapTest.cpp
     test/Observable_test.cpp
     test/RefcountedTest.cpp
     test/ReferenceTest.cpp
