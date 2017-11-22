@@ -100,8 +100,12 @@ class RSocketRequester {
 
   virtual void closeSocket();
 
+  bool canReplaceEventBase();
+  bool setEventBase(folly::EventBase* evb);
+
  private:
   std::shared_ptr<rsocket::RSocketStateMachine> stateMachine_;
-  folly::EventBase& eventBase_;
+  folly::EventBase* eventBase_;
+  bool eventBaseIsReplaceable_{true};
 };
 }
