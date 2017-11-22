@@ -23,8 +23,15 @@ RSocketRequester::~RSocketRequester() {
   VLOG(1) << "Destroying RSocketRequester";
 }
 
-void RSocketRequester::setEventBase(folly::EventBase* evb) {
-  eventBase_ = evb;
+bool RSocketRequester::canReplaceEventBase() {
+  return eventBaseIsReplaceable_;
+}
+
+bool RSocketRequester::setEventBase(folly::EventBase* evb) {
+  if (canReplaceEventBase()) {
+    eventBase_ = evb;
+  }
+  return false;
 }
 
 void RSocketRequester::closeSocket() {
@@ -40,6 +47,8 @@ RSocketRequester::requestChannel(
     yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
         requestStream) {
   CHECK(stateMachine_); // verify the socket was not closed
+
+  eventBaseIsReplaceable_ = false;
 
   return yarpl::flowable::Flowables::fromPublisher<Payload>([
     eb = eventBase_,
@@ -78,6 +87,8 @@ yarpl::Reference<yarpl::flowable::Flowable<Payload>>
 RSocketRequester::requestStream(Payload request) {
   CHECK(stateMachine_); // verify the socket was not closed
 
+  eventBaseIsReplaceable_ = false;
+
   return yarpl::flowable::Flowables::fromPublisher<Payload>([
     eb = eventBase_,
     request = std::move(request),
@@ -107,6 +118,7 @@ RSocketRequester::requestResponse(Payload request) {
   CHECK(stateMachine_); // verify the socket was not closed
 
   return yarpl::single::Single<Payload>::create([
+    this,
     eb = eventBase_,
     request = std::move(request),
     srs = stateMachine_
@@ -125,6 +137,7 @@ RSocketRequester::requestResponse(Payload request) {
     if (eb->isInEventBaseThread()) {
       lambda();
     } else {
+      eventBaseIsReplaceable_ = false;
       eb->runInEventBaseThread(std::move(lambda));
     }
   });
@@ -135,6 +148,7 @@ yarpl::Reference<yarpl::single::Single<void>> RSocketRequester::fireAndForget(
   CHECK(stateMachine_); // verify the socket was not closed
 
   return yarpl::single::Single<void>::create([
+    this,
     eb = eventBase_,
     request = std::move(request),
     srs = stateMachine_
@@ -154,6 +168,7 @@ yarpl::Reference<yarpl::single::Single<void>> RSocketRequester::fireAndForget(
     if (eb->isInEventBaseThread()) {
       lambda();
     } else {
+      eventBaseIsReplaceable_ = false;
       eb->runInEventBaseThread(std::move(lambda));
     }
   });
@@ -162,10 +177,15 @@ yarpl::Reference<yarpl::single::Single<void>> RSocketRequester::fireAndForget(
 void RSocketRequester::metadataPush(std::unique_ptr<folly::IOBuf> metadata) {
   CHECK(stateMachine_); // verify the socket was not closed
 
-  eventBase_->runInEventBaseThread(
-      [ srs = stateMachine_, metadata = std::move(metadata) ]() mutable {
-        srs->metadataPush(std::move(metadata));
-      });
+  if (eventBase_->isInEventBaseThread()) {
+    stateMachine_->metadataPush(std::move(metadata));
+  } else {
+    eventBaseIsReplaceable_ = false;
+    eventBase_->runInEventBaseThread(
+        [srs = stateMachine_, metadata = std::move(metadata)]() mutable {
+          srs->metadataPush(std::move(metadata));
+        });
+  }
 }
 
 DuplexConnection* RSocketRequester::getConnection() {
