@@ -13,7 +13,10 @@ namespace observable {
  */
 void Subscription::cancel() {
   cancelled_ = true;
-  for(auto& subscription : *tiedSubscriptions_.rlock()) {
+  // Lock must be obtained here and not in the range expression for it to
+  // apply to the loop body.
+  auto locked = tiedSubscriptions_.wlock();
+  for(auto& subscription : *locked) {
     subscription->cancel();
   }
 }
@@ -41,7 +44,10 @@ void CallbackSubscription::cancel() {
   // mark cancelled 'true' and only if successful invoke 'onCancel()'
   if (cancelled_.compare_exchange_strong(expected, true)) {
     onCancel_();
-    for(auto& subscription : *tiedSubscriptions_.rlock()) {
+    // Lock must be obtained here and not in the range expression for it to
+    // apply to the loop body.
+    auto locked = tiedSubscriptions_.wlock();
+    for(auto& subscription : *locked) {
       subscription->cancel();
     }
   }
