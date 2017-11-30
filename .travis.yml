@@ -40,7 +40,7 @@ matrix:
     # Set COMPILER environment variable instead of CC or CXX because the latter
     # are overriden by Travis. Setting the compiler in Travis doesn't work
     # either because it strips version.
-    - env: COMPILER=clang-4.0
+    - env: COMPILER=clang-4.0 ASAN_OPTIONS=detect_leaks=0
       addons:
         apt:
           sources:
@@ -60,7 +60,7 @@ matrix:
             - *common_deps
             - g++-4.9
 
-    - env: COMPILER=gcc-5
+    - env: COMPILER=gcc-5 ASAN_OPTIONS=detect_leaks=0
       addons:
         apt:
           sources:
@@ -69,7 +69,7 @@ matrix:
             - *common_deps
             - g++-5
 
-    - env: COMPILER=gcc-6
+    - env: COMPILER=gcc-6 ASAN_OPTIONS=detect_leaks=0
       addons:
         apt:
           sources:
