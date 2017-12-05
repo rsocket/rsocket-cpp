@@ -21,6 +21,21 @@ namespace yarpl {
 namespace flowable {
 
 template <typename T>
+class Flowable;
+
+namespace detail {
+
+template <typename T>
+struct is_t_flowable : std::false_type {};
+
+template <typename R>
+struct is_t_flowable<Reference<Flowable<R>>> : std::true_type {
+  using ElemType = R;
+};
+
+} // namespace detail
+
+template <typename T>
 class Flowable : public virtual Refcounted, public yarpl::enable_get_ref {
  public:
   virtual void subscribe(Reference<Subscriber<T>>) = 0;
@@ -79,8 +94,11 @@ class Flowable : public virtual Refcounted, public yarpl::enable_get_ref {
       typename R = typename std::result_of<Function(T)>::type>
   Reference<Flowable<R>> map(Function function);
 
-  template <typename R>
-  Reference<Flowable<R>> flatMap(folly::Function<Reference<Flowable<R>>(T)>);
+  template <
+      typename Function,
+      typename R = typename detail::is_t_flowable<
+          typename std::result_of<Function(T)>::type>::ElemType>
+  Reference<Flowable<R>> flatMap(Function func);
 
   template <typename Function>
   Reference<Flowable<T>> filter(Function function);
@@ -99,6 +117,15 @@ class Flowable : public virtual Refcounted, public yarpl::enable_get_ref {
   Reference<Flowable<T>> subscribeOn(folly::Executor&);
 
   Reference<Flowable<T>> observeOn(folly::Executor&);
+
+  template <typename Q>
+  using enableWrapRef =
+      typename std::enable_if<detail::is_t_flowable<Q>::value, Q>::type;
+
+  template <typename Q = T>
+  enableWrapRef<Q> merge() {
+    return this->flatMap([](auto f) { return std::move(f); });
+  }
 
   template <
       typename Emitter,
@@ -172,11 +199,10 @@ Reference<Flowable<T>> Flowable<T>::observeOn(folly::Executor& executor) {
 }
 
 template <typename T>
-template <typename R>
-Reference<Flowable<R>> Flowable<T>::flatMap(
-    folly::Function<Reference<Flowable<R>>(T)> func) {
+template <typename Function, typename R>
+Reference<Flowable<R>> Flowable<T>::flatMap(Function function) {
   return make_ref<FlatMapOperator<T, R>>(
-      this->ref_from_this(this), std::move(func));
+      this->ref_from_this(this), std::move(function));
 }
 
 } // flowable

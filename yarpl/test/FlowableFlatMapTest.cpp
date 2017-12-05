@@ -218,15 +218,13 @@ TEST(FlowableFlatMapTest, Multithreaded) {
   auto p1 = make_range_flowable(10, 12);
   auto p2 = make_range_flowable(20, 25);
 
-  folly::Function<Reference<Flowable<int>>(int64_t)> mappingFunc = [&](auto i) {
+  auto f = Flowables::range(0, 2)->flatMap([&](auto i) {
     if (i == 0) {
       return p1->flowable;
     } else {
       return p2->flowable;
     }
-  };
-
-  auto f = Flowables::range(0, 2)->flatMap(std::move(mappingFunc));
+  });
 
   auto sub = yarpl::make_ref<TestSubscriber<int>>(0);
   f->subscribe(sub);
@@ -244,15 +242,13 @@ TEST(FlowableFlatMapTest, MultithreadedLargeAmount) {
   auto p1 = make_range_flowable(10000, 40000);
   auto p2 = make_range_flowable(50000, 80000);
 
-  folly::Function<Reference<Flowable<int>>(int64_t)> mappingFunc = [&](auto i) {
+  auto f = Flowables::range(0, 2)->flatMap([&](auto i) {
     if (i == 0) {
       return p1->flowable;
     } else {
       return p2->flowable;
     }
-  };
-
-  auto f = Flowables::range(0, 2)->flatMap(std::move(mappingFunc));
+  });
 
   auto sub = yarpl::make_ref<TestSubscriber<int>>();
   sub->dropValues(true);
@@ -265,6 +261,45 @@ TEST(FlowableFlatMapTest, MultithreadedLargeAmount) {
 
   p1->evb.stop();
   p2->evb.stop();
+}
+
+TEST(FlowableFlatMapTest, MergeOperator) {
+  auto sub = yarpl::make_ref<TestSubscriber<std::string>>(0);
+
+  auto p1 = Flowables::justN<std::string>({"foo", "bar"});
+  auto p2 = Flowables::justN<std::string>({"baz", "quxx"});
+  Reference<Flowable<Reference<Flowable<std::string>>>> p3 =
+      Flowables::justN<Reference<Flowable<std::string>>>({p1, p2});
+
+  Reference<Flowable<std::string>> p4 = p3->merge();
+  p4->subscribe(sub);
+
+  EXPECT_EQ(0, sub->getValueCount());
+  sub->request(1);
+  EXPECT_EQ(1, sub->getValueCount());
+  EXPECT_EQ(false, sub->isComplete());
+  EXPECT_TRUE(validate_flatmapped_values(sub->values(), {{"foo"}, {"baz"}}));
+
+  sub->request(1);
+  EXPECT_EQ(2, sub->getValueCount());
+  EXPECT_EQ(false, sub->isComplete());
+  EXPECT_EQ(false, sub->isError());
+  EXPECT_TRUE(validate_flatmapped_values(
+      sub->values(), {{"foo", "bar"}, {"baz", "quxx"}}));
+
+  sub->request(1);
+  EXPECT_EQ(3, sub->getValueCount());
+  EXPECT_EQ(false, sub->isComplete());
+  EXPECT_EQ(false, sub->isError());
+  EXPECT_TRUE(validate_flatmapped_values(
+      sub->values(), {{"foo", "bar"}, {"baz", "quxx"}}));
+
+  sub->request(1);
+  EXPECT_EQ(4, sub->getValueCount());
+  EXPECT_EQ(true, sub->isComplete());
+  EXPECT_EQ(false, sub->isError());
+  EXPECT_TRUE(validate_flatmapped_values(
+      sub->values(), {{"foo", "bar"}, {"baz", "quxx"}}));
 }
 
 } // namespace flowable

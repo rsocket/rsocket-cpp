@@ -499,9 +499,6 @@ class FlatMapOperator : public FlowableOperator<T, R, FlatMapOperator<T, R>> {
     void onSubscribeImpl() final {
       liveSubscribers_++;
       SuperSubscription::onSubscribeImpl();
-      // TODO: make max parallelism configurable a-la RxJava 2.x's
-      // FlowableFlatMapOperator
-      SuperSubscription::request(std::numeric_limits<int64_t>::max());
     }
 
     void onNextImpl(T value) final {
@@ -542,13 +539,13 @@ class FlatMapOperator : public FlowableOperator<T, R, FlatMapOperator<T, R>> {
     void drainImpl() {
       // phase 1: clear out terminated subscribers
       {
-        auto clearList = [](auto& list) {
+        SubscriberList trash;
+        auto clearList = [&trash](auto& list) {
           while (!list.empty()) {
             auto& elem = list.front();
             elem.explicitlyCanceled = true;
-            elem.cancel();
             elem.unlink();
-            elem.fmReference_ = nullptr;
+            trash.push_back(elem);
           }
         };
 
@@ -557,6 +554,14 @@ class FlatMapOperator : public FlowableOperator<T, R, FlatMapOperator<T, R>> {
           clearList(l->withValue);
           clearList(l->withoutValue);
           clearList(l->pendingValue);
+        }
+
+        // clear elements while no locks are held
+        while (!trash.empty()) {
+          auto& elem = trash.front();
+          elem.unlink();
+          elem.cancel();
+          elem.fmReference_ = nullptr;
         }
       }
 
@@ -606,7 +611,9 @@ class FlatMapOperator : public FlowableOperator<T, R, FlatMapOperator<T, R>> {
       }
 
       // phase 4: ask any upstream flowables which don't have pending
-      // requests for their next element kick off any more requests
+      // requests for their next element kick off any more requests.
+      // Put subscribers which have terminated into the trash.
+      SubscriberList trash;
       while (true) {
         MappedStreamSubscriber* elem;
         {
@@ -620,9 +627,36 @@ class FlatMapOperator : public FlowableOperator<T, R, FlatMapOperator<T, R>> {
           CHECK(!r->hasValue) << "failed for elem=" << elem; // sanity
 
           elem->unlink();
+
+          // Subscribers might call onNext and then terminate; delay
+          // removing its liveSubscriber reference until we've delivered
+          // its element to the downstream subscriber and dropped its
+          // synchronized reference to `r`, as dropping the flatMapSubscription_
+          // reference may invoke its destructor
+          if (r->isTerminated) {
+            trash.push_back(*elem);
+            continue; // skips the next elem->request(1)
+          }
+
+          // else, the stream hasn't terminated, request another
+          // element
           l->pendingValue.push_back(*elem);
         }
         elem->request(1);
+      }
+
+      // phase 5: destroy any mapped subscribers which have terminated, enqueue
+      // another drain loop run if we do end up discarding any subscribers, as
+      // our live subscriber count may have gone to zero
+      if (!trash.empty()) {
+        drainLoopMutex_++;
+      }
+      while (!trash.empty()) {
+        auto& elem = trash.front();
+        CHECK(elem.sync.wlock()->isTerminated);
+        elem.unlink();
+        elem.fmReference_ = nullptr;
+        liveSubscribers_--;
       }
     }
 
@@ -654,10 +688,10 @@ class FlatMapOperator : public FlowableOperator<T, R, FlatMapOperator<T, R>> {
       drainLoop();
     }
     void onMappedSubscriberTerminate(MappedStreamSubscriber* elem) {
-      liveSubscribers_--;
-
       {
         auto r = elem->sync.wlock();
+
+        r->isTerminated = true;
         if (r->onErrorEx) {
           std::lock_guard<std::mutex> exg(onErrorExGuard_);
           onErrorEx_ = std::move(r->onErrorEx);
@@ -670,9 +704,17 @@ class FlatMapOperator : public FlowableOperator<T, R, FlatMapOperator<T, R>> {
 
       {
         auto l = lists.wlock();
+        auto r = elem->sync.wlock();
+
         CHECK(elem->is_linked());
         elem->unlink();
-        elem->fmReference_ = nullptr;
+
+        if (r->hasValue) {
+          l->withValue.push_back(*elem);
+        } else {
+          liveSubscribers_--;
+          elem->fmReference_ = nullptr;
+        }
       }
 
       drainLoop();
@@ -700,6 +742,13 @@ class FlatMapOperator : public FlowableOperator<T, R, FlatMapOperator<T, R>> {
       else {
         requested_ += n;
       }
+
+      if (n > 0) {
+        // TODO: make max parallelism configurable a-la RxJava 2.x's
+        // FlowableFlatMapOperator
+        SuperSubscription::request(std::numeric_limits<int64_t>::max());
+      }
+
       drainLoop();
     }
 
@@ -748,6 +797,7 @@ class FlatMapOperator : public FlowableOperator<T, R, FlatMapOperator<T, R>> {
       struct SyncData {
         R value;
         bool hasValue{false};
+        bool isTerminated{false};
         folly::exception_wrapper onErrorEx{nullptr};
       };
       folly::Synchronized<SyncData> sync;
