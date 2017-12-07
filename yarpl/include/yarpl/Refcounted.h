@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include <string>
 #include <ostream>
+#include <mutex>
 
 namespace yarpl {
 
@@ -298,7 +299,7 @@ class AtomicReference final {
   AtomicReference(Reference<T> const& other) : pointer_(other.pointer_) {
     inc();
   }
-  AtomicReference(AtomicReference<T> const& other) : pointer_(other.pointer_.load()) {
+  AtomicReference(AtomicReference<T> const& other) : pointer_(other.pointer_) {
     inc();
   }
 
@@ -311,56 +312,47 @@ class AtomicReference final {
     dec();
   }
 
-  template <typename U>
-  AtomicReference& operator=(Reference<U>&& other) {
-    return assign(std::move(other));
-  }
-
   Reference<T> load() {
-    return Reference<T>(*this);
+    std::lock_guard<std::mutex> lg{mtx_};
+    if (pointer_) {
+      pointer_->incRef();
+      return Reference<T>{pointer_, detail::skip_initial_refcount_check{}};
+    }
+    else {
+      return {};
+    }
   }
 
   Reference<T> exchange(Reference<T> other) {
-    T* old = pointer_.exchange(other.get());
+    std::lock_guard<std::mutex> lg{mtx_};
+    T* old = pointer_;
+    pointer_ = other.get();
     inc();
     Reference<T> r{old, detail::skip_initial_refcount_check{}};
     return r;
   }
 
-  void store(Reference<T> const& other) {
+  void store(Reference<T> const& other) {   
+    std::lock_guard<std::mutex> lg{mtx_};
     dec();
-    pointer_.store(other.get());
+    pointer_ = other.pointer_;
     inc();
   }
 
-  explicit operator bool() const {
-    return pointer_;
-  }
-
-  T* operator->() const {
-    return pointer_;
+  void store(std::nullptr_t) {
+    std::lock_guard<std::mutex> lg{mtx_};
+    dec();
+    pointer_ = nullptr;
   }
 
  private:
-  template <typename U>
-  AtomicReference& assign(AtomicReference<U>&& other) {
-    other.pointer_.store(pointer_.exchange(other.pointer_.load()));
-    return *this;
-  }
-
-  template <typename U>
-  AtomicReference& assign(Reference<U>&& other) {
-    AtomicReference<U> atomic_other{std::forward<Reference<U>>(other)};
-    return assign(std::move(atomic_other));
-  }
-
   void inc() {
     static_assert(
         std::is_base_of<Refcounted, T>::value,
         "Reference must be used with types that virtually derive Refcounted");
 
-    if (auto p = pointer_.load()) {
-      p->incRef();
+    if (pointer_) {
+      pointer_->incRef();
     }
   }
 
@@ -369,12 +361,13 @@ class AtomicReference final {
         std::is_base_of<Refcounted, T>::value,
         "Reference must be used with types that virtually derive Refcounted");
 
-    if (auto p = pointer_.load()) {
-      p->decRef();
+    if (pointer_) {
+      pointer_->decRef();
     }
   }
 
-  std::atomic<T*> pointer_{nullptr};
+  std::mutex mtx_;
+  T* pointer_{nullptr};
 };
 
 template <typename T, typename U>

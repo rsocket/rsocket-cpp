@@ -48,7 +48,7 @@ class FlowableOperator : public Flowable<D> {
         : flowableOperator_(std::move(flowable)),
           subscriber_(std::move(subscriber)) {
       assert(flowableOperator_);
-      assert(subscriber_);
+      assert(subscriber_.load());
     }
 
     const Reference<Operator>& getFlowableOperator() {
@@ -93,7 +93,7 @@ class FlowableOperator : public Flowable<D> {
     // Subscriber.
 
     void onSubscribeImpl() override {
-      subscriber_->onSubscribe(this->ref_from_this(this));
+      subscriber_.load()->onSubscribe(this->ref_from_this(this));
     }
 
     void onCompleteImpl() override {
