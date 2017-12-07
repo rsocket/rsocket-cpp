@@ -26,10 +26,10 @@ class Flowable;
 namespace detail {
 
 template <typename T>
-struct is_t_flowable : std::false_type {};
+struct IsFlowable : std::false_type {};
 
 template <typename R>
-struct is_t_flowable<Reference<Flowable<R>>> : std::true_type {
+struct IsFlowable<Reference<Flowable<R>>> : std::true_type {
   using ElemType = R;
 };
 
@@ -96,7 +96,7 @@ class Flowable : public virtual Refcounted, public yarpl::enable_get_ref {
 
   template <
       typename Function,
-      typename R = typename detail::is_t_flowable<
+      typename R = typename detail::IsFlowable<
           typename std::result_of<Function(T)>::type>::ElemType>
   Reference<Flowable<R>> flatMap(Function func);
 
@@ -120,7 +120,7 @@ class Flowable : public virtual Refcounted, public yarpl::enable_get_ref {
 
   template <typename Q>
   using enableWrapRef =
-      typename std::enable_if<detail::is_t_flowable<Q>::value, Q>::type;
+      typename std::enable_if<detail::IsFlowable<Q>::value, Q>::type;
 
   template <typename Q = T>
   enableWrapRef<Q> merge() {

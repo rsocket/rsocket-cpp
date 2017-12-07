@@ -43,21 +43,21 @@ class BaseSubscriber : public Subscriber<T> {
   // methods SHOULD ensure that these are invoked as well.
   void onSubscribe(Reference<Subscription> subscription) final override {
     DCHECK(subscription);
-    CHECK(!subscription_);
+    CHECK(!subscription_.load());
 
-#ifdef DEBUG
+#ifdef NDEBUG
     DCHECK(!gotOnSubscribe_.exchange(true))
         << "Already subscribed to BaseSubscriber";
 #endif
 
-    subscription_ = std::move(subscription);
+    subscription_.store(subscription);
     KEEP_REF_TO_THIS();
     onSubscribeImpl();
   }
 
   // No further calls to the subscription after this method is invoked.
   void onComplete() final override {
-#ifdef DEBUG
+#ifdef NDEBUG
     DCHECK(gotOnSubscribe_.load()) << "Not subscribed to BaseSubscriber";
     DCHECK(!gotTerminating_.exchange(true))
         << "Already got terminating signal method";
@@ -72,7 +72,7 @@ class BaseSubscriber : public Subscriber<T> {
 
   // No further calls to the subscription after this method is invoked.
   void onError(folly::exception_wrapper e) final override {
-#ifdef DEBUG
+#ifdef NDEBUG
     DCHECK(gotOnSubscribe_.load()) << "Not subscribed to BaseSubscriber";
     DCHECK(!gotTerminating_.exchange(true))
         << "Already got terminating signal method";
@@ -86,7 +86,7 @@ class BaseSubscriber : public Subscriber<T> {
   }
 
   void onNext(T t) final override {
-#ifdef DEBUG
+#ifdef NDEBUG
     DCHECK(gotOnSubscribe_.load()) << "Not subscibed to BaseSubscriber";
     if (gotTerminating_.load()) {
       VLOG(2) << "BaseSubscriber already got terminating signal method";
@@ -105,7 +105,7 @@ class BaseSubscriber : public Subscriber<T> {
       sub->cancel();
       onTerminateImpl();
     }
-#ifdef DEBUG
+#ifdef NDEBUG
     else {
       VLOG(2) << "cancel() on BaseSubscriber with no subscription_";
     }
@@ -117,7 +117,7 @@ class BaseSubscriber : public Subscriber<T> {
       KEEP_REF_TO_THIS();
       sub->request(n);
     }
-#ifdef DEBUG
+#ifdef NDEBUG
     else {
       VLOG(2) << "request() on BaseSubscriber with no subscription_";
     }
@@ -136,7 +136,7 @@ protected:
   // keeps a reference alive to the subscription
   AtomicReference<Subscription> subscription_;
 
-#ifdef DEBUG
+#ifdef NDEBUG
   std::atomic<bool> gotOnSubscribe_{false};
   std::atomic<bool> gotTerminating_{false};
 #endif
