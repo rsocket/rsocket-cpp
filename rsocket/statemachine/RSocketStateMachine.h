@@ -2,11 +2,7 @@
 
 #pragma once
 
-#include <list>
-#include <memory>
-
 #include "rsocket/ColdResumeHandler.h"
-#include "rsocket/DuplexConnection.h"
 #include "rsocket/Payload.h"
 #include "rsocket/RSocketParameters.h"
 #include "rsocket/ResumeManager.h"
@@ -25,7 +21,6 @@ class DuplexConnection;
 class FrameSerializer;
 class FrameTransport;
 class Frame_ERROR;
-class KeepaliveTimer;
 class RSocketConnectionEvents;
 class RSocketParameters;
 class RSocketResponder;
@@ -35,28 +30,7 @@ class ResumeManager;
 class StreamState;
 class StreamStateMachineBase;
 
-class FrameSink {
- public:
-  virtual ~FrameSink() = default;
-
-  /// Terminates underlying connection sending the error frame
-  /// on the connection.
-  ///
-  /// This may synchronously deliver terminal signals to all
-  /// StreamAutomatonBase attached to this ConnectionAutomaton.
-  virtual void disconnectOrCloseWithError(Frame_ERROR&& error) = 0;
-
-  virtual void sendKeepalive(
-      std::unique_ptr<folly::IOBuf> data = folly::IOBuf::create(0)) = 0;
-};
-
 /// Handles connection-level frames and (de)multiplexes streams.
-///
-/// Instances of this class should be accessed and managed via shared_ptr,
-/// instead of the pattern reflected in MemoryMixin and IntrusiveDeleter.
-/// The reason why such a simple memory management story is possible lies in the
-/// fact that there is no request(n)-based flow control between stream
-/// automata and ConnectionAutomaton.
 class RSocketStateMachine final
     : public FrameSink,
       public FrameProcessor,
@@ -90,22 +64,22 @@ class RSocketStateMachine final
       std::unique_ptr<ClientResumeStatusCallback>,
       ProtocolVersion);
 
-  /// Disconnect the state machine's connection.  Existing streams will stay
-  /// intact.
+  /// Disconnect the state machine's connection, keeping existing streams intact
+  /// if the connection is resumable.  Otherwise this behaves just like close().
   void disconnect(folly::exception_wrapper);
+
+  /// Disconnect the connection if it is resumable, otherwise send an ERROR
+  /// frame and close the connection and all of its streams.
+  void disconnectWithError(Frame_ERROR&&) override;
 
   /// Whether the connection has been disconnected or closed.
   bool isDisconnected() const;
 
-  /// Send an ERROR frame, and close the connection and all of its streams.
-  void closeWithError(Frame_ERROR&&);
-
-  /// Disconnect the connection if it is resumable, otherwise send an ERROR
-  /// frame and close the connection and all of its streams.
-  void disconnectOrCloseWithError(Frame_ERROR&&) override;
-
   /// Close the connection and all of its streams.
   void close(folly::exception_wrapper, StreamCompletionSignal);
+
+  /// Send an ERROR frame, and close the connection and all of its streams.
+  void closeWithError(Frame_ERROR&&);
 
   /// A contract exposed to StreamAutomatonBase, modelled after Subscriber
   /// and Subscription contracts, while omitting flow control related signals.
@@ -167,18 +141,11 @@ class RSocketStateMachine final
       yarpl::Reference<FrameTransport>,
       std::unique_ptr<ClientResumeStatusCallback>);
 
-  void setResumable(bool);
-
   bool resumeFromPositionOrClose(
       ResumePosition serverPosition,
       ResumePosition clientPosition);
 
   bool isPositionAvailable(ResumePosition) const;
-
-  /// Whether the connection has been closed.
-  bool isClosed() const;
-
-  uint32_t getKeepaliveTime() const;
 
   void setFrameSerializer(std::unique_ptr<FrameSerializer>);
 
@@ -295,4 +262,4 @@ class RSocketStateMachine final
   /// Back reference to the set that's holding this state machine.
   std::weak_ptr<ConnectionSet> connectionSet_;
 };
-}
+} // namespace rsocket

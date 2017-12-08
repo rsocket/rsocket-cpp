@@ -4,9 +4,24 @@
 
 #include <folly/io/async/EventBase.h>
 
-#include "rsocket/statemachine/RSocketStateMachine.h"
+#include "rsocket/framing/Frame.h"
 
 namespace rsocket {
+
+class FrameSink {
+ public:
+  virtual ~FrameSink() = default;
+
+  /// Terminates underlying connection sending the error frame
+  /// on the connection.
+  ///
+  /// This may synchronously deliver terminal signals to all StreamAutomatonBase
+  /// attached to this RSocketStateMachine.
+  virtual void disconnectWithError(Frame_ERROR&&) = 0;
+
+  virtual void sendKeepalive(
+      std::unique_ptr<folly::IOBuf> data = folly::IOBuf::create(0)) = 0;
+};
 
 class KeepaliveTimer {
  public:
