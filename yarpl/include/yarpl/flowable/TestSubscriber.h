@@ -96,8 +96,6 @@ class TestSubscriber :
     if (delegate_) {
       delegate_->onComplete();
     }
-    terminated_ = true;
-    terminalEventCV_.notify_all();
   }
 
   void onErrorImpl(folly::exception_wrapper ex) override final {
@@ -105,6 +103,10 @@ class TestSubscriber :
       delegate_->onError(ex);
     }
     e_ = std::move(ex);
+  }
+
+  void onTerminateImpl() override final {
+    std::unique_lock<std::mutex> lk(m_);
     terminated_ = true;
     terminalEventCV_.notify_all();
   }

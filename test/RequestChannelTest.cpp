@@ -159,8 +159,8 @@ TEST(RequestChannelTest, CompleteRequesterResponderContinues) {
 
   auto responder = std::make_shared<TestChannelResponder>(
       responderRange, responderSubscriberInitialRequest);
-
   folly::ScopedEventBaseThread worker;
+
   auto server = makeServer(responder);
   auto client = makeClient(worker.getEventBase(), *server->listeningPort());
   auto requester = client->getRequester();
@@ -171,7 +171,7 @@ TEST(RequestChannelTest, CompleteRequesterResponderContinues) {
   int64_t requesterRangeEnd = 10;
 
   auto requesterFlowable =
-      Flowables::range(1, requesterRangeEnd)->map([&](int64_t v) {
+      Flowables::range(1, requesterRangeEnd)->map([=](int64_t v) {
         std::stringstream ss;
         ss << "Requester stream: " << v << " of " << requesterRangeEnd;
         std::string s = ss.str();
@@ -216,7 +216,7 @@ TEST(RequestChannelTest, CompleteResponderRequesterContinues) {
   int64_t requesterRangeEnd = 100;
 
   auto requesterFlowable =
-      Flowables::range(1, requesterRangeEnd)->map([&](int64_t v) {
+      Flowables::range(1, requesterRangeEnd)->map([=](int64_t v) {
         std::stringstream ss;
         ss << "Requester stream: " << v << " of " << requesterRangeEnd;
         std::string s = ss.str();

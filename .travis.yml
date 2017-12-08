@@ -111,7 +111,7 @@ script:
   - make -j4
   - lcov --directory . --zerocounters
   - make test
-  - make coverage
+  # - make coverage
   - cd ..
   - ./scripts/tck_test.sh -c cpp -s cpp
   - ./scripts/tck_test.sh -c java -s java
