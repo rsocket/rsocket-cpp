@@ -369,7 +369,7 @@ TEST(Observable, SingleMovable) {
   auto value = std::make_unique<int>(123456);
 
   auto observable = Observables::justOnce(std::move(value));
-  EXPECT_EQ(std::size_t{1}, observable->count());
+  EXPECT_EQ(std::size_t{1}, observable.use_count());
 
   auto values = run(std::move(observable));
   EXPECT_EQ(values.size(), size_t(1));
@@ -580,11 +580,11 @@ class InfiniteAsyncTestOperator
   class TestSubscription : public Super::OperatorSubscription {
     using SuperSub = typename Super::OperatorSubscription;
 
+   public:
     ~TestSubscription() {
       t_.join();
     }
 
-   public:
     void sendSuperNext() {
       // workaround for gcc bug 58972.
       SuperSub::observerOnNext(1);

@@ -48,7 +48,7 @@ class FlowableOperator : public Flowable<D> {
         : flowableOperator_(std::move(flowable)),
           subscriber_(std::move(subscriber)) {
       CHECK(flowableOperator_);
-      CHECK(subscriber_);
+      CHECK(std::atomic_load(&subscriber_));
     }
 
     const Reference<Operator>& getFlowableOperator() {
@@ -56,14 +56,14 @@ class FlowableOperator : public Flowable<D> {
     }
 
     void subscriberOnNext(D value) {
-      if (auto subscriber = subscriber_.load()) {
+      if (auto subscriber = std::atomic_load(&subscriber_)) {
         subscriber->onNext(std::move(value));
       }
     }
 
     /// Terminates both ends of an operator normally.
     void terminate() {
-      auto subscriber = subscriber_.exchange(nullptr);
+      auto subscriber = std::atomic_exchange(&subscriber_, {nullptr});
       BaseSubscriber<U>::cancel();
       if (subscriber) {
         subscriber->onComplete();
@@ -72,7 +72,7 @@ class FlowableOperator : public Flowable<D> {
 
     /// Terminates both ends of an operator with an error.
     void terminateErr(folly::exception_wrapper ew) {
-      auto subscriber = subscriber_.exchange(nullptr);
+      auto subscriber = std::atomic_exchange(&subscriber_, {nullptr});
       BaseSubscriber<U>::cancel();
       if (subscriber) {
         subscriber->onError(std::move(ew));
@@ -86,24 +86,24 @@ class FlowableOperator : public Flowable<D> {
     }
 
     void cancel() override {
-      auto subscriber = subscriber_.exchange(nullptr);
+      auto subscriber = std::atomic_exchange(&subscriber_, {nullptr});
       BaseSubscriber<U>::cancel();
     }
 
     // Subscriber.
 
     void onSubscribeImpl() override {
-      subscriber_->onSubscribe(this->ref_from_this(this));
+      std::atomic_load(&subscriber_)->onSubscribe(this->ref_from_this(this));
     }
 
     void onCompleteImpl() override {
-      if (auto subscriber = subscriber_.exchange(nullptr)) {
+      if (auto subscriber = std::atomic_exchange(&subscriber_, {nullptr})) {
         subscriber->onComplete();
       }
     }
 
     void onErrorImpl(folly::exception_wrapper ew) override {
-      if (auto subscriber = subscriber_.exchange(nullptr)) {
+      if (auto subscriber = std::atomic_exchange(&subscriber_, {nullptr})) {
         subscriber->onError(std::move(ew));
       }
     }

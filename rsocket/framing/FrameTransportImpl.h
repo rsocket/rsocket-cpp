@@ -15,7 +15,8 @@ class FrameProcessor;
 
 class FrameTransportImpl : public FrameTransport,
                            /// Registered as an input in the DuplexConnection.
-                           public DuplexConnection::Subscriber {
+                           public DuplexConnection::Subscriber,
+                           public yarpl::enable_get_ref {
  public:
   explicit FrameTransportImpl(std::unique_ptr<DuplexConnection> connection);
   ~FrameTransportImpl();

@@ -31,7 +31,9 @@ class EmiterBase : public virtual Refcounted {
  * of a request(n) call.
  */
 template <typename T>
-class EmiterSubscription : public Subscription, public Subscriber<T> {
+class EmiterSubscription final : public Subscription,
+                                 public Subscriber<T>,
+                                 public yarpl::enable_get_ref {
   constexpr static auto kCanceled = credits::kCanceled;
   constexpr static auto kNoFlowControl = credits::kNoFlowControl;
 
@@ -39,7 +41,9 @@ class EmiterSubscription : public Subscription, public Subscriber<T> {
   EmiterSubscription(
       Reference<EmiterBase<T>> emiter,
       Reference<Subscriber<T>> subscriber)
-      : emiter_(std::move(emiter)), subscriber_(std::move(subscriber)) {
+      : emiter_(std::move(emiter)), subscriber_(std::move(subscriber)) {}
+
+  void init() {
     subscriber_->onSubscribe(this->ref_from_this(this));
   }
 
@@ -194,7 +198,9 @@ class EmitterWrapper : public EmiterBase<T>, public Flowable<T> {
   explicit EmitterWrapper(Emitter emitter) : emitter_(std::move(emitter)) {}
 
   void subscribe(Reference<Subscriber<T>> subscriber) override {
-    make_ref<EmiterSubscription<T>>(this->ref_from_this(this), std::move(subscriber));
+    auto ef = make_ref<EmiterSubscription<T>>(
+        this->ref_from_this(this), std::move(subscriber));
+    ef->init();
   }
 
   std::tuple<int64_t, bool> emit(

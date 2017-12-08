@@ -13,7 +13,7 @@ namespace yarpl {
 namespace flowable {
 
 template <typename T>
-class Subscriber : public virtual Refcounted, public yarpl::enable_get_ref {
+class Subscriber : public virtual Refcounted {
  public:
   virtual void onSubscribe(Reference<Subscription>) = 0;
   virtual void onComplete() = 0;
@@ -37,13 +37,13 @@ class Subscriber : public virtual Refcounted, public yarpl::enable_get_ref {
 // use `keep_reference_to_this = false` as an optimization to
 // prevent an atomic inc/dec pair
 template <typename T, bool keep_reference_to_this = true>
-class BaseSubscriber : public Subscriber<T> {
+class BaseSubscriber : public Subscriber<T>, public yarpl::enable_get_ref {
  public:
   // Note: If any of the following methods is overridden in a subclass, the new
   // methods SHOULD ensure that these are invoked as well.
   void onSubscribe(Reference<Subscription> subscription) final override {
-    DCHECK(subscription);
-    CHECK(!subscription_.load());
+    CHECK(subscription);
+    CHECK(!std::atomic_load(&subscription_));
 
 #ifdef DEBUG
     DCHECK(!gotOnSubscribe_.exchange(true))
@@ -63,7 +63,7 @@ class BaseSubscriber : public Subscriber<T> {
         << "Already got terminating signal method";
 #endif
 
-    if(auto sub = subscription_.exchange(nullptr)) {
+    if(auto sub = std::atomic_exchange(&subscription_, {nullptr})) {
       KEEP_REF_TO_THIS();
       onCompleteImpl();
       onTerminateImpl();
@@ -78,7 +78,7 @@ class BaseSubscriber : public Subscriber<T> {
         << "Already got terminating signal method";
 #endif
 
-    if(auto sub = subscription_.exchange(nullptr)) {
+    if(auto sub = std::atomic_exchange(&subscription_, {nullptr})) {
       KEEP_REF_TO_THIS();
       onErrorImpl(std::move(e));
       onTerminateImpl();
@@ -93,14 +93,14 @@ class BaseSubscriber : public Subscriber<T> {
     }
 #endif
 
-    if(auto sub = subscription_.load()) {
+    if (auto sub = std::atomic_load(&subscription_)) {
       KEEP_REF_TO_THIS();
       onNextImpl(std::move(t));
     }
   }
 
   void cancel() {
-    if(auto sub = subscription_.exchange(nullptr)) {
+    if(auto sub = std::atomic_exchange(&subscription_, {nullptr})) {
       KEEP_REF_TO_THIS();
       sub->cancel();
       onTerminateImpl();
@@ -113,7 +113,7 @@ class BaseSubscriber : public Subscriber<T> {
   }
 
   void request(int64_t n) {
-    if(auto sub = subscription_.load()) {
+    if (auto sub = std::atomic_load(&subscription_)) {
       KEEP_REF_TO_THIS();
       sub->request(n);
     }

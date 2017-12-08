@@ -21,16 +21,15 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-weak-vtables -Wno-padded")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -momit-leaf-frame-pointer")
 
+if(${CMAKE_CXX_COMPILER_ID} MATCHES GNU)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -latomic")
+endif() 
+
 # The yarpl-tests binary constantly fails with an ASAN error in gtest internal
 # code on macOS.
 if(APPLE AND ${CMAKE_CXX_COMPILER_ID} MATCHES Clang)
   message("== macOS detected, disabling ASAN for yarpl")
   add_compile_options("-fno-sanitize=address,undefined")
-endif()
-
-option(YARPL_REFCOUNT_DEBUGGING "Enable refcount debugging/leak checking in Yarpl" OFF)
-if(YARPL_REFCOUNT_DEBUGGING)
-  add_compile_options(-DYARPL_REFCOUNT_DEBUGGING)
 endif()
 
 # Using NDEBUG in Release builds.
@@ -53,7 +52,6 @@ add_library(
         yarpl
         # public API
         include/yarpl/Refcounted.h
-        src/yarpl/Refcounted.cpp
         # Flowable public API
         include/yarpl/Flowable.h
         include/yarpl/flowable/EmitterFlowable.h
