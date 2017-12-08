@@ -10,29 +10,16 @@
 namespace rsocket {
 
 class MockDuplexConnection : public DuplexConnection {
-public:
- using Subscriber = DuplexConnection::Subscriber;
+ public:
+  using Subscriber = DuplexConnection::Subscriber;
 
- MockDuplexConnection() {
-   ON_CALL(*this, getOutput_()).WillByDefault(testing::Invoke([] {
-     return yarpl::make_ref<
-         yarpl::mocks::MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
-   }));
-  }
+  MockDuplexConnection() {}
 
-  /// Creates a DuplexConnection that always runs `in` on the input
-  /// subscriber and `out` on a default MockSubscriber.
-  template <class InputFn, class OutputFn>
-  MockDuplexConnection(InputFn in, OutputFn out) {
+  /// Creates a DuplexConnection that always runs `in` on the input subscriber.
+  template <class InputFn>
+  MockDuplexConnection(InputFn in) {
     EXPECT_CALL(*this, setInput_(testing::_))
         .WillRepeatedly(testing::Invoke(std::move(in)));
-    EXPECT_CALL(*this, getOutput_())
-        .WillRepeatedly(testing::Invoke([out = std::move(out)] {
-          auto subscriber = yarpl::make_ref<
-              yarpl::mocks::MockSubscriber<std::unique_ptr<folly::IOBuf>>>();
-          out(subscriber);
-          return subscriber;
-        }));
   }
 
   // DuplexConnection.
@@ -41,14 +28,14 @@ public:
     setInput_(std::move(in));
   }
 
-  yarpl::Reference<Subscriber> getOutput() override {
-    return getOutput_();
+  void send(std::unique_ptr<folly::IOBuf> buf) override {
+    send_(buf);
   }
 
   // Mocks.
 
   MOCK_METHOD1(setInput_, void(yarpl::Reference<Subscriber>));
-  MOCK_METHOD0(getOutput_, yarpl::Reference<Subscriber>());
+  MOCK_METHOD1(send_, void(std::unique_ptr<folly::IOBuf>&));
 };
 
-}
+} // namespace rsocket

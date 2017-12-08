@@ -85,7 +85,6 @@ void RSocketStateMachine::connectServer(
 bool RSocketStateMachine::resumeServer(
     yarpl::Reference<FrameTransport> frameTransport,
     const ResumeParameters& resumeParams) {
-
   folly::Optional<int64_t> clientAvailable =
       (resumeParams.clientPosition == kUnspecifiedResumePosition)
       ? folly::none
@@ -193,16 +192,14 @@ void RSocketStateMachine::connect(
   if (version != ProtocolVersion::Unknown) {
     if (frameSerializer_) {
       if (frameSerializer_->protocolVersion() != version) {
-        std::runtime_error exn("Protocol version mismatch");
-        transport->closeWithError(std::move(exn));
-        throw exn;
+        transport->close();
+        throw std::runtime_error{"Protocol version mismatch"};
       }
     } else {
       frameSerializer_ = FrameSerializer::createFrameSerializer(version);
       if (!frameSerializer_) {
-        std::runtime_error exn("Invalid protocol version");
-        transport->closeWithError(std::move(exn));
-        throw exn;
+        transport->close();
+        throw std::runtime_error{"Invalid protocol version"};
       }
     }
   }
@@ -249,7 +246,7 @@ void RSocketStateMachine::disconnect(folly::exception_wrapper ex) {
     connectionEvents_->onDisconnected(ex);
   }
 
-  closeFrameTransport(std::move(ex), StreamCompletionSignal::CONNECTION_END);
+  closeFrameTransport(std::move(ex));
 
   if (connectionEvents_) {
     connectionEvents_->onStreamsPaused();
@@ -276,7 +273,7 @@ void RSocketStateMachine::close(
   }
 
   closeStreams(signal);
-  closeFrameTransport(ex, signal);
+  closeFrameTransport(ex);
 
   if (auto connectionEvents = std::move(connectionEvents_)) {
     connectionEvents->onClosed(std::move(ex));
@@ -287,9 +284,7 @@ void RSocketStateMachine::close(
   }
 }
 
-void RSocketStateMachine::closeFrameTransport(
-    folly::exception_wrapper ex,
-    StreamCompletionSignal signal) {
+void RSocketStateMachine::closeFrameTransport(folly::exception_wrapper ex) {
   if (isDisconnected()) {
     DCHECK(!resumeCallback_);
     return;
@@ -309,11 +304,7 @@ void RSocketStateMachine::closeFrameTransport(
   // closing with error.  Otherwise we sent some error frame over the wire and
   // we are closing the transport cleanly.
   if (frameTransport_) {
-    if (signal == StreamCompletionSignal::CONNECTION_ERROR) {
-      frameTransport_->closeWithError(std::move(ex));
-    } else {
-      frameTransport_->close();
-    }
+    frameTransport_->close();
     frameTransport_ = nullptr;
   }
 }
@@ -435,7 +426,6 @@ void RSocketStateMachine::closeStreams(StreamCompletionSignal signal) {
 }
 
 void RSocketStateMachine::processFrame(std::unique_ptr<folly::IOBuf> frame) {
-
   if (isClosed()) {
     VLOG(4) << "StateMachine has been closed.  Discarding incoming frame";
     return;

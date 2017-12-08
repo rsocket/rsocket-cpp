@@ -30,11 +30,4 @@ void ScheduledFrameTransport::close() {
   });
 }
 
-void ScheduledFrameTransport::closeWithError(folly::exception_wrapper ex) {
-  transportEvb_->runInEventBaseThread(
-      [ ft = frameTransport_, ex = std::move(ex) ]() mutable {
-        ft->closeWithError(std::move(ex));
-      });
-}
-
 } // rsocket

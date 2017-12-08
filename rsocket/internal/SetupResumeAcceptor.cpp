@@ -21,26 +21,6 @@ class NoneFrameProcessor final : public FrameProcessor {
   void onTerminal(folly::exception_wrapper) override {}
 };
 
-/// Closes a DuplexConnection with an error.
-void closeWithError(
-    std::unique_ptr<DuplexConnection> connection,
-    std::string message) {
-  auto output = connection->getOutput();
-  output->onSubscribe(yarpl::flowable::Subscription::empty());
-  output->onError(std::runtime_error{std::move(message)});
-}
-
-/// Closes a DuplexConnection with an error, sending a serialized frame first.
-void closeWithError(
-    std::unique_ptr<DuplexConnection> connection,
-    std::unique_ptr<folly::IOBuf> frame,
-    std::string message) {
-  auto output = connection->getOutput();
-  output->onSubscribe(yarpl::flowable::Subscription::empty());
-  output->onNext(std::move(frame));
-  output->onError(std::runtime_error{std::move(message)});
-}
-
 } // namespace
 
 SetupResumeAcceptor::OneFrameSubscriber::OneFrameSubscriber(
@@ -114,16 +94,12 @@ void SetupResumeAcceptor::processFrame(
   DCHECK(connection);
 
   if (closed_) {
-    std::string msg{"SetupResumeAcceptor is shutting down"};
-    closeWithError(std::move(connection), std::move(msg));
     return;
   }
 
   auto serializer = FrameSerializer::createAutodetectedSerializer(*buf);
   if (!serializer) {
-    std::string msg{"Unable to detect protocol version"};
-    VLOG(2) << msg;
-    closeWithError(std::move(connection), std::move(msg));
+    VLOG(2) << "Unable to detect protocol version";
     return;
   }
 
@@ -133,7 +109,7 @@ void SetupResumeAcceptor::processFrame(
       if (!serializer->deserializeFrom(frame, std::move(buf))) {
         std::string msg{"Cannot decode SETUP frame"};
         auto err = serializer->serializeOut(Frame_ERROR::connectionError(msg));
-        closeWithError(std::move(connection), std::move(err), std::move(msg));
+        connection->send(std::move(err));
         break;
       }
 
@@ -145,7 +121,7 @@ void SetupResumeAcceptor::processFrame(
       if (serializer->protocolVersion() != params.protocolVersion) {
         std::string msg{"SETUP frame has invalid protocol version"};
         auto err = serializer->serializeOut(Frame_ERROR::invalidSetup(msg));
-        closeWithError(std::move(connection), std::move(err), std::move(msg));
+        connection->send(std::move(err));
         break;
       }
 
@@ -155,11 +131,10 @@ void SetupResumeAcceptor::processFrame(
       try {
         onSetup(transport, std::move(params));
       } catch (const std::exception& exn) {
-        folly::exception_wrapper ew{std::current_exception(), exn};
-        auto err = Frame_ERROR::rejectedSetup(ew.what().toStdString());
+        auto err = Frame_ERROR::rejectedSetup(exn.what());
         transport->setFrameProcessor(std::make_shared<NoneFrameProcessor>());
         transport->outputFrameOrDrop(serializer->serializeOut(std::move(err)));
-        transport->closeWithError(std::move(ew));
+        transport->close();
       }
       break;
     }
@@ -169,7 +144,7 @@ void SetupResumeAcceptor::processFrame(
       if (!serializer->deserializeFrom(frame, std::move(buf))) {
         std::string msg{"Cannot decode RESUME frame"};
         auto err = serializer->serializeOut(Frame_ERROR::connectionError(msg));
-        closeWithError(std::move(connection), std::move(err), std::move(msg));
+        connection->send(std::move(err));
         break;
       }
 
@@ -184,7 +159,7 @@ void SetupResumeAcceptor::processFrame(
       if (serializer->protocolVersion() != params.protocolVersion) {
         std::string msg{"RESUME frame has invalid protocol version"};
         auto err = serializer->serializeOut(Frame_ERROR::rejectedResume(msg));
-        closeWithError(std::move(connection), std::move(err), std::move(msg));
+        connection->send(std::move(err));
         break;
       }
 
@@ -194,11 +169,10 @@ void SetupResumeAcceptor::processFrame(
       try {
         onResume(transport, std::move(params));
       } catch (const std::exception& exn) {
-        folly::exception_wrapper ew{std::current_exception(), exn};
-        auto err = Frame_ERROR::rejectedResume(ew.what().toStdString());
+        auto err = Frame_ERROR::rejectedResume(exn.what());
         transport->setFrameProcessor(std::make_shared<NoneFrameProcessor>());
         transport->outputFrameOrDrop(serializer->serializeOut(std::move(err)));
-        transport->closeWithError(std::move(ew));
+        transport->close();
       }
       break;
     }
@@ -206,7 +180,7 @@ void SetupResumeAcceptor::processFrame(
     default: {
       std::string msg{"Invalid frame, expected SETUP/RESUME"};
       auto err = serializer->serializeOut(Frame_ERROR::connectionError(msg));
-      closeWithError(std::move(connection), std::move(err), std::move(msg));
+      connection->send(std::move(err));
       break;
     }
   }

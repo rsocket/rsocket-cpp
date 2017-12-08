@@ -55,23 +55,6 @@ class TcpReaderWriter : public folly::AsyncTransportWrapper::WriteCallback,
     }
   }
 
-  void setOutputSubscription(yarpl::Reference<Subscription> subscription) {
-    if (!subscription) {
-      outputSubscription_ = nullptr;
-      return;
-    }
-
-    if (isClosed()) {
-      subscription->cancel();
-      return;
-    }
-
-    // No flow control at TCP level for output
-    // The AsyncSocket will accept all send calls
-    subscription->request(std::numeric_limits<int64_t>::max());
-    outputSubscription_ = std::move(subscription);
-  }
-
   void send(std::unique_ptr<folly::IOBuf> element) {
     if (isClosed()) {
       return;
@@ -90,9 +73,6 @@ class TcpReaderWriter : public folly::AsyncTransportWrapper::WriteCallback,
     if (auto socket = std::move(socket_)) {
       socket->close();
     }
-    if (auto outputSubscription = std::move(outputSubscription_)) {
-      outputSubscription->cancel();
-    }
     if (auto subscriber = std::move(inputSubscriber_)) {
       subscriber->onComplete();
     }
@@ -101,9 +81,6 @@ class TcpReaderWriter : public folly::AsyncTransportWrapper::WriteCallback,
   void closeErr(folly::exception_wrapper ew) {
     if (auto socket = std::move(socket_)) {
       socket->close();
-    }
-    if (auto subscription = std::move(outputSubscription_)) {
-      subscription->cancel();
     }
     if (auto subscriber = std::move(inputSubscriber_)) {
       subscriber->onError(std::move(ew));
@@ -166,7 +143,6 @@ class TcpReaderWriter : public folly::AsyncTransportWrapper::WriteCallback,
   const std::shared_ptr<RSocketStats> stats_;
 
   yarpl::Reference<DuplexConnection::Subscriber> inputSubscriber_;
-  yarpl::Reference<Subscription> outputSubscription_;
   int refCount_{0};
 };
 
@@ -183,39 +159,6 @@ inline void intrusive_ptr_release(TcpReaderWriter* x) {
 }
 
 namespace {
-
-class TcpOutputSubscriber : public DuplexConnection::Subscriber {
- public:
-  explicit TcpOutputSubscriber(
-      boost::intrusive_ptr<TcpReaderWriter> tcpReaderWriter)
-      : tcpReaderWriter_(std::move(tcpReaderWriter)) {
-    CHECK(tcpReaderWriter_);
-  }
-
-  void onSubscribe(yarpl::Reference<Subscription> subscription) override {
-    CHECK(subscription);
-    CHECK(tcpReaderWriter_);
-    tcpReaderWriter_->setOutputSubscription(std::move(subscription));
-  }
-
-  void onNext(std::unique_ptr<folly::IOBuf> element) override {
-    CHECK(tcpReaderWriter_);
-    tcpReaderWriter_->send(std::move(element));
-  }
-
-  void onComplete() override {
-    CHECK(tcpReaderWriter_);
-    tcpReaderWriter_->setOutputSubscription(nullptr);
-  }
-
-  void onError(folly::exception_wrapper) override {
-    CHECK(tcpReaderWriter_);
-    tcpReaderWriter_->setOutputSubscription(nullptr);
-  }
-
- private:
-  boost::intrusive_ptr<TcpReaderWriter> tcpReaderWriter_;
-};
 
 class TcpInputSubscription : public Subscription {
  public:
@@ -239,7 +182,8 @@ class TcpInputSubscription : public Subscription {
  private:
   boost::intrusive_ptr<TcpReaderWriter> tcpReaderWriter_;
 };
-}
+
+} // namespace
 
 TcpDuplexConnection::TcpDuplexConnection(
     folly::AsyncTransportWrapper::UniquePtr&& socket,
@@ -262,9 +206,10 @@ folly::AsyncTransportWrapper* TcpDuplexConnection::getTransport() {
   return tcpReaderWriter_ ? tcpReaderWriter_->getTransport() : nullptr;
 }
 
-yarpl::Reference<DuplexConnection::Subscriber>
-TcpDuplexConnection::getOutput() {
-  return yarpl::make_ref<TcpOutputSubscriber>(tcpReaderWriter_);
+void TcpDuplexConnection::send(std::unique_ptr<folly::IOBuf> buf) {
+  if (tcpReaderWriter_) {
+    tcpReaderWriter_->send(std::move(buf));
+  }
 }
 
 void TcpDuplexConnection::setInput(
@@ -274,4 +219,4 @@ void TcpDuplexConnection::setInput(
       yarpl::make_ref<TcpInputSubscription>(tcpReaderWriter_));
   tcpReaderWriter_->setInput(std::move(inputSubscriber));
 }
-}
+} // namespace rsocket

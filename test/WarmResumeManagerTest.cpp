@@ -8,19 +8,13 @@
 #include "rsocket/framing/FrameSerializer.h"
 #include "rsocket/framing/FrameTransportImpl.h"
 #include "rsocket/internal/WarmResumeManager.h"
+#include "test/test_utils/MockDuplexConnection.h"
 #include "test/test_utils/MockStats.h"
 
 using namespace ::testing;
 using namespace ::rsocket;
 
 namespace {
-
-class MockDuplexConnection : public DuplexConnection {
-  void setInput(yarpl::Reference<Subscriber>) override {}
-  yarpl::Reference<Subscriber> getOutput() override {
-    return nullptr;
-  }
-};
 
 class FrameTransportMock : public FrameTransportImpl {
  public:
@@ -33,6 +27,7 @@ class FrameTransportMock : public FrameTransportImpl {
     outputFrameOrDrop_(frame);
   }
 };
+
 } // namespace
 
 class WarmResumeManagerTest : public Test {

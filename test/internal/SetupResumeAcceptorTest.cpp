@@ -77,12 +77,13 @@ TEST(SetupResumeAcceptor, CloseWithActiveConnection) {
 
   yarpl::Reference<DuplexConnection::Subscriber> outerInput;
 
-  auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
-      [&](auto input) {
+  auto connection =
+      std::make_unique<StrictMock<MockDuplexConnection>>([&](auto input) {
         outerInput = input;
         input->onSubscribe(yarpl::flowable::Subscription::empty());
-      },
-      [](auto) { FAIL(); });
+      });
+
+  ON_CALL(*connection, send_(_)).WillByDefault(Invoke([](auto&) { FAIL(); }));
 
   acceptor.accept(std::move(connection), setupFail, resumeFail);
   acceptor.close();
@@ -98,14 +99,10 @@ TEST(SetupResumeAcceptor, EarlyComplete) {
   folly::EventBase evb;
   SetupResumeAcceptor acceptor{&evb};
 
-  auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
-      [](auto input) {
+  auto connection =
+      std::make_unique<StrictMock<MockDuplexConnection>>([](auto input) {
         input->onSubscribe(yarpl::flowable::Subscription::empty());
         input->onComplete();
-      },
-      [](auto output) {
-        EXPECT_CALL(*output, onSubscribe_(_));
-        EXPECT_CALL(*output, onComplete_());
       });
 
   acceptor.accept(std::move(connection), setupFail, resumeFail);
@@ -117,14 +114,10 @@ TEST(SetupResumeAcceptor, EarlyError) {
   folly::EventBase evb;
   SetupResumeAcceptor acceptor{&evb};
 
-  auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
-      [](auto input) {
+  auto connection =
+      std::make_unique<StrictMock<MockDuplexConnection>>([](auto input) {
         input->onSubscribe(yarpl::flowable::Subscription::empty());
         input->onError(std::runtime_error("Whoops"));
-      },
-      [](auto output) {
-        EXPECT_CALL(*output, onSubscribe_(_));
-        EXPECT_CALL(*output, onError_(_));
       });
 
   acceptor.accept(std::move(connection), setupFail, resumeFail);
@@ -136,17 +129,13 @@ TEST(SetupResumeAcceptor, SingleSetup) {
   folly::EventBase evb;
   SetupResumeAcceptor acceptor{&evb};
 
-  auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
-      [](auto input) {
+  auto connection =
+      std::make_unique<StrictMock<MockDuplexConnection>>([](auto input) {
         auto serializer =
             FrameSerializer::createFrameSerializer(ProtocolVersion::Current());
         input->onSubscribe(yarpl::flowable::Subscription::empty());
         input->onNext(serializer->serializeOut(makeSetup()));
         input->onComplete();
-      },
-      [](auto output) {
-        EXPECT_CALL(*output, onSubscribe_(_));
-        EXPECT_CALL(*output, onComplete_());
       });
 
   bool setupCalled = false;
@@ -168,8 +157,8 @@ TEST(SetupResumeAcceptor, InvalidSetup) {
   folly::EventBase evb;
   SetupResumeAcceptor acceptor{&evb};
 
-  auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
-      [](auto input) {
+  auto connection =
+      std::make_unique<StrictMock<MockDuplexConnection>>([](auto input) {
         auto serializer =
             FrameSerializer::createFrameSerializer(ProtocolVersion::Current());
 
@@ -180,18 +169,15 @@ TEST(SetupResumeAcceptor, InvalidSetup) {
         input->onSubscribe(yarpl::flowable::Subscription::empty());
         input->onNext(serializer->serializeOut(std::move(setup)));
         input->onComplete();
-      },
-      [](auto output) {
-        EXPECT_CALL(*output, onSubscribe_(_));
-        EXPECT_CALL(*output, onNext_(_)).WillOnce(Invoke([](auto const& buf) {
-          auto serializer = FrameSerializer::createFrameSerializer(
-              ProtocolVersion::Current());
-          Frame_ERROR frame;
-          EXPECT_TRUE(serializer->deserializeFrom(frame, buf->clone()));
-          EXPECT_EQ(frame.errorCode_, ErrorCode::CONNECTION_ERROR);
-        }));
-        EXPECT_CALL(*output, onError_(_));
       });
+
+  EXPECT_CALL(*connection, send_(_)).WillOnce(Invoke([](auto& buf) {
+    auto serializer =
+        FrameSerializer::createFrameSerializer(ProtocolVersion::Current());
+    Frame_ERROR frame;
+    EXPECT_TRUE(serializer->deserializeFrom(frame, buf->clone()));
+    EXPECT_EQ(frame.errorCode_, ErrorCode::CONNECTION_ERROR);
+  }));
 
   acceptor.accept(std::move(connection), setupFail, resumeFail);
 
@@ -202,25 +188,22 @@ TEST(SetupResumeAcceptor, RejectedSetup) {
   folly::EventBase evb;
   SetupResumeAcceptor acceptor{&evb};
 
-  auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
-      [](auto input) {
+  auto connection =
+      std::make_unique<StrictMock<MockDuplexConnection>>([](auto input) {
         auto serializer =
             FrameSerializer::createFrameSerializer(ProtocolVersion::Current());
         input->onSubscribe(yarpl::flowable::Subscription::empty());
         input->onNext(serializer->serializeOut(makeSetup()));
         input->onComplete();
-      },
-      [](auto output) {
-        EXPECT_CALL(*output, onSubscribe_(_));
-        EXPECT_CALL(*output, onNext_(_)).WillOnce(Invoke([](auto const& buf) {
-          auto serializer = FrameSerializer::createFrameSerializer(
-              ProtocolVersion::Current());
-          Frame_ERROR frame;
-          EXPECT_TRUE(serializer->deserializeFrom(frame, buf->clone()));
-          EXPECT_EQ(frame.errorCode_, ErrorCode::REJECTED_SETUP);
-        }));
-        EXPECT_CALL(*output, onError_(_));
       });
+
+  EXPECT_CALL(*connection, send_(_)).WillOnce(Invoke([](auto& buf) {
+    auto serializer =
+        FrameSerializer::createFrameSerializer(ProtocolVersion::Current());
+    Frame_ERROR frame;
+    EXPECT_TRUE(serializer->deserializeFrom(frame, buf->clone()));
+    EXPECT_EQ(frame.errorCode_, ErrorCode::REJECTED_SETUP);
+  }));
 
   bool setupCalled = false;
 
@@ -241,25 +224,22 @@ TEST(SetupResumeAcceptor, RejectedResume) {
   folly::EventBase evb;
   SetupResumeAcceptor acceptor{&evb};
 
-  auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
-      [](auto input) {
+  auto connection =
+      std::make_unique<StrictMock<MockDuplexConnection>>([](auto input) {
         auto serializer =
             FrameSerializer::createFrameSerializer(ProtocolVersion::Current());
         input->onSubscribe(yarpl::flowable::Subscription::empty());
         input->onNext(serializer->serializeOut(makeResume()));
         input->onComplete();
-      },
-      [](auto output) {
-        EXPECT_CALL(*output, onSubscribe_(_));
-        EXPECT_CALL(*output, onNext_(_)).WillOnce(Invoke([](auto const& buf) {
-          auto serializer = FrameSerializer::createFrameSerializer(
-              ProtocolVersion::Current());
-          Frame_ERROR frame;
-          EXPECT_TRUE(serializer->deserializeFrom(frame, buf->clone()));
-          EXPECT_EQ(frame.errorCode_, ErrorCode::REJECTED_RESUME);
-        }));
-        EXPECT_CALL(*output, onError_(_));
       });
+
+  EXPECT_CALL(*connection, send_(_)).WillOnce(Invoke([](auto& buf) {
+    auto serializer =
+        FrameSerializer::createFrameSerializer(ProtocolVersion::Current());
+    Frame_ERROR frame;
+    EXPECT_TRUE(serializer->deserializeFrom(frame, buf->clone()));
+    EXPECT_EQ(frame.errorCode_, ErrorCode::REJECTED_RESUME);
+  }));
 
   bool resumeCalled = false;
 

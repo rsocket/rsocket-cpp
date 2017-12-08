@@ -21,7 +21,7 @@ class TcpDuplexConnection : public DuplexConnection {
       std::shared_ptr<RSocketStats> stats = RSocketStats::noop());
   ~TcpDuplexConnection();
 
-  yarpl::Reference<DuplexConnection::Subscriber> getOutput() override;
+  void send(std::unique_ptr<folly::IOBuf>) override;
 
   void setInput(yarpl::Reference<DuplexConnection::Subscriber>) override;
 

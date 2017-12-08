@@ -18,15 +18,11 @@ MATCHER_P(IOBufStringEq, s, "") {
   return folly::IOBufEqual()(*arg, *folly::IOBuf::copyBuffer(s));
 }
 
-}
+} // namespace
 
 TEST(FrameTransport, Close) {
-  auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
-      [](auto) {},
-      [](auto output) {
-        EXPECT_CALL(*output, onSubscribe_(_));
-        EXPECT_CALL(*output, onComplete_());
-      });
+  auto connection = std::make_unique<StrictMock<MockDuplexConnection>>();
+  EXPECT_CALL(*connection, setInput_(_));
 
   auto transport = yarpl::make_ref<FrameTransportImpl>(std::move(connection));
   transport->setFrameProcessor(
@@ -34,31 +30,12 @@ TEST(FrameTransport, Close) {
   transport->close();
 }
 
-TEST(FrameTransport, CloseWithError) {
-  auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
-      [](auto) {},
-      [](auto output) {
-        EXPECT_CALL(*output, onSubscribe_(_));
-        EXPECT_CALL(*output, onError_(_));
-      });
-
-  auto transport = yarpl::make_ref<FrameTransportImpl>(std::move(connection));
-  transport->setFrameProcessor(
-      std::make_shared<StrictMock<MockFrameProcessor>>());
-  transport->closeWithError(std::runtime_error("Uh oh"));
-}
-
 TEST(FrameTransport, SimpleNoQueue) {
-  auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
-      [](auto) {},
-      [](auto output) {
-        EXPECT_CALL(*output, onSubscribe_(_));
+  auto connection = std::make_unique<StrictMock<MockDuplexConnection>>();
+  EXPECT_CALL(*connection, setInput_(_));
 
-        EXPECT_CALL(*output, onNext_(IOBufStringEq("Hello")));
-        EXPECT_CALL(*output, onNext_(IOBufStringEq("World")));
-
-        EXPECT_CALL(*output, onComplete_());
-      });
+  EXPECT_CALL(*connection, send_(IOBufStringEq("Hello")));
+  EXPECT_CALL(*connection, send_(IOBufStringEq("World")));
 
   auto transport = yarpl::make_ref<FrameTransportImpl>(std::move(connection));
 
@@ -72,8 +49,8 @@ TEST(FrameTransport, SimpleNoQueue) {
 }
 
 TEST(FrameTransport, InputSendsError) {
-  auto connection = std::make_unique<StrictMock<MockDuplexConnection>>(
-      [](auto input) {
+  auto connection =
+      std::make_unique<StrictMock<MockDuplexConnection>>([](auto input) {
         auto subscription =
             yarpl::make_ref<StrictMock<yarpl::mocks::MockSubscription>>();
         EXPECT_CALL(*subscription, request_(_));
@@ -81,10 +58,6 @@ TEST(FrameTransport, InputSendsError) {
 
         input->onSubscribe(std::move(subscription));
         input->onError(std::runtime_error("Oops"));
-      },
-      [](auto output) {
-        EXPECT_CALL(*output, onSubscribe_(_));
-        EXPECT_CALL(*output, onComplete_());
       });
 
   auto transport = yarpl::make_ref<FrameTransportImpl>(std::move(connection));

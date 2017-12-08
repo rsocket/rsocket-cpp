@@ -65,11 +65,10 @@ class DuplexConnection {
   /// complete the previous subscriber.
   virtual void setInput(yarpl::Reference<Subscriber>) = 0;
 
-  /// Obtains a Subscriber that should be fed with frames to send (a writer).
+  /// Write a serialized frame to the connection.
   ///
-  /// If getOutput() has already been called, it is only safe to call again if
-  /// all previous output subscribers have been terminated.
-  virtual yarpl::Reference<Subscriber> getOutput() = 0;
+  /// Does nothing if the underlying connection is closed.
+  virtual void send(std::unique_ptr<folly::IOBuf>) = 0;
 
   /// Whether the duplex connection respects frame boundaries.
   virtual bool isFramed() const {

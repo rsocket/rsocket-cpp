@@ -31,7 +31,6 @@ class ScheduledFrameTransport : public FrameTransport,
   void setFrameProcessor(std::shared_ptr<FrameProcessor> fp) override;
   void outputFrameOrDrop(std::unique_ptr<folly::IOBuf> ioBuf) override;
   void close() override;
-  void closeWithError(folly::exception_wrapper ex) override;
 
  private:
   DuplexConnection* getConnection() override {

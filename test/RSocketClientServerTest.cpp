@@ -103,10 +103,7 @@ TEST(RSocketClientServer, ServerGetsGarbage) {
   auto evb = &result.eventBase;
 
   evb->runInEventBaseThreadAndWait([conn = std::move(connection)]() mutable {
-    auto output = conn->getOutput();
-    output->onSubscribe(yarpl::flowable::Subscription::empty());
-    output->onNext(folly::IOBuf::copyBuffer("ABCDEFGHIJKLMNOP"));
-    output->onComplete();
+    conn->send(folly::IOBuf::copyBuffer("ABCDEFGHIJKLMNOP"));
     conn.reset();
   });
 }

@@ -32,30 +32,19 @@ struct FuzzerDuplexConnection : rsocket::DuplexConnection {
   using Subscriber = rsocket::DuplexConnection::Subscriber;
   using DuplexSubscriber = rsocket::DuplexConnection::DuplexSubscriber;
 
-  struct SinkSubscriber : DuplexSubscriber {
-    std::vector<std::unique_ptr<folly::IOBuf>> sent_buffers;
+  FuzzerDuplexConnection() {}
 
-    void onNext(std::unique_ptr<folly::IOBuf> buf) override {
-      VLOG(1) << "SinkSubscriber::onNext(\""
-              << folly::humanify(buf->cloneAsValue().moveToFbString()) << "\")"
-              << std::endl;
-      sent_buffers.push_back(std::move(buf));
-    }
-  };
-
-  FuzzerDuplexConnection() : output_sub(yarpl::make_ref<SinkSubscriber>()) {}
-
-  virtual void setInput(yarpl::Reference<Subscriber> sub) {
+  void setInput(yarpl::Reference<Subscriber> sub) override {
     VLOG(1) << "FuzzerDuplexConnection::setInput()" << std::endl;
     input_sub = sub;
   }
-  virtual yarpl::Reference<Subscriber> getOutput() {
-    VLOG(1) << "FuzzerDuplexConnection::getOutput()" << std::endl;
-    return output_sub;
+
+  void send(std::unique_ptr<folly::IOBuf> buf) override {
+    VLOG(1) << "FuzzerDuplexConnection::send(\""
+            << folly::humanify(buf->moveToFbString()) << "\")" << std::endl;
   }
 
   yarpl::Reference<Subscriber> input_sub;
-  yarpl::Reference<Subscriber> output_sub;
 };
 
 struct NoopSubscription : yarpl::flowable::Subscription {
@@ -89,7 +78,6 @@ int main(int argc, char* argv[]) {
 
   // grab references while we still own the duplex connection
   auto& input_sub = feed_conn->input_sub;
-  auto& output_sub = feed_conn->output_sub;
   auto& acceptor_func_ptr = acceptor->func;
 
   rsocket::RSocketServer server(std::move(acceptor));
@@ -103,7 +91,6 @@ int main(int argc, char* argv[]) {
   evb.loopOnce();
 
   CHECK(input_sub);
-  CHECK(output_sub);
   auto input_subscription = yarpl::make_ref<NoopSubscription>();
   input_sub->onSubscribe(input_subscription);
 

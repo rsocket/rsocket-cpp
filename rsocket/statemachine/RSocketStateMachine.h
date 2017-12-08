@@ -233,7 +233,7 @@ class RSocketStateMachine final
   void handleUnknownStream(StreamId, FrameType, std::unique_ptr<folly::IOBuf>);
 
   void closeStreams(StreamCompletionSignal);
-  void closeFrameTransport(folly::exception_wrapper, StreamCompletionSignal);
+  void closeFrameTransport(folly::exception_wrapper);
 
   void sendKeepalive(FrameFlags, std::unique_ptr<folly::IOBuf>);
 

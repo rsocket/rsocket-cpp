@@ -46,23 +46,20 @@ class DirectDuplexConnection : public DuplexConnection {
     input_ = std::move(input);
   }
 
-  yarpl::Reference<DuplexConnection::Subscriber> getOutput() override {
-    return yarpl::flowable::Subscribers::create<std::unique_ptr<folly::IOBuf>>(
-        [this](std::unique_ptr<folly::IOBuf> buf) {
-          auto destroyed = state_->destroyed.rlock();
+  void send(std::unique_ptr<folly::IOBuf> buf) override {
+    auto destroyed = state_->destroyed.rlock();
+    if (*destroyed || !other_) {
+      return;
+    }
+
+    other_->evb_.runInEventBaseThread(
+        [ state = state_, other = other_, b = std::move(buf) ]() mutable {
+          auto destroyed = state->destroyed.rlock();
           if (*destroyed) {
             return;
           }
 
-          other_->evb_.runInEventBaseThread(
-              [ state = state_, other = other_, b = std::move(buf) ]() mutable {
-                auto destroyed = state->destroyed.rlock();
-                if (*destroyed) {
-                  return;
-                }
-
-                other->input_->onNext(std::move(b));
-              });
+          other->input_->onNext(std::move(b));
         });
   }
 
@@ -147,7 +144,7 @@ std::shared_ptr<RSocketClient> makeClient() {
   auto factory = std::make_unique<Factory>();
   return RSocket::createConnectedClient(std::move(factory)).get();
 }
-}
+} // namespace
 
 BENCHMARK(StreamThroughput, n) {
   (void)n;

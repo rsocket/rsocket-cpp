@@ -26,14 +26,6 @@ FrameTransportImpl::~FrameTransportImpl() {
 void FrameTransportImpl::connect() {
   CHECK(connection_);
 
-  if (connectionOutput_) {
-    // Already connected.
-    return;
-  }
-
-  connectionOutput_ = connection_->getOutput();
-  connectionOutput_->onSubscribe(this->ref_from_this(this));
-
   // The onSubscribe call on the previous line may have called the terminating
   // signal which would call disconnect/close.
   if (connection_) {
@@ -58,19 +50,6 @@ void FrameTransportImpl::setFrameProcessor(
 }
 
 void FrameTransportImpl::close() {
-  closeImpl(folly::exception_wrapper());
-}
-
-void FrameTransportImpl::closeWithError(folly::exception_wrapper ew) {
-  if (!ew) {
-    VLOG(1)
-        << "FrameTransportImpl::closeWithError() called with empty exception";
-    ew = std::runtime_error("Undefined error");
-  }
-  closeImpl(std::move(ew));
-}
-
-void FrameTransportImpl::closeImpl(folly::exception_wrapper ew) {
   // Make sure we never try to call back into the processor.
   frameProcessor_ = nullptr;
 
@@ -80,16 +59,6 @@ void FrameTransportImpl::closeImpl(folly::exception_wrapper ew) {
 
   auto oldConnection = std::move(connection_);
 
-  // Send terminal signals to the DuplexConnection's input and output before
-  // tearing it down.  We must do this per DuplexConnection specification (see
-  // interface definition).
-  if (auto subscriber = std::move(connectionOutput_)) {
-    if (ew) {
-      subscriber->onError(std::move(ew));
-    } else {
-      subscriber->onComplete();
-    }
-  }
   if (auto subscription = std::move(connectionInputSub_)) {
     subscription->cancel();
   }
@@ -115,7 +84,7 @@ void FrameTransportImpl::onNext(std::unique_ptr<folly::IOBuf> frame) {
 void FrameTransportImpl::terminateProcessor(folly::exception_wrapper ex) {
   // This method can be executed multiple times while terminating.
 
-  if(!frameProcessor_) {
+  if (!frameProcessor_) {
     // already terminated
     return;
   }
@@ -139,25 +108,11 @@ void FrameTransportImpl::onError(folly::exception_wrapper ex) {
   terminateProcessor(std::move(ex));
 }
 
-void FrameTransportImpl::request(int64_t n) {
-  // we are expecting we can write output without back pressure
-  CHECK_EQ(n, std::numeric_limits<int64_t>::max());
-}
-
-void FrameTransportImpl::cancel() {
-  VLOG(3) << "FrameTransport received cancel";
-  terminateProcessor(folly::exception_wrapper());
-}
-
 void FrameTransportImpl::outputFrameOrDrop(
     std::unique_ptr<folly::IOBuf> frame) {
-  if (!connection_) {
-    // if the connection was closed we will drop the frame
-    return;
+  if (connection_) {
+    connection_->send(std::move(frame));
   }
-
-  CHECK(connectionOutput_); // the connect method has to be already executed
-  connectionOutput_->onNext(std::move(frame));
 }
 
-}
+} // namespace rsocket

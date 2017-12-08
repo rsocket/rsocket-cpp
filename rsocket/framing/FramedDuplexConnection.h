@@ -19,7 +19,7 @@ class FramedDuplexConnection : public virtual DuplexConnection {
 
   ~FramedDuplexConnection();
 
-  yarpl::Reference<DuplexConnection::Subscriber> getOutput() override;
+  void send(std::unique_ptr<folly::IOBuf>) override;
 
   void setInput(yarpl::Reference<DuplexConnection::Subscriber>) override;
 
