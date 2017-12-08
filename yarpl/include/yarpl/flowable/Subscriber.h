@@ -63,7 +63,8 @@ class BaseSubscriber : public Subscriber<T>, public yarpl::enable_get_ref {
         << "Already got terminating signal method";
 #endif
 
-    if(auto sub = std::atomic_exchange(&subscription_, {nullptr})) {
+    Reference<Subscription> null;
+    if (auto sub = std::atomic_exchange(&subscription_, null)) {
       KEEP_REF_TO_THIS();
       onCompleteImpl();
       onTerminateImpl();
@@ -78,7 +79,8 @@ class BaseSubscriber : public Subscriber<T>, public yarpl::enable_get_ref {
         << "Already got terminating signal method";
 #endif
 
-    if(auto sub = std::atomic_exchange(&subscription_, {nullptr})) {
+    Reference<Subscription> null;
+    if (auto sub = std::atomic_exchange(&subscription_, null)) {
       KEEP_REF_TO_THIS();
       onErrorImpl(std::move(e));
       onTerminateImpl();
@@ -100,7 +102,8 @@ class BaseSubscriber : public Subscriber<T>, public yarpl::enable_get_ref {
   }
 
   void cancel() {
-    if(auto sub = std::atomic_exchange(&subscription_, {nullptr})) {
+    Reference<Subscription> null;
+    if (auto sub = std::atomic_exchange(&subscription_, null)) {
       KEEP_REF_TO_THIS();
       sub->cancel();
       onTerminateImpl();
@@ -134,7 +137,7 @@ protected:
 
  private:
   // keeps a reference alive to the subscription
-  AtomicReference<Subscription> subscription_;
+  Reference<Subscription> subscription_;
 
 #ifdef DEBUG
   std::atomic<bool> gotOnSubscribe_{false};

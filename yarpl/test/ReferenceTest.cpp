@@ -10,7 +10,6 @@
 
 using yarpl::Refcounted;
 using yarpl::Reference;
-using yarpl::AtomicReference;
 using yarpl::flowable::Subscriber;
 using yarpl::flowable::BaseSubscriber;
 
@@ -78,11 +77,11 @@ TEST(ReferenceTest, MoveAssignTemplate) {
 }
 
 TEST(ReferenceTest, Construction) {
-  AtomicReference<MyRefcounted> a{yarpl::make_ref<MyRefcounted>(1)};
+  Reference<MyRefcounted> a{yarpl::make_ref<MyRefcounted>(1)};
   EXPECT_EQ(1u, a.use_count());
   EXPECT_EQ(1, a->i);
 
-  AtomicReference<MyRefcounted> b = yarpl::make_ref<MyRefcounted>(2);
+  Reference<MyRefcounted> b = yarpl::make_ref<MyRefcounted>(2);
   EXPECT_EQ(1u, b.use_count());
   EXPECT_EQ(2, b->i);
 }

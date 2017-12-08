@@ -63,7 +63,8 @@ class FlowableOperator : public Flowable<D> {
 
     /// Terminates both ends of an operator normally.
     void terminate() {
-      auto subscriber = std::atomic_exchange(&subscriber_, {nullptr});
+      Reference<Subscriber<D>> null;
+      auto subscriber = std::atomic_exchange(&subscriber_, null);
       BaseSubscriber<U>::cancel();
       if (subscriber) {
         subscriber->onComplete();
@@ -72,7 +73,8 @@ class FlowableOperator : public Flowable<D> {
 
     /// Terminates both ends of an operator with an error.
     void terminateErr(folly::exception_wrapper ew) {
-      auto subscriber = std::atomic_exchange(&subscriber_, {nullptr});
+      Reference<Subscriber<D>> null;
+      auto subscriber = std::atomic_exchange(&subscriber_, null);
       BaseSubscriber<U>::cancel();
       if (subscriber) {
         subscriber->onError(std::move(ew));
@@ -86,7 +88,8 @@ class FlowableOperator : public Flowable<D> {
     }
 
     void cancel() override {
-      auto subscriber = std::atomic_exchange(&subscriber_, {nullptr});
+      Reference<Subscriber<D>> null;
+      auto subscriber = std::atomic_exchange(&subscriber_, null);
       BaseSubscriber<U>::cancel();
     }
 
@@ -97,13 +100,15 @@ class FlowableOperator : public Flowable<D> {
     }
 
     void onCompleteImpl() override {
-      if (auto subscriber = std::atomic_exchange(&subscriber_, {nullptr})) {
+      Reference<Subscriber<D>> null;
+      if (auto subscriber = std::atomic_exchange(&subscriber_, null)) {
         subscriber->onComplete();
       }
     }
 
     void onErrorImpl(folly::exception_wrapper ew) override {
-      if (auto subscriber = std::atomic_exchange(&subscriber_, {nullptr})) {
+      Reference<Subscriber<D>> null;
+      if (auto subscriber = std::atomic_exchange(&subscriber_, null)) {
         subscriber->onError(std::move(ew));
       }
     }
@@ -116,7 +121,7 @@ class FlowableOperator : public Flowable<D> {
     /// subscriber is retained as long as calls on it can be made.  (Note: the
     /// subscriber in turn maintains a reference on this subscription object
     /// until cancellation and/or completion.)
-    AtomicReference<Subscriber<D>> subscriber_;
+    Reference<Subscriber<D>> subscriber_;
   };
 
   Reference<Flowable<U>> upstream_;
