@@ -43,14 +43,14 @@ class BaseSubscriber : public Subscriber<T> {
   // methods SHOULD ensure that these are invoked as well.
   void onSubscribe(Reference<Subscription> subscription) final override {
     DCHECK(subscription);
-    CHECK(!subscription_);
+    CHECK(!subscription_.load());
 
 #ifdef DEBUG
     DCHECK(!gotOnSubscribe_.exchange(true))
         << "Already subscribed to BaseSubscriber";
 #endif
 
-    subscription_ = std::move(subscription);
+    subscription_.exchange(subscription);
     KEEP_REF_TO_THIS();
     onSubscribeImpl();
   }

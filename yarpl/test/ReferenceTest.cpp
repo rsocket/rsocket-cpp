@@ -86,14 +86,14 @@ TEST(ReferenceTest, Atomic) {
   auto a = yarpl::make_ref<MyRefcounted>(1);
   AtomicReference<MyRefcounted> b = a;
   EXPECT_EQ(2u, a->count());
-  EXPECT_EQ(2u, b->count()); // b and a point to same object
+  EXPECT_EQ(3u, b.load()->count()); // b and a point to same object
   EXPECT_EQ(1, a->i);
-  EXPECT_EQ(1, b->i);
+  EXPECT_EQ(1, b.load()->i);
 
   auto c = yarpl::make_ref<MyRefcounted>(2);
   {
     auto a_copy = b.exchange(c);
-    EXPECT_EQ(2, b->i);
+    EXPECT_EQ(2, b.load()->i);
     EXPECT_EQ(2u, a->count());
     EXPECT_EQ(2u, a_copy->count());
     EXPECT_EQ(1, a_copy->i);
@@ -101,15 +101,15 @@ TEST(ReferenceTest, Atomic) {
   EXPECT_EQ(1u, a->count()); // a_copy destroyed
 
   EXPECT_EQ(2u, c->count());
-  EXPECT_EQ(2u, b->count()); // b and c point to same object
+  EXPECT_EQ(3u, b.load()->count()); // b and c point to same object
 }
 
 TEST(ReferenceTest, Construction) {
   AtomicReference<MyRefcounted> a{yarpl::make_ref<MyRefcounted>(1)};
-  EXPECT_EQ(1u, a->count());
-  EXPECT_EQ(1, a->i);
+  EXPECT_EQ(2u, a.load()->count());
+  EXPECT_EQ(1, a.load()->i);
 
   AtomicReference<MyRefcounted> b = yarpl::make_ref<MyRefcounted>(2);
-  EXPECT_EQ(1u, b->count());
-  EXPECT_EQ(2, b->i);
+  EXPECT_EQ(2u, b.load()->count());
+  EXPECT_EQ(2, b.load()->i);
 }
