@@ -48,7 +48,7 @@ class FlowableOperator : public Flowable<D> {
         : flowableOperator_(std::move(flowable)),
           subscriber_(std::move(subscriber)) {
       CHECK(flowableOperator_);
-      CHECK(std::atomic_load(&subscriber_));
+      CHECK(yarpl::atomic_load(&subscriber_));
     }
 
     const Reference<Operator>& getFlowableOperator() {
@@ -56,7 +56,7 @@ class FlowableOperator : public Flowable<D> {
     }
 
     void subscriberOnNext(D value) {
-      if (auto subscriber = std::atomic_load(&subscriber_)) {
+      if (auto subscriber = yarpl::atomic_load(&subscriber_)) {
         subscriber->onNext(std::move(value));
       }
     }
@@ -64,7 +64,7 @@ class FlowableOperator : public Flowable<D> {
     /// Terminates both ends of an operator normally.
     void terminate() {
       Reference<Subscriber<D>> null;
-      auto subscriber = std::atomic_exchange(&subscriber_, null);
+      auto subscriber = yarpl::atomic_exchange(&subscriber_, null);
       BaseSubscriber<U>::cancel();
       if (subscriber) {
         subscriber->onComplete();
@@ -74,7 +74,7 @@ class FlowableOperator : public Flowable<D> {
     /// Terminates both ends of an operator with an error.
     void terminateErr(folly::exception_wrapper ew) {
       Reference<Subscriber<D>> null;
-      auto subscriber = std::atomic_exchange(&subscriber_, null);
+      auto subscriber = yarpl::atomic_exchange(&subscriber_, null);
       BaseSubscriber<U>::cancel();
       if (subscriber) {
         subscriber->onError(std::move(ew));
@@ -89,26 +89,26 @@ class FlowableOperator : public Flowable<D> {
 
     void cancel() override {
       Reference<Subscriber<D>> null;
-      auto subscriber = std::atomic_exchange(&subscriber_, null);
+      auto subscriber = yarpl::atomic_exchange(&subscriber_, null);
       BaseSubscriber<U>::cancel();
     }
 
     // Subscriber.
 
     void onSubscribeImpl() override {
-      std::atomic_load(&subscriber_)->onSubscribe(this->ref_from_this(this));
+      yarpl::atomic_load(&subscriber_)->onSubscribe(this->ref_from_this(this));
     }
 
     void onCompleteImpl() override {
       Reference<Subscriber<D>> null;
-      if (auto subscriber = std::atomic_exchange(&subscriber_, null)) {
+      if (auto subscriber = yarpl::atomic_exchange(&subscriber_, null)) {
         subscriber->onComplete();
       }
     }
 
     void onErrorImpl(folly::exception_wrapper ew) override {
       Reference<Subscriber<D>> null;
-      if (auto subscriber = std::atomic_exchange(&subscriber_, null)) {
+      if (auto subscriber = yarpl::atomic_exchange(&subscriber_, null)) {
         subscriber->onError(std::move(ew));
       }
     }
@@ -121,7 +121,7 @@ class FlowableOperator : public Flowable<D> {
     /// subscriber is retained as long as calls on it can be made.  (Note: the
     /// subscriber in turn maintains a reference on this subscription object
     /// until cancellation and/or completion.)
-    Reference<Subscriber<D>> subscriber_;
+    AtomicReference<Subscriber<D>> subscriber_;
   };
 
   Reference<Flowable<U>> upstream_;
@@ -788,7 +788,7 @@ class FlatMapOperator : public FlowableOperator<T, R, FlatMapOperator<T, R>> {
 
       void onSubscribeImpl() final {
 #ifdef DEBUG
-        if (auto fms = flatMapSubscription_.load()) {
+        if (auto fms = yarpl::atomic_load(&flatMapSubscription_)) {
           auto l = fms->lists.wlock();
           auto r = sync.wlock();
           if (!is_in_list(*this, l->pendingValue, l)) {
@@ -806,7 +806,7 @@ class FlatMapOperator : public FlowableOperator<T, R, FlatMapOperator<T, R>> {
       };
 
       void onNextImpl(R value) final {
-        if (auto fms = flatMapSubscription_.load()) {
+        if (auto fms = yarpl::atomic_load(&flatMapSubscription_)) {
           fms->onMappedSubscriberNext(this, std::move(value));
         }
       }
@@ -821,7 +821,8 @@ class FlatMapOperator : public FlowableOperator<T, R, FlatMapOperator<T, R>> {
       }
 
       void onTerminateImpl() override {
-        if (auto fms = flatMapSubscription_.exchange(nullptr)) {
+        Reference<FMSubscription> null;
+        if (auto fms = yarpl::atomic_exchange(&flatMapSubscription_, null)) {
           fms->onMappedSubscriberTerminate(this);
         }
       }

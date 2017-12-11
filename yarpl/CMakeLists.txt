@@ -21,6 +21,17 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-weak-vtables -Wno-padded")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -momit-leaf-frame-pointer")
 
+if(YARPL_WRAP_SHARED_IN_LOCK)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DYARPL_WRAP_SHARED_IN_LOCK")
+    message("Compiler lacks support std::atomic<std::shared_ptr>; wrapping with a mutex")
+elseif(YARPL_WRAP_SHARED_IN_ATOMIC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DYARPL_WRAP_SHARED_IN_ATOMIC")
+    message("Compiler lacks std::shared_ptr atomic overloads; wrapping in std::atomic")
+else()
+    message("Compiler has atomic std::shared_ptr support")
+endif()
+
+
 if(${CMAKE_CXX_COMPILER_ID} MATCHES GNU)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -latomic")
 endif() 

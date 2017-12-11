@@ -43,14 +43,14 @@ class BaseSubscriber : public Subscriber<T>, public yarpl::enable_get_ref {
   // methods SHOULD ensure that these are invoked as well.
   void onSubscribe(Reference<Subscription> subscription) final override {
     CHECK(subscription);
-    CHECK(!std::atomic_load(&subscription_));
+    CHECK(!yarpl::atomic_load(&subscription_));
 
 #ifdef DEBUG
     DCHECK(!gotOnSubscribe_.exchange(true))
         << "Already subscribed to BaseSubscriber";
 #endif
 
-    subscription_.store(subscription);
+    yarpl::atomic_store(&subscription_, std::move(subscription));
     KEEP_REF_TO_THIS();
     onSubscribeImpl();
   }
@@ -64,7 +64,7 @@ class BaseSubscriber : public Subscriber<T>, public yarpl::enable_get_ref {
 #endif
 
     Reference<Subscription> null;
-    if (auto sub = std::atomic_exchange(&subscription_, null)) {
+    if (auto sub = yarpl::atomic_exchange(&subscription_, null)) {
       KEEP_REF_TO_THIS();
       onCompleteImpl();
       onTerminateImpl();
@@ -80,7 +80,7 @@ class BaseSubscriber : public Subscriber<T>, public yarpl::enable_get_ref {
 #endif
 
     Reference<Subscription> null;
-    if (auto sub = std::atomic_exchange(&subscription_, null)) {
+    if (auto sub = yarpl::atomic_exchange(&subscription_, null)) {
       KEEP_REF_TO_THIS();
       onErrorImpl(std::move(e));
       onTerminateImpl();
@@ -95,7 +95,7 @@ class BaseSubscriber : public Subscriber<T>, public yarpl::enable_get_ref {
     }
 #endif
 
-    if (auto sub = std::atomic_load(&subscription_)) {
+    if (auto sub = yarpl::atomic_load(&subscription_)) {
       KEEP_REF_TO_THIS();
       onNextImpl(std::move(t));
     }
@@ -103,7 +103,7 @@ class BaseSubscriber : public Subscriber<T>, public yarpl::enable_get_ref {
 
   void cancel() {
     Reference<Subscription> null;
-    if (auto sub = std::atomic_exchange(&subscription_, null)) {
+    if (auto sub = yarpl::atomic_exchange(&subscription_, null)) {
       KEEP_REF_TO_THIS();
       sub->cancel();
       onTerminateImpl();
@@ -116,7 +116,7 @@ class BaseSubscriber : public Subscriber<T>, public yarpl::enable_get_ref {
   }
 
   void request(int64_t n) {
-    if (auto sub = std::atomic_load(&subscription_)) {
+    if (auto sub = yarpl::atomic_load(&subscription_)) {
       KEEP_REF_TO_THIS();
       sub->request(n);
     }
@@ -137,7 +137,7 @@ protected:
 
  private:
   // keeps a reference alive to the subscription
-  Reference<Subscription> subscription_;
+  AtomicReference<Subscription> subscription_;
 
 #ifdef DEBUG
   std::atomic<bool> gotOnSubscribe_{false};

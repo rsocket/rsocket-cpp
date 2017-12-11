@@ -156,9 +156,34 @@ set(GMOCK_LIBS
 set(CMAKE_CXX_STANDARD 14)
 
 # Common configuration for all build modes.
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Woverloaded-virtual")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+
+# does the compiler support std::atomic_load(&std::shared_ptr<T>) ?
+try_compile(HAS_NATIVE_ATOMIC_SHARED_PTR ${CMAKE_BINARY_DIR}/has_shared_ptr_support_rs
+    ${CMAKE_CURRENT_SOURCE_DIR}/yarpl/test/test_has_shared_ptr_support.cpp)
+
+# if it doesn't support the above,
+# does the compiler support std::atomic<std::shared_ptr<T>> ?
+try_compile(CAN_WRAP_SHARED_PTR_IN_ATOMIC ${CMAKE_BINARY_DIR}/test_wrap_shared_in_atomic_support_rs
+    ${CMAKE_CURRENT_SOURCE_DIR}/yarpl/test/test_wrap_shared_in_atomic_support.cpp)
+
+if(NOT HAS_NATIVE_ATOMIC_SHARED_PTR)
+  if(NOT CAN_WRAP_SHARED_PTR_IN_ATOMIC)
+    set(YARPL_WRAP_SHARED_IN_LOCK True)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DYARPL_WRAP_SHARED_IN_LOCK")
+    message("Compiler lacks support std::atomic<std::shared_ptr>; wrapping with a mutex")
+  else()
+    set(YARPL_WRAP_SHARED_IN_ATOMIC True)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DYARPL_WRAP_SHARED_IN_ATOMIC")
+    message("Compiler lacks std::shared_ptr atomic overloads; wrapping in std::atomic")
+  endif()
+else()
+    message("Compiler has atomic std::shared_ptr support")
+endif()
+
 
 set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Werror)
 
