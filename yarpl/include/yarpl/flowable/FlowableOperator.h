@@ -782,17 +782,18 @@ class FlatMapOperator : public FlowableOperator<T, R, FlatMapOperator<T, R>> {
           : flatMapSubscription_(std::move(subscription)) {}
 
       void onSubscribeImpl() final {
-#ifdef NDEBUG
-        {
-          auto l = flatMapSubscription_->lists.wlock();
+#ifdef DEBUG
+        if (auto fms = flatMapSubscription_.load()) {
+          auto l = fms->lists.wlock();
+          auto r = sync.wlock();
           if (!is_in_list(*this, l->pendingValue, l)) {
             LOG(INFO) << "failed: this=" << this;
             LOG(INFO) << "in list: ";
             debug_is_in_list(*this, l);
-            CHECK(false);
+            DCHECK(r->freeze);
+          } else {
           }
-          auto r = sync.wlock();
-          CHECK(!r->hasValue);
+          DCHECK(!r->hasValue);
         }
 #endif
 
@@ -800,7 +801,9 @@ class FlatMapOperator : public FlowableOperator<T, R, FlatMapOperator<T, R>> {
       };
 
       void onNextImpl(R value) final {
-        flatMapSubscription_->onMappedSubscriberNext(this, std::move(value));
+        if (auto fms = flatMapSubscription_.load()) {
+          fms->onMappedSubscriberNext(this, std::move(value));
+        }
       }
 
       // noop
@@ -813,8 +816,9 @@ class FlatMapOperator : public FlowableOperator<T, R, FlatMapOperator<T, R>> {
       }
 
       void onTerminateImpl() override {
-        flatMapSubscription_->onMappedSubscriberTerminate(this);
-        flatMapSubscription_ = nullptr;
+        if (auto fms = flatMapSubscription_.exchange(nullptr)) {
+          fms->onMappedSubscriberTerminate(this);
+        }
       }
 
       struct SyncData {
@@ -833,7 +837,7 @@ class FlatMapOperator : public FlowableOperator<T, R, FlatMapOperator<T, R>> {
       Reference<MappedStreamSubscriber> fmReference_{nullptr};
 
       // this is both a Subscriber and a Subscription<T>
-      Reference<FMSubscription> flatMapSubscription_{nullptr};
+      AtomicReference<FMSubscription> flatMapSubscription_{nullptr};
     };
 
     // used to make sure only one thread at a time is calling subscriberOnNext
@@ -877,7 +881,7 @@ class FlatMapOperator : public FlowableOperator<T, R, FlatMapOperator<T, R>> {
         L const& lists,
         bool should) {
       if (is_in_list(elem, list) != should) {
-#ifdef NDEBUG
+#ifdef DEBUG
         debug_is_in_list(elem, lists);
 #else
         (void) lists;
