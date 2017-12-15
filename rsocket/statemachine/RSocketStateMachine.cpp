@@ -68,17 +68,11 @@ RSocketStateMachine::~RSocketStateMachine() {
   // close method
 }
 
-void RSocketStateMachine::setResumable(bool resumable) {
-  // We should set this flag before we are connected
-  DCHECK(isDisconnected());
-  isResumable_ = resumable;
-}
-
 void RSocketStateMachine::connectServer(
-    yarpl::Reference<FrameTransport> frameTransport,
-    const SetupParameters& setupParams) {
-  setResumable(setupParams.resumable);
-  connect(std::move(frameTransport), setupParams.protocolVersion);
+    yarpl::Reference<FrameTransport> transport,
+    const SetupParameters& params) {
+  isResumable_ = params.resumable;
+  connect(std::move(transport), params.protocolVersion);
   sendPendingFrames();
 }
 
@@ -122,13 +116,17 @@ void RSocketStateMachine::connectClient(
       : params.protocolVersion;
   setFrameSerializer(FrameSerializer::createFrameSerializer(version));
 
-  setResumable(params.resumable);
+  isResumable_ = params.resumable;
+
+  auto const keepaliveTime = keepaliveTimer_
+      ? static_cast<uint32_t>(keepaliveTimer_->keepaliveTime().count())
+      : Frame_SETUP::kMaxKeepaliveTime;
 
   Frame_SETUP frame(
       params.resumable ? FrameFlags::RESUME_ENABLE : FrameFlags::EMPTY,
       version.major,
       version.minor,
-      getKeepaliveTime(),
+      keepaliveTime,
       Frame_SETUP::kMaxLifetime,
       std::move(params.token),
       std::move(params.metadataMimeType),
@@ -152,6 +150,8 @@ void RSocketStateMachine::resumeClient(
     yarpl::Reference<FrameTransport> transport,
     std::unique_ptr<ClientResumeStatusCallback> resumeCallback,
     ProtocolVersion version) {
+  isResumable_ = true;
+
   // Verify warm-resumption using the same version.
   if (frameSerializer_ && frameSerializer_->protocolVersion() != version) {
     throw std::invalid_argument{"Client resuming with different version"};
@@ -176,8 +176,6 @@ void RSocketStateMachine::resumeClient(
 
   // Disconnect a previous client if there is one.
   disconnect(std::runtime_error{"Resuming client on a different connection"});
-
-  setResumable(true);
   reconnect(std::move(transport), std::move(resumeCallback));
   outputFrame(frameSerializer_->serializeOut(std::move(resumeFrame)));
 }
@@ -237,6 +235,11 @@ void RSocketStateMachine::sendPendingFrames() {
 }
 
 void RSocketStateMachine::disconnect(folly::exception_wrapper ex) {
+  if (!isResumable_) {
+    close(std::move(ex), StreamCompletionSignal::CONNECTION_END);
+    return;
+  }
+
   VLOG(2) << "Disconnecting transport";
   if (isDisconnected()) {
     return;
@@ -258,7 +261,7 @@ void RSocketStateMachine::disconnect(folly::exception_wrapper ex) {
 void RSocketStateMachine::close(
     folly::exception_wrapper ex,
     StreamCompletionSignal signal) {
-  if (isClosed()) {
+  if (isClosed_) {
     return;
   }
 
@@ -309,7 +312,7 @@ void RSocketStateMachine::closeFrameTransport(folly::exception_wrapper ex) {
   }
 }
 
-void RSocketStateMachine::disconnectOrCloseWithError(Frame_ERROR&& errorFrame) {
+void RSocketStateMachine::disconnectWithError(Frame_ERROR&& errorFrame) {
   if (isResumable_) {
     std::runtime_error exn{errorFrame.payload_.moveDataToString()};
     disconnect(std::move(exn));
@@ -426,7 +429,7 @@ void RSocketStateMachine::closeStreams(StreamCompletionSignal signal) {
 }
 
 void RSocketStateMachine::processFrame(std::unique_ptr<folly::IOBuf> frame) {
-  if (isClosed()) {
+  if (isClosed_) {
     VLOG(4) << "StateMachine has been closed.  Discarding incoming frame";
     return;
   }
@@ -870,18 +873,8 @@ void RSocketStateMachine::outputFrame(std::unique_ptr<folly::IOBuf> frame) {
   frameTransport_->outputFrameOrDrop(std::move(frame));
 }
 
-uint32_t RSocketStateMachine::getKeepaliveTime() const {
-  return keepaliveTimer_
-      ? static_cast<uint32_t>(keepaliveTimer_->keepaliveTime().count())
-      : Frame_SETUP::kMaxKeepaliveTime;
-}
-
 bool RSocketStateMachine::isDisconnected() const {
   return !frameTransport_;
-}
-
-bool RSocketStateMachine::isClosed() const {
-  return isClosed_;
 }
 
 void RSocketStateMachine::setFrameSerializer(
@@ -996,4 +989,5 @@ void RSocketStateMachine::registerSet(std::shared_ptr<ConnectionSet> set) {
 DuplexConnection* RSocketStateMachine::getConnection() {
   return frameTransport_ ? frameTransport_->getConnection() : nullptr;
 }
+
 } // namespace rsocket

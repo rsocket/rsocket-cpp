@@ -24,10 +24,10 @@ class MockConnectionAutomaton : public FrameSink {
   }
   MOCK_METHOD1(sendKeepalive_, void(std::unique_ptr<folly::IOBuf>&));
 
-  MOCK_METHOD1(disconnectOrCloseWithError_, void(Frame_ERROR&));
+  MOCK_METHOD1(disconnectWithError_, void(Frame_ERROR&));
 
-  void disconnectOrCloseWithError(Frame_ERROR&& error) override {
-    disconnectOrCloseWithError_(error);
+  void disconnectWithError(Frame_ERROR&& error) override {
+    disconnectWithError_(error);
   }
 };
 }
@@ -58,7 +58,7 @@ TEST(FollyKeepaliveTimerTest, NoResponse) {
       std::make_shared<StrictMock<MockConnectionAutomaton>>();
 
   EXPECT_CALL(*connectionAutomaton, sendKeepalive_(_)).Times(1);
-  EXPECT_CALL(*connectionAutomaton, disconnectOrCloseWithError_(_)).Times(1);
+  EXPECT_CALL(*connectionAutomaton, disconnectWithError_(_)).Times(1);
 
   folly::EventBase eventBase;
 

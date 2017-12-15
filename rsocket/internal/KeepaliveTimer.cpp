@@ -38,8 +38,8 @@ void KeepaliveTimer::sendKeepalive() {
     auto localPtr = connection_;
     stop();
     // TODO: we need to use max lifetime from the setup frame for this
-    localPtr->disconnectOrCloseWithError(
-        Frame_ERROR::connectionError("no response to keepalive"));
+    auto error = Frame_ERROR::connectionError("No response to KEEPALIVE");
+    localPtr->disconnectWithError(std::move(error));
   } else {
     connection_->sendKeepalive();
     pending_ = true;
@@ -66,4 +66,4 @@ void KeepaliveTimer::start(const std::shared_ptr<FrameSink>& connection) {
 void KeepaliveTimer::keepaliveReceived() {
   pending_ = false;
 }
-}
+} // namespace rsocket
