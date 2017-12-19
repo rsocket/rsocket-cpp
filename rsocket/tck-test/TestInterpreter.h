@@ -10,8 +10,8 @@
 #include "rsocket/RSocket.h"
 #include "rsocket/RSocketRequester.h"
 
-#include "tck-test/BaseSubscriber.h"
-#include "tck-test/TestSuite.h"
+#include "rsocket/tck-test/BaseSubscriber.h"
+#include "rsocket/tck-test/TestSuite.h"
 
 namespace folly {
 class EventBase;
