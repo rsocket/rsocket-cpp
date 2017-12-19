@@ -59,6 +59,8 @@ class SetupResumeAcceptor final {
         SetupResumeAcceptor::OnSetup,
         SetupResumeAcceptor::OnResume);
 
+    ~OneFrameSubscriber() = default;
+
     void setInput();
 
     /// Shut down the DuplexConnection, breaking the cycle between it and this

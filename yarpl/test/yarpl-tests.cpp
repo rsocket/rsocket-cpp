@@ -15,7 +15,5 @@ int main(int argc, char** argv) {
     ret = RUN_ALL_TESTS();
   }
 
-  yarpl::detail::debug_refcounts(std::cerr);
-
   return ret;
 }

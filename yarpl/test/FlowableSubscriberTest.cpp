@@ -46,11 +46,9 @@ TEST(FlowableSubscriberTest, TestKeepRefToThisIsDisabled) {
   // reference in `auto subscriber` would cause it to deallocate
   {
     InSequence s;
-    EXPECT_CALL(*subscriber, onSubscribeImpl())
-      .Times(1)
-      .WillOnce(Invoke([&] {
-        EXPECT_EQ(1UL, subscriber->count());
-      }));
+    EXPECT_CALL(*subscriber, onSubscribeImpl()).Times(1).WillOnce(Invoke([&] {
+      EXPECT_EQ(1UL, subscriber.use_count());
+    }));
   }
 
   subscriber->onSubscribe(subscription);
@@ -64,11 +62,9 @@ TEST(FlowableSubscriberTest, TestKeepRefToThisIsEnabled) {
   // deallocate it (until it's safe to do so)
   {
     InSequence s;
-    EXPECT_CALL(*subscriber, onSubscribeImpl())
-      .Times(1)
-      .WillOnce(Invoke([&] {
-        EXPECT_EQ(2UL, subscriber->count());
-      }));
+    EXPECT_CALL(*subscriber, onSubscribeImpl()).Times(1).WillOnce(Invoke([&] {
+      EXPECT_EQ(2UL, subscriber.use_count());
+    }));
   }
 
   subscriber->onSubscribe(subscription);

@@ -91,7 +91,7 @@ TEST(FlowableTest, SingleMovableFlowable) {
   auto value = std::make_unique<int>(123456);
 
   auto flowable = Flowables::justOnce(std::move(value));
-  EXPECT_EQ(std::size_t{1}, flowable->count());
+  EXPECT_EQ(1, flowable.use_count());
 
   size_t received = 0;
   auto subscriber =
