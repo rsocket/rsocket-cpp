@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "tck-test/BaseSubscriber.h"
+#include "rsocket/tck-test/BaseSubscriber.h"
 
 #include "yarpl/Single.h"
 
