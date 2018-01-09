@@ -255,8 +255,6 @@ add_library(
   rsocket/framing/FramedDuplexConnection.h
   rsocket/framing/FramedReader.cpp
   rsocket/framing/FramedReader.h
-  rsocket/framing/FramedWriter.cpp
-  rsocket/framing/FramedWriter.h
   rsocket/framing/ScheduledFrameProcessor.cpp
   rsocket/framing/ScheduledFrameProcessor.h
   rsocket/framing/ScheduledFrameTransport.cpp
@@ -335,43 +333,43 @@ install(DIRECTORY yarpl/include/yarpl DESTINATION include FILES_MATCHING PATTERN
 
 add_executable(
   tests
-  test/ColdResumptionTest.cpp
-  test/ConnectionEventsTest.cpp
-  test/PayloadTest.cpp
-  test/RSocketClientServerTest.cpp
-  test/RSocketClientTest.cpp
-  test/RSocketTests.cpp
-  test/RSocketTests.h
-  test/RequestChannelTest.cpp
-  test/RequestResponseTest.cpp
-  test/RequestStreamTest.cpp
-  test/RequestStreamTest_concurrency.cpp
-  test/Test.cpp
-  test/WarmResumeManagerTest.cpp
-  test/WarmResumptionTest.cpp
-  test/framing/FrameTest.cpp
-  test/framing/FrameTransportTest.cpp
-  test/framing/FramedReaderTest.cpp
-  test/handlers/HelloServiceHandler.cpp
-  test/handlers/HelloServiceHandler.h
-  test/handlers/HelloStreamRequestHandler.cpp
-  test/handlers/HelloStreamRequestHandler.h
-  test/internal/AllowanceTest.cpp
-  test/internal/ConnectionSetTest.cpp
-  test/internal/KeepaliveTimerTest.cpp
-  test/internal/ResumeIdentificationToken.cpp
-  test/internal/SetupResumeAcceptorTest.cpp
-  test/internal/SwappableEventBaseTest.cpp
-  test/test_utils/ColdResumeManager.cpp
-  test/test_utils/ColdResumeManager.h
-  test/test_utils/GenericRequestResponseHandler.h
-  test/test_utils/MockDuplexConnection.h
-  test/test_utils/MockKeepaliveTimer.h
-  test/test_utils/MockRequestHandler.h
-  test/test_utils/MockStats.h
-  test/transport/DuplexConnectionTest.cpp
-  test/transport/DuplexConnectionTest.h
-  test/transport/TcpDuplexConnectionTest.cpp)
+  rsocket/test/ColdResumptionTest.cpp
+  rsocket/test/ConnectionEventsTest.cpp
+  rsocket/test/PayloadTest.cpp
+  rsocket/test/RSocketClientServerTest.cpp
+  rsocket/test/RSocketClientTest.cpp
+  rsocket/test/RSocketTests.cpp
+  rsocket/test/RSocketTests.h
+  rsocket/test/RequestChannelTest.cpp
+  rsocket/test/RequestResponseTest.cpp
+  rsocket/test/RequestStreamTest.cpp
+  rsocket/test/RequestStreamTest_concurrency.cpp
+  rsocket/test/Test.cpp
+  rsocket/test/WarmResumeManagerTest.cpp
+  rsocket/test/WarmResumptionTest.cpp
+  rsocket/test/framing/FrameTest.cpp
+  rsocket/test/framing/FrameTransportTest.cpp
+  rsocket/test/framing/FramedReaderTest.cpp
+  rsocket/test/handlers/HelloServiceHandler.cpp
+  rsocket/test/handlers/HelloServiceHandler.h
+  rsocket/test/handlers/HelloStreamRequestHandler.cpp
+  rsocket/test/handlers/HelloStreamRequestHandler.h
+  rsocket/test/internal/AllowanceTest.cpp
+  rsocket/test/internal/ConnectionSetTest.cpp
+  rsocket/test/internal/KeepaliveTimerTest.cpp
+  rsocket/test/internal/ResumeIdentificationToken.cpp
+  rsocket/test/internal/SetupResumeAcceptorTest.cpp
+  rsocket/test/internal/SwappableEventBaseTest.cpp
+  rsocket/test/test_utils/ColdResumeManager.cpp
+  rsocket/test/test_utils/ColdResumeManager.h
+  rsocket/test/test_utils/GenericRequestResponseHandler.h
+  rsocket/test/test_utils/MockDuplexConnection.h
+  rsocket/test/test_utils/MockKeepaliveTimer.h
+  rsocket/test/test_utils/MockRequestHandler.h
+  rsocket/test/test_utils/MockStats.h
+  rsocket/test/transport/DuplexConnectionTest.cpp
+  rsocket/test/transport/DuplexConnectionTest.h
+  rsocket/test/transport/TcpDuplexConnectionTest.cpp)
 
 target_link_libraries(
   tests
@@ -395,7 +393,7 @@ add_test(NAME RSocketTests-0.1 COMMAND tests --rs_use_protocol_version=0.1)
 ### Fuzzer harnesses
 add_executable(
   frame_fuzzer
-  test/fuzzers/frame_fuzzer.cpp)
+  rsocket/test/fuzzers/frame_fuzzer.cpp)
 
 target_link_libraries(
   frame_fuzzer
@@ -417,20 +415,20 @@ add_test(
 
 add_executable(
   tckclient
-  tck-test/client.cpp
-  tck-test/TestFileParser.cpp
-  tck-test/TestFileParser.h
-  tck-test/FlowableSubscriber.cpp
-  tck-test/FlowableSubscriber.h
-  tck-test/SingleSubscriber.cpp
-  tck-test/SingleSubscriber.h
-  tck-test/TestSuite.cpp
-  tck-test/TestSuite.h
-  tck-test/TestInterpreter.cpp
-  tck-test/TestInterpreter.h
-  tck-test/TypedCommands.h
-  tck-test/BaseSubscriber.cpp
-  tck-test/BaseSubscriber.h)
+  rsocket/tck-test/client.cpp
+  rsocket/tck-test/TestFileParser.cpp
+  rsocket/tck-test/TestFileParser.h
+  rsocket/tck-test/FlowableSubscriber.cpp
+  rsocket/tck-test/FlowableSubscriber.h
+  rsocket/tck-test/SingleSubscriber.cpp
+  rsocket/tck-test/SingleSubscriber.h
+  rsocket/tck-test/TestSuite.cpp
+  rsocket/tck-test/TestSuite.h
+  rsocket/tck-test/TestInterpreter.cpp
+  rsocket/tck-test/TestInterpreter.h
+  rsocket/tck-test/TypedCommands.h
+  rsocket/tck-test/BaseSubscriber.cpp
+  rsocket/tck-test/BaseSubscriber.h)
 
 target_link_libraries(
   tckclient
@@ -441,11 +439,11 @@ target_link_libraries(
 
 add_executable(
   tckserver
-  tck-test/server.cpp
-  tck-test/MarbleProcessor.cpp
-  tck-test/MarbleProcessor.h
-  test/test_utils/StatsPrinter.cpp
-  test/test_utils/StatsPrinter.h)
+  rsocket/tck-test/server.cpp
+  rsocket/tck-test/MarbleProcessor.cpp
+  rsocket/tck-test/MarbleProcessor.h
+  rsocket/test/test_utils/StatsPrinter.cpp
+  rsocket/test/test_utils/StatsPrinter.h)
 
 target_link_libraries(
   tckserver
@@ -470,10 +468,10 @@ file(DOWNLOAD ${TCK_DRIVERS_URL} ${CMAKE_SOURCE_DIR}/${TCK_DRIVERS_JAR})
 
 add_library(
   reactivesocket_examples_util
-  examples/util/ExampleSubscriber.cpp
-  examples/util/ExampleSubscriber.h
-  test/test_utils/ColdResumeManager.h
-  test/test_utils/ColdResumeManager.cpp
+  rsocket/examples/util/ExampleSubscriber.cpp
+  rsocket/examples/util/ExampleSubscriber.h
+  rsocket/test/test_utils/ColdResumeManager.h
+  rsocket/test/test_utils/ColdResumeManager.cpp
 )
 
 target_link_libraries(
@@ -487,7 +485,7 @@ target_link_libraries(
 
 add_executable(
   example_request-response-hello-world-server
-  examples/request-response-hello-world/RequestResponseHelloWorld_Server.cpp
+  rsocket/examples/request-response-hello-world/RequestResponseHelloWorld_Server.cpp
 )
 
 target_link_libraries(
@@ -500,7 +498,7 @@ target_link_libraries(
 
 add_executable(
   example_request-response-hello-world-client
-  examples/request-response-hello-world/RequestResponseHelloWorld_Client.cpp
+  rsocket/examples/request-response-hello-world/RequestResponseHelloWorld_Client.cpp
 )
 
 target_link_libraries(
@@ -515,7 +513,7 @@ target_link_libraries(
 
 add_executable(
   example_fire-and-forget-hello-world-server
-  examples/fire-and-forget-hello-world/FireAndForgetHelloWorld_Server.cpp
+  rsocket/examples/fire-and-forget-hello-world/FireAndForgetHelloWorld_Server.cpp
 )
 
 target_link_libraries(
@@ -528,7 +526,7 @@ target_link_libraries(
 
 add_executable(
   example_fire-and-forget-hello-world-client
-  examples/fire-and-forget-hello-world/FireAndForgetHelloWorld_Client.cpp
+  rsocket/examples/fire-and-forget-hello-world/FireAndForgetHelloWorld_Client.cpp
 )
 
 target_link_libraries(
@@ -544,7 +542,7 @@ target_link_libraries(
 
 add_executable(
   example_stream-hello-world-server
-  examples/stream-hello-world/StreamHelloWorld_Server.cpp
+  rsocket/examples/stream-hello-world/StreamHelloWorld_Server.cpp
 )
 
 target_link_libraries(
@@ -557,7 +555,7 @@ target_link_libraries(
 
 add_executable(
   example_stream-hello-world-client
-  examples/stream-hello-world/StreamHelloWorld_Client.cpp
+  rsocket/examples/stream-hello-world/StreamHelloWorld_Client.cpp
 )
 
 target_link_libraries(
@@ -572,7 +570,7 @@ target_link_libraries(
 
 add_executable(
   example_channel-hello-world-server
-  examples/channel-hello-world/ChannelHelloWorld_Server.cpp
+  rsocket/examples/channel-hello-world/ChannelHelloWorld_Server.cpp
 )
 
 target_link_libraries(
@@ -585,7 +583,7 @@ target_link_libraries(
 
 add_executable(
   example_channel-hello-world-client
-  examples/channel-hello-world/ChannelHelloWorld_Client.cpp
+  rsocket/examples/channel-hello-world/ChannelHelloWorld_Client.cpp
 )
 
 target_link_libraries(
@@ -600,7 +598,7 @@ target_link_libraries(
 
 add_executable(
   example_observable-to-flowable-server
-  examples/stream-observable-to-flowable/StreamObservableToFlowable_Server.cpp
+  rsocket/examples/stream-observable-to-flowable/StreamObservableToFlowable_Server.cpp
 )
 
 target_link_libraries(
@@ -613,7 +611,7 @@ target_link_libraries(
 
 add_executable(
   example_observable-to-flowable-client
-  examples/stream-observable-to-flowable/StreamObservableToFlowable_Client.cpp
+  rsocket/examples/stream-observable-to-flowable/StreamObservableToFlowable_Client.cpp
 )
 
 target_link_libraries(
@@ -628,11 +626,11 @@ target_link_libraries(
 
 add_executable(
   example_conditional-request-handling-server
-  examples/conditional-request-handling/ConditionalRequestHandling_Server.cpp
-  examples/conditional-request-handling/TextRequestHandler.h
-  examples/conditional-request-handling/TextRequestHandler.cpp
-  examples/conditional-request-handling/JsonRequestHandler.cpp
-  examples/conditional-request-handling/JsonRequestHandler.h
+  rsocket/examples/conditional-request-handling/ConditionalRequestHandling_Server.cpp
+  rsocket/examples/conditional-request-handling/TextRequestHandler.h
+  rsocket/examples/conditional-request-handling/TextRequestHandler.cpp
+  rsocket/examples/conditional-request-handling/JsonRequestHandler.cpp
+  rsocket/examples/conditional-request-handling/JsonRequestHandler.h
 )
 
 target_link_libraries(
@@ -645,7 +643,7 @@ target_link_libraries(
 
 add_executable(
   example_conditional-request-handling-client
-  examples/conditional-request-handling/ConditionalRequestHandling_Client.cpp
+  rsocket/examples/conditional-request-handling/ConditionalRequestHandling_Client.cpp
 )
 
 target_link_libraries(
@@ -660,7 +658,7 @@ target_link_libraries(
 
 add_executable(
   example_resumption-server
-  examples/resumption/Resumption_Server.cpp
+  rsocket/examples/resumption/Resumption_Server.cpp
 )
 
 target_link_libraries(
@@ -673,7 +671,7 @@ target_link_libraries(
 
 add_executable(
   example_warm-resumption-client
-  examples/resumption/WarmResumption_Client.cpp
+  rsocket/examples/resumption/WarmResumption_Client.cpp
 )
 
 target_link_libraries(
@@ -686,7 +684,7 @@ target_link_libraries(
 
 add_executable(
   example_cold-resumption-client
-  examples/resumption/ColdResumption_Client.cpp
+  rsocket/examples/resumption/ColdResumption_Client.cpp
 )
 
 target_link_libraries(
@@ -702,5 +700,5 @@ target_link_libraries(
 ########################################
 
 if (BUILD_BENCHMARKS)
-  add_subdirectory(benchmarks)
+  add_subdirectory(rsocket/benchmarks)
 endif ()

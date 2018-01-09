@@ -4,7 +4,7 @@
 #include <gtest/gtest.h>
 
 #include "rsocket/statemachine/StreamState.h"
-#include "test/test_utils/MockStats.h"
+#include "rsocket/test/test_utils/MockStats.h"
 
 using namespace rsocket;
 using namespace testing;
