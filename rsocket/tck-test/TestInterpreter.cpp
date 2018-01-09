@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "tck-test/TestInterpreter.h"
+#include "rsocket/tck-test/TestInterpreter.h"
 
 #include <folly/Format.h>
 #include <folly/String.h>
@@ -8,9 +8,9 @@
 
 #include "rsocket/RSocket.h"
 #include "rsocket/transports/tcp/TcpConnectionFactory.h"
-#include "tck-test/FlowableSubscriber.h"
-#include "tck-test/SingleSubscriber.h"
-#include "tck-test/TypedCommands.h"
+#include "rsocket/tck-test/FlowableSubscriber.h"
+#include "rsocket/tck-test/SingleSubscriber.h"
+#include "rsocket/tck-test/TypedCommands.h"
 
 using namespace folly;
 using namespace yarpl;

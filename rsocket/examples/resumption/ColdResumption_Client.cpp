@@ -9,7 +9,7 @@
 #include "rsocket/RSocket.h"
 
 #include "rsocket/transports/tcp/TcpConnectionFactory.h"
-#include "test/test_utils/ColdResumeManager.h"
+#include "rsocket/test/test_utils/ColdResumeManager.h"
 
 using namespace rsocket;
 using namespace yarpl;

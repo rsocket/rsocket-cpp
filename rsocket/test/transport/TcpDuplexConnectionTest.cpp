@@ -7,7 +7,7 @@
 
 #include "rsocket/transports/tcp/TcpConnectionAcceptor.h"
 #include "rsocket/transports/tcp/TcpConnectionFactory.h"
-#include "test/transport/DuplexConnectionTest.h"
+#include "rsocket/test/transport/DuplexConnectionTest.h"
 
 namespace rsocket {
 namespace tests {

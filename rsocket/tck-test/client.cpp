@@ -8,8 +8,8 @@
 
 #include "rsocket/RSocket.h"
 
-#include "tck-test/TestFileParser.h"
-#include "tck-test/TestInterpreter.h"
+#include "rsocket/tck-test/TestFileParser.h"
+#include "rsocket/tck-test/TestInterpreter.h"
 
 #include "rsocket/transports/tcp/TcpConnectionFactory.h"
 
