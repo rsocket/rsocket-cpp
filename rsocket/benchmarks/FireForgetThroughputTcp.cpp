@@ -1,7 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "benchmarks/Fixture.h"
-#include "benchmarks/Latch.h"
+#include "rsocket/benchmarks/Fixture.h"
+#include "rsocket/benchmarks/Latch.h"
 
 #include <folly/Benchmark.h>
 #include <folly/portability/GFlags.h>

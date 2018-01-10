@@ -5,7 +5,7 @@
 #include <folly/Conv.h>
 #include <folly/String.h>
 
-#include "tck-test/TestSuite.h"
+#include "rsocket/tck-test/TestSuite.h"
 
 namespace rsocket {
 namespace tck {
