@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "tck-test/BaseSubscriber.h"
+#include "rsocket/tck-test/BaseSubscriber.h"
 
 #include <thread>
 

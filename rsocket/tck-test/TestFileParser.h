@@ -4,7 +4,7 @@
 
 #include <fstream>
 
-#include "tck-test/TestSuite.h"
+#include "rsocket/tck-test/TestSuite.h"
 
 namespace rsocket {
 namespace tck {

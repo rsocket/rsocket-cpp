@@ -16,7 +16,7 @@
 
 #include "rsocket/transports/tcp/TcpConnectionAcceptor.h"
 
-#include "tck-test/MarbleProcessor.h"
+#include "rsocket/tck-test/MarbleProcessor.h"
 
 using namespace folly;
 using namespace rsocket;
