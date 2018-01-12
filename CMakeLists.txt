@@ -199,6 +199,7 @@ include_directories(${GMOCK_SOURCE_DIR}/googlemock/include)
 include_directories(${GMOCK_SOURCE_DIR}/googletest/include)
 
 add_subdirectory(yarpl)
+add_subdirectory(third_party)
 
 add_library(
   ReactiveSocket
