@@ -10,7 +10,74 @@
 #include "rsocket/Payload.h"
 #include "rsocket/statemachine/RSocketStateMachine.h"
 
+#include "rs/publisher.h"
+
 namespace rsocket {
+
+namespace detail {
+
+template <typename T, typename ShkSubscriber>
+struct RsRequestStreamSubscriber : yarpl::flowable::BaseSubscriber<T> {
+  RsRequestStreamSubscriber(ShkSubscriber&& sub, folly::EventBase* evb)
+      : shkSubscriber_(std::move(sub)), evb_(evb) {}
+
+  void onSubscribeImpl() override final {
+    evb_->runInEventBaseThread([=] {
+      VLOG(0) << "got onSubscribeImpl()";
+      wasSubscribed_ = true;
+      auto tmp = reqBacklog_;
+      reqBacklog_ = 0;
+
+      if (canceled_) {
+        return;
+      } else {
+        VLOG(0) << "calling deferred request(" << tmp << ")";
+        this->request(tmp);
+      }
+    });
+  }
+
+  void onNextImpl(T t) override final {
+    VLOG(0) << "got OnNext";
+    shkSubscriber_.OnNext(std::move(t));
+  }
+  void onCompleteImpl() override final {
+    VLOG(0) << "got OnComplete";
+    shkSubscriber_.OnComplete();
+  }
+  void onErrorImpl(folly::exception_wrapper e) override final {
+    VLOG(0) << "got OnError";
+    shkSubscriber_.OnError(std::exception_ptr(e.to_exception_ptr()));
+  }
+
+  void requestFromRs(int64_t req) {
+    VLOG(0) << "requestFromRs(" << req << ")";
+    evb_->runInEventBaseThread([=] {
+      if (!wasSubscribed_) {
+        reqBacklog_ += req;
+      } else if (!canceled_) {
+        VLOG(0) << "calling immediate request(" << req << ")";
+        this->request(req);
+      }
+    });
+  }
+
+  void cancelFromRs() {
+    evb_->runInEventBaseThread([=] {
+      VLOG(0) << "calling cancel()";
+      canceled_ = true;
+    });
+  }
+
+ private:
+  ShkSubscriber shkSubscriber_;
+  bool wasSubscribed_{false};
+  folly::EventBase* evb_;
+  int64_t reqBacklog_{0};
+  bool canceled_{false};
+};
+
+} // namespace detail
 
 /**
  * Request APIs to submit requests on an RSocket connection.
@@ -53,6 +120,35 @@ class RSocketRequester {
    */
   virtual std::shared_ptr<yarpl::flowable::Flowable<rsocket::Payload>>
   requestStream(rsocket::Payload request);
+
+  template <typename PayloadGen>
+  auto rsRequestStream(PayloadGen&& payloadGen) {
+    return shk::MakePublisher([payloadGen = std::move(payloadGen),
+                               srs = stateMachine_,
+                               eb = eventBase_](auto&& rsSubscriber) {
+      auto yarplSubscriber = yarpl::make_ref<detail::RsRequestStreamSubscriber<
+          rsocket::Payload,
+          std::decay_t<decltype(rsSubscriber)>>>(
+          std::forward<decltype(rsSubscriber)>(rsSubscriber), eb);
+
+      auto payload = payloadGen();
+      eb->runInEventBaseThread([srs = std::move(srs),
+                                yarplSubscriber,
+                                payload = std::move(payload)]() mutable {
+        VLOG(0) << "Calling createStreamRequester()";
+        srs->streamsFactory().createStreamRequester(
+            std::move(payload), yarplSubscriber);
+      });
+
+      return shk::MakeSubscription(
+          // request(n)
+          [yarplSubscriber](shk::ElementCount n) {
+            yarplSubscriber->requestFromRs(n.Get());
+          },
+          // cancel
+          [yarplSubscriber] { yarplSubscriber->cancelFromRs(); });
+    });
+  }
 
   /**
    * Start a channel (streams in both directions).

@@ -8,6 +8,9 @@
 #include "yarpl/Flowable.h"
 #include "yarpl/flowable/TestSubscriber.h"
 
+#include "rs/map.h"
+#include "rs/pipe.h"
+
 using namespace yarpl;
 using namespace yarpl::flowable;
 using namespace rsocket;
@@ -223,4 +226,38 @@ TEST(RequestStreamTest, HandleErrorMidStream) {
   ts->awaitTerminalEvent();
   ts->assertValueCount(4);
   ts->assertOnErrorMessage("A wild Error appeared!");
+}
+
+TEST(RequestStreamTest, HelloAsyncRs) {
+  folly::ScopedEventBaseThread worker;
+  auto server = makeServer(std::make_shared<TestHandlerAsync>());
+  auto client = makeClient(worker.getEventBase(), *server->listeningPort());
+  auto requester = client->getRequester();
+
+  auto pipe = shk::Pipe(
+      requester->rsRequestStream([] { return Payload("Bob"); }),
+      shk::Map([](auto p) { return p.moveDataToString(); }));
+
+  folly::Baton<> baton;
+  int got{0};
+
+  auto sub = pipe.Subscribe(shk::MakeSubscriber(
+      [&](auto str) {
+        got++;
+        if (got == 1) {
+          CHECK_EQ(str, "Hello Bob 1!");
+        }
+      },
+      [&](auto err) {
+        // err
+        try {
+          std::rethrow_exception(err);
+        } catch (const std::exception& e) {
+          FAIL() << "failed with " << e.what();
+        }
+      },
+      [&] { baton.post(); }));
+  sub.Request(shk::ElementCount{100});
+  CHECK(baton.try_wait_for(std::chrono::seconds{1}));
+  CHECK_EQ(got, 40);
 }
