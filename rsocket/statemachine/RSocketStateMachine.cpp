@@ -874,8 +874,7 @@ void RSocketStateMachine::writeNewStream(
     StreamId streamId,
     StreamType streamType,
     uint32_t initialRequestN,
-    Payload payload,
-    bool completed) {
+    Payload payload) {
   if (coldResumeHandler_ && streamType != StreamType::FNF) {
     auto streamToken =
         coldResumeHandler_->generateStreamToken(payload, streamId, streamType);
@@ -887,7 +886,7 @@ void RSocketStateMachine::writeNewStream(
     case StreamType::CHANNEL:
       outputFrameOrEnqueue(Frame_REQUEST_CHANNEL(
           streamId,
-          completed ? FrameFlags::COMPLETE : FrameFlags::EMPTY,
+          FrameFlags::EMPTY,
           initialRequestN,
           std::move(payload)));
       break;

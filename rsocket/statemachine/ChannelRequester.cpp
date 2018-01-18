@@ -25,8 +25,7 @@ void ChannelRequester::onNext(Payload request) noexcept {
     newStream(
         StreamType::CHANNEL,
         static_cast<uint32_t>(initialN),
-        std::move(request),
-        false);
+        std::move(request));
     // We must inform ConsumerBase about an implicit allowance we have
     // requested from the remote end.
     ConsumerBase::addImplicitAllowance(initialN);

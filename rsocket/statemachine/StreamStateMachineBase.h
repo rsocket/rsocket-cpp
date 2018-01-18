@@ -58,8 +58,7 @@ class StreamStateMachineBase : public virtual yarpl::Refcounted {
   void newStream(
       StreamType streamType,
       uint32_t initialRequestN,
-      Payload payload,
-      bool completed = false);
+      Payload payload);
   void writePayload(Payload&& payload, bool complete);
   void writeRequestN(uint32_t n);
   void applicationError(std::string errorPayload);

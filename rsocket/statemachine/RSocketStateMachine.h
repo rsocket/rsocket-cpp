@@ -243,8 +243,7 @@ class RSocketStateMachine final
       StreamId streamId,
       StreamType streamType,
       uint32_t initialRequestN,
-      Payload payload,
-      bool completed) override;
+      Payload payload) override;
   void writeRequestN(Frame_REQUEST_N&&) override;
   void writeCancel(Frame_CANCEL&&) override;
 

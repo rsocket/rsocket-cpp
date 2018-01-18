@@ -36,10 +36,9 @@ void StreamStateMachineBase::endStream(StreamCompletionSignal) {
 void StreamStateMachineBase::newStream(
     StreamType streamType,
     uint32_t initialRequestN,
-    Payload payload,
-    bool completed) {
+    Payload payload) {
   writer_->writeNewStream(
-      streamId_, streamType, initialRequestN, std::move(payload), completed);
+      streamId_, streamType, initialRequestN, std::move(payload));
 }
 
 void StreamStateMachineBase::writePayload(Payload&& payload, bool complete) {
