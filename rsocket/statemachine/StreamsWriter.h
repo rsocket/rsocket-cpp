@@ -16,8 +16,7 @@ class StreamsWriter {
       StreamId streamId,
       StreamType streamType,
       uint32_t initialRequestN,
-      Payload payload,
-      bool TEMP_completed) = 0;
+      Payload payload) = 0;
 
   virtual void writeRequestN(Frame_REQUEST_N&&) = 0;
   virtual void writeCancel(Frame_CANCEL&&) = 0;
