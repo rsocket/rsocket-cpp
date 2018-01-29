@@ -10,7 +10,7 @@
 namespace rsocket {
 namespace tck {
 
-class BaseSubscriber : public virtual yarpl::Refcounted {
+class BaseSubscriber {
  public:
   virtual void request(int n) = 0;
   virtual void cancel() = 0;

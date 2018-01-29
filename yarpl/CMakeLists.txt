@@ -76,6 +76,7 @@ add_library(
         include/yarpl/flowable/Subscription.h
         include/yarpl/flowable/TestSubscriber.h
         src/yarpl/flowable/sources/Subscription.cpp
+        src/yarpl/flowable/sources/Flowables.cpp
         # Observable public API
         include/yarpl/Observable.h
         include/yarpl/observable/Observable.h
@@ -142,8 +143,6 @@ if (BUILD_TESTS)
     test/FlowableTest.cpp
     test/FlowableFlatMapTest.cpp
     test/Observable_test.cpp
-    test/RefcountedTest.cpp
-    test/ReferenceTest.cpp
     test/SubscribeObserveOnTests.cpp
     test/Single_test.cpp
     test/FlowableSubscriberTest.cpp

@@ -22,8 +22,7 @@ typedef std::map<std::string, std::shared_ptr<Subscriber<Payload>>> HelloSubscri
 
 namespace {
 
-class HelloSubscriber : public virtual Refcounted,
-                        public Subscriber<Payload> {
+class HelloSubscriber : public Subscriber<Payload> {
  public:
   void request(int n) {
     while (!subscription_) {

@@ -88,8 +88,7 @@ class ServerResponder : public RSocketResponder {
     } else {
       auto marbleProcessor = std::make_shared<tck::MarbleProcessor>(it->second);
       auto lambda = [marbleProcessor](
-          std::shared_ptr<yarpl::flowable::Subscriber<rsocket::Payload>> subscriber,
-          int64_t requested) mutable {
+          auto& subscriber, int64_t requested) mutable {
         return marbleProcessor->run(subscriber, requested);
       };
       return Flowable<rsocket::Payload>::create(std::move(lambda));

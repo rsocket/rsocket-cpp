@@ -14,9 +14,8 @@ class MarbleProcessor {
  public:
   explicit MarbleProcessor(const std::string /* marble */);
 
-  std::tuple<int64_t, bool> run(
-      std::shared_ptr<yarpl::flowable::Subscriber<rsocket::Payload>>
-          subscriber,
+  void run(
+      yarpl::flowable::Subscriber<rsocket::Payload>& subscriber,
       int64_t requested);
 
   void run(std::shared_ptr<yarpl::single::SingleObserver<rsocket::Payload>>
