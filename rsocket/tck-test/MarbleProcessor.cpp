@@ -67,12 +67,12 @@ MarbleProcessor::MarbleProcessor(const std::string marble)
   }
 }
 
-std::tuple<int64_t, bool> MarbleProcessor::run(
-    std::shared_ptr<yarpl::flowable::Subscriber<rsocket::Payload>> subscriber,
+void MarbleProcessor::run(
+    yarpl::flowable::Subscriber<rsocket::Payload>& subscriber,
     int64_t requested) {
   canSend_ += requested;
   if (index_ > marble_.size()) {
-    return std::make_tuple(requested, true);
+    return;
   }
 
   while (true) {
@@ -80,12 +80,10 @@ std::tuple<int64_t, bool> MarbleProcessor::run(
     switch (c) {
       case '#':
         LOG(INFO) << "Sending onError";
-        subscriber->onError(std::runtime_error("Marble Error"));
-        return std::make_tuple(requested, true);
+        subscriber.onError(std::runtime_error("Marble Error"));
       case '|':
         LOG(INFO) << "Sending onComplete";
-        subscriber->onComplete();
-        return std::make_tuple(requested, true);
+        subscriber.onComplete();
       default: {
         if (canSend_ > 0) {
           Payload payload;
@@ -102,10 +100,8 @@ std::tuple<int64_t, bool> MarbleProcessor::run(
             payload =
                 Payload(folly::to<std::string>(c), folly::to<std::string>(c));
           }
-          subscriber->onNext(std::move(payload));
+          subscriber.onNext(std::move(payload));
           canSend_--;
-        } else {
-          return std::make_tuple(requested, false);
         }
       }
     }
