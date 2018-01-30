@@ -38,8 +38,21 @@ struct GenericRequestResponseHandler : public rsocket::RSocketResponder {
   std::shared_ptr<yarpl::single::Single<Payload>> handleRequestResponse(
       Payload request,
       StreamId) override {
-    auto data = request.moveDataToString();
-    auto meta = request.moveMetadataToString();
+    auto ioBufChainToString = [](std::unique_ptr<folly::IOBuf> buf) {
+      folly::IOBufQueue queue;
+      queue.append(std::move(buf));
+
+      std::string ret;
+      while (auto elem = queue.pop_front()) {
+        auto part = elem->moveToFbString();
+        ret += part.toStdString();
+      }
+
+      return ret;
+    };
+
+    std::string data = ioBufChainToString(std::move(request.data));
+    std::string meta = ioBufChainToString(std::move(request.metadata));
 
     StringPair req(data, meta);
     Response resp = (*handler_)(req);

@@ -149,7 +149,10 @@ class SingleTestObserver : public yarpl::single::SingleObserver<T> {
       throw std::runtime_error("Did not receive terminal event.");
     }
     if (e_) {
-      throw std::runtime_error("Received onError instead of onSuccess");
+      std::stringstream ss;
+      ss << "Received onError instead of onSuccess";
+      ss << " (error was " << e_ << ")";
+      throw std::runtime_error(ss.str());
     }
   }
 

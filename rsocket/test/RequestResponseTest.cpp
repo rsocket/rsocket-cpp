@@ -198,3 +198,117 @@ TEST(RequestResponseTest, FailureOnRequest) {
   to->awaitTerminalEvent();
   EXPECT_TRUE(to->getError());
 }
+
+TEST(RequestResponseTest, TestLargePayload) {
+  std::string niceLongData     = "ABCDEFGH";
+  std::string niceLongMetadata = "12345678";
+
+  auto const REQUEST_SIZE_MB = 50;
+
+  // extend payload and metadata to be > 50 megabytes
+  LOG(INFO) << "Building up large data/metadata, this may take a moment...";
+  while (niceLongMetadata.size() < (REQUEST_SIZE_MB * 1024 * 1024)) {
+    niceLongMetadata += niceLongMetadata;
+  }
+  while (niceLongData.size() < (REQUEST_SIZE_MB * 1024 * 1024)) {
+    niceLongData += niceLongData;
+  }
+  LOG(INFO) << "Built meta size: " << niceLongMetadata.size()
+            << " data size: " << niceLongData.size();
+
+  // Builds up an IOBuf consisting of chunks with the following sizes, and then
+  // the rest tacked on the end in one big iobuf chunk
+  auto buildIOBufFromString = [&](std::vector<size_t> const& sizes,
+                                  std::string const& from) {
+    folly::IOBufQueue bufQueue{folly::IOBufQueue::cacheChainLength()};
+    size_t fromCursor = 0;
+    size_t remaining = from.size();
+    for (auto size : sizes) {
+      if (remaining == 0)
+        break;
+      if (size > remaining) {
+        size = remaining;
+      }
+
+      bufQueue.append(
+          folly::IOBuf::copyBuffer(from.c_str() + fromCursor, size));
+
+      fromCursor += size;
+      remaining -= size;
+    }
+
+    if (remaining) {
+      bufQueue.append(
+          folly::IOBuf::copyBuffer(from.c_str() + fromCursor, remaining));
+    }
+
+    CHECK_EQ(bufQueue.chainLength(), from.size());
+
+    auto ret = bufQueue.move();
+    int numChainElems = 1;
+    auto currentChainElem = ret.get()->next();
+    while (currentChainElem != ret.get()) {
+      numChainElems++;
+      currentChainElem = currentChainElem->next();
+    }
+    CHECK_GE(numChainElems, sizes.size());
+
+    // verify that the returned buffer has identical data
+    auto str = ret->cloneAsValue().moveToFbString().toStdString();
+    CHECK_EQ(str.size(), from.size());
+    CHECK(str == from);
+
+    return ret;
+  };
+
+  auto debugStringMismatch =
+      [](auto const& got, auto const& expect, auto const& name) {
+        CHECK_EQ(got.size(), expect.size())
+            << "Got mismatched size " << name << " string (" << got.size()
+            << " vs " << expect.size() << ")";
+        CHECK(got == expect) << name << " mismatch between got and expected";
+      };
+
+  folly::ScopedEventBaseThread worker;
+  auto server = makeServer(std::make_shared<GenericRequestResponseHandler>(
+      [&](StringPair const& request) {
+        debugStringMismatch(
+            request.first, niceLongData, "data (recieved on server)");
+        debugStringMismatch(
+            request.second, niceLongMetadata, "metadata (recieved on server)");
+        LOG(INFO) << "Got large payload on server, sending response back";
+        return payload_response(request.first, request.second);
+      }));
+
+  auto client = makeClient(worker.getEventBase(), *server->listeningPort());
+  auto requester = client->getRequester();
+
+  auto checkForSizePattern = [&](std::vector<size_t> const& meta_sizes,
+                                 std::vector<size_t> const& data_sizes) {
+    auto to = SingleTestObserver<StringPair>::create();
+
+    // all in one big chunk
+    requester
+        ->requestResponse(Payload(
+            buildIOBufFromString(data_sizes, niceLongData),
+            buildIOBufFromString(meta_sizes, niceLongMetadata)))
+        ->map(payload_to_stringpair)
+        ->subscribe(to);
+    to->awaitTerminalEvent();
+    to->assertSuccess();
+
+    auto lastVal = to->getOnSuccessValue();
+
+    debugStringMismatch(
+        lastVal.first, niceLongData, "data (recieved on client)");
+    debugStringMismatch(
+        lastVal.second, niceLongMetadata, "metadata (recieved on client)");
+  };
+
+  // All in one big chunk
+  checkForSizePattern({}, {});
+
+  // Small chunk, big chunk, small chunk
+  checkForSizePattern(
+      {100, 10 * 1024 * 1024, 100}, {100, 10 * 1024 * 1024, 100});
+}
