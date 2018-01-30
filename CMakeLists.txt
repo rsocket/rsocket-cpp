@@ -304,6 +304,7 @@ add_library(
   rsocket/statemachine/StreamStateMachineBase.h
   rsocket/statemachine/StreamsFactory.cpp
   rsocket/statemachine/StreamsFactory.h
+  rsocket/statemachine/StreamFragmentAccumulator.h
   rsocket/statemachine/StreamsWriter.h
   rsocket/transports/tcp/TcpConnectionAcceptor.cpp
   rsocket/transports/tcp/TcpConnectionAcceptor.h

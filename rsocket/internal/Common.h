@@ -63,6 +63,9 @@ enum class StreamType {
   FNF,
 };
 
+folly::StringPiece toString(StreamType);
+std::ostream& operator<<(std::ostream&, StreamType);
+
 enum class RequestOriginator {
   LOCAL,
   REMOTE,
