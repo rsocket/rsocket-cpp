@@ -57,13 +57,12 @@ static void serializeMetadataInto(
     return;
   }
 
-  // Use signed int because the first bit in metadata length is reserved.
-  if (metadata->length() > kMaxMetadataLength) {
-    CHECK(false) << "Metadata is too big to serialize";
-  }
-
   // metadata length field not included in the medatadata length
-  uint32_t metadataLength = static_cast<uint32_t>(metadata->length());
+  uint32_t metadataLength =
+      static_cast<uint32_t>(metadata->computeChainDataLength());
+  CHECK_LT(metadataLength, kMaxMetadataLength)
+      << "Metadata is too big to serialize";
+
   appender.write(static_cast<uint8_t>(metadataLength >> 16)); // first byte
   appender.write(
       static_cast<uint8_t>((metadataLength >> 8) & 0xFF)); // second byte

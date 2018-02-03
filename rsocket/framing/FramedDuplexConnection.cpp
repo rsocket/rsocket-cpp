@@ -44,27 +44,17 @@ size_t getFrameSizeFieldLength(ProtocolVersion version) {
   }
 }
 
-size_t getPayloadLength(ProtocolVersion version, size_t payloadLength) {
-  DCHECK(version != ProtocolVersion::Unknown);
-  if (version < FrameSerializerV1_0::Version) {
-    return payloadLength + getFrameSizeFieldLength(version);
-  } else {
-    return payloadLength;
-  }
-}
-
 std::unique_ptr<folly::IOBuf> prependSize(
     ProtocolVersion version,
     std::unique_ptr<folly::IOBuf> payload) {
   CHECK(payload);
 
   const auto frameSizeFieldLength = getFrameSizeFieldLength(version);
-  // the frame size includes the payload size and the size value
-  auto payloadLength =
-      getPayloadLength(version, payload->computeChainDataLength());
-  if (payloadLength > kMaxFrameLength) {
-    return nullptr;
-  }
+  const auto payloadLength = payload->computeChainDataLength();
+
+  CHECK_LE(payloadLength, kMaxFrameLength)
+      << "payloadLength: " << payloadLength
+      << " kMaxFrameLength: " << kMaxFrameLength;
 
   if (payload->headroom() >= frameSizeFieldLength) {
     // move the data pointer back and write value to the payload
@@ -102,13 +92,6 @@ void FramedDuplexConnection::send(std::unique_ptr<folly::IOBuf> buf) {
   }
 
   auto sized = prependSize(*protocolVersion_, std::move(buf));
-  if (!sized) {
-    protocolVersion_.reset();
-    inputReader_.reset();
-    inner_.reset();
-    return;
-  }
-
   inner_->send(std::move(sized));
 }
 

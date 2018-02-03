@@ -13,6 +13,7 @@
 #include "rsocket/framing/FrameProcessor.h"
 #include "rsocket/internal/Common.h"
 #include "rsocket/internal/KeepaliveTimer.h"
+#include "rsocket/statemachine/StreamFragmentAccumulator.h"
 #include "rsocket/statemachine/StreamState.h"
 #include "rsocket/statemachine/StreamsFactory.h"
 #include "rsocket/statemachine/StreamsWriter.h"
@@ -161,6 +162,13 @@ class RSocketStateMachine final
   DuplexConnection* getConnection();
 
  private:
+  template <typename WriteInitialFrame>
+  void writeFragmented(
+      WriteInitialFrame,
+      StreamId const,
+      FrameFlags const,
+      Payload payload);
+
   void connect(std::shared_ptr<FrameTransport>);
 
   /// Terminate underlying connection and connect new connection
@@ -231,6 +239,12 @@ class RSocketStateMachine final
   void handleStreamFrame(StreamId, FrameType, std::unique_ptr<folly::IOBuf>);
   void handleUnknownStream(StreamId, FrameType, std::unique_ptr<folly::IOBuf>);
 
+  void
+  setupRequestStream(StreamId streamId, uint32_t requestN, Payload payload);
+  void
+  setupRequestChannel(StreamId streamId, uint32_t requestN, Payload payload);
+  void setupRequestResponse(StreamId streamId, Payload payload);
+
   void closeStreams(StreamCompletionSignal);
   void closeFrameTransport(folly::exception_wrapper);
 
@@ -244,10 +258,13 @@ class RSocketStateMachine final
       StreamType streamType,
       uint32_t initialRequestN,
       Payload payload) override;
+
   void writeRequestN(Frame_REQUEST_N&&) override;
   void writeCancel(Frame_CANCEL&&) override;
 
   void writePayload(Frame_PAYLOAD&&) override;
+
+  // TODO: writeFragmentedError
   void writeError(Frame_ERROR&&) override;
 
   void onStreamClosed(StreamId streamId, StreamCompletionSignal signal)
@@ -277,6 +294,11 @@ class RSocketStateMachine final
 
   /// Per-stream frame buffer between the state machine and the FrameTransport.
   StreamState streamState_;
+
+  /// Accumulates the REQUEST payloads for new incoming streams which haven't
+  ///  been seen before (and therefore have no backing state machine in
+  /// streamState_ yet), and are fragmented
+  std::unordered_map<StreamId, StreamFragmentAccumulator> streamFragments_;
 
   // Manages all state needed for warm/cold resumption.
   std::shared_ptr<ResumeManager> resumeManager_;

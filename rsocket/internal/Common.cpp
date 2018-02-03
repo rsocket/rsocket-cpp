@@ -5,6 +5,7 @@
 #include <folly/Random.h>
 #include <folly/String.h>
 #include <folly/io/IOBuf.h>
+#include <algorithm>
 #include <random>
 
 namespace rsocket {
@@ -42,6 +43,26 @@ static const char* getTerminatingSignalErrorMessage(int terminatingSignal) {
     default:
       return "stream interrupted";
   }
+}
+
+folly::StringPiece toString(StreamType t) {
+  switch (t) {
+    case StreamType::REQUEST_RESPONSE:
+      return "REQUEST_RESPONSE";
+    case StreamType::STREAM:
+      return "STREAM";
+    case StreamType::CHANNEL:
+      return "CHANNEL";
+    case StreamType::FNF:
+      return "FNF";
+    default:
+      DCHECK(false);
+      return "(invalid StreamType)";
+  }
+}
+
+std::ostream& operator<<(std::ostream& os, StreamType t) {
+  return os << toString(t);
 }
 
 std::ostream& operator<<(std::ostream& os, RSocketMode mode) {
@@ -149,6 +170,6 @@ std::ostream& operator<<(
 }
 
 std::string hexDump(folly::StringPiece s) {
-  return folly::hexDump(s.data(), s.size());
+  return folly::hexDump(s.data(), std::min(0xFFUL, s.size()));
 }
 } // reactivesocket
