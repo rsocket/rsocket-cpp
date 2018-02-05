@@ -159,6 +159,7 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Woverloaded-virtual")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter")
 
 set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Werror)
 
@@ -199,6 +200,7 @@ include_directories(${GMOCK_SOURCE_DIR}/googlemock/include)
 include_directories(${GMOCK_SOURCE_DIR}/googletest/include)
 
 add_subdirectory(yarpl)
+add_subdirectory(third_party)
 
 add_library(
   ReactiveSocket
@@ -315,7 +317,10 @@ add_library(
 target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/include")
 target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/src")
 
-target_link_libraries(ReactiveSocket yarpl ${GFLAGS_LIBRARY} ${GLOG_LIBRARY})
+target_link_libraries(ReactiveSocket yarpl ${GFLAGS_LIBRARY} ${GLOG_LIBRARY} rs)
+
+target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/third_party/rs/include")
+add_dependencies(ReactiveSocket rs)
 
 target_compile_options(
   ReactiveSocket

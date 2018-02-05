@@ -62,6 +62,7 @@ RSocketRequester::requestChannel(
             std::move(responseSink), *eb));
       }
     };
+    
     if (eb->isInEventBaseThread()) {
       lambda();
     } else {
