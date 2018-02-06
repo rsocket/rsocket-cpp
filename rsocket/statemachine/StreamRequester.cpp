@@ -15,7 +15,7 @@ void StreamRequester::request(int64_t n) noexcept {
     return;
   }
 
-  if(!requested_) {
+  if (!requested_) {
     requested_ = true;
 
     auto initialN =
@@ -48,16 +48,11 @@ void StreamRequester::request(int64_t n) noexcept {
 
 void StreamRequester::cancel() noexcept {
   VLOG(5) << "StreamRequester::cancel(requested_=" << requested_ << ")";
+  cancelConsumer();
   if (requested_) {
-    cancelConsumer();
     cancelStream();
   }
-  closeStream(StreamCompletionSignal::CANCEL);
-}
-
-void StreamRequester::endStream(StreamCompletionSignal signal) {
-  VLOG(5) << "StreamRequester::endStream()";
-  ConsumerBase::endStream(signal);
+  removeFromWriter();
 }
 
 void StreamRequester::handlePayload(
@@ -69,13 +64,14 @@ void StreamRequester::handlePayload(
 
   if (complete) {
     completeConsumer();
-    closeStream(StreamCompletionSignal::COMPLETE);
+    removeFromWriter();
   }
 }
 
 void StreamRequester::handleError(folly::exception_wrapper errorPayload) {
   CHECK(requested_);
   errorConsumer(std::move(errorPayload));
-  closeStream(StreamCompletionSignal::ERROR);
+  removeFromWriter();
 }
-}
+
+} // namespace rsocket

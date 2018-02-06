@@ -119,28 +119,6 @@ class RSocketStateMachine final
   /// ::writeFrame after calling this method.
   void addStream(StreamId, std::shared_ptr<StreamStateMachineBase>);
 
-  /// Indicates that the stream should be removed from the connection.
-  ///
-  /// No frames will be issued as a result of this call. Stream stateMachine
-  /// must take care of writing appropriate frames to the connection, using
-  /// ::writeFrame, prior to calling this method.
-  ///
-  /// This signal corresponds to Subscriber::{onComplete,onError} and
-  /// Subscription::cancel.
-  /// Per ReactiveStreams specification:
-  /// 1. no other signal can be delivered during or after this one,
-  /// 2. "unsubscribe handshake" guarantees that the signal will be delivered
-  ///   at least once, even if the stateMachine initiated stream closure,
-  /// 3. per "unsubscribe handshake", the stateMachine must deliver
-  /// corresponding
-  ///   terminal signal to the connection.
-  ///
-  /// Additionally, in order to simplify implementation of stream stateMachine:
-  /// 4. the signal bound with a particular StreamId is idempotent and may be
-  ///   delivered multiple times as long as the caller holds shared_ptr to
-  ///   ConnectionAutomaton.
-  void endStream(StreamId, StreamCompletionSignal);
-
   /// Send a REQUEST_FNF frame.
   void fireAndForget(Payload);
 
@@ -250,8 +228,7 @@ class RSocketStateMachine final
   void writePayload(Frame_PAYLOAD&&) override;
   void writeError(Frame_ERROR&&) override;
 
-  void onStreamClosed(StreamId streamId, StreamCompletionSignal signal)
-      override;
+  void onStreamClosed(StreamId) override;
 
   bool ensureOrAutodetectFrameSerializer(const folly::IOBuf& firstFrame);
 

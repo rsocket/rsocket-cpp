@@ -24,6 +24,7 @@ class StreamsWriter {
   virtual void writePayload(Frame_PAYLOAD&&) = 0;
   virtual void writeError(Frame_ERROR&&) = 0;
 
-  virtual void onStreamClosed(StreamId, StreamCompletionSignal) = 0;
+  virtual void onStreamClosed(StreamId) = 0;
 };
-}
+
+} // namespace rsocket

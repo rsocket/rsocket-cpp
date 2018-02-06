@@ -25,74 +25,72 @@ namespace yarpl {
 namespace observable {
 
 /**
-*Strategy for backpressure when converting from Observable to Flowable.
-*/
+ *Strategy for backpressure when converting from Observable to Flowable.
+ */
 enum class BackpressureStrategy { BUFFER, DROP, ERROR, LATEST, MISSING };
 
 template <typename T = void>
 class Observable : public yarpl::enable_get_ref {
  public:
-   static std::shared_ptr<Observable<T>> empty() {
-     auto lambda = [](std::shared_ptr<Observer<T>> observer) {
-       observer->onComplete();
-     };
-     return Observable<T>::create(std::move(lambda));
-   }
+  static std::shared_ptr<Observable<T>> empty() {
+    auto lambda = [](std::shared_ptr<Observer<T>> observer) {
+      observer->onComplete();
+    };
+    return Observable<T>::create(std::move(lambda));
+  }
 
-   static std::shared_ptr<Observable<T>> error(folly::exception_wrapper ex) {
-     auto lambda = [ex = std::move(ex)](std::shared_ptr<Observer<T>> observer) {
-       observer->onError(std::move(ex));
-     };
-     return Observable<T>::create(std::move(lambda));
-   }
+  static std::shared_ptr<Observable<T>> error(folly::exception_wrapper ex) {
+    auto lambda = [ex = std::move(ex)](std::shared_ptr<Observer<T>> observer) {
+      observer->onError(std::move(ex));
+    };
+    return Observable<T>::create(std::move(lambda));
+  }
 
-   template <typename Ex>
-   static std::shared_ptr<Observable<T>> error(Ex&) {
-     static_assert(
-         std::is_lvalue_reference<Ex>::value,
-         "use variant of error() method accepting also exception_ptr");
-   }
+  template <typename Ex>
+  static std::shared_ptr<Observable<T>> error(Ex&) {
+    static_assert(
+        std::is_lvalue_reference<Ex>::value,
+        "use variant of error() method accepting also exception_ptr");
+  }
 
-   template <typename Ex>
-   static std::shared_ptr<Observable<T>> error(
-       Ex& ex,
-       std::exception_ptr ptr) {
-     auto lambda = [ew = folly::exception_wrapper(std::move(ptr), ex)](
-                       std::shared_ptr<Observer<T>> observer) {
-       observer->onError(std::move(ew));
-     };
-     return Observable<T>::create(std::move(lambda));
-   }
+  template <typename Ex>
+  static std::shared_ptr<Observable<T>> error(Ex& ex, std::exception_ptr ptr) {
+    auto lambda = [ew = folly::exception_wrapper(std::move(ptr), ex)](
+                      std::shared_ptr<Observer<T>> observer) {
+      observer->onError(std::move(ew));
+    };
+    return Observable<T>::create(std::move(lambda));
+  }
 
-   /**
-    * The Defer operator waits until an observer subscribes to it, and then it
-    * generates an Observable with an ObservableFactory function. It
-    * does this afresh for each subscriber, so although each subscriber may
-    * think it is subscribing to the same Observable, in fact each subscriber
-    * gets its own individual sequence.
-    */
-   template <
-       typename ObservableFactory,
-       typename = typename std::enable_if<folly::is_invocable_r<
-           std::shared_ptr<Observable<T>>,
-           ObservableFactory>::value>::type>
-   static std::shared_ptr<Observable<T>> defer(ObservableFactory);
+  /**
+   * The Defer operator waits until an observer subscribes to it, and then it
+   * generates an Observable with an ObservableFactory function. It
+   * does this afresh for each subscriber, so although each subscriber may
+   * think it is subscribing to the same Observable, in fact each subscriber
+   * gets its own individual sequence.
+   */
+  template <
+      typename ObservableFactory,
+      typename = typename std::enable_if<folly::is_invocable_r<
+          std::shared_ptr<Observable<T>>,
+          ObservableFactory>::value>::type>
+  static std::shared_ptr<Observable<T>> defer(ObservableFactory);
 
-   template <typename OnSubscribe>
-   static std::shared_ptr<Observable<T>> create(OnSubscribe);
+  template <typename OnSubscribe>
+  static std::shared_ptr<Observable<T>> create(OnSubscribe);
 
-   virtual std::shared_ptr<Subscription> subscribe(
-       std::shared_ptr<Observer<T>>) = 0;
+  virtual std::shared_ptr<Subscription> subscribe(
+      std::shared_ptr<Observer<T>>) = 0;
 
-   /**
-    * Subscribe overload that accepts lambdas.
-    */
-   template <
-       typename Next,
-       typename =
-           typename std::enable_if<folly::is_invocable<Next, T>::value>::type>
-   std::shared_ptr<Subscription> subscribe(Next next) {
-     return subscribe(Observers::create<T>(std::move(next)));
+  /**
+   * Subscribe overload that accepts lambdas.
+   */
+  template <
+      typename Next,
+      typename =
+          typename std::enable_if<folly::is_invocable<Next, T>::value>::type>
+  std::shared_ptr<Subscription> subscribe(Next next) {
+    return subscribe(Observers::create<T>(std::move(next)));
   }
 
   /**
@@ -105,8 +103,7 @@ class Observable : public yarpl::enable_get_ref {
           folly::is_invocable<Next, T>::value &&
           folly::is_invocable<Error, folly::exception_wrapper>::value>::type>
   std::shared_ptr<Subscription> subscribe(Next next, Error error) {
-    return subscribe(Observers::create<T>(
-        std::move(next), std::move(error)));
+    return subscribe(Observers::create<T>(std::move(next), std::move(error)));
   }
 
   /**
@@ -120,11 +117,10 @@ class Observable : public yarpl::enable_get_ref {
           folly::is_invocable<Next, T>::value &&
           folly::is_invocable<Error, folly::exception_wrapper>::value &&
           folly::is_invocable<Complete>::value>::type>
-  std::shared_ptr<Subscription> subscribe(Next next, Error error, Complete complete) {
+  std::shared_ptr<Subscription>
+  subscribe(Next next, Error error, Complete complete) {
     return subscribe(Observers::create<T>(
-        std::move(next),
-        std::move(error),
-        std::move(complete)));
+        std::move(next), std::move(error), std::move(complete)));
   }
 
   std::shared_ptr<Subscription> subscribe() {
@@ -225,19 +221,19 @@ class Observable : public yarpl::enable_get_ref {
   // function is invoked when cancel is called.
   template <
       typename Function,
-      typename = typename std::enable_if<
-          folly::is_invocable<Function>::value>::type>
+      typename =
+          typename std::enable_if<folly::is_invocable<Function>::value>::type>
   std::shared_ptr<Observable<T>> doOnCancel(Function function);
 
   /**
-  * Convert from Observable to Flowable with a given BackpressureStrategy.
-  *
-  * Currently the only strategy is DROP.
-  */
+   * Convert from Observable to Flowable with a given BackpressureStrategy.
+   *
+   * Currently the only strategy is DROP.
+   */
   auto toFlowable(BackpressureStrategy strategy);
 };
-} // observable
-} // yarpl
+} // namespace observable
+} // namespace yarpl
 
 #include "yarpl/observable/DeferObservable.h"
 #include "yarpl/observable/ObservableOperator.h"
@@ -431,41 +427,37 @@ template <typename T>
 auto Observable<T>::toFlowable(BackpressureStrategy strategy) {
   // we currently ONLY support the DROP strategy
   // so do not use the strategy parameter for anything
-  return yarpl::flowable::Flowable<T>::fromPublisher([
-    thisObservable = this->ref_from_this(this),
-    strategy
-  ](std::shared_ptr<flowable::Subscriber<T>> subscriber) {
+  return yarpl::flowable::Flowable<
+      T>::fromPublisher([thisObservable = this->ref_from_this(this),
+                         strategy](std::shared_ptr<flowable::Subscriber<T>>
+                                       subscriber) {
     std::shared_ptr<flowable::Subscription> subscription;
     switch (strategy) {
       case BackpressureStrategy::DROP:
-        subscription =
-            std::make_shared<flowable::details::
-                         FlowableFromObservableSubscriptionDropStrategy<T>>(
-                thisObservable, subscriber);
+        subscription = std::make_shared<
+            flowable::details::FlowableFromObservableSubscriptionDropStrategy<
+                T>>(thisObservable, subscriber);
         break;
       case BackpressureStrategy::ERROR:
-        subscription =
-            std::make_shared<flowable::details::
-                         FlowableFromObservableSubscriptionErrorStrategy<T>>(
-                thisObservable, subscriber);
+        subscription = std::make_shared<
+            flowable::details::FlowableFromObservableSubscriptionErrorStrategy<
+                T>>(thisObservable, subscriber);
         break;
       case BackpressureStrategy::BUFFER:
-        subscription =
-            std::make_shared<flowable::details::
-                         FlowableFromObservableSubscriptionBufferStrategy<T>>(
-                thisObservable, subscriber);
+        subscription = std::make_shared<
+            flowable::details::FlowableFromObservableSubscriptionBufferStrategy<
+                T>>(thisObservable, subscriber);
         break;
       case BackpressureStrategy::LATEST:
-        subscription =
-            std::make_shared<flowable::details::
-                         FlowableFromObservableSubscriptionLatestStrategy<T>>(
-                thisObservable, subscriber);
+        subscription = std::make_shared<
+            flowable::details::FlowableFromObservableSubscriptionLatestStrategy<
+                T>>(thisObservable, subscriber);
         break;
       case BackpressureStrategy::MISSING:
-        subscription =
-            std::make_shared<flowable::details::
-                         FlowableFromObservableSubscriptionMissingStrategy<T>>(
-                thisObservable, subscriber);
+        subscription = std::make_shared<
+            flowable::details::
+                FlowableFromObservableSubscriptionMissingStrategy<T>>(
+            thisObservable, subscriber);
         break;
       default:
         CHECK(false); // unknown value for strategy
@@ -474,5 +466,5 @@ auto Observable<T>::toFlowable(BackpressureStrategy strategy) {
   });
 }
 
-} // observable
-} // yarpl
+} // namespace observable
+} // namespace yarpl

@@ -18,7 +18,8 @@ void StreamStateMachineBase::handleRequestN(uint32_t) {
 }
 
 void StreamStateMachineBase::handleError(folly::exception_wrapper) {
-  closeStream(StreamCompletionSignal::ERROR);
+  endStream(StreamCompletionSignal::ERROR);
+  removeFromWriter();
 }
 
 void StreamStateMachineBase::handleCancel() {
@@ -58,7 +59,8 @@ void StreamStateMachineBase::applicationError(std::string msg) {
 
 void StreamStateMachineBase::errorStream(std::string msg) {
   writer_->writeError(Frame_ERROR::invalid(streamId_, std::move(msg)));
-  closeStream(StreamCompletionSignal::ERROR);
+  endStream(StreamCompletionSignal::ERROR);
+  removeFromWriter();
 }
 
 void StreamStateMachineBase::cancelStream() {
@@ -69,8 +71,10 @@ void StreamStateMachineBase::completeStream() {
   writer_->writePayload(Frame_PAYLOAD::complete(streamId_));
 }
 
-void StreamStateMachineBase::closeStream(StreamCompletionSignal signal) {
-  writer_->onStreamClosed(streamId_, signal);
+void StreamStateMachineBase::removeFromWriter() {
+  isTerminated_ = true;
+  writer_->onStreamClosed(streamId_);
   // TODO: set writer_ to nullptr
 }
-}
+
+} // namespace rsocket

@@ -38,8 +38,6 @@ class StreamRequester : public ConsumerBase {
   void handlePayload(Payload&& payload, bool complete, bool flagsNext) override;
   void handleError(folly::exception_wrapper errorPayload) override;
 
-  void endStream(StreamCompletionSignal) override;
-
   /// An allowance accumulated before the stream is initialised.
   /// Remaining part of the allowance is forwarded to the ConsumerBase.
   Allowance initialResponseAllowance_;

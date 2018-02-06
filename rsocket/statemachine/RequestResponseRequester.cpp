@@ -20,13 +20,13 @@ void RequestResponseRequester::subscribe(
   if (state_ == State::NEW) {
     state_ = State::REQUESTED;
     newStream(StreamType::REQUEST_RESPONSE, 1, std::move(initialPayload_));
-  } else {
-    if (auto subscriber = std::move(consumingSubscriber_)) {
-      subscriber->onError(
-          std::runtime_error("cannot request more than 1 item"));
-    }
-    closeStream(StreamCompletionSignal::ERROR);
+    return;
   }
+
+  if (auto subscriber = std::move(consumingSubscriber_)) {
+    subscriber->onError(std::runtime_error("cannot request more than 1 item"));
+  }
+  removeFromWriter();
 }
 
 void RequestResponseRequester::cancel() noexcept {
@@ -34,12 +34,12 @@ void RequestResponseRequester::cancel() noexcept {
   switch (state_) {
     case State::NEW:
       state_ = State::CLOSED;
-      closeStream(StreamCompletionSignal::CANCEL);
+      removeFromWriter();
       break;
     case State::REQUESTED: {
       state_ = State::CLOSED;
       cancelStream();
-      closeStream(StreamCompletionSignal::CANCEL);
+      removeFromWriter();
     } break;
     case State::CLOSED:
       break;
@@ -78,7 +78,7 @@ void RequestResponseRequester::handleError(
       if (auto subscriber = std::move(consumingSubscriber_)) {
         subscriber->onError(errorPayload);
       }
-      closeStream(StreamCompletionSignal::ERROR);
+      removeFromWriter();
       break;
     case State::CLOSED:
       break;
@@ -108,13 +108,14 @@ void RequestResponseRequester::handlePayload(
     consumingSubscriber_->onSuccess(std::move(payload));
     consumingSubscriber_ = nullptr;
   } else if (!complete) {
-    errorStream("payload, NEXT or COMPLETE flag expected");
+    errorStream("Payload, NEXT or COMPLETE flag expected");
     return;
   }
-  closeStream(StreamCompletionSignal::COMPLETE);
+  removeFromWriter();
 }
 
 size_t RequestResponseRequester::getConsumerAllowance() const {
   return (state_ == State::REQUESTED) ? 1 : 0;
 }
-}
+
+} // namespace rsocket
