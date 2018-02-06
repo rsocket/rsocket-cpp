@@ -114,7 +114,7 @@ TEST(PublishProcessorTest, CancelTest) {
   pp.onNext(1);
   pp.onNext(2);
 
-  subscriber->getSubscription()->cancel();
+  subscriber->cancel();
 
   pp.onNext(3);
   pp.onNext(4);

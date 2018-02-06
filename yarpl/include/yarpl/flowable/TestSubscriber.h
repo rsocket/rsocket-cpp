@@ -238,8 +238,6 @@ class TestSubscriber :
     dropValues_ = drop;
   }
 
-  using BaseSubscriber<T>::getSubscription;
-
  private:
   bool dropValues_{false};
   std::atomic<int> valueCount_{0};
