@@ -11,7 +11,7 @@ using namespace yarpl::flowable;
 
 void RequestResponseResponder::onSubscribe(
     std::shared_ptr<yarpl::single::SingleSubscription> subscription) noexcept {
-#ifdef DEBUG
+#ifndef NDEBUG
   DCHECK(!gotOnSubscribe_.exchange(true)) << "Already called onSubscribe()";
 #endif
 
@@ -23,7 +23,7 @@ void RequestResponseResponder::onSubscribe(
 }
 
 void RequestResponseResponder::onSuccess(Payload response) noexcept {
-#ifdef DEBUG
+#ifndef NDEBUG
   DCHECK(gotOnSubscribe_.load()) << "didnt call onSubscribe";
   DCHECK(!gotTerminating_.exchange(true)) << "Already called onSuccess/onError";
 #endif
@@ -36,7 +36,7 @@ void RequestResponseResponder::onSuccess(Payload response) noexcept {
       state_ = State::CLOSED;
       writePayload(std::move(response), true);
       producingSubscription_ = nullptr;
-      closeStream(StreamCompletionSignal::COMPLETE);
+      removeFromWriter();
       break;
     }
     case State::CLOSED:
@@ -45,7 +45,7 @@ void RequestResponseResponder::onSuccess(Payload response) noexcept {
 }
 
 void RequestResponseResponder::onError(folly::exception_wrapper ex) noexcept {
-#ifdef DEBUG
+#ifndef NDEBUG
   DCHECK(gotOnSubscribe_.load()) << "didnt call onSubscribe";
   DCHECK(!gotTerminating_.exchange(true)) << "Already called onSuccess/onError";
 #endif
@@ -55,7 +55,7 @@ void RequestResponseResponder::onError(folly::exception_wrapper ex) noexcept {
     case State::RESPONDING: {
       state_ = State::CLOSED;
       applicationError(ex.get_exception()->what());
-      closeStream(StreamCompletionSignal::APPLICATION_ERROR);
+      removeFromWriter();
     } break;
     case State::CLOSED:
       break;
@@ -83,7 +83,7 @@ void RequestResponseResponder::handleCancel() {
   switch (state_) {
     case State::RESPONDING:
       state_ = State::CLOSED;
-      closeStream(StreamCompletionSignal::CANCEL);
+      removeFromWriter();
       break;
     case State::CLOSED:
       break;

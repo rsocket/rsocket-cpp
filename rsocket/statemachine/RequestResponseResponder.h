@@ -38,7 +38,7 @@ class RequestResponseResponder : public StreamStateMachineBase,
   } state_{State::RESPONDING};
 
   std::shared_ptr<yarpl::single::SingleSubscription> producingSubscription_;
-#ifdef DEBUG
+#ifndef NDEBUG
   std::atomic<bool> gotOnSubscribe_{false};
   std::atomic<bool> gotTerminating_{false};
 #endif

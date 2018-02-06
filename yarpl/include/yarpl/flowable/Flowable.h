@@ -38,7 +38,7 @@ class TrackingSubscriber;
 template <typename T>
 class Flowable : public yarpl::enable_get_ref {
  public:
-   virtual ~Flowable() = default;
+  virtual ~Flowable() = default;
 
   virtual void subscribe(std::shared_ptr<Subscriber<T>>) = 0;
 
@@ -114,8 +114,7 @@ class Flowable : public yarpl::enable_get_ref {
   }
 
   static std::shared_ptr<Flowable<T>> error(folly::exception_wrapper ex) {
-    auto lambda = [ex = std::move(ex)](
-        Subscriber<T>& subscriber, int64_t) {
+    auto lambda = [ex = std::move(ex)](Subscriber<T>& subscriber, int64_t) {
       subscriber.onError(std::move(ex));
     };
     return Flowable<T>::create(std::move(lambda));
@@ -140,7 +139,8 @@ class Flowable : public yarpl::enable_get_ref {
   template <
       typename OnSubscribe,
       typename = typename std::enable_if<folly::is_invocable<
-          OnSubscribe, std::shared_ptr<Subscriber<T>>>::value>::type>
+          OnSubscribe,
+          std::shared_ptr<Subscriber<T>>>::value>::type>
   static std::shared_ptr<Flowable<T>> fromPublisher(OnSubscribe function);
 
   template <typename TGenerator>
@@ -254,8 +254,8 @@ class Flowable : public yarpl::enable_get_ref {
   // function is invoked when cancel is called.
   template <
       typename Function,
-      typename = typename std::enable_if<
-          folly::is_invocable<Function>::value>::type>
+      typename =
+          typename std::enable_if<folly::is_invocable<Function>::value>::type>
   std::shared_ptr<Flowable<T>> doOnCancel(Function function);
 
   // the callbacks will be invoked of each of the signals
@@ -289,13 +289,14 @@ class Flowable : public yarpl::enable_get_ref {
       typename Emitter,
       typename = typename std::enable_if<folly::is_invocable_r<
           void,
-          Emitter, details::TrackingSubscriber<T>&, int64_t
-          >::value>::type>
+          Emitter,
+          details::TrackingSubscriber<T>&,
+          int64_t>::value>::type>
   static std::shared_ptr<Flowable<T>> create(Emitter emitter);
 };
 
-} // flowable
-} // yarpl
+} // namespace flowable
+} // namespace yarpl
 
 #include "yarpl/flowable/DeferFlowable.h"
 #include "yarpl/flowable/EmitterFlowable.h"
@@ -307,22 +308,22 @@ namespace flowable {
 template <typename T>
 template <typename Emitter, typename>
 std::shared_ptr<Flowable<T>> Flowable<T>::create(Emitter emitter) {
-  return std::make_shared<details::EmitterWrapper<T, Emitter>>(std::move(emitter));
+  return std::make_shared<details::EmitterWrapper<T, Emitter>>(
+      std::move(emitter));
 }
 
 template <typename T>
-template <
-    typename OnSubscribe,
-    typename>
+template <typename OnSubscribe, typename>
 std::shared_ptr<Flowable<T>> Flowable<T>::fromPublisher(OnSubscribe function) {
-  return std::make_shared<FromPublisherOperator<T, OnSubscribe>>(std::move(function));
+  return std::make_shared<FromPublisherOperator<T, OnSubscribe>>(
+      std::move(function));
 }
 
 template <typename T>
 template <typename TGenerator>
 std::shared_ptr<Flowable<T>> Flowable<T>::fromGenerator(TGenerator generator) {
   auto lambda = [generator = std::move(generator)](
-      Subscriber<T>& subscriber, int64_t requested) {
+                    Subscriber<T>& subscriber, int64_t requested) {
     try {
       while (requested-- > 0) {
         subscriber.onNext(generator());
@@ -409,8 +410,8 @@ std::shared_ptr<Flowable<T>> Flowable<T>::doOnSubscribe(Function function) {
       [](const T&) {},
       [](const auto&) {},
       [] {},
-      [](const auto&) {}, //onRequest
-      []{}); //onCancel
+      [](const auto&) {}, // onRequest
+      [] {}); // onCancel
 }
 
 template <typename T>
@@ -422,17 +423,21 @@ std::shared_ptr<Flowable<T>> Flowable<T>::doOnNext(Function function) {
       std::move(function),
       [](const auto&) {},
       [] {},
-      [](const auto&) {}, //onRequest
-      []{}); //onCancel
+      [](const auto&) {}, // onRequest
+      [] {}); // onCancel
 }
 
 template <typename T>
 template <typename Function, typename>
 std::shared_ptr<Flowable<T>> Flowable<T>::doOnError(Function function) {
   return details::createDoOperator(
-      ref_from_this(this), [] {}, [](const T&) {}, std::move(function), [] {},
-      [](const auto&) {}, //onRequest
-      []{}); //onCancel
+      ref_from_this(this),
+      [] {},
+      [](const T&) {},
+      std::move(function),
+      [] {},
+      [](const auto&) {}, // onRequest
+      [] {}); // onCancel
 }
 
 template <typename T>
@@ -444,8 +449,8 @@ std::shared_ptr<Flowable<T>> Flowable<T>::doOnComplete(Function function) {
       [](const T&) {},
       [](const auto&) {},
       std::move(function),
-      [](const auto&) {}, //onRequest
-      []{}); //onCancel
+      [](const auto&) {}, // onRequest
+      [] {}); // onCancel
 }
 
 template <typename T>
@@ -456,12 +461,10 @@ std::shared_ptr<Flowable<T>> Flowable<T>::doOnTerminate(Function function) {
       ref_from_this(this),
       [] {},
       [](const T&) {},
-      [sharedFunction](const auto&) {
-    (*sharedFunction)(); },
-      [sharedFunction]() {
-    (*sharedFunction)(); },
-      [](const auto&) {}, //onRequest
-      []{}); //onCancel
+      [sharedFunction](const auto&) { (*sharedFunction)(); },
+      [sharedFunction]() { (*sharedFunction)(); },
+      [](const auto&) {}, // onRequest
+      [] {}); // onCancel
 }
 
 template <typename T>
@@ -471,14 +474,11 @@ std::shared_ptr<Flowable<T>> Flowable<T>::doOnEach(Function function) {
   return details::createDoOperator(
       ref_from_this(this),
       [] {},
-      [sharedFunction](const T&) {
-    (*sharedFunction)(); },
-      [sharedFunction](const auto&) {
-    (*sharedFunction)(); },
-      [sharedFunction]() {
-    (*sharedFunction)(); },
-      [](const auto&) {}, //onRequest
-      []{}); //onCancel
+      [sharedFunction](const T&) { (*sharedFunction)(); },
+      [sharedFunction](const auto&) { (*sharedFunction)(); },
+      [sharedFunction]() { (*sharedFunction)(); },
+      [](const auto&) {}, // onRequest
+      [] {}); // onCancel
 }
 
 template <typename T>
@@ -492,8 +492,8 @@ std::shared_ptr<Flowable<T>> Flowable<T>::doOn(
       std::move(onNext),
       [](const auto&) {},
       std::move(onComplete),
-      [](const auto&) {}, //onRequest
-      []{}); //onCancel
+      [](const auto&) {}, // onRequest
+      [] {}); // onCancel
 }
 
 template <typename T>
@@ -514,21 +514,21 @@ std::shared_ptr<Flowable<T>> Flowable<T>::doOn(
       std::move(onNext),
       std::move(onError),
       std::move(onComplete),
-      [](const auto&) {}, //onRequest
-      []{}); //onCancel
+      [](const auto&) {}, // onRequest
+      [] {}); // onCancel
 }
 
 template <typename T>
 template <typename Function, typename>
 std::shared_ptr<Flowable<T>> Flowable<T>::doOnRequest(Function function) {
   return details::createDoOperator(
-    ref_from_this(this),
-    [] {}, // onSubscribe
-    [](const auto&) {}, // onNext
-    [](const auto&) {}, // onError
-    [] {}, // onComplete
-    std::move(function), //onRequest
-    []{}); //onCancel
+      ref_from_this(this),
+      [] {}, // onSubscribe
+      [](const auto&) {}, // onNext
+      [](const auto&) {}, // onError
+      [] {}, // onComplete
+      std::move(function), // onRequest
+      [] {}); // onCancel
 }
 
 template <typename T>
@@ -544,5 +544,5 @@ std::shared_ptr<Flowable<T>> Flowable<T>::doOnCancel(Function function) {
       std::move(function)); // onCancel
 }
 
-} // flowable
-} // yarpl
+} // namespace flowable
+} // namespace yarpl

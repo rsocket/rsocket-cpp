@@ -67,8 +67,8 @@ class ObservableOperator : public Observable<D> {
 
     // Observer.
 
-    void onSubscribe(
-        std::shared_ptr<yarpl::observable::Subscription> subscription) override {
+    void onSubscribe(std::shared_ptr<yarpl::observable::Subscription>
+                         subscription) override {
       if (upstream_) {
         DLOG(ERROR) << "attempt to subscribe twice";
         subscription->cancel();
@@ -158,7 +158,8 @@ template <
     typename U,
     typename D,
     typename F,
-    typename = typename std::enable_if<folly::is_invocable_r<D, F, U>::value>::type>
+    typename =
+        typename std::enable_if<folly::is_invocable_r<D, F, U>::value>::type>
 class MapOperator : public ObservableOperator<U, D> {
   using Super = ObservableOperator<U, D>;
 
@@ -166,9 +167,10 @@ class MapOperator : public ObservableOperator<U, D> {
   MapOperator(std::shared_ptr<Observable<U>> upstream, F function)
       : Super(std::move(upstream)), function_(std::move(function)) {}
 
-  std::shared_ptr<Subscription> subscribe(std::shared_ptr<Observer<D>> observer) override {
-    auto subscription =
-        std::make_shared<MapSubscription>(this->ref_from_this(this), std::move(observer));
+  std::shared_ptr<Subscription> subscribe(
+      std::shared_ptr<Observer<D>> observer) override {
+    auto subscription = std::make_shared<MapSubscription>(
+        this->ref_from_this(this), std::move(observer));
     Super::upstream_->subscribe(
         // Note: implicit cast to a reference to a observer.
         subscription);
@@ -194,7 +196,7 @@ class MapOperator : public ObservableOperator<U, D> {
       }
     }
 
-  private:
+   private:
     std::shared_ptr<MapOperator> observable_;
   };
 
@@ -213,9 +215,10 @@ class FilterOperator : public ObservableOperator<U, U> {
   FilterOperator(std::shared_ptr<Observable<U>> upstream, F function)
       : Super(std::move(upstream)), function_(std::move(function)) {}
 
-  std::shared_ptr<Subscription> subscribe(std::shared_ptr<Observer<U>> observer) override {
-    auto subscription =
-        std::make_shared<FilterSubscription>(this->ref_from_this(this), std::move(observer));
+  std::shared_ptr<Subscription> subscribe(
+      std::shared_ptr<Observer<U>> observer) override {
+    auto subscription = std::make_shared<FilterSubscription>(
+        this->ref_from_this(this), std::move(observer));
     Super::upstream_->subscribe(
         // Note: implicit cast to a reference to a observer.
         subscription);
@@ -238,7 +241,7 @@ class FilterOperator : public ObservableOperator<U, U> {
       }
     }
 
-  private:
+   private:
     std::shared_ptr<FilterOperator> observable_;
   };
 
@@ -252,8 +255,7 @@ template <
     typename = typename std::enable_if<std::is_assignable<D, U>::value>,
     typename =
         typename std::enable_if<folly::is_invocable_r<U, F, D, U>::value>::type>
-class ReduceOperator
-    : public ObservableOperator<U, D> {
+class ReduceOperator : public ObservableOperator<U, D> {
   using Super = ObservableOperator<U, D>;
 
  public:
@@ -299,7 +301,7 @@ class ReduceOperator
     }
 
    private:
-     std::shared_ptr<ReduceOperator> observable_;
+    std::shared_ptr<ReduceOperator> observable_;
     bool accInitialized_;
     D acc_;
   };
@@ -328,15 +330,20 @@ class TakeOperator : public ObservableOperator<T, T> {
     using SuperSub = typename Super::OperatorSubscription;
 
    public:
-    TakeSubscription(
-        int64_t limit,
-        std::shared_ptr<Observer<T>> observer)
+    TakeSubscription(int64_t limit, std::shared_ptr<Observer<T>> observer)
         : SuperSub(std::move(observer)), limit_(limit) {}
+
+    void onSubscribe(std::shared_ptr<yarpl::observable::Subscription>
+                         subscription) override {
+      SuperSub::onSubscribe(std::move(subscription));
+
+      if (limit_ <= 0) {
+        SuperSub::terminate();
+      }
+    }
 
     void onNext(T value) override {
       if (limit_-- > 0) {
-        if (pending_ > 0)
-          --pending_;
         SuperSub::observerOnNext(std::move(value));
         if (limit_ == 0) {
           SuperSub::terminate();
@@ -345,7 +352,6 @@ class TakeOperator : public ObservableOperator<T, T> {
     }
 
    private:
-    int64_t pending_{0};
     int64_t limit_;
   };
 
@@ -373,11 +379,8 @@ class SkipOperator : public ObservableOperator<T, T> {
     using SuperSub = typename Super::OperatorSubscription;
 
    public:
-    SkipSubscription(
-        int64_t offset,
-        std::shared_ptr<Observer<T>> observer)
-        : SuperSub(std::move(observer)),
-          offset_(offset) {}
+    SkipSubscription(int64_t offset, std::shared_ptr<Observer<T>> observer)
+        : SuperSub(std::move(observer)), offset_(offset) {}
 
     void onNext(T value) override {
       if (offset_ <= 0) {
@@ -395,15 +398,15 @@ class SkipOperator : public ObservableOperator<T, T> {
 };
 
 template <typename T>
-class IgnoreElementsOperator
-    : public ObservableOperator<T, T> {
+class IgnoreElementsOperator : public ObservableOperator<T, T> {
   using Super = ObservableOperator<T, T>;
 
  public:
   explicit IgnoreElementsOperator(std::shared_ptr<Observable<T>> upstream)
       : Super(std::move(upstream)) {}
 
-  std::shared_ptr<Subscription> subscribe(std::shared_ptr<Observer<T>> observer) override {
+  std::shared_ptr<Subscription> subscribe(
+      std::shared_ptr<Observer<T>> observer) override {
     auto subscription =
         std::make_shared<IgnoreElementsSubscription>(std::move(observer));
     Super::upstream_->subscribe(subscription);
@@ -415,8 +418,7 @@ class IgnoreElementsOperator
     using SuperSub = typename Super::OperatorSubscription;
 
    public:
-    IgnoreElementsSubscription(
-        std::shared_ptr<Observer<T>> observer)
+    IgnoreElementsSubscription(std::shared_ptr<Observer<T>> observer)
         : SuperSub(std::move(observer)) {}
 
     void onNext(T) override {}
@@ -451,11 +453,10 @@ class SubscribeOnOperator : public ObservableOperator<T, T> {
     SubscribeOnSubscription(
         folly::Executor& executor,
         std::shared_ptr<Observer<T>> observer)
-        : SuperSub(std::move(observer)),
-          executor_(executor) {}
+        : SuperSub(std::move(observer)), executor_(executor) {}
 
     void cancel() override {
-      executor_.add([ self = this->ref_from_this(this), this ] {
+      executor_.add([self = this->ref_from_this(this), this] {
         this->callSuperCancel();
       });
     }
@@ -531,7 +532,7 @@ class FromPublisherOperator : public Observable<T> {
  private:
   OnSubscribe function_;
 };
-}
-}
+} // namespace observable
+} // namespace yarpl
 
 #include "yarpl/observable/ObservableDoOperator.h"

@@ -46,7 +46,8 @@ void ChannelRequester::onNext(Payload request) noexcept {
 // TODO: consolidate code in onCompleteImpl, onErrorImpl, cancelImpl
 void ChannelRequester::onComplete() noexcept {
   if (!requested_) {
-    closeStream(StreamCompletionSignal::CANCEL);
+    endStream(StreamCompletionSignal::CANCEL);
+    removeFromWriter();
     return;
   }
   if (!publisherClosed()) {
@@ -58,7 +59,8 @@ void ChannelRequester::onComplete() noexcept {
 
 void ChannelRequester::onError(folly::exception_wrapper ex) noexcept {
   if (!requested_) {
-    closeStream(StreamCompletionSignal::CANCEL);
+    endStream(StreamCompletionSignal::CANCEL);
+    removeFromWriter();
     return;
   }
   if (!publisherClosed()) {
@@ -82,7 +84,8 @@ void ChannelRequester::request(int64_t n) noexcept {
 
 void ChannelRequester::cancel() noexcept {
   if (!requested_) {
-    closeStream(StreamCompletionSignal::CANCEL);
+    endStream(StreamCompletionSignal::CANCEL);
+    removeFromWriter();
     return;
   }
   cancelConsumer();
@@ -97,7 +100,8 @@ void ChannelRequester::endStream(StreamCompletionSignal signal) {
 
 void ChannelRequester::tryCompleteChannel() {
   if (publisherClosed() && consumerClosed()) {
-    closeStream(StreamCompletionSignal::COMPLETE);
+    endStream(StreamCompletionSignal::COMPLETE);
+    removeFromWriter();
   }
 }
 

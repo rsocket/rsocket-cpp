@@ -20,7 +20,7 @@ class DeferFlowable : public Flowable<T> {
     } catch (const std::exception& ex) {
       flowable = Flowable<T>::error(ex, std::current_exception());
     }
-    return flowable->subscribe(std::move(subscriber));
+    flowable->subscribe(std::move(subscriber));
   }
 
  private:

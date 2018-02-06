@@ -37,7 +37,8 @@ void ChannelResponder::onError(folly::exception_wrapper ex) noexcept {
 
 void ChannelResponder::tryCompleteChannel() {
   if (publisherClosed() && consumerClosed()) {
-    closeStream(StreamCompletionSignal::COMPLETE);
+    endStream(StreamCompletionSignal::COMPLETE);
+    removeFromWriter();
   }
 }
 

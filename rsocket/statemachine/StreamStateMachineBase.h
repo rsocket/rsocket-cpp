@@ -62,7 +62,8 @@ class StreamStateMachineBase {
   void errorStream(std::string errorPayload);
   void cancelStream();
   void completeStream();
-  void closeStream(StreamCompletionSignal signal);
+
+  void removeFromWriter();
 
   /// A partially-owning pointer to the connection, the stream runs on.
   /// It is declared as const to allow only ctor to initialize it for thread

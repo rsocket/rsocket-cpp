@@ -179,8 +179,7 @@ void RSocketStateMachine::resumeClient(
   outputFrame(frameSerializer_->serializeOut(std::move(resumeFrame)));
 }
 
-void RSocketStateMachine::connect(
-    std::shared_ptr<FrameTransport> transport) {
+void RSocketStateMachine::connect(std::shared_ptr<FrameTransport> transport) {
   VLOG(2) << "Connecting to transport " << transport.get();
 
   CHECK(isDisconnected());
@@ -363,22 +362,6 @@ void RSocketStateMachine::addStream(
   auto result =
       streamState_.streams_.emplace(streamId, std::move(stateMachine));
   DCHECK(result.second);
-}
-
-void RSocketStateMachine::endStream(
-    StreamId streamId,
-    StreamCompletionSignal signal) {
-  VLOG(6) << "endStream";
-  // The signal must be idempotent.
-  if (!endStreamInternal(streamId, signal)) {
-    return;
-  }
-  resumeManager_->onStreamClosed(streamId);
-  DCHECK(
-      signal == StreamCompletionSignal::CANCEL ||
-      signal == StreamCompletionSignal::COMPLETE ||
-      signal == StreamCompletionSignal::APPLICATION_ERROR ||
-      signal == StreamCompletionSignal::ERROR);
 }
 
 bool RSocketStateMachine::endStreamInternal(
@@ -885,10 +868,7 @@ void RSocketStateMachine::writeNewStream(
   switch (streamType) {
     case StreamType::CHANNEL:
       outputFrameOrEnqueue(Frame_REQUEST_CHANNEL(
-          streamId,
-          FrameFlags::EMPTY,
-          initialRequestN,
-          std::move(payload)));
+          streamId, FrameFlags::EMPTY, initialRequestN, std::move(payload)));
       break;
 
     case StreamType::STREAM:
@@ -927,10 +907,9 @@ void RSocketStateMachine::writeError(Frame_ERROR&& frame) {
   outputFrameOrEnqueue(std::move(frame));
 }
 
-void RSocketStateMachine::onStreamClosed(
-    StreamId streamId,
-    StreamCompletionSignal signal) {
-  endStream(streamId, signal);
+void RSocketStateMachine::onStreamClosed(StreamId streamId) {
+  streamState_.streams_.erase(streamId);
+  resumeManager_->onStreamClosed(streamId);
 }
 
 bool RSocketStateMachine::ensureOrAutodetectFrameSerializer(
