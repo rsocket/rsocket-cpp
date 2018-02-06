@@ -5,6 +5,7 @@
 #include <atomic>
 #include <cstdint>
 #include <limits>
+#include <stdexcept>
 
 namespace yarpl {
 namespace credits {
@@ -58,6 +59,13 @@ bool cancel(std::atomic<int64_t>*);
 int64_t consume(std::atomic<int64_t>*, int64_t);
 
 /**
+ * Try Consume (remove) credits from the 'current' atomic<int64_t>.
+ *
+ * Returns true if consuming the credit was successful.
+ */
+bool tryConsume(std::atomic<int64_t>*, int64_t);
+
+/**
  * Whether the current value represents a "cancelled" subscription.
  */
 bool isCancelled(std::atomic<int64_t>*);
@@ -68,4 +76,13 @@ bool isCancelled(std::atomic<int64_t>*);
 bool isInfinite(std::atomic<int64_t>*);
 
 }
+
+namespace flowable {
+// Exception thrown in case the downstream can't keep up.
+class MissingBackpressureException : public std::runtime_error {
+ public:
+  MissingBackpressureException()
+      : std::runtime_error("BACK_PRESSURE: DROP (missing credits onNext)") {}
+};
+} // namespace flowable
 }

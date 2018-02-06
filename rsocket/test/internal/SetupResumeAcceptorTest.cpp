@@ -139,9 +139,7 @@ TEST(SetupResumeAcceptor, SingleSetup) {
 
   acceptor.accept(
       std::move(connection),
-      [&](auto transport, auto) {
-        setupCalled = true;
-      },
+      [&](auto, auto) { setupCalled = true; },
       resumeFail);
 
   evb.loop();

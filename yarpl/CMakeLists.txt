@@ -74,6 +74,7 @@ add_library(
         include/yarpl/flowable/FlowableObserveOnOperator.h
         include/yarpl/flowable/Flowable_FromObservable.h
         include/yarpl/flowable/Flowables.h
+        include/yarpl/flowable/PublishProcessor.h
         include/yarpl/flowable/Subscriber.h
         include/yarpl/flowable/Subscribers.h
         include/yarpl/flowable/Subscription.h
@@ -149,6 +150,7 @@ if (BUILD_TESTS)
     test/FlowableTest.cpp
     test/FlowableFlatMapTest.cpp
     test/Observable_test.cpp
+    test/PublishProcessorTest.cpp
     test/SubscribeObserveOnTests.cpp
     test/Single_test.cpp
     test/FlowableSubscriberTest.cpp

@@ -83,7 +83,7 @@ class ServerResponder : public RSocketResponder {
     std::string metadata = request.metadata->moveToFbString().toStdString();
     auto it = marbles_.streamMarbles.find(std::make_pair(data, metadata));
     if (it == marbles_.streamMarbles.end()) {
-      return yarpl::flowable::Flowables::error<rsocket::Payload>(
+      return yarpl::flowable::Flowable<rsocket::Payload>::error(
           std::logic_error("No MarbleHandler found"));
     } else {
       auto marbleProcessor = std::make_shared<tck::MarbleProcessor>(it->second);

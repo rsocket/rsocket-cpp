@@ -24,7 +24,7 @@ auto printer() {
 }
 
 std::shared_ptr<Flowable<int64_t>> getData() {
-  return Flowables::range(2, 5);
+  return Flowable<>::range(2, 5);
 }
 
 std::string getThreadId() {
@@ -54,7 +54,7 @@ void fromPublisherExample() {
     subscriber->onComplete();
   };
 
-  Flowables::fromPublisher<int>(std::move(onSubscribe))
+  Flowable<int>::fromPublisher(std::move(onSubscribe))
       ->subscribe(printer<int>());
 }
 
@@ -62,31 +62,31 @@ void fromPublisherExample() {
 
 void FlowableExamples::run() {
   std::cout << "create a flowable" << std::endl;
-  Flowables::range(2, 2);
+  Flowable<>::range(2, 2);
 
   std::cout << "get a flowable from a method" << std::endl;
   getData()->subscribe(printer<int64_t>());
 
   std::cout << "just: single value" << std::endl;
-  Flowables::just<long>(23)->subscribe(printer<long>());
+  Flowable<>::just<long>(23)->subscribe(printer<long>());
 
   std::cout << "just: multiple values." << std::endl;
-  Flowables::justN<long>({1, 4, 7, 11})->subscribe(printer<long>());
+  Flowable<>::justN<long>({1, 4, 7, 11})->subscribe(printer<long>());
 
   std::cout << "just: string values." << std::endl;
-  Flowables::justN<std::string>({"the", "quick", "brown", "fox"})
+  Flowable<>::justN<std::string>({"the", "quick", "brown", "fox"})
       ->subscribe(printer<std::string>());
 
   std::cout << "range operator." << std::endl;
-  Flowables::range(1, 4)->subscribe(printer<int64_t>());
+  Flowable<>::range(1, 4)->subscribe(printer<int64_t>());
 
   std::cout << "map example: squares" << std::endl;
-  Flowables::range(1, 4)
+  Flowable<>::range(1, 4)
       ->map([](int64_t v) { return v * v; })
       ->subscribe(printer<int64_t>());
 
   std::cout << "map example: convert to string" << std::endl;
-  Flowables::range(1, 4)
+  Flowable<>::range(1, 4)
       ->map([](int64_t v) { return v * v; })
       ->map([](int64_t v) { return v * v; })
       ->map([](int64_t v) { return std::to_string(v); })
@@ -94,7 +94,7 @@ void FlowableExamples::run() {
       ->subscribe(printer<std::string>());
 
   std::cout << "take example: 3 out of 10 items" << std::endl;
-  Flowables::range(1, 11)->take(3)->subscribe(printer<int64_t>());
+  Flowable<>::range(1, 11)->take(3)->subscribe(printer<int64_t>());
 
   auto flowable = Flowable<int>::create([total = 0](
       auto& subscriber, int64_t requested) mutable {
@@ -114,7 +114,7 @@ void FlowableExamples::run() {
   folly::ScopedEventBaseThread worker;
 
   std::cout << "subscribe_on example" << std::endl;
-  Flowables::justN({"0: ", "1: ", "2: "})
+  Flowable<>::justN({"0: ", "1: ", "2: "})
       ->map([](const char* p) { return std::string(p); })
       ->map([](std::string log) { return log + " on " + getThreadId(); })
       ->subscribeOn(*worker.getEventBase())
