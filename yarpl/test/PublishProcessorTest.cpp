@@ -124,7 +124,7 @@ TEST(PublishProcessorTest, CancelTest) {
   subscriber->onComplete(); // to break any reference cycles
 }
 
-TEST(PublishProcessorTest, OnMultipleSubscribersMultithreadedTest) {
+TEST(PublishProcessorTest, OnMultipleSubscribersMultithreadedWithErrorTest) {
   PublishProcessor<int> pp;
 
   std::vector<std::thread> threads;
@@ -137,6 +137,9 @@ TEST(PublishProcessorTest, OnMultipleSubscribersMultithreadedTest) {
         pp.subscribe(subscriber);
 
         subscriber->awaitTerminalEvent(std::chrono::milliseconds(500));
+
+        EXPECT_EQ(subscriber->values().size(), 1ULL);
+
         EXPECT_TRUE(subscriber->isError());
         EXPECT_EQ(
             subscriber->exceptionWrapper().type(),
@@ -150,6 +153,43 @@ TEST(PublishProcessorTest, OnMultipleSubscribersMultithreadedTest) {
   while (threadsDone < threads.size()) {
     pp.onNext(k++);
   }
+
+  for (auto& thread : threads) {
+    thread.join();
+  }
+}
+
+TEST(PublishProcessorTest, OnMultipleSubscribersMultithreadedTest) {
+  PublishProcessor<int> pp;
+
+  std::vector<std::thread> threads;
+  std::atomic<size_t> subscribersReady{0};
+  std::atomic<size_t> threadsDone{0};
+
+  for (int i = 0; i < 100; i++) {
+    threads.push_back(std::thread([&] {
+      auto subscriber = std::make_shared<TestSubscriber<int>>();
+      pp.subscribe(subscriber);
+
+      ++subscribersReady;
+      subscriber->awaitTerminalEvent(std::chrono::milliseconds(50));
+
+      EXPECT_EQ(subscriber->values(), std::vector<int>({1, 2, 3, 4, 5}));
+      EXPECT_FALSE(subscriber->isError());
+      EXPECT_TRUE(subscriber->isComplete());
+
+      ++threadsDone;
+    }));
+  }
+
+  while (subscribersReady < threads.size());
+
+  pp.onNext(1);
+  pp.onNext(2);
+  pp.onNext(3);
+  pp.onNext(4);
+  pp.onNext(5);
+  pp.onComplete();
 
   for (auto& thread : threads) {
     thread.join();
