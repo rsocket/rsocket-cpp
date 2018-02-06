@@ -3,9 +3,9 @@
 #pragma once
 
 #include <atomic>
-#include <stdexcept>
 #include <cstdint>
 #include <limits>
+#include <stdexcept>
 
 namespace yarpl {
 namespace credits {
@@ -84,5 +84,5 @@ class MissingBackpressureException : public std::runtime_error {
   MissingBackpressureException()
       : std::runtime_error("BACK_PRESSURE: DROP (missing credits onNext)") {}
 };
-}
+} // namespace flowable
 }

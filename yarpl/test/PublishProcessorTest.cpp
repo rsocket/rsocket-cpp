@@ -18,7 +18,7 @@ TEST(PublishProcessorTest, OnNextTest) {
   pp.onNext(2);
   pp.onNext(3);
 
-  EXPECT_EQ(subscriber->values(), std::vector<int>({1,2,3}));
+  EXPECT_EQ(subscriber->values(), std::vector<int>({1, 2, 3}));
 }
 
 TEST(PublishProcessorTest, OnCompleteTest) {
@@ -31,7 +31,11 @@ TEST(PublishProcessorTest, OnCompleteTest) {
   pp.onNext(2);
   pp.onComplete();
 
-  EXPECT_EQ(subscriber->values(), std::vector<int>({1,2,}));
+  EXPECT_EQ(
+      subscriber->values(),
+      std::vector<int>({
+          1, 2,
+      }));
   EXPECT_TRUE(subscriber->isComplete());
 
   auto subscriber2 = std::make_shared<TestSubscriber<int>>();
@@ -50,7 +54,11 @@ TEST(PublishProcessorTest, OnErrorTest) {
   pp.onNext(2);
   pp.onError(std::runtime_error("error!"));
 
-  EXPECT_EQ(subscriber->values(), std::vector<int>({1,2,}));
+  EXPECT_EQ(
+      subscriber->values(),
+      std::vector<int>({
+          1, 2,
+      }));
   EXPECT_TRUE(subscriber->isError());
   EXPECT_EQ(subscriber->getErrorMsg(), "error!");
 
@@ -72,8 +80,8 @@ TEST(PublishProcessorTest, OnNextMultipleSubscribersTest) {
   pp.onNext(2);
   pp.onNext(3);
 
-  EXPECT_EQ(subscriber1->values(), std::vector<int>({1,2,3}));
-  EXPECT_EQ(subscriber2->values(), std::vector<int>({1,2,3}));
+  EXPECT_EQ(subscriber1->values(), std::vector<int>({1, 2, 3}));
+  EXPECT_EQ(subscriber2->values(), std::vector<int>({1, 2, 3}));
 }
 
 TEST(PublishProcessorTest, OnNextSlowSubscriberTest) {
@@ -88,11 +96,13 @@ TEST(PublishProcessorTest, OnNextSlowSubscriberTest) {
   pp.onNext(2);
   pp.onNext(3);
 
-  EXPECT_EQ(subscriber1->values(), std::vector<int>({1,2,3}));
+  EXPECT_EQ(subscriber1->values(), std::vector<int>({1, 2, 3}));
 
   EXPECT_EQ(subscriber2->values(), std::vector<int>({1}));
   EXPECT_TRUE(subscriber2->isError());
-  EXPECT_EQ(subscriber2->exceptionWrapper().type(), typeid(MissingBackpressureException));
+  EXPECT_EQ(
+      subscriber2->exceptionWrapper().type(),
+      typeid(MissingBackpressureException));
 }
 
 TEST(PublishProcessorTest, CancelTest) {
@@ -109,7 +119,7 @@ TEST(PublishProcessorTest, CancelTest) {
   pp.onNext(3);
   pp.onNext(4);
 
-  EXPECT_EQ(subscriber->values(), std::vector<int>({1,2}));
+  EXPECT_EQ(subscriber->values(), std::vector<int>({1, 2}));
 
   subscriber->onComplete(); // to break any reference cycles
 }
@@ -120,27 +130,28 @@ TEST(PublishProcessorTest, OnMultipleSubscribersMultithreadedTest) {
   std::vector<std::thread> threads;
   std::atomic<size_t> threadsDone{0};
 
-  for(int i = 0; i < 100; i++) {
-    threads.push_back(std::thread([&]{
-  for(int j = 0; j < 100; j++) {
+  for (int i = 0; i < 100; i++) {
+    threads.push_back(std::thread([&] {
+      for (int j = 0; j < 100; j++) {
+        auto subscriber = std::make_shared<TestSubscriber<int>>(1);
+        pp.subscribe(subscriber);
 
-    auto subscriber = std::make_shared<TestSubscriber<int>>(1);
-    pp.subscribe(subscriber);
-
-    subscriber->awaitTerminalEvent(std::chrono::milliseconds(500));
-    EXPECT_TRUE(subscriber->isError());
-    EXPECT_EQ(subscriber->exceptionWrapper().type(), typeid(MissingBackpressureException));
-}
-  ++threadsDone;
+        subscriber->awaitTerminalEvent(std::chrono::milliseconds(500));
+        EXPECT_TRUE(subscriber->isError());
+        EXPECT_EQ(
+            subscriber->exceptionWrapper().type(),
+            typeid(MissingBackpressureException));
+      }
+      ++threadsDone;
     }));
   }
 
   int k = 0;
-  while(threadsDone < threads.size()) {
+  while (threadsDone < threads.size()) {
     pp.onNext(k++);
   }
 
-  for(auto& thread : threads) {
+  for (auto& thread : threads) {
     thread.join();
   }
 }
