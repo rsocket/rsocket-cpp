@@ -185,6 +185,10 @@ class TestSubscriber :
     return terminated_ && e_;
   }
 
+  const folly::exception_wrapper& exceptionWrapper() const {
+    return e_;
+  }
+
   std::string getErrorMsg() const {
     return e_ ? e_.get_exception()->what() : "";
   }
@@ -233,6 +237,8 @@ class TestSubscriber :
     valueCount_ = getValueCount();
     dropValues_ = drop;
   }
+
+  using BaseSubscriber<T>::getSubscription;
 
  private:
   bool dropValues_{false};

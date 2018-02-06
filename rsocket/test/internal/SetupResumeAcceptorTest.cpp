@@ -139,7 +139,7 @@ TEST(SetupResumeAcceptor, SingleSetup) {
 
   acceptor.accept(
       std::move(connection),
-      [&](auto transport, auto) {
+      [&](auto, auto) {
         setupCalled = true;
       },
       resumeFail);

@@ -89,6 +89,28 @@ int64_t consume(std::atomic<std::int64_t>* current, int64_t n) {
   }
 }
 
+bool tryConsume(std::atomic<std::int64_t>* current, int64_t n) {
+  if (n <= 0) {
+    // do nothing, return existing unmodified value
+    return false;
+  }
+
+  for (;;) {
+    auto r = current->load();
+    if (r < n) {
+      return false;
+    }
+
+    auto u = r - n;
+
+    // set the new number
+    if (current->compare_exchange_strong(r, u)) {
+      return true;
+    }
+    // if failed to set (concurrent modification) loop and try again
+  }
+}
+
 bool isCancelled(std::atomic<std::int64_t>* current) {
   return current->load() == kCanceled;
 }

@@ -135,6 +135,10 @@ protected:
 
   virtual void onTerminateImpl() {}
 
+  std::shared_ptr<Subscription> getSubscription() {
+    return yarpl::atomic_load(&subscription_);
+  }
+
  private:
   // keeps a reference alive to the subscription
   AtomicReference<Subscription> subscription_;

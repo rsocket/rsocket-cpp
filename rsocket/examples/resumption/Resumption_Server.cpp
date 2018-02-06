@@ -21,7 +21,7 @@ class HelloStreamRequestResponder : public RSocketResponder {
       rsocket::Payload request,
       rsocket::StreamId) override {
     auto requestString = request.moveDataToString();
-    return Flowables::range(1, 1000)->map([name = std::move(requestString)](
+    return Flowable<>::range(1, 1000)->map([name = std::move(requestString)](
         int64_t v) {
       return Payload(folly::to<std::string>(v), "metadata");
     });
