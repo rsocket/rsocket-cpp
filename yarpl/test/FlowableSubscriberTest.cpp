@@ -47,7 +47,7 @@ TEST(FlowableSubscriberTest, TestKeepRefToThisIsDisabled) {
   {
     InSequence s;
     EXPECT_CALL(*subscriber, onSubscribeImpl()).Times(1).WillOnce(Invoke([&] {
-      EXPECT_EQ(1UL, subscriber.use_count());
+      EXPECT_EQ(1L, subscriber.use_count());
     }));
   }
 
@@ -63,7 +63,7 @@ TEST(FlowableSubscriberTest, TestKeepRefToThisIsEnabled) {
   {
     InSequence s;
     EXPECT_CALL(*subscriber, onSubscribeImpl()).Times(1).WillOnce(Invoke([&] {
-      EXPECT_EQ(2UL, subscriber.use_count());
+      EXPECT_EQ(2L, subscriber.use_count());
     }));
   }
 
