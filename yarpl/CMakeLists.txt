@@ -149,6 +149,7 @@ if (BUILD_TESTS)
     test/MocksTest.cpp
     test/FlowableTest.cpp
     test/FlowableFlatMapTest.cpp
+    test/FlowableMakeFlowableTest.cpp
     test/Observable_test.cpp
     test/PublishProcessorTest.cpp
     test/SubscribeObserveOnTests.cpp

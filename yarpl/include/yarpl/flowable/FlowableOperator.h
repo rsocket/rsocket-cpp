@@ -459,6 +459,81 @@ class FromPublisherOperator : public Flowable<T> {
   OnSubscribe function_;
 };
 
+template <typename T>
+class MakeFlowableSubscription : public Subscription,
+                                 public Subscriber<T>,
+                                 public yarpl::enable_get_ref {
+ public:
+  MakeFlowableSubscription(std::shared_ptr<Subscriber<T>> wrapped)
+      : wrapped_(std::move(wrapped)) {}
+
+  void onSubscribe(std::shared_ptr<Subscription> subscription) override {
+    CHECK(wrapped_);
+    CHECK(!subscription_);
+    subscription_ = std::move(subscription);
+    wrapped_->onSubscribe(this->ref_from_this(this));
+  }
+
+  void onNext(T t) override {
+    if (wrapped_) {
+      wrapped_->onNext(std::move(t));
+    }
+  }
+
+  void onError(folly::exception_wrapper err) override {
+    if (wrapped_) {
+      wrapped_->onError(err);
+      auto w = std::move(wrapped_);
+      auto s = std::move(subscription_);
+    }
+  }
+
+  void onComplete() override {
+    if (wrapped_) {
+      wrapped_->onComplete();
+      auto w = std::move(wrapped_);
+      auto s = std::move(subscription_);
+    }
+  }
+
+  void cancel() override {
+    auto w = std::move(wrapped_);
+    auto s = std::move(subscription_);
+
+    if (s) {
+      s->cancel();
+    }
+  }
+
+  void request(int64_t req) override {
+    if (subscription_) {
+      subscription_->request(req);
+    }
+  }
+
+  ~MakeFlowableSubscription() = default;
+
+ private:
+  int64_t credits_{0};
+  std::shared_ptr<Subscription> subscription_;
+  std::shared_ptr<Subscriber<T>> wrapped_;
+};
+
+template <typename T, typename OnSubscribe>
+class MakeFlowableOperator : public Flowable<T> {
+ public:
+  explicit MakeFlowableOperator(OnSubscribe sub) : function_(std::move(sub)) {}
+
+  void subscribe(std::shared_ptr<Subscriber<T>> subscriber) override {
+    auto wrapperSub = std::make_shared<MakeFlowableSubscription<T>>(subscriber);
+    std::shared_ptr<Subscription> subscription = function_(wrapperSub);
+    wrapperSub->onSubscribe(subscription);
+  }
+
+ private:
+  OnSubscribe function_;
+};
+
 template <typename T, typename R>
 class FlatMapOperator : public FlowableOperator<T, R> {
   using Super = FlowableOperator<T, R>;

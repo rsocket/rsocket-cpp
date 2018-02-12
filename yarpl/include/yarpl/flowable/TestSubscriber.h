@@ -71,6 +71,7 @@ class TestSubscriber :
       delegate_->onSubscribe(this->ref_from_this(this));
     }
     this->request(initial_);
+    wasSubscribed_ = true;
   }
 
   void onNextImpl(T t) override final {
@@ -126,6 +127,8 @@ class TestSubscriber :
       std::chrono::milliseconds ms = std::chrono::seconds{1}) {
     // now block this thread
     std::unique_lock<std::mutex> lk(m_);
+    CHECK(wasSubscribed_)
+        << "TestSubscriber wasn't subscribed to, but was expected to have a terminal event";
     // if shutdown gets implemented this would then be released by it
     if (!terminalEventCV_.wait_for(lk, ms, [this] { return terminated_; })) {
       throw std::runtime_error("timeout in awaitTerminalEvent");
@@ -154,6 +157,9 @@ class TestSubscriber :
   }
 
   void assertValueCount(size_t count) {
+    CHECK(count != 0 || !wasSubscribed_)
+        << "Expected to have nonzero value count, but wasn't susbcribed to yet";
+
     if (values_.size() != count) {
       std::stringstream ss;
       ss << "Value count " << values_.size() << " does not match " << count;
@@ -240,6 +246,8 @@ class TestSubscriber :
 
  private:
   bool dropValues_{false};
+  bool wasSubscribed_{false};
+
   std::atomic<int> valueCount_{0};
 
   std::shared_ptr<Subscriber<T>> delegate_;

@@ -181,6 +181,9 @@ class Flowable : public yarpl::enable_get_ref {
     return Flowable<T>::create(std::move(lambda));
   }
 
+  template <typename OnSubscribe>
+  static std::shared_ptr<Flowable<T>> makeFlowable(OnSubscribe function);
+
   template <typename TGenerator>
   static std::shared_ptr<Flowable<T>> fromGenerator(TGenerator generator);
 
@@ -393,6 +396,13 @@ template <typename T>
 template <typename OnSubscribe, typename>
 std::shared_ptr<Flowable<T>> Flowable<T>::fromPublisher(OnSubscribe function) {
   return internal::flowableFromSubscriber<T>(std::move(function));
+}
+
+template <typename T>
+template <typename OnSubscribe>
+std::shared_ptr<Flowable<T>> Flowable<T>::makeFlowable(OnSubscribe function) {
+  return std::make_shared<MakeFlowableOperator<T, OnSubscribe>>(
+      std::move(function));
 }
 
 template <typename T>
