@@ -831,11 +831,11 @@ TEST(FlowableTest, ConcatWithMultipleTest) {
 TEST(FlowableTest, ConcatWithExceptionTest) {
   auto first = Flowable<>::range(1, 2);
   auto second = Flowable<>::range(5, 2);
-  auto third = Flowable<long>::error(std::runtime_error("error"));
+  auto third = Flowable<int64_t>::error(std::runtime_error("error"));
 
   auto combined = first->concatWith(second)->concatWith(third);
 
-  auto subscriber = std::make_shared<TestSubscriber<long>>();
+  auto subscriber = std::make_shared<TestSubscriber<int64_t>>();
   combined->subscribe(subscriber);
 
   EXPECT_EQ(subscriber->values(), std::vector<int64_t>({1, 2, 5, 6}));
@@ -852,7 +852,7 @@ TEST(FlowableTest, ConcatWithFlowControlTest) {
   auto thirdFourth = third->concatWith(fourth);
   auto combined = firstSecond->concatWith(thirdFourth);
 
-  auto subscriber = std::make_shared<TestSubscriber<long>>(0);
+  auto subscriber = std::make_shared<TestSubscriber<int64_t>>(0);
   combined->subscribe(subscriber);
   EXPECT_EQ(subscriber->values(), std::vector<int64_t>{});
 
@@ -871,7 +871,7 @@ TEST(FlowableTest, ConcatWithCancel) {
   auto second = Flowable<>::range(5, 2);
 
   auto combined = first->concatWith(second);
-  auto subscriber = std::make_shared<TestSubscriber<long>>(0);
+  auto subscriber = std::make_shared<TestSubscriber<int64_t>>(0);
 
   MockFunction<void()> checkpoint;
   EXPECT_CALL(checkpoint, Call());

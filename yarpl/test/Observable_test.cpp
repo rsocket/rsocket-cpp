@@ -838,11 +838,11 @@ TEST(Observable, ConcatWithMultipleTest) {
 TEST(Observable, ConcatWithExceptionTest) {
   auto first = Observable<>::range(1, 2);
   auto second = Observable<>::range(5, 2);
-  auto third = Observable<long>::error(std::runtime_error("error"));
+  auto third = Observable<int64_t>::error(std::runtime_error("error"));
 
   auto combined = first->concatWith(second)->concatWith(third);
 
-  auto observer = std::make_shared<CollectingObserver<long>>();
+  auto observer = std::make_shared<CollectingObserver<int64_t>>();
   combined->subscribe(observer);
 
   EXPECT_EQ(observer->values(), std::vector<int64_t>({1, 2, 5, 6}));
