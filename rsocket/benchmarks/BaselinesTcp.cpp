@@ -9,6 +9,7 @@
 #include <cstring>
 #include <iostream>
 #include <thread>
+#include <array>
 
 #define MAX_MESSAGE_LENGTH (8 * 1024)
 #define PORT (35437)
