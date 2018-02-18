@@ -56,66 +56,69 @@ ENDIF()
 message("glog include_dir <${GLOG_INCLUDE_DIR}> lib <${GLOG_LIBRARY}>")
 
 include_directories(SYSTEM ${GLOG_INCLUDE_DIR})
-include_directories(${CMAKE_SOURCE_DIR})
+
+message("including ${CMAKE_CURRENT_SOURCE_DIR}")
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # library source
 add_library(
         yarpl
         # public API
-        include/yarpl/Refcounted.h
+        Refcounted.h
         # Flowable public API
-        include/yarpl/Flowable.h
-        include/yarpl/flowable/DeferFlowable.h
-        include/yarpl/flowable/EmitterFlowable.h
-        include/yarpl/flowable/Flowable.h
-        include/yarpl/flowable/FlowableOperator.h
-        include/yarpl/flowable/FlowableConcatOperators.h
-        include/yarpl/flowable/FlowableDoOperator.h
-        include/yarpl/flowable/FlowableObserveOnOperator.h
-        include/yarpl/flowable/Flowable_FromObservable.h
-        include/yarpl/flowable/Flowables.h
-        include/yarpl/flowable/PublishProcessor.h
-        include/yarpl/flowable/Subscriber.h
-        include/yarpl/flowable/Subscribers.h
-        include/yarpl/flowable/Subscription.h
-        include/yarpl/flowable/TestSubscriber.h
-        src/yarpl/flowable/sources/Subscription.cpp
-        src/yarpl/flowable/sources/Flowables.cpp
+        Flowable.h
+        flowable/DeferFlowable.h
+        flowable/EmitterFlowable.h
+        flowable/Flowable.h
+        flowable/FlowableOperator.h
+        flowable/FlowableConcatOperators.h
+        flowable/FlowableDoOperator.h
+        flowable/FlowableObserveOnOperator.h
+        flowable/Flowable_FromObservable.h
+        flowable/Flowables.h
+        flowable/PublishProcessor.h
+        flowable/Subscriber.h
+        flowable/Subscribers.h
+        flowable/Subscription.h
+        flowable/TestSubscriber.h
+        flowable/Subscription.cpp
+        flowable/Flowables.cpp
         # Observable public API
-        include/yarpl/Observable.h
-        include/yarpl/observable/DeferObservable.h
-        include/yarpl/observable/Observable.h
-        include/yarpl/observable/Observables.h
-        include/yarpl/observable/ObservableOperator.h
-        include/yarpl/observable/ObservableConcatOperators.h
-        include/yarpl/observable/ObservableDoOperator.h
-        include/yarpl/observable/Observer.h
-        include/yarpl/observable/Observers.h
-        include/yarpl/observable/Subscription.h
-        include/yarpl/observable/Subscriptions.h
-        include/yarpl/observable/TestObserver.h
-        src/yarpl/observable/Subscriptions.cpp
-        src/yarpl/observable/Observables.cpp
+        Observable.h
+        observable/DeferObservable.h
+        observable/Observable.h
+        observable/Observables.h
+        observable/ObservableOperator.h
+        observable/ObservableConcatOperators.h
+        observable/ObservableDoOperator.h
+        observable/Observer.h
+        observable/Observers.h
+        observable/Subscription.h
+        observable/Subscriptions.h
+        observable/TestObserver.h
+        observable/Subscriptions.cpp
+        observable/Observables.cpp
         # Single
-        include/yarpl/Single.h
-        include/yarpl/single/Single.h
-        include/yarpl/single/Singles.h
-        include/yarpl/single/SingleOperator.h
-        include/yarpl/single/SingleObserver.h
-        include/yarpl/single/SingleObservers.h
-        include/yarpl/single/SingleSubscription.h
-        include/yarpl/single/SingleSubscriptions.h
-        include/yarpl/single/SingleTestObserver.h
+        Single.h
+        single/Single.h
+        single/Singles.h
+        single/SingleOperator.h
+        single/SingleObserver.h
+        single/SingleObservers.h
+        single/SingleSubscription.h
+        single/SingleSubscriptions.h
+        single/SingleTestObserver.h
         # utils
-        include/yarpl/utils/type_traits.h
-        include/yarpl/utils/credits.h
-        src/yarpl/utils/credits.cpp)
+        utils/type_traits.h
+        utils/credits.h
+        utils/credits.cpp)
 
 target_include_directories(
         yarpl
-        PUBLIC "${PROJECT_SOURCE_DIR}/include" # allow include paths such as "yarpl/observable.h"
-        PUBLIC "${PROJECT_SOURCE_DIR}/src" # allow include paths such as "yarpl/flowable/FlowableRange.h"
+        PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/../" # allow include paths such as "yarpl/observable.h"
         )
+
+message("yarpl source dir: ${CMAKE_CURRENT_SOURCE_DIR}")
 
 target_link_libraries(
   yarpl
@@ -123,16 +126,16 @@ target_link_libraries(
   ${GLOG_LIBRARY})
 
 install(TARGETS yarpl DESTINATION lib)
-install(DIRECTORY include/yarpl DESTINATION include
+install(DIRECTORY yarpl DESTINATION include
   FILES_MATCHING PATTERN "*.h")
 
 if (BUILD_TESTS)
   add_library(
     yarpl-test-utils
-    test/yarpl/test_utils/Tuple.cpp
-    test/yarpl/test_utils/Tuple.h
-    test/yarpl/test_utils/utils.h
-    test/yarpl/test_utils/Mocks.h)
+    test_utils/Tuple.cpp
+    test_utils/Tuple.h
+    test_utils/utils.h
+    test_utils/Mocks.h)
 
   # Executable for experimenting.
   add_executable(

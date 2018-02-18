@@ -12,7 +12,7 @@ namespace rsocket {
 namespace tck {
 
 void BaseSubscriber::awaitTerminalEvent() {
-  const std::unique_lock<std::mutex> lock(mutex_);
+  std::unique_lock<std::mutex> lock(mutex_);
   if (!terminatedCV_.wait_for(lock, std::chrono::seconds(5), [&] {
         return completed_ || errored_;
       })) {
@@ -21,7 +21,7 @@ void BaseSubscriber::awaitTerminalEvent() {
 }
 
 void BaseSubscriber::awaitAtLeast(int numItems) {
-  const std::unique_lock<std::mutex> lock(mutex_);
+  std::unique_lock<std::mutex> lock(mutex_);
   if (!valuesCV_.wait_for(lock, std::chrono::seconds(5), [&] {
         return valuesCount_ >= numItems;
       })) {
