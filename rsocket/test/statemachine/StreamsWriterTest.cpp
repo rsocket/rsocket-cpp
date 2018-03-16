@@ -14,9 +14,9 @@ using namespace yarpl::mocks;
 TEST(StreamsWriterTest, DelegateMock) {
   auto writer = std::make_shared<StrictMock<MockStreamsWriter>>();
   auto& impl = writer->delegateToImpl();
-  EXPECT_CALL(impl, outputFrame(_));
+  EXPECT_CALL(impl, outputFrame_(_));
   EXPECT_CALL(impl, shouldQueue()).WillOnce(Return(false));
-  EXPECT_CALL(*writer, writeNewStream(_, _, _, _));
+  EXPECT_CALL(*writer, writeNewStream_(_, _, _, _));
 
   auto requester = std::make_shared<ChannelRequester>(*writer, 1u);
   yarpl::flowable::Subscriber<rsocket::Payload>* subscriber = requester.get();
@@ -26,7 +26,7 @@ TEST(StreamsWriterTest, DelegateMock) {
 
 TEST(StreamsWriterTest, NewStreamsMockWriterImpl) {
   auto writer = std::make_shared<StrictMock<MockStreamsWriterImpl>>();
-  EXPECT_CALL(*writer, outputFrame(_));
+  EXPECT_CALL(*writer, outputFrame_(_));
   EXPECT_CALL(*writer, shouldQueue()).WillOnce(Return(false));
 
   auto requester = std::make_shared<ChannelRequester>(*writer, 1u);
@@ -40,9 +40,9 @@ TEST(StreamsWriterTest, QueueFrames) {
   auto& impl = writer->delegateToImpl();
   impl.shouldQueue_ = true;
 
-  EXPECT_CALL(impl, outputFrame(_)).Times(0);
+  EXPECT_CALL(impl, outputFrame_(_)).Times(0);
   EXPECT_CALL(impl, shouldQueue()).WillOnce(Return(true));
-  EXPECT_CALL(*writer, writeNewStream(_, _, _, _));
+  EXPECT_CALL(*writer, writeNewStream_(_, _, _, _));
 
   auto requester = std::make_shared<ChannelRequester>(*writer, 1u);
   yarpl::flowable::Subscriber<rsocket::Payload>* subscriber = requester.get();
@@ -55,9 +55,9 @@ TEST(StreamsWriterTest, FlushQueuedFrames) {
   auto& impl = writer->delegateToImpl();
   impl.shouldQueue_ = true;
 
-  EXPECT_CALL(impl, outputFrame(_)).Times(1);
+  EXPECT_CALL(impl, outputFrame_(_)).Times(1);
   EXPECT_CALL(impl, shouldQueue()).Times(3);
-  EXPECT_CALL(*writer, writeNewStream(_, _, _, _));
+  EXPECT_CALL(*writer, writeNewStream_(_, _, _, _));
 
   auto requester = std::make_shared<ChannelRequester>(*writer, 1u);
   yarpl::flowable::Subscriber<rsocket::Payload>* subscriber = requester.get();

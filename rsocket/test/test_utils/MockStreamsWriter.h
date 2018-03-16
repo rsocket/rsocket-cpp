@@ -13,7 +13,7 @@ namespace rsocket {
 class MockStreamsWriterImpl : public StreamsWriterImpl {
  public:
   MOCK_METHOD1(onStreamClosed, void(StreamId));
-  MOCK_METHOD1(outputFrame, void(std::unique_ptr<folly::IOBuf>));
+  MOCK_METHOD1(outputFrame_, void(folly::IOBuf*));
   MOCK_METHOD0(shouldQueue, bool());
 
   MockStreamsWriterImpl() {
@@ -21,6 +21,10 @@ class MockStreamsWriterImpl : public StreamsWriterImpl {
     ON_CALL(*this, shouldQueue()).WillByDefault(Invoke([this]() {
       return this->shouldQueue_;
     }));
+  }
+
+  void outputFrame(std::unique_ptr<folly::IOBuf> buf) override {
+    outputFrame_(buf.get());
   }
 
   FrameSerializer& serializer() override {
@@ -40,33 +44,61 @@ class MockStreamsWriterImpl : public StreamsWriterImpl {
 
 class MockStreamsWriter : public StreamsWriter {
  public:
-  MOCK_METHOD4(writeNewStream, void(StreamId, StreamType, uint32_t, Payload));
-  MOCK_METHOD1(writeRequestN, void(rsocket::Frame_REQUEST_N&&));
-  MOCK_METHOD1(writeCancel, void(rsocket::Frame_CANCEL&&));
-  MOCK_METHOD1(writePayload, void(rsocket::Frame_PAYLOAD&&));
-  MOCK_METHOD1(writeError, void(rsocket::Frame_ERROR&&));
+  MOCK_METHOD4(writeNewStream_, void(StreamId, StreamType, uint32_t, Payload&));
+  MOCK_METHOD1(writeRequestN_, void(rsocket::Frame_REQUEST_N));
+  MOCK_METHOD1(writeCancel_, void(rsocket::Frame_CANCEL));
+  MOCK_METHOD1(writePayload_, void(rsocket::Frame_PAYLOAD&));
+  MOCK_METHOD1(writeError_, void(rsocket::Frame_ERROR&));
   MOCK_METHOD1(onStreamClosed, void(rsocket::StreamId));
 
   // Delegate the Mock calls to the implementation in StreamsWriterImpl.
   MockStreamsWriterImpl& delegateToImpl() {
+    delegateToImpl_ = true;
     using namespace testing;
-    ON_CALL(*this, writeNewStream(_, _, _, _))
-        .WillByDefault(Invoke(&impl_, &StreamsWriter::writeNewStream));
-    ON_CALL(*this, writeRequestN(_))
-        .WillByDefault(Invoke(&impl_, &StreamsWriter::writeRequestN));
-    ON_CALL(*this, writeCancel(_))
-        .WillByDefault(Invoke(&impl_, &StreamsWriter::writeCancel));
-    ON_CALL(*this, writePayload(_))
-        .WillByDefault(Invoke(&impl_, &StreamsWriter::writePayload));
-    ON_CALL(*this, writeError(_))
-        .WillByDefault(Invoke(&impl_, &StreamsWriter::writeError));
     ON_CALL(*this, onStreamClosed(_))
         .WillByDefault(Invoke(&impl_, &StreamsWriter::onStreamClosed));
     return impl_;
   }
 
+  void writeNewStream(StreamId id, StreamType type, uint32_t i, Payload p)
+      override {
+    writeNewStream_(id, type, i, p);
+    if (delegateToImpl_) {
+      impl_.writeNewStream(id, type, i, std::move(p));
+    }
+  }
+
+  void writeRequestN(rsocket::Frame_REQUEST_N&& request) override {
+    if (delegateToImpl_) {
+      impl_.writeRequestN(std::move(request));
+    }
+    writeRequestN_(request);
+  }
+
+  void writeCancel(rsocket::Frame_CANCEL&& cancel) override {
+    writeCancel_(cancel);
+    if (delegateToImpl_) {
+      impl_.writeCancel(std::move(cancel));
+    }
+  }
+
+  void writePayload(rsocket::Frame_PAYLOAD&& payload) override {
+    writePayload_(payload);
+    if (delegateToImpl_) {
+      impl_.writePayload(std::move(payload));
+    }
+  }
+
+  void writeError(rsocket::Frame_ERROR&& error) override {
+    writeError_(error);
+    if (delegateToImpl_) {
+      impl_.writeError(std::move(error));
+    }
+  }
+
  protected:
   MockStreamsWriterImpl impl_;
+  bool delegateToImpl_{false};
 };
 
 } // namespace rsocket
