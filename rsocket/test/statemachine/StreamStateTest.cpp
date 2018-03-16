@@ -2,7 +2,7 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <yarpl/test_utils/mocks.h>
+#include <yarpl/test_utils/Mocks.h>
 
 #include "rsocket/internal/Common.h"
 #include "rsocket/statemachine/ChannelRequester.h"
@@ -31,8 +31,8 @@ TEST(StreamState, ChannelRequesterOnError) {
   auto writer = std::make_shared<StrictMock<MockStreamsWriter>>();
   auto requester = std::make_shared<ChannelRequester>(*writer, 1u);
 
-  EXPECT_CALL(*writer, writeNewStream(1u, _, _, _));
-  EXPECT_CALL(*writer, writeError(_));
+  EXPECT_CALL(*writer, writeNewStream_(1u, _, _, _));
+  EXPECT_CALL(*writer, writeError_(_));
   EXPECT_CALL(*writer, onStreamClosed(1u));
 
   auto subscription = std::make_shared<StrictMock<MockSubscription>>();
@@ -64,9 +64,9 @@ TEST(StreamState, ChannelResponderOnError) {
   auto writer = std::make_shared<StrictMock<MockStreamsWriter>>();
   auto responder = std::make_shared<ChannelResponder>(*writer, 1u, 0u);
 
-  EXPECT_CALL(*writer, writeError(_));
+  EXPECT_CALL(*writer, writeError_(_));
   EXPECT_CALL(*writer, onStreamClosed(1u));
-  EXPECT_CALL(*writer, writeRequestN(_));
+  EXPECT_CALL(*writer, writeRequestN_(_));
 
   auto mockSubscriber =
       std::make_shared<StrictMock<MockSubscriber<rsocket::Payload>>>();
@@ -92,8 +92,8 @@ TEST(StreamState, ChannelRequesterHandleError) {
   auto writer = std::make_shared<StrictMock<MockStreamsWriter>>();
   auto requester = std::make_shared<ChannelRequester>(*writer, 1u);
 
-  EXPECT_CALL(*writer, writeNewStream(1u, _, _, _));
-  EXPECT_CALL(*writer, writeError(_)).Times(0);
+  EXPECT_CALL(*writer, writeNewStream_(1u, _, _, _));
+  EXPECT_CALL(*writer, writeError_(_)).Times(0);
   EXPECT_CALL(*writer, onStreamClosed(1u)).Times(0);
 
   auto mockSubscriber =
@@ -125,9 +125,9 @@ TEST(StreamState, ChannelResponderHandleError) {
   auto writer = std::make_shared<StrictMock<MockStreamsWriter>>();
   auto responder = std::make_shared<ChannelResponder>(*writer, 1u, 0u);
 
-  EXPECT_CALL(*writer, writeError(_)).Times(0);
+  EXPECT_CALL(*writer, writeError_(_)).Times(0);
   EXPECT_CALL(*writer, onStreamClosed(1u)).Times(0);
-  EXPECT_CALL(*writer, writeRequestN(_));
+  EXPECT_CALL(*writer, writeRequestN_(_));
 
   auto mockSubscriber =
       std::make_shared<StrictMock<MockSubscriber<rsocket::Payload>>>();
@@ -159,9 +159,9 @@ TEST(StreamState, ChannelRequesterCancel) {
   auto writer = std::make_shared<StrictMock<MockStreamsWriter>>();
   auto requester = std::make_shared<ChannelRequester>(*writer, 1u);
 
-  EXPECT_CALL(*writer, writeNewStream(1u, _, _, _));
-  EXPECT_CALL(*writer, writePayload(_)).Times(2);
-  EXPECT_CALL(*writer, writeCancel(_));
+  EXPECT_CALL(*writer, writeNewStream_(1u, _, _, _));
+  EXPECT_CALL(*writer, writePayload_(_)).Times(2);
+  EXPECT_CALL(*writer, writeCancel_(_));
   EXPECT_CALL(*writer, onStreamClosed(1u)).Times(0);
 
   auto mockSubscriber =
@@ -199,9 +199,9 @@ TEST(StreamState, ChannelResponderCancel) {
   auto writer = std::make_shared<StrictMock<MockStreamsWriter>>();
   auto responder = std::make_shared<ChannelResponder>(*writer, 1u, 0u);
 
-  EXPECT_CALL(*writer, writePayload(_)).Times(2);
-  EXPECT_CALL(*writer, writeCancel(_));
-  EXPECT_CALL(*writer, writeRequestN(_));
+  EXPECT_CALL(*writer, writePayload_(_)).Times(2);
+  EXPECT_CALL(*writer, writeCancel_(_));
+  EXPECT_CALL(*writer, writeRequestN_(_));
 
   auto mockSubscriber =
       std::make_shared<StrictMock<MockSubscriber<rsocket::Payload>>>();
@@ -237,8 +237,8 @@ TEST(StreamState, ChannelRequesterHandleCancel) {
   auto writer = std::make_shared<StrictMock<MockStreamsWriter>>();
   auto requester = std::make_shared<ChannelRequester>(*writer, 1u);
 
-  EXPECT_CALL(*writer, writeNewStream(1u, _, _, _));
-  EXPECT_CALL(*writer, writePayload(_)).Times(0);
+  EXPECT_CALL(*writer, writeNewStream_(1u, _, _, _));
+  EXPECT_CALL(*writer, writePayload_(_)).Times(0);
   EXPECT_CALL(*writer, onStreamClosed(1u));
 
   auto mockSubscriber =
@@ -269,7 +269,7 @@ TEST(StreamState, ChannelRequesterHandleCancel) {
   subscriber->onNext(Payload());
 
   // Break the cycle: requester <-> mockSubscriber
-  EXPECT_CALL(*writer, writeCancel(_));
+  EXPECT_CALL(*writer, writeCancel_(_));
   auto consumerSubscription = mockSubscriber->subscription();
   consumerSubscription->cancel();
 }
@@ -278,8 +278,8 @@ TEST(StreamState, ChannelResponderHandleCancel) {
   auto writer = std::make_shared<StrictMock<MockStreamsWriter>>();
   auto responder = std::make_shared<ChannelResponder>(*writer, 1u, 0u);
 
-  EXPECT_CALL(*writer, writePayload(_)).Times(0);
-  EXPECT_CALL(*writer, writeRequestN(_));
+  EXPECT_CALL(*writer, writePayload_(_)).Times(0);
+  EXPECT_CALL(*writer, writeRequestN_(_));
   EXPECT_CALL(*writer, onStreamClosed(1u));
 
   auto mockSubscriber =
@@ -307,7 +307,7 @@ TEST(StreamState, ChannelResponderHandleCancel) {
   subscriber->onNext(Payload());
 
   // Break the cycle: responder <-> mockSubscriber
-  EXPECT_CALL(*writer, writeCancel(_));
+  EXPECT_CALL(*writer, writeCancel_(_));
   auto consumerSubscription = mockSubscriber->subscription();
   consumerSubscription->cancel();
 }

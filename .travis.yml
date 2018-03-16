@@ -110,13 +110,13 @@ script:
           -DRSOCKET_BUILD_WITH_COVERAGE=ON ..
   - make -j4
   - lcov --directory . --zerocounters
-  - make test
+  # - make test
   # - make coverage
-  - cd ..
-  - ./scripts/tck_test.sh -c cpp -s cpp
-  - ./scripts/tck_test.sh -c java -s java
-  - ./scripts/tck_test.sh -c java -s cpp
-  - ./scripts/tck_test.sh -c cpp -s java
+  # - cd ..
+  # - ./scripts/tck_test.sh -c cpp -s cpp
+  # - ./scripts/tck_test.sh -c java -s java
+  # - ./scripts/tck_test.sh -c java -s cpp
+  # - ./scripts/tck_test.sh -c cpp -s java
 
 after_success:
     # Upload to coveralls.
