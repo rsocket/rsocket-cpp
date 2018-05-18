@@ -12,6 +12,7 @@
 #include "rsocket/internal/Common.h"
 #include "rsocket/statemachine/ChannelRequester.h"
 #include "rsocket/statemachine/ChannelResponder.h"
+#include "rsocket/statemachine/RSocketStateMachine.h"
 #include "rsocket/statemachine/RequestResponseResponder.h"
 #include "rsocket/test/test_utils/MockDuplexConnection.h"
 #include "rsocket/test/test_utils/MockStreamsWriter.h"
@@ -25,18 +26,35 @@ namespace rsocket {
 
 class ResponderMock : public RSocketResponder {
  public:
+  MOCK_METHOD1(
+      handleRequestResponse_,
+      std::shared_ptr<Single<Payload>>(StreamId));
+  MOCK_METHOD1(
+      handleRequestStream_,
+      std::shared_ptr<yarpl::flowable::Flowable<Payload>>(StreamId));
   MOCK_METHOD2(
-      handleRequestResponse,
-      std::shared_ptr<Single<Payload>>(Payload, StreamId));
-  MOCK_METHOD2(
-      handleRequestStream,
-      std::shared_ptr<yarpl::flowable::Flowable<Payload>>(Payload, StreamId));
-  MOCK_METHOD3(
-      handleRequestChannel,
+      handleRequestChannel_,
       std::shared_ptr<yarpl::flowable::Flowable<Payload>>(
-          Payload request,
           std::shared_ptr<yarpl::flowable::Flowable<Payload>> requestStream,
           StreamId streamId));
+
+  std::shared_ptr<Single<Payload>> handleRequestResponse(Payload, StreamId id)
+      override {
+    return handleRequestResponse_(id);
+  }
+
+  std::shared_ptr<yarpl::flowable::Flowable<Payload>> handleRequestStream(
+      Payload,
+      StreamId id) override {
+    return handleRequestStream_(id);
+  }
+
+  std::shared_ptr<yarpl::flowable::Flowable<Payload>> handleRequestChannel(
+      Payload,
+      std::shared_ptr<yarpl::flowable::Flowable<Payload>> requestStream,
+      StreamId streamId) override {
+    return handleRequestChannel_(requestStream, streamId);
+  }
 };
 
 class RSocketStateMachineTest : public Test {
@@ -213,12 +231,13 @@ TEST_F(RSocketStateMachineTest, RequestResponse) {
 TEST_F(RSocketStateMachineTest, RespondStream) {
   auto connection = std::make_unique<StrictMock<MockDuplexConnection>>();
   int requestCount = 5;
+
   // + the cancel frame when the stateMachine gets destroyed
   EXPECT_CALL(*connection, send_(_)).Times(requestCount + 1);
 
   int sendCount = 0;
   auto responder = std::make_shared<StrictMock<ResponderMock>>();
-  EXPECT_CALL(*responder, handleRequestStream(_, _))
+  EXPECT_CALL(*responder, handleRequestStream_(_))
       .WillOnce(Return(
           yarpl::flowable::Flowable<Payload>::fromGenerator([&sendCount]() {
             ++sendCount;
@@ -244,7 +263,7 @@ TEST_F(RSocketStateMachineTest, RespondChannel) {
 
   int sendCount = 0;
   auto responder = std::make_shared<StrictMock<ResponderMock>>();
-  EXPECT_CALL(*responder, handleRequestChannel(_, _, _))
+  EXPECT_CALL(*responder, handleRequestChannel_(_, _))
       .WillOnce(Return(
           yarpl::flowable::Flowable<Payload>::fromGenerator([&sendCount]() {
             ++sendCount;
@@ -268,7 +287,7 @@ TEST_F(RSocketStateMachineTest, RespondRequest) {
 
   int sendCount = 0;
   auto responder = std::make_shared<StrictMock<ResponderMock>>();
-  EXPECT_CALL(*responder, handleRequestResponse(_, _))
+  EXPECT_CALL(*responder, handleRequestResponse_(_))
       .WillOnce(Return(Singles::fromGenerator<Payload>([&sendCount]() {
         ++sendCount;
         return Payload{};

@@ -132,7 +132,6 @@ if (BUILD_TESTS)
     yarpl-test-utils
     test_utils/Tuple.cpp
     test_utils/Tuple.h
-    test_utils/utils.h
     test_utils/Mocks.h)
 
   # Executable for experimenting.
