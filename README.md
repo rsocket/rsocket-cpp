@@ -10,7 +10,7 @@ C++ implementation of [RSocket](https://rsocket.io)
 Install `folly`:
 
 ```
-brew install --HEAD folly
+brew install folly
 ```
 
 # Building and running tests
