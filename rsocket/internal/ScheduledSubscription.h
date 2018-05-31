@@ -2,30 +2,25 @@
 
 #pragma once
 
-#include "yarpl/flowable/Subscription.h"
+#include <folly/io/async/EventBase.h>
 
-namespace folly {
-class EventBase;
-}
+#include "yarpl/flowable/Subscription.h"
 
 namespace rsocket {
 
-//
-// A decorator of the Subscription object which schedules the method calls on
-// the provided EventBase
-//
+// A wrapper over Subscription that schedules all of the subscription's methods
+// on an EventBase.
 class ScheduledSubscription : public yarpl::flowable::Subscription {
  public:
   ScheduledSubscription(
-      std::shared_ptr<yarpl::flowable::Subscription> inner,
-      folly::EventBase& eventBase);
+      std::shared_ptr<yarpl::flowable::Subscription>,
+      folly::EventBase&);
 
-  void request(int64_t n) noexcept override;
-
-  void cancel() noexcept override;
+  void request(int64_t) override;
+  void cancel() override;
 
  private:
-  const std::shared_ptr<yarpl::flowable::Subscription> inner_;
+  std::shared_ptr<yarpl::flowable::Subscription> inner_;
   folly::EventBase& eventBase_;
 };
 

@@ -5,44 +5,58 @@
 namespace rsocket {
 
 void StreamResponder::onSubscribe(
-    std::shared_ptr<yarpl::flowable::Subscription> subscription) noexcept {
+    std::shared_ptr<yarpl::flowable::Subscription> subscription) {
   publisherSubscribe(std::move(subscription));
 }
 
-void StreamResponder::onNext(Payload response) noexcept {
-  checkPublisherOnNext();
-  if (!publisherClosed()) {
-    writePayload(std::move(response));
+void StreamResponder::onNext(Payload response) {
+  if (publisherClosed()) {
+    return;
   }
+  writePayload(std::move(response));
 }
 
-void StreamResponder::onComplete() noexcept {
-  if (!publisherClosed()) {
-    publisherComplete();
-    writeComplete();
-    removeFromWriter();
+void StreamResponder::onComplete() {
+  if (publisherClosed()) {
+    return;
   }
+  publisherComplete();
+  writeComplete();
+  removeFromWriter();
 }
 
-void StreamResponder::onError(folly::exception_wrapper ex) noexcept {
-  if (!publisherClosed()) {
-    publisherComplete();
-    writeApplicationError(ex.get_exception()->what());
-    removeFromWriter();
+void StreamResponder::onError(folly::exception_wrapper ew) {
+  if (publisherClosed()) {
+    return;
   }
-}
-
-void StreamResponder::endStream(StreamCompletionSignal) {
-  terminatePublisher();
-}
-
-void StreamResponder::handleCancel() {
-  endStream(StreamCompletionSignal::CANCEL);
+  publisherComplete();
+  writeApplicationError(ew.get_exception()->what());
   removeFromWriter();
 }
 
 void StreamResponder::handleRequestN(uint32_t n) {
   processRequestN(n);
+}
+
+void StreamResponder::handleError(folly::exception_wrapper) {
+  handleCancel();
+}
+
+void StreamResponder::handleCancel() {
+  if (publisherClosed()) {
+    return;
+  }
+  terminatePublisher();
+  removeFromWriter();
+}
+
+void StreamResponder::endStream(StreamCompletionSignal signal) {
+  if (publisherClosed()) {
+    return;
+  }
+  terminatePublisher();
+  writeApplicationError(to_string(signal));
+  removeFromWriter();
 }
 
 } // namespace rsocket

@@ -1,3 +1,5 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
 #pragma once
 
 #include <folly/io/async/EventBase.h>
@@ -16,19 +18,15 @@ namespace rsocket {
 // (FrameProcessor) in the original EventBase.
 class ScheduledFrameProcessor : public FrameProcessor {
  public:
-  ScheduledFrameProcessor(
-      std::shared_ptr<FrameProcessor> fp,
-      folly::EventBase* evb)
-      : frameProcessor_(std::move(fp)), evb_(evb) {}
-
+  ScheduledFrameProcessor(std::shared_ptr<FrameProcessor>, folly::EventBase*);
   ~ScheduledFrameProcessor();
 
-  void processFrame(std::unique_ptr<folly::IOBuf> ioBuf) override;
-  void onTerminal(folly::exception_wrapper ex) override;
+  void processFrame(std::unique_ptr<folly::IOBuf>) override;
+  void onTerminal(folly::exception_wrapper) override;
 
  private:
-  const std::shared_ptr<FrameProcessor> frameProcessor_;
   folly::EventBase* const evb_;
+  std::shared_ptr<FrameProcessor> processor_;
 };
 
 } // namespace rsocket

@@ -260,7 +260,7 @@ void coldResumer(uint32_t port, uint32_t client_num) {
   }
 }
 
-TEST(ColdResumptionTest, SuccessfulResumption) {
+TEST(ColdResumptionTest, DISABLED_SuccessfulResumption) {
   auto server = makeResumableServer(std::make_shared<HelloServiceHandler>());
   auto port = *server->listeningPort();
 

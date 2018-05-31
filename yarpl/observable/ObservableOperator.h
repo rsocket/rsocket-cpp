@@ -541,7 +541,7 @@ class FromPublisherOperator : public Observable<T> {
 
     if (!subscription->isCancelled()) {
       function_(std::make_shared<PublisherObserver>(
-          std::move(observer), subscription));
+          std::move(observer), subscription), subscription);
     }
     return subscription;
   }

@@ -129,6 +129,17 @@ class BackpressureStrategyBase : public IBackpressureStrategy<T>,
     observable_.reset();
   }
 
+  void downstreamOnErrorAndCancel(folly::exception_wrapper error) {
+    if (observable::Observer<T>::isUnsubscribedOrTerminated()) {
+      return;
+    }
+    auto subscriber = std::move(subscriber_);
+    subscriber->onError(std::move(error));
+
+    observable_.reset();
+    observable::Observer<T>::subscription()->cancel();
+  }
+
  private:
   std::shared_ptr<observable::Observable<T>> observable_;
   std::shared_ptr<flowable::Subscriber<T>> subscriber_;
@@ -151,13 +162,19 @@ class ErrorBackpressureStrategy : public BackpressureStrategyBase<T> {
   void onCreditsAvailable(int64_t /*credits*/) override {}
 
   void onNextWithoutCredits(T /*t*/) override {
-    Super::downstreamOnError(flowable::MissingBackpressureException());
-    Super::cancel();
+    Super::downstreamOnErrorAndCancel(flowable::MissingBackpressureException());
   }
 };
 
 template <typename T>
 class BufferBackpressureStrategy : public BackpressureStrategyBase<T> {
+ public:
+  static constexpr size_t kNoLimit = 0;
+
+  explicit BufferBackpressureStrategy(size_t bufferSizeLimit = kNoLimit)
+      : bufferSizeLimit_(bufferSizeLimit) {}
+
+ private:
   using Super = BackpressureStrategyBase<T>;
 
   void onComplete() override {
@@ -175,7 +192,14 @@ class BufferBackpressureStrategy : public BackpressureStrategyBase<T> {
   //
 
   void onNextWithoutCredits(T t) override {
-    buffer_->push_back(std::move(t));
+    {
+      auto buffer = buffer_.wlock();
+      if (bufferSizeLimit_ == kNoLimit || buffer->size() < bufferSizeLimit_) {
+        buffer->push_back(std::move(t));
+        return;
+      }
+    }
+    Super::downstreamOnErrorAndCancel(flowable::MissingBackpressureException());
   }
 
   void onCreditsAvailable(int64_t credits) override {
@@ -193,6 +217,7 @@ class BufferBackpressureStrategy : public BackpressureStrategyBase<T> {
 
   folly::Synchronized<std::deque<T>> buffer_;
   std::atomic<bool> completed_{false};
+  const size_t bufferSizeLimit_;
 };
 
 template <typename T>

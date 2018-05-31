@@ -20,17 +20,16 @@ class StreamResponder : public StreamStateMachineBase,
       : StreamStateMachineBase(std::move(writer), streamId),
         PublisherBase(initialRequestN) {}
 
- protected:
-  void handleCancel() override;
-  void handleRequestN(uint32_t n) override;
+  void onSubscribe(std::shared_ptr<yarpl::flowable::Subscription>) override;
+  void onNext(Payload) override;
+  void onComplete() override;
+  void onError(folly::exception_wrapper) override;
 
- private:
-  void onSubscribe(std::shared_ptr<yarpl::flowable::Subscription>
-                       subscription) noexcept override;
-  void onNext(Payload) noexcept override;
-  void onComplete() noexcept override;
-  void onError(folly::exception_wrapper) noexcept override;
+  void handleRequestN(uint32_t) override;
+  void handleError(folly::exception_wrapper) override;
+  void handleCancel() override;
 
   void endStream(StreamCompletionSignal) override;
 };
+
 } // namespace rsocket

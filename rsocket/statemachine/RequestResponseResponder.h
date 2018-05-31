@@ -2,12 +2,10 @@
 
 #pragma once
 
+#include "rsocket/Payload.h"
 #include "rsocket/statemachine/StreamStateMachineBase.h"
-#include "yarpl/flowable/Subscriber.h"
 #include "yarpl/single/SingleObserver.h"
 #include "yarpl/single/SingleSubscription.h"
-
-#include <glog/logging.h>
 
 namespace rsocket {
 
@@ -21,28 +19,23 @@ class RequestResponseResponder : public StreamStateMachineBase,
       StreamId streamId)
       : StreamStateMachineBase(std::move(writer), streamId) {}
 
- private:
-  void onSubscribe(std::shared_ptr<yarpl::single::SingleSubscription>
-                       subscription) noexcept override;
-  void onSuccess(Payload) noexcept override;
-  void onError(folly::exception_wrapper) noexcept override;
+  void onSubscribe(std::shared_ptr<yarpl::single::SingleSubscription>) override;
+  void onSuccess(Payload) override;
+  void onError(folly::exception_wrapper) override;
 
   void handleCancel() override;
 
   void endStream(StreamCompletionSignal) override;
 
+ private:
   /// State of the Subscription responder.
   enum class State : uint8_t {
     RESPONDING,
     CLOSED,
   };
 
-  State state_{State::RESPONDING};
-
   std::shared_ptr<yarpl::single::SingleSubscription> producingSubscription_;
-#ifndef NDEBUG
-  std::atomic<bool> gotOnSubscribe_{false};
-  std::atomic<bool> gotTerminating_{false};
-#endif
+  State state_{State::RESPONDING};
 };
+
 } // namespace rsocket

@@ -4,17 +4,111 @@
 
 namespace rsocket {
 
-using namespace yarpl;
-using namespace yarpl::flowable;
-
 void ChannelRequester::onSubscribe(
-    std::shared_ptr<Subscription> subscription) noexcept {
+    std::shared_ptr<yarpl::flowable::Subscription> subscription) {
   CHECK(!requested_);
   publisherSubscribe(std::move(subscription));
 
   if (hasInitialRequest_) {
     initStream(std::move(request_));
   }
+}
+
+void ChannelRequester::onNext(Payload request) {
+  if (!requested_) {
+    initStream(std::move(request));
+    return;
+  }
+
+  if (!publisherClosed()) {
+    writePayload(std::move(request));
+  }
+}
+
+// TODO: consolidate code in onCompleteImpl, onErrorImpl, cancelImpl
+void ChannelRequester::onComplete() {
+  if (!requested_) {
+    endStream(StreamCompletionSignal::CANCEL);
+    removeFromWriter();
+    return;
+  }
+  if (!publisherClosed()) {
+    publisherComplete();
+    writeComplete();
+    tryCompleteChannel();
+  }
+}
+
+void ChannelRequester::onError(folly::exception_wrapper ex) {
+  if (!requested_) {
+    endStream(StreamCompletionSignal::CANCEL);
+    removeFromWriter();
+    return;
+  }
+  if (!publisherClosed()) {
+    publisherComplete();
+    endStream(StreamCompletionSignal::ERROR);
+    writeApplicationError(ex.get_exception()->what());
+    tryCompleteChannel();
+  }
+}
+
+void ChannelRequester::request(int64_t n) {
+  if (!requested_) {
+    // The initial request has not been sent out yet, hence we must accumulate
+    // the unsynchronised allowance, portion of which will be sent out with
+    // the initial request frame, and the rest will be dispatched via
+    // ConsumerBase:request (ultimately by sending REQUEST_N frames).
+    initialResponseAllowance_.add(n);
+    return;
+  }
+  ConsumerBase::generateRequest(n);
+}
+
+void ChannelRequester::cancel() {
+  if (!requested_) {
+    endStream(StreamCompletionSignal::CANCEL);
+    removeFromWriter();
+    return;
+  }
+  cancelConsumer();
+  writeCancel();
+  tryCompleteChannel();
+}
+
+void ChannelRequester::handlePayload(
+    Payload&& payload,
+    bool complete,
+    bool next) {
+  CHECK(requested_);
+  processPayload(std::move(payload), next);
+
+  if (complete) {
+    completeConsumer();
+    tryCompleteChannel();
+  }
+}
+
+void ChannelRequester::handleRequestN(uint32_t n) {
+  CHECK(requested_);
+  PublisherBase::processRequestN(n);
+}
+
+void ChannelRequester::handleError(folly::exception_wrapper ex) {
+  CHECK(requested_);
+  errorConsumer(std::move(ex));
+  terminatePublisher();
+}
+
+void ChannelRequester::handleCancel() {
+  CHECK(requested_);
+  terminatePublisher();
+  tryCompleteChannel();
+}
+
+void ChannelRequester::endStream(StreamCompletionSignal signal) {
+  terminatePublisher();
+  ConsumerBase::endStream(signal);
 }
 
 void ChannelRequester::initStream(Payload&& request) {
@@ -38,74 +132,6 @@ void ChannelRequester::initStream(Payload&& request) {
   }
 }
 
-void ChannelRequester::onNext(Payload request) noexcept {
-  if (!requested_) {
-    initStream(std::move(request));
-    return;
-  }
-
-  checkPublisherOnNext();
-  if (!publisherClosed()) {
-    writePayload(std::move(request));
-  }
-}
-
-// TODO: consolidate code in onCompleteImpl, onErrorImpl, cancelImpl
-void ChannelRequester::onComplete() noexcept {
-  if (!requested_) {
-    endStream(StreamCompletionSignal::CANCEL);
-    removeFromWriter();
-    return;
-  }
-  if (!publisherClosed()) {
-    publisherComplete();
-    writeComplete();
-    tryCompleteChannel();
-  }
-}
-
-void ChannelRequester::onError(folly::exception_wrapper ex) noexcept {
-  if (!requested_) {
-    endStream(StreamCompletionSignal::CANCEL);
-    removeFromWriter();
-    return;
-  }
-  if (!publisherClosed()) {
-    publisherComplete();
-    endStream(StreamCompletionSignal::ERROR);
-    writeApplicationError(ex.get_exception()->what());
-    tryCompleteChannel();
-  }
-}
-
-void ChannelRequester::request(int64_t n) noexcept {
-  if (!requested_) {
-    // The initial request has not been sent out yet, hence we must accumulate
-    // the unsynchronised allowance, portion of which will be sent out with
-    // the initial request frame, and the rest will be dispatched via
-    // ConsumerBase:request (ultimately by sending REQUEST_N frames).
-    initialResponseAllowance_.add(n);
-    return;
-  }
-  ConsumerBase::generateRequest(n);
-}
-
-void ChannelRequester::cancel() noexcept {
-  if (!requested_) {
-    endStream(StreamCompletionSignal::CANCEL);
-    removeFromWriter();
-    return;
-  }
-  cancelConsumer();
-  writeCancel();
-  tryCompleteChannel();
-}
-
-void ChannelRequester::endStream(StreamCompletionSignal signal) {
-  terminatePublisher();
-  ConsumerBase::endStream(signal);
-}
-
 void ChannelRequester::tryCompleteChannel() {
   if (publisherClosed() && consumerClosed()) {
     endStream(StreamCompletionSignal::COMPLETE);
@@ -113,33 +139,4 @@ void ChannelRequester::tryCompleteChannel() {
   }
 }
 
-void ChannelRequester::handlePayload(
-    Payload&& payload,
-    bool complete,
-    bool next) {
-  CHECK(requested_);
-  processPayload(std::move(payload), next);
-
-  if (complete) {
-    completeConsumer();
-    tryCompleteChannel();
-  }
-}
-
-void ChannelRequester::handleError(folly::exception_wrapper ex) {
-  CHECK(requested_);
-  errorConsumer(std::move(ex));
-  terminatePublisher();
-}
-
-void ChannelRequester::handleRequestN(uint32_t n) {
-  CHECK(requested_);
-  PublisherBase::processRequestN(n);
-}
-
-void ChannelRequester::handleCancel() {
-  CHECK(requested_);
-  terminatePublisher();
-  tryCompleteChannel();
-}
 } // namespace rsocket

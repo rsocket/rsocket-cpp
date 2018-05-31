@@ -4,22 +4,18 @@
 
 namespace rsocket {
 
-using namespace yarpl;
-using namespace yarpl::flowable;
-
 void ChannelResponder::onSubscribe(
-    std::shared_ptr<Subscription> subscription) noexcept {
+    std::shared_ptr<yarpl::flowable::Subscription> subscription) {
   publisherSubscribe(std::move(subscription));
 }
 
-void ChannelResponder::onNext(Payload response) noexcept {
-  checkPublisherOnNext();
+void ChannelResponder::onNext(Payload response) {
   if (!publisherClosed()) {
     writePayload(std::move(response));
   }
 }
 
-void ChannelResponder::onComplete() noexcept {
+void ChannelResponder::onComplete() {
   if (!publisherClosed()) {
     publisherComplete();
     writeComplete();
@@ -27,7 +23,7 @@ void ChannelResponder::onComplete() noexcept {
   }
 }
 
-void ChannelResponder::onError(folly::exception_wrapper ex) noexcept {
+void ChannelResponder::onError(folly::exception_wrapper ex) {
   if (!publisherClosed()) {
     publisherComplete();
     endStream(StreamCompletionSignal::ERROR);
@@ -36,52 +32,26 @@ void ChannelResponder::onError(folly::exception_wrapper ex) noexcept {
   }
 }
 
-void ChannelResponder::tryCompleteChannel() {
-  if (publisherClosed() && consumerClosed()) {
-    endStream(StreamCompletionSignal::COMPLETE);
-    removeFromWriter();
-  }
-}
-
-void ChannelResponder::request(int64_t n) noexcept {
+void ChannelResponder::request(int64_t n) {
   ConsumerBase::generateRequest(n);
 }
 
-void ChannelResponder::cancel() noexcept {
+void ChannelResponder::cancel() {
   cancelConsumer();
   writeCancel();
   tryCompleteChannel();
 }
 
-void ChannelResponder::endStream(StreamCompletionSignal signal) {
-  terminatePublisher();
-  ConsumerBase::endStream(signal);
-}
-
 void ChannelResponder::handlePayload(
     Payload&& payload,
     bool complete,
-    bool flagsNext) {
-  onNextPayloadFrame(0, std::move(payload), complete, flagsNext);
-}
-
-void ChannelResponder::onNextPayloadFrame(
-    uint32_t requestN,
-    Payload&& payload,
-    bool complete,
     bool next) {
-  processRequestN(requestN);
   processPayload(std::move(payload), next);
 
   if (complete) {
     completeConsumer();
     tryCompleteChannel();
   }
-}
-
-void ChannelResponder::handleCancel() {
-  terminatePublisher();
-  tryCompleteChannel();
 }
 
 void ChannelResponder::handleRequestN(uint32_t n) {
@@ -92,4 +62,22 @@ void ChannelResponder::handleError(folly::exception_wrapper ex) {
   errorConsumer(std::move(ex));
   terminatePublisher();
 }
+
+void ChannelResponder::handleCancel() {
+  terminatePublisher();
+  tryCompleteChannel();
+}
+
+void ChannelResponder::endStream(StreamCompletionSignal signal) {
+  terminatePublisher();
+  ConsumerBase::endStream(signal);
+}
+
+void ChannelResponder::tryCompleteChannel() {
+  if (publisherClosed() && consumerClosed()) {
+    endStream(StreamCompletionSignal::COMPLETE);
+    removeFromWriter();
+  }
+}
+
 } // namespace rsocket

@@ -92,26 +92,28 @@ class ScheduledSubscriptionSubscriber : public yarpl::flowable::Subscriber<T> {
       : inner_(std::move(inner)), eventBase_(eventBase) {}
 
   void onSubscribe(
-      std::shared_ptr<yarpl::flowable::Subscription> subscription) override {
-    inner_->onSubscribe(
-        std::make_shared<ScheduledSubscription>(subscription, eventBase_));
-  }
-
-  // No further calls to the subscription after this method is invoked.
-  void onComplete() override {
-    inner_->onComplete();
-  }
-
-  void onError(folly::exception_wrapper ex) override {
-    inner_->onError(std::move(ex));
+      std::shared_ptr<yarpl::flowable::Subscription> sub) override {
+    auto scheduled =
+        std::make_shared<ScheduledSubscription>(std::move(sub), eventBase_);
+    inner_->onSubscribe(std::move(scheduled));
   }
 
   void onNext(T value) override {
     inner_->onNext(std::move(value));
   }
 
+  void onComplete() override {
+    auto inner = std::move(inner_);
+    inner->onComplete();
+  }
+
+  void onError(folly::exception_wrapper ew) override {
+    auto inner = std::move(inner_);
+    inner->onError(std::move(ew));
+  }
+
  private:
-  const std::shared_ptr<yarpl::flowable::Subscriber<T>> inner_;
+  std::shared_ptr<yarpl::flowable::Subscriber<T>> inner_;
   folly::EventBase& eventBase_;
 };
 

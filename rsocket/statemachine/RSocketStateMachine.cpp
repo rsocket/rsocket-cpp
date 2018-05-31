@@ -26,25 +26,27 @@
 #include "rsocket/statemachine/StreamResponder.h"
 #include "rsocket/statemachine/StreamStateMachineBase.h"
 
-#include "yarpl/flowable/Flowable.h"
-#include "yarpl/single/Singles.h"
+#include "yarpl/flowable/Subscription.h"
+#include "yarpl/single/SingleSubscriptions.h"
 
 namespace rsocket {
 
 namespace {
-void subscribeToErrorFlowable(
-    std::shared_ptr<yarpl::flowable::Subscriber<Payload>> responseSink) {
-  yarpl::flowable::Flowable<Payload>::error(
-      std::runtime_error("state machine is disconnected/closed"))
-      ->subscribe(std::move(responseSink));
+
+void disconnectError(
+    std::shared_ptr<yarpl::flowable::Subscriber<Payload>> subscriber) {
+  std::runtime_error exn{"RSocket connection is disconnected or closed"};
+  subscriber->onSubscribe(yarpl::flowable::Subscription::create());
+  subscriber->onError(std::move(exn));
 }
 
-void subscribeToErrorSingle(
-    std::shared_ptr<yarpl::single::SingleObserver<Payload>> responseSink) {
-  yarpl::single::Singles::error<Payload>(
-      std::runtime_error("state machine is disconnected/closed"))
-      ->subscribe(std::move(responseSink));
+void disconnectError(
+    std::shared_ptr<yarpl::single::SingleObserver<Payload>> observer) {
+  std::runtime_error exn{"RSocket connection is disconnected or closed"};
+  observer->onSubscribe(yarpl::single::SingleSubscriptions::empty());
+  observer->onError(std::move(exn));
 }
+
 } // namespace
 
 RSocketStateMachine::RSocketStateMachine(
@@ -167,7 +169,8 @@ void RSocketStateMachine::connectClient(
   setResumable(params.resumable);
 
   Frame_SETUP frame(
-      params.resumable ? FrameFlags::RESUME_ENABLE : FrameFlags::EMPTY,
+      (params.resumable ? FrameFlags::RESUME_ENABLE : FrameFlags::EMPTY) |
+          (params.payload.metadata ? FrameFlags::METADATA : FrameFlags::EMPTY),
       version.major,
       version.minor,
       getKeepaliveTime(),
@@ -395,7 +398,7 @@ void RSocketStateMachine::requestStream(
     Payload request,
     std::shared_ptr<yarpl::flowable::Subscriber<Payload>> responseSink) {
   if (isDisconnected()) {
-    subscribeToErrorFlowable(std::move(responseSink));
+    disconnectError(std::move(responseSink));
     return;
   }
 
@@ -413,9 +416,10 @@ RSocketStateMachine::requestChannel(
     bool hasInitialRequest,
     std::shared_ptr<yarpl::flowable::Subscriber<Payload>> responseSink) {
   if (isDisconnected()) {
-    subscribeToErrorFlowable(std::move(responseSink));
+    disconnectError(std::move(responseSink));
     return nullptr;
   }
+
   auto const streamId = getNextStreamId();
   std::shared_ptr<ChannelRequester> stateMachine;
   if (hasInitialRequest) {
@@ -435,9 +439,10 @@ void RSocketStateMachine::requestResponse(
     Payload request,
     std::shared_ptr<yarpl::single::SingleObserver<Payload>> responseSink) {
   if (isDisconnected()) {
-    subscribeToErrorSingle(std::move(responseSink));
+    disconnectError(std::move(responseSink));
     return;
   }
+
   auto const streamId = getNextStreamId();
   auto stateMachine = std::make_shared<RequestResponseRequester>(
       shared_from_this(), streamId, std::move(request));
@@ -446,32 +451,12 @@ void RSocketStateMachine::requestResponse(
   stateMachine->subscribe(std::move(responseSink));
 }
 
-bool RSocketStateMachine::endStreamInternal(
-    StreamId streamId,
-    StreamCompletionSignal signal) {
-  VLOG(6) << "endStreamInternal";
-  const auto it = streams_.find(streamId);
-  if (it == streams_.end()) {
-    // Unsubscribe handshake initiated by the connection, we're done.
-    return false;
-  }
-
-  // Remove from the map before notifying the stateMachine.
-  auto streamElem = std::move(it->second);
-  streams_.erase(it);
-  streamElem.stateMachine->endStream(signal);
-  return true;
-}
-
 void RSocketStateMachine::closeStreams(StreamCompletionSignal signal) {
-  // Close all streams.
   while (!streams_.empty()) {
-    const auto oldSize = streams_.size();
-    const auto result = endStreamInternal(streams_.begin()->first, signal);
-    // TODO(stupaq): what kind of a user action could violate these
-    // assertions?
-    DCHECK(result);
-    DCHECK_EQ(streams_.size(), oldSize - 1);
+    auto it = streams_.begin();
+    auto streamElem = std::move(it->second);
+    streams_.erase(it);
+    streamElem.stateMachine->endStream(signal);
   }
 }
 
@@ -686,14 +671,8 @@ void RSocketStateMachine::handleConnectionFrame(
 
 std::shared_ptr<StreamStateMachineBase>
 RSocketStateMachine::getStreamStateMachine(StreamId streamId) {
-  const auto&& it = streams_.find(streamId);
-  if (it == streams_.end()) {
-    return nullptr;
-  }
-  // we are purposely making a copy of the reference here to avoid problems with
-  // lifetime of the stateMachine when a terminating signal is delivered which
-  // will cause the stateMachine to be destroyed while in one of its methods
-  return it->second.stateMachine;
+  auto const it = streams_.find(streamId);
+  return it != streams_.end() ? it->second.stateMachine : nullptr;
 }
 
 void RSocketStateMachine::onStreamRequestN(
@@ -725,7 +704,7 @@ void RSocketStateMachine::onStreamPayload(
     bool flagsFollows,
     bool flagsComplete,
     bool flagsNext) {
-  const auto&& it = streams_.find(streamId);
+  auto const it = streams_.find(streamId);
   if (it == streams_.end()) {
     return;
   }
@@ -761,8 +740,7 @@ void RSocketStateMachine::handleStreamFrame(
     StreamId streamId,
     FrameType frameType,
     std::unique_ptr<folly::IOBuf> serializedFrame) {
-  const auto it = streams_.find(streamId);
-  if (it == streams_.end()) {
+  if (streams_.count(streamId) == 0) {
     handleUnknownStream(streamId, frameType, std::move(serializedFrame));
     return;
   }
@@ -1191,12 +1169,9 @@ bool RSocketStateMachine::ensureOrAutodetectFrameSerializer(
 }
 
 size_t RSocketStateMachine::getConsumerAllowance(StreamId streamId) const {
-  size_t consumerAllowance = 0;
-  const auto it = streams_.find(streamId);
-  if (it != streams_.end()) {
-    consumerAllowance = it->second.stateMachine->getConsumerAllowance();
-  }
-  return consumerAllowance;
+  auto const it = streams_.find(streamId);
+  return it != streams_.end() ? it->second.stateMachine->getConsumerAllowance()
+                              : 0;
 }
 
 void RSocketStateMachine::registerCloseCallback(
@@ -1247,7 +1222,7 @@ StreamId RSocketStateMachine::getNextStreamId() {
     throw std::runtime_error{"Ran out of stream IDs"};
   }
 
-  CHECK(streams_.find(streamId) == streams_.end())
+  CHECK_EQ(0, streams_.count(streamId))
       << "Next stream ID already exists in the streams map";
 
   nextStreamId_ += 2;

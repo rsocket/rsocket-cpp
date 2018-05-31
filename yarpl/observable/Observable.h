@@ -112,6 +112,9 @@ class Observable : public yarpl::enable_get_ref {
   template <typename OnSubscribe>
   static std::shared_ptr<Observable<T>> create(OnSubscribe&&);
 
+  template <typename OnSubscribe>
+  static std::shared_ptr<Observable<T>> createEx(OnSubscribe&&);
+
   virtual std::shared_ptr<Subscription> subscribe(
       std::shared_ptr<Observer<T>>) = 0;
 
@@ -306,6 +309,23 @@ std::shared_ptr<Observable<T>> Observable<T>::create(OnSubscribe&& function) {
   static_assert(
       folly::is_invocable<OnSubscribe&&, std::shared_ptr<Observer<T>>>::value,
       "OnSubscribe must have type `void(std::shared_ptr<Observer<T>>)`");
+
+  return createEx([func = std::forward<OnSubscribe>(function)](
+                         std::shared_ptr<Observer<T>> observer,
+                         std::shared_ptr<Subscription>) mutable {
+    func(std::move(observer));
+  });
+}
+
+template <typename T>
+template <typename OnSubscribe>
+std::shared_ptr<Observable<T>> Observable<T>::createEx(OnSubscribe&& function) {
+  static_assert(
+      folly::is_invocable<
+          OnSubscribe&&,
+          std::shared_ptr<Observer<T>>, std::shared_ptr<Subscription>>::value,
+      "OnSubscribe must have type "
+      "`void(std::shared_ptr<Observer<T>>, std::shared_ptr<Subscription>)`");
 
   return std::make_shared<FromPublisherOperator<T, std::decay_t<OnSubscribe>>>(
       std::forward<OnSubscribe>(function));

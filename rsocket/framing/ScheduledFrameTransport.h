@@ -1,9 +1,10 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
 #pragma once
 
 #include <folly/io/async/EventBase.h>
 
-#include "rsocket/framing/FrameTransportImpl.h"
-#include "rsocket/framing/ScheduledFrameProcessor.h"
+#include "rsocket/framing/FrameTransport.h"
 
 namespace rsocket {
 
@@ -15,8 +16,7 @@ namespace rsocket {
 // original RSocketStateMachine was constructed for the client.  Here the
 // RSocketStateMachine uses this class to schedule events of the Transport in
 // the new EventBase.
-class ScheduledFrameTransport : public FrameTransport,
-                                public yarpl::enable_get_ref {
+class ScheduledFrameTransport : public FrameTransport {
  public:
   ScheduledFrameTransport(
       std::shared_ptr<FrameTransport> frameTransport,
@@ -28,8 +28,8 @@ class ScheduledFrameTransport : public FrameTransport,
 
   ~ScheduledFrameTransport();
 
-  void setFrameProcessor(std::shared_ptr<FrameProcessor> fp) override;
-  void outputFrameOrDrop(std::unique_ptr<folly::IOBuf> ioBuf) override;
+  void setFrameProcessor(std::shared_ptr<FrameProcessor>) override;
+  void outputFrameOrDrop(std::unique_ptr<folly::IOBuf>) override;
   void close() override;
   bool isConnectionFramed() const override;
 
@@ -45,6 +45,7 @@ class ScheduledFrameTransport : public FrameTransport,
  private:
   folly::EventBase* const transportEvb_;
   folly::EventBase* const stateMachineEvb_;
-  const std::shared_ptr<FrameTransport> frameTransport_;
+  std::shared_ptr<FrameTransport> frameTransport_;
 };
+
 } // namespace rsocket

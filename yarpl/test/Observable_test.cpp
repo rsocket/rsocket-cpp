@@ -315,7 +315,13 @@ TEST(Observable, toFlowableDropWithCancel) {
 }
 
 TEST(Observable, toFlowableErrorStrategy) {
-  auto a = Observable<>::range(1, 10);
+  auto a = Observable<int64_t>::createEx([](auto observer, auto subscription) {
+    int64_t i = 1;
+    for (; !subscription->isCancelled() && i <= 10; ++i) {
+      observer->onNext(i);
+    }
+    EXPECT_EQ(7, i);
+  });
   auto f = a->toFlowable(BackpressureStrategy::ERROR);
 
   std::vector<int64_t> v;
@@ -356,6 +362,59 @@ TEST(Observable, toFlowableBufferStrategy) {
 
   subscriber->subscription()->request(5);
   EXPECT_EQ(v, std::vector<int64_t>({1, 2, 3, 4, 5, 6, 7, 8, 9, 10}));
+}
+
+TEST(Observable, toFlowableBufferStrategyLimit) {
+  std::shared_ptr<Observer<int64_t>> observer;
+  std::shared_ptr<Subscription> subscription;
+
+  auto a = Observable<int64_t>::createEx([&](auto o, auto s) {
+    observer = std::move(o);
+    subscription = std::move(s);
+  });
+  auto f =
+      a->toFlowable(std::make_shared<BufferBackpressureStrategy<int64_t>>(3));
+
+  std::vector<int64_t> v;
+
+  auto subscriber =
+      std::make_shared<testing::StrictMock<MockSubscriber<int64_t>>>(5);
+
+  EXPECT_CALL(*subscriber, onSubscribe_(_));
+  EXPECT_CALL(*subscriber, onNext_(_))
+      .WillRepeatedly(Invoke([&](int64_t value) { v.push_back(value); }));
+
+  EXPECT_FALSE(observer);
+  EXPECT_FALSE(subscription);
+
+  f->subscribe(subscriber);
+
+  EXPECT_TRUE(observer);
+  EXPECT_TRUE(subscription);
+
+  for (size_t i = 1; i <= 5; ++i) {
+    observer->onNext(i);
+  }
+
+  EXPECT_EQ(v, std::vector<int64_t>({1, 2, 3, 4, 5}));
+
+  observer->onNext(6);
+  observer->onNext(7);
+  observer->onNext(8);
+
+  EXPECT_FALSE(observer->isUnsubscribedOrTerminated());
+  EXPECT_FALSE(subscription->isCancelled());
+
+  EXPECT_CALL(*subscriber, onError_(_))
+      .WillOnce(Invoke([&](folly::exception_wrapper ex) {
+        EXPECT_TRUE(ex.is_compatible_with<
+                    yarpl::flowable::MissingBackpressureException>());
+      }));
+
+  observer->onNext(9);
+
+  EXPECT_TRUE(observer->isUnsubscribedOrTerminated());
+  EXPECT_TRUE(subscription->isCancelled());
 }
 
 TEST(Observable, toFlowableLatestStrategy) {

@@ -4,8 +4,6 @@
 
 #include <glog/logging.h>
 
-#include "rsocket/statemachine/RSocketStateMachine.h"
-
 namespace rsocket {
 
 PublisherBase::PublisherBase(uint32_t initialRequestN)
@@ -24,12 +22,6 @@ void PublisherBase::publisherSubscribe(
   }
 }
 
-void PublisherBase::checkPublisherOnNext() {
-  // we are either responding and publisherSubscribe method was called
-  // or we are already terminated
-  CHECK((state_ == State::RESPONDING) == !!producingSubscription_);
-}
-
 void PublisherBase::publisherComplete() {
   state_ = State::CLOSED;
   producingSubscription_ = nullptr;
@@ -40,12 +32,12 @@ bool PublisherBase::publisherClosed() const {
 }
 
 void PublisherBase::processRequestN(uint32_t requestN) {
-  if (!requestN || state_ == State::CLOSED) {
+  if (requestN == 0 || state_ == State::CLOSED) {
     return;
   }
 
-  // we might not have the subscription set yet as there can be REQUEST_N
-  // frames scheduled on the executor before onSubscribe method
+  // We might not have the subscription set yet as there can be REQUEST_N frames
+  // scheduled on the executor before onSubscribe method.
   if (producingSubscription_) {
     producingSubscription_->request(requestN);
   } else {

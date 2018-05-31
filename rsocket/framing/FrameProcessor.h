@@ -2,12 +2,8 @@
 
 #pragma once
 
-#include "rsocket/internal/Common.h"
-
-namespace folly {
-class IOBuf;
-class exception_wrapper;
-} // namespace folly
+#include <folly/ExceptionWrapper.h>
+#include <folly/io/IOBuf.h>
 
 namespace rsocket {
 

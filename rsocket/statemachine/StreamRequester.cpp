@@ -11,7 +11,7 @@ void StreamRequester::setRequested(size_t n) {
 }
 
 void StreamRequester::request(int64_t signedN) {
-  if (signedN <= 0) {
+  if (signedN <= 0 || consumerClosed()) {
     return;
   }
 
@@ -39,6 +39,9 @@ void StreamRequester::request(int64_t signedN) {
 
 void StreamRequester::cancel() {
   VLOG(5) << "StreamRequester::cancel(requested_=" << requested_ << ")";
+  if (consumerClosed()) {
+    return;
+  }
   cancelConsumer();
   if (requested_) {
     writeCancel();

@@ -177,8 +177,7 @@ class RSocketStateMachine final
       bool flagsComplete,
       bool flagsNext);
 
-  std::shared_ptr<StreamStateMachineBase> getStreamStateMachine(
-      StreamId streamId);
+  std::shared_ptr<StreamStateMachineBase> getStreamStateMachine(StreamId);
 
   void connect(std::shared_ptr<FrameTransport>);
 
@@ -235,12 +234,6 @@ class RSocketStateMachine final
     closeWithError(Frame_ERROR::connectionError("Invalid frame"));
     return false;
   }
-
-  /// Performs the same actions as ::endStream without propagating closure
-  /// signal to the underlying connection.
-  ///
-  /// The call is idempotent and returns false iff a stream has not been found.
-  bool endStreamInternal(StreamId streamId, StreamCompletionSignal signal);
 
   // FrameProcessor.
   void processFrame(std::unique_ptr<folly::IOBuf>) override;

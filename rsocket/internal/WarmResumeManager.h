@@ -57,10 +57,10 @@ class WarmResumeManager : public ResumeManager {
 
   // No action to perform for WarmResumeManager
   void onStreamOpen(StreamId, RequestOriginator, std::string, StreamType)
-      override{};
+      override {}
 
   // No action to perform for WarmResumeManager
-  void onStreamClosed(StreamId) override{};
+  void onStreamClosed(StreamId) override {}
 
   const StreamResumeInfos& getStreamResumeInfos() const override {
     LOG(FATAL) << "Not Implemented for Warm Resumption";
