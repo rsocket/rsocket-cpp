@@ -127,13 +127,14 @@ install(TARGETS yarpl DESTINATION lib)
 install(DIRECTORY yarpl DESTINATION include
   FILES_MATCHING PATTERN "*.h")
 
-if (BUILD_TESTS)
-  add_library(
-    yarpl-test-utils
-    test_utils/Tuple.cpp
-    test_utils/Tuple.h
-    test_utils/Mocks.h)
+# RSocket's tests also has dependency on this library
+add_library(
+  yarpl-test-utils
+  test_utils/Tuple.cpp
+  test_utils/Tuple.h
+  test_utils/Mocks.h)
 
+if (BUILD_TESTS)
   # Executable for experimenting.
   add_executable(
     yarpl-playground

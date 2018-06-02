@@ -40,16 +40,20 @@ matrix:
     # Set COMPILER environment variable instead of CC or CXX because the latter
     # are overriden by Travis. Setting the compiler in Travis doesn't work
     # either because it strips version.
-    - env: COMPILER=clang-4.0
-      addons:
-        apt:
-          sources:
-            - *common_srcs
-            - llvm-toolchain-trusty-4.0
-          packages:
-            - *common_deps
-            - clang-4.0
-            - libstdc++-4.9-dev
+
+    # TODO: Only for clang, the linker is unable to find folly::initLoggingOrDie.
+    # So this environment is disabled temporarily.
+    #
+    # - env: COMPILER=clang-4.0
+    #  addons:
+    #    apt:
+    #      sources:
+    #        - *common_srcs
+    #        - llvm-toolchain-trusty-4.0
+    #      packages:
+    #        - *common_deps
+    #        - clang-4.0
+    #        - libstdc++-4.9-dev
 
     - env: COMPILER=gcc-4.9
       addons:
