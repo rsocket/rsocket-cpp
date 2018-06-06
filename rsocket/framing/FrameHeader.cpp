@@ -38,7 +38,9 @@ constexpr auto toRange(const std::array<FlagString, N>& arr) {
   return folly::Range<const FlagString*>{arr.data(), arr.size()};
 }
 
-constexpr folly::Range<const FlagString*> allowedFlags(FrameType type) {
+// constexpr -- Old versions of C++ compiler doesn't support 
+// compound-statements in constexpr function (no switch statement)
+folly::Range<const FlagString*> allowedFlags(FrameType type) {
   switch (type) {
     case FrameType::SETUP:
       return toRange(kMetadataResumeEnableLease);

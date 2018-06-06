@@ -367,8 +367,6 @@ add_executable(
   rsocket/test/test_utils/ColdResumeManager.h
   rsocket/test/test_utils/GenericRequestResponseHandler.h
   rsocket/test/test_utils/MockDuplexConnection.h
-  rsocket/test/test_utils/MockKeepaliveTimer.h
-  rsocket/test/test_utils/MockRequestHandler.h
   rsocket/test/test_utils/MockStreamsWriter.h
   rsocket/test/test_utils/MockStats.h
   rsocket/test/transport/DuplexConnectionTest.cpp
