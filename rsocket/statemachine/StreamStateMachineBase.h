@@ -47,7 +47,7 @@ class StreamStateMachineBase {
       bool flagsNext,
       bool flagsFollows) = 0;
   virtual void handleRequestN(uint32_t n);
-  virtual void handleError(Payload errorPayload);
+  virtual void handleError(folly::exception_wrapper);
   virtual void handleCancel();
 
   virtual size_t getConsumerAllowance() const;
@@ -75,6 +75,7 @@ class StreamStateMachineBase {
   void writePayload(Payload&& payload, bool complete = false);
   void writeComplete();
   void writeApplicationError(folly::StringPiece);
+  void writeApplicationError(Payload&& payload);
   void writeInvalidError(folly::StringPiece);
 
   void removeFromWriter();

@@ -135,20 +135,17 @@ class FlowableOperator : public Flowable<D> {
   };
 };
 
-template <
-    typename U,
-    typename D,
-    typename F,
-    typename EF,
-    typename = typename std::enable_if<
-        folly::is_invocable_r<D, F, U>::value &&
-        folly::is_invocable_r<
-            folly::exception_wrapper,
-            EF,
-            folly::exception_wrapper&&>::value>::type>
+template <typename U, typename D, typename F, typename EF>
 class MapOperator : public FlowableOperator<U, D> {
   using Super = FlowableOperator<U, D>;
   static_assert(std::is_same<std::decay_t<F>, F>::value, "undecayed");
+  static_assert(folly::is_invocable_r<D, F, U>::value, "not invocable");
+  static_assert(
+      folly::is_invocable_r<
+          folly::exception_wrapper,
+          EF,
+          folly::exception_wrapper&&>::value,
+      "exception handler not invocable");
 
  public:
   template <typename Func, typename ErrorFunc>
@@ -207,15 +204,12 @@ class MapOperator : public FlowableOperator<U, D> {
   EF errFunction_;
 };
 
-template <
-    typename U,
-    typename F,
-    typename =
-        typename std::enable_if<folly::is_invocable_r<bool, F, U>::value>::type>
+template <typename U, typename F>
 class FilterOperator : public FlowableOperator<U, U> {
   // for use in subclasses
   using Super = FlowableOperator<U, U>;
   static_assert(std::is_same<std::decay_t<F>, F>::value, "undecayed");
+  static_assert(folly::is_invocable_r<bool, F, U>::value, "not invocable");
 
  public:
   template <typename Func>
@@ -259,16 +253,12 @@ class FilterOperator : public FlowableOperator<U, U> {
   F function_;
 };
 
-template <
-    typename U,
-    typename D,
-    typename F,
-    typename = typename std::enable_if<std::is_assignable<D, U>::value>,
-    typename =
-        typename std::enable_if<folly::is_invocable_r<D, F, D, U>::value>::type>
+template <typename U, typename D, typename F>
 class ReduceOperator : public FlowableOperator<U, D> {
   using Super = FlowableOperator<U, D>;
   static_assert(std::is_same<std::decay_t<F>, F>::value, "undecayed");
+  static_assert(std::is_assignable<D&, U>::value, "not assignable");
+  static_assert(folly::is_invocable_r<D, F, D, U>::value, "not invocable");
 
  public:
   template <typename Func>

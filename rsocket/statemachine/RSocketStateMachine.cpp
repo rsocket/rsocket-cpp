@@ -594,7 +594,15 @@ void RSocketStateMachine::onErrorFrame(
     }
     // we ignore  messages for streams which don't exist
     if (auto stateMachine = getStreamStateMachine(streamId)) {
-      stateMachine->handleError(std::move(payload));
+      if (errorCode != ErrorCode::APPLICATION_ERROR) {
+        // Encapsulate non-user errors with runtime_error, which is more
+        // suitable for LOGging.
+        stateMachine->handleError(
+            std::runtime_error(payload.moveDataToString()));
+      } else {
+        // Don't expose user errors
+        stateMachine->handleError(ErrorWithPayload(std::move(payload)));
+      }
     }
   } else {
     // TODO: handle INVALID_SETUP, UNSUPPORTED_SETUP, REJECTED_SETUP

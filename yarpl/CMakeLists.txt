@@ -107,7 +107,6 @@ add_library(
         single/SingleSubscriptions.h
         single/SingleTestObserver.h
         # utils
-        utils/type_traits.h
         utils/credits.h
         utils/credits.cpp)
 

@@ -210,6 +210,10 @@ class SingleTestObserver : public yarpl::single::SingleObserver<T> {
     }
   }
 
+  folly::exception_wrapper getException() const {
+    return e_;
+  }
+
   /**
    * Submit SingleSubscription->cancel();
    */

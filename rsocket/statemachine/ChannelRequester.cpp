@@ -108,9 +108,9 @@ void ChannelRequester::handleRequestN(uint32_t n) {
   PublisherBase::processRequestN(n);
 }
 
-void ChannelRequester::handleError(Payload errorPayload) {
+void ChannelRequester::handleError(folly::exception_wrapper ew) {
   CHECK(requested_);
-  errorConsumer(std::move(errorPayload));
+  errorConsumer(std::move(ew));
   terminatePublisher();
 }
 

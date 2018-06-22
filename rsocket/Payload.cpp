@@ -102,13 +102,6 @@ ErrorWithPayload& ErrorWithPayload::operator=(const ErrorWithPayload& oth) {
   return *this;
 }
 
-const char* ErrorWithPayload::what() const noexcept {
-  if (!whatString_) {
-    whatString_ = std::make_unique<std::string>(payload.cloneDataToString());
-  }
-  return whatString_->c_str();
-}
-
 std::ostream& operator<<(
     std::ostream& os,
     const ErrorWithPayload& errorWithPayload) {

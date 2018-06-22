@@ -14,8 +14,6 @@
 
 #pragma once
 
-#include "yarpl/utils/type_traits.h"
-
 #include "yarpl/single/Single.h"
 #include "yarpl/single/SingleSubscriptions.h"
 

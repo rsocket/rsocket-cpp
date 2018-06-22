@@ -96,7 +96,7 @@ TEST(StreamResponder, HandleError) {
   responder->onNext(Payload{});
   ASSERT_FALSE(responder->publisherClosed());
 
-  responder->handleError(Payload("Test"));
+  responder->handleError(std::runtime_error("Test"));
   ASSERT_TRUE(responder->publisherClosed());
 }
 

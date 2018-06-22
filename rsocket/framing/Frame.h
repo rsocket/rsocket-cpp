@@ -270,6 +270,7 @@ class Frame_ERROR {
 
   // Stream errors.
   static Frame_ERROR applicationError(StreamId, folly::StringPiece);
+  static Frame_ERROR applicationError(StreamId, Payload&&);
   static Frame_ERROR rejected(StreamId, folly::StringPiece);
   static Frame_ERROR canceled(StreamId, folly::StringPiece);
   static Frame_ERROR invalid(StreamId, folly::StringPiece);

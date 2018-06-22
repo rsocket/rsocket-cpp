@@ -59,7 +59,7 @@ class TestHandlerCancel : public rsocket::RSocketResponder {
         // simulate slow processing or IO being done
         // and block this current background thread
         // until we are cancelled
-        cancelFromClient->wait();
+        cancelFromClient->timed_wait(std::chrono::seconds(1));
         if (subscription->isCancelled()) {
           //  this is used by the unit test to assert the cancel was
           //  received
@@ -144,7 +144,10 @@ TEST(RequestResponseTest, FailureInResponse) {
       ->map(payload_to_stringpair)
       ->subscribe(to);
   to->awaitTerminalEvent();
-  to->assertOnErrorMessage("whew!");
+  to->assertOnErrorMessage("ErrorWithPayload");
+  EXPECT_TRUE(to->getException().with_exception([](ErrorWithPayload& err) {
+    EXPECT_STREQ("whew!", err.payload.moveDataToString().c_str());
+  }));
 }
 
 TEST(RequestResponseTest, RequestOnDisconnectedClient) {

@@ -199,7 +199,12 @@ TEST(RequestStreamTest, HandleError) {
       ->map([](auto p) { return p.moveDataToString(); })
       ->subscribe(ts);
   ts->awaitTerminalEvent();
-  ts->assertOnErrorMessage("A wild Error appeared!");
+  // Hide the user error from the logs
+  ts->assertOnErrorMessage("ErrorWithPayload");
+  EXPECT_TRUE(ts->getException().with_exception([](ErrorWithPayload& err) {
+    EXPECT_STREQ(
+        "A wild Error appeared!", err.payload.moveDataToString().c_str());
+  }));
 }
 
 class TestErrorAfterOnNextResponder : public rsocket::RSocketResponder {
@@ -233,7 +238,11 @@ TEST(RequestStreamTest, HandleErrorMidStream) {
       ->subscribe(ts);
   ts->awaitTerminalEvent();
   ts->assertValueCount(4);
-  ts->assertOnErrorMessage("A wild Error appeared!");
+  ts->assertOnErrorMessage("ErrorWithPayload");
+  EXPECT_TRUE(ts->getException().with_exception([](ErrorWithPayload& err) {
+    EXPECT_STREQ(
+        "A wild Error appeared!", err.payload.moveDataToString().c_str());
+  }));
 }
 
 struct LargePayloadStreamHandler : public rsocket::RSocketResponder {

@@ -373,7 +373,12 @@ TEST(RequestChannelTest, FailureOnResponderRequesterSees) {
 
   // failure streaming from Responder
   requestSubscriber->awaitTerminalEvent();
-  requestSubscriber->assertOnErrorMessage("A wild Error appeared!");
+  requestSubscriber->assertOnErrorMessage("ErrorWithPayload");
+  EXPECT_TRUE(requestSubscriber->getException().with_exception(
+      [](ErrorWithPayload& err) {
+        EXPECT_STREQ(
+            "A wild Error appeared!", err.payload.moveDataToString().c_str());
+      }));
 
   responderSubscriber->awaitTerminalEvent();
   responderSubscriber->assertSuccess();

@@ -67,7 +67,7 @@ void StreamRequester::handlePayload(
     bool next,
     bool follows) {
   if (!requested_) {
-    handleError(Payload("Haven't sent REQUEST_STREAM yet"));
+    handleError(std::runtime_error("Haven't sent REQUEST_STREAM yet"));
     return;
   }
   bool finalComplete =
@@ -79,8 +79,8 @@ void StreamRequester::handlePayload(
   }
 }
 
-void StreamRequester::handleError(Payload errorPayload) {
-  errorConsumer(std::move(errorPayload));
+void StreamRequester::handleError(folly::exception_wrapper ew) {
+  errorConsumer(std::move(ew));
   removeFromWriter();
 }
 

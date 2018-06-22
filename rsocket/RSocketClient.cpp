@@ -65,84 +65,86 @@ const std::shared_ptr<RSocketRequester>& RSocketClient::getRequester() const {
 }
 
 folly::Future<folly::Unit> RSocketClient::resume() {
-  VLOG(2) << "Resuming connection";
-
   CHECK(connectionFactory_)
       << "The client was likely created without ConnectionFactory. Can't "
       << "resume";
 
   return connectionFactory_->connect().then(
       [this](ConnectionFactory::ConnectedDuplexConnection connection) mutable {
-        if (!evb_) {
-          // cold-resumption.  EventBase hasn't been explicitly set for SM by
-          // the application.  Use the transports eventBase.
-          evb_ = &connection.eventBase;
-        }
-
-        class ResumeCallback : public ClientResumeStatusCallback {
-         public:
-          explicit ResumeCallback(folly::Promise<folly::Unit> promise)
-              : promise_(std::move(promise)) {}
-
-          void onResumeOk() noexcept override {
-            promise_.setValue();
-          }
-
-          void onResumeError(folly::exception_wrapper ex) noexcept override {
-            promise_.setException(ex);
-          }
-
-         private:
-          folly::Promise<folly::Unit> promise_;
-        };
-
-        folly::Promise<folly::Unit> promise;
-        auto future = promise.getFuture();
-
-        auto resumeCallback =
-            std::make_unique<ResumeCallback>(std::move(promise));
-        std::unique_ptr<DuplexConnection> framedConnection;
-        if (connection.connection->isFramed()) {
-          framedConnection = std::move(connection.connection);
-        } else {
-          framedConnection = std::make_unique<FramedDuplexConnection>(
-              std::move(connection.connection), protocolVersion_);
-        }
-        auto transport =
-            std::make_shared<FrameTransportImpl>(std::move(framedConnection));
-
-        std::shared_ptr<FrameTransport> ft;
-        if (evb_ != &connection.eventBase) {
-          // If the StateMachine EventBase is different from the transport
-          // EventBase, then use ScheduledFrameTransport and
-          // ScheduledFrameProcessor to ensure the RSocketStateMachine and
-          // Transport live on the desired EventBases
-          ft = std::make_shared<ScheduledFrameTransport>(
-              std::move(transport),
-              &connection.eventBase, /* Transport EventBase */
-              evb_); /* StateMachine EventBase */
-        } else {
-          ft = std::move(transport);
-        }
-
-        evb_->runInEventBaseThread(
-            [this,
-             frameTransport = std::move(ft),
-             resumeCallback = std::move(resumeCallback),
-             connection = std::move(connection)]() mutable {
-              if (!stateMachine_) {
-                createState();
-              }
-
-              stateMachine_->resumeClient(
-                  token_,
-                  std::move(frameTransport),
-                  std::move(resumeCallback),
-                  protocolVersion_);
-            });
-
-        return future;
+        return resumeFromConnection(std::move(connection));
       });
+}
+
+folly::Future<folly::Unit> RSocketClient::resumeFromConnection(
+    ConnectionFactory::ConnectedDuplexConnection connection) {
+  VLOG(2) << "Resuming connection";
+
+  if (!evb_) {
+    // Cold-resumption.  EventBase hasn't been explicitly set for SM by the
+    // application.  Use the transport's eventBase.
+    evb_ = &connection.eventBase;
+  }
+
+  class ResumeCallback : public ClientResumeStatusCallback {
+   public:
+    explicit ResumeCallback(folly::Promise<folly::Unit> promise)
+        : promise_(std::move(promise)) {}
+
+    void onResumeOk() noexcept override {
+      promise_.setValue();
+    }
+
+    void onResumeError(folly::exception_wrapper ex) noexcept override {
+      promise_.setException(ex);
+    }
+
+   private:
+    folly::Promise<folly::Unit> promise_;
+  };
+
+  folly::Promise<folly::Unit> promise;
+  auto future = promise.getFuture();
+
+  auto resumeCallback = std::make_unique<ResumeCallback>(std::move(promise));
+  std::unique_ptr<DuplexConnection> framedConnection;
+  if (connection.connection->isFramed()) {
+    framedConnection = std::move(connection.connection);
+  } else {
+    framedConnection = std::make_unique<FramedDuplexConnection>(
+        std::move(connection.connection), protocolVersion_);
+  }
+  auto transport =
+      std::make_shared<FrameTransportImpl>(std::move(framedConnection));
+
+  std::shared_ptr<FrameTransport> ft;
+  if (evb_ != &connection.eventBase) {
+    // If the StateMachine EventBase is different from the transport
+    // EventBase, then use ScheduledFrameTransport and
+    // ScheduledFrameProcessor to ensure the RSocketStateMachine and
+    // Transport live on the desired EventBases
+    ft = std::make_shared<ScheduledFrameTransport>(
+        std::move(transport),
+        &connection.eventBase, /* Transport EventBase */
+        evb_); /* StateMachine EventBase */
+  } else {
+    ft = std::move(transport);
+  }
+
+  evb_->runInEventBaseThread([this,
+                              frameTransport = std::move(ft),
+                              callback = std::move(resumeCallback)]() mutable {
+    if (!stateMachine_) {
+      createState();
+    }
+
+    stateMachine_->resumeClient(
+        token_,
+        std::move(frameTransport),
+        std::move(callback),
+        protocolVersion_);
+  });
+
+  return future;
 }
 
 folly::Future<folly::Unit> RSocketClient::disconnect(

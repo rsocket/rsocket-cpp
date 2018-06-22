@@ -56,7 +56,11 @@ void RequestResponseResponder::onError(folly::exception_wrapper ex) {
   switch (state_) {
     case State::RESPONDING: {
       state_ = State::CLOSED;
-      writeApplicationError(ex.get_exception()->what());
+      if (!ex.with_exception([this](rsocket::ErrorWithPayload& err) {
+            writeApplicationError(std::move(err.payload));
+          })) {
+        writeApplicationError(ex.get_exception()->what());
+      }
       removeFromWriter();
     } break;
     case State::CLOSED:

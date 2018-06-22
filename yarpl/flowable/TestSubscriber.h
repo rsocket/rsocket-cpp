@@ -244,6 +244,10 @@ class TestSubscriber : public BaseSubscriber<T>,
     }
   }
 
+  folly::exception_wrapper getException() const {
+    return e_;
+  }
+
   void dropValues(bool drop) {
     valueCount_ = getValueCount();
     dropValues_ = drop;

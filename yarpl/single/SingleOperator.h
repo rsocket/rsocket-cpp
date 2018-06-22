@@ -163,15 +163,14 @@ class SingleOperator : public Single<D> {
 template <
     typename U,
     typename D,
-    typename F,
-    typename =
-        typename std::enable_if<folly::is_invocable_r<D, F, U>::value>::type>
+    typename F>
 class MapOperator : public SingleOperator<U, D> {
   using ThisOperatorT = MapOperator<U, D, F>;
   using Super = SingleOperator<U, D>;
   using OperatorSubscription =
       typename Super::template Subscription<ThisOperatorT>;
   static_assert(std::is_same<std::decay_t<F>, F>::value, "undecayed");
+  static_assert(folly::is_invocable_r<D, F, U>::value, "not invocable");
 
  public:
   template <typename Func>

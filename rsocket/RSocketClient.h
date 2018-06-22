@@ -48,12 +48,19 @@ class RSocketClient {
   // Returns the RSocketRequester associated with the RSocketClient.
   const std::shared_ptr<RSocketRequester>& getRequester() const;
 
-  // Resumes the connection.  If a stateMachine already exists,
-  // it provides a warm-resumption.  If a stateMachine does not exist,
-  // it does a cold-resumption.  The returned future resolves on successful
-  // resumption.  Else either a ConnectionException or a ResumptionException
-  // is raised.
+  // Resumes the client's connection.  If the client was previously connected
+  // this will attempt a warm-resumption.  Otherwise this will attempt a
+  // cold-resumption.
+  //
+  // Uses the internal ConnectionFactory instance to re-connect.
   folly::Future<folly::Unit> resume();
+
+  // Like resume(), but this doesn't use a ConnectionFactory and instead takes
+  // the connection and transport EventBase by argument.
+  //
+  // Prefer using resume() if possible.
+  folly::Future<folly::Unit> resumeFromConnection(
+      ConnectionFactory::ConnectedDuplexConnection);
 
   // Disconnect the underlying transport.
   folly::Future<folly::Unit> disconnect(folly::exception_wrapper = {});

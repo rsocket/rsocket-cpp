@@ -55,7 +55,7 @@ class ConsumerBase : public StreamStateMachineBase,
 
   void cancelConsumer();
   void completeConsumer();
-  void errorConsumer(Payload errorPayload);
+  void errorConsumer(folly::exception_wrapper);
 
  private:
   enum class State : uint8_t {

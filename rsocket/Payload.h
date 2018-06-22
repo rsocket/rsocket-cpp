@@ -60,12 +60,11 @@ struct ErrorWithPayload : public std::exception {
   ErrorWithPayload(ErrorWithPayload&&) = default;
   ErrorWithPayload& operator=(ErrorWithPayload&&) = default;
 
-  const char* what() const noexcept override;
+  const char* what() const noexcept override {
+    return "ErrorWithPayload";
+  }
 
   Payload payload;
-
- private:
-  mutable std::unique_ptr<std::string> whatString_;
 };
 
 std::ostream& operator<<(std::ostream& os, const Payload&);

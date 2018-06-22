@@ -22,7 +22,6 @@
 #include "yarpl/Refcounted.h"
 #include "yarpl/flowable/Subscriber.h"
 #include "yarpl/utils/credits.h"
-#include "yarpl/utils/type_traits.h"
 
 namespace yarpl {
 
@@ -211,8 +210,8 @@ class Flowable : public yarpl::enable_get_ref {
   template <
       typename Function,
       typename ErrorFunction =
-          folly::Function<folly::exception_wrapper(folly::exception_wrapper)>,
-      typename R = typename std::result_of<Function(T)>::type,
+          folly::Function<folly::exception_wrapper(folly::exception_wrapper&&)>,
+      typename R = typename folly::invoke_result_t<Function, T>,
       typename = typename std::enable_if<folly::is_invocable_r<
           folly::exception_wrapper,
           std::decay_t<ErrorFunction>&,
@@ -226,7 +225,7 @@ class Flowable : public yarpl::enable_get_ref {
   template <
       typename Function,
       typename R = typename details::IsFlowable<
-          typename std::result_of<Function(T)>::type>::ElemType>
+          typename folly::invoke_result_t<Function, T>>::ElemType>
   std::shared_ptr<Flowable<R>> flatMap(Function&& func);
 
   template <typename Function>
@@ -234,7 +233,7 @@ class Flowable : public yarpl::enable_get_ref {
 
   template <
       typename Function,
-      typename R = typename std::result_of<Function(T, T)>::type>
+      typename R = typename folly::invoke_result_t<Function, T, T>>
   std::shared_ptr<Flowable<R>> reduce(Function&& function);
 
   std::shared_ptr<Flowable<T>> take(int64_t);

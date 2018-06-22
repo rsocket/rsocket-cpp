@@ -106,6 +106,13 @@ Frame_ERROR Frame_ERROR::applicationError(
   return streamErr(ErrorCode::APPLICATION_ERROR, message, stream);
 }
 
+Frame_ERROR Frame_ERROR::applicationError(StreamId stream, Payload&& payload) {
+  if (stream == 0) {
+    throw std::invalid_argument{"Can't make stream error for stream zero"};
+  }
+  return Frame_ERROR(stream, ErrorCode::APPLICATION_ERROR, std::move(payload));
+}
+
 Frame_ERROR Frame_ERROR::rejected(StreamId stream, folly::StringPiece message) {
   return streamErr(ErrorCode::REJECTED, message, stream);
 }

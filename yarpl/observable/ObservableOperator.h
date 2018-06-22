@@ -157,15 +157,11 @@ class ObservableOperator : public Observable<D> {
   };
 };
 
-template <
-    typename U,
-    typename D,
-    typename F,
-    typename =
-        typename std::enable_if<folly::is_invocable_r<D, F, U>::value>::type>
+template <typename U, typename D, typename F>
 class MapOperator : public ObservableOperator<U, D> {
   using Super = ObservableOperator<U, D>;
   static_assert(std::is_same<std::decay_t<F>, F>::value, "undecayed");
+  static_assert(folly::is_invocable_r<D, F, U>::value, "not invocable");
 
  public:
   template <typename Func>
@@ -210,14 +206,11 @@ class MapOperator : public ObservableOperator<U, D> {
   F function_;
 };
 
-template <
-    typename U,
-    typename F,
-    typename =
-        typename std::enable_if<folly::is_invocable_r<bool, F, U>::value>::type>
+template <typename U, typename F>
 class FilterOperator : public ObservableOperator<U, U> {
   using Super = ObservableOperator<U, U>;
   static_assert(std::is_same<std::decay_t<F>, F>::value, "undecayed");
+  static_assert(folly::is_invocable_r<bool, F, U>::value, "not invocable");
 
  public:
   template <typename Func>
@@ -259,16 +252,12 @@ class FilterOperator : public ObservableOperator<U, U> {
   F function_;
 };
 
-template <
-    typename U,
-    typename D,
-    typename F,
-    typename = typename std::enable_if<std::is_assignable<D, U>::value>,
-    typename =
-        typename std::enable_if<folly::is_invocable_r<U, F, D, U>::value>::type>
+template <typename U, typename D, typename F>
 class ReduceOperator : public ObservableOperator<U, D> {
   using Super = ObservableOperator<U, D>;
   static_assert(std::is_same<std::decay_t<F>, F>::value, "undecayed");
+  static_assert(std::is_assignable<D&, U>::value, "not assignable");
+  static_assert(folly::is_invocable_r<D, F, D, U>::value, "not invocable");
 
  public:
   template <typename Func>
@@ -553,7 +542,7 @@ class FromPublisherOperator : public Observable<T> {
 
     if (!subscription->isCancelled()) {
       function_(std::make_shared<PublisherObserver>(
-          std::move(observer), subscription), subscription);
+              std::move(observer), subscription), subscription);
     }
     return subscription;
   }

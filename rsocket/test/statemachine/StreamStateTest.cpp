@@ -41,7 +41,7 @@ TEST(StreamState, NewStateMachineBase) {
   TestStreamStateMachineBase ssm(writer, 1u);
   ssm.getConsumerAllowance();
   ssm.handleCancel();
-  ssm.handleError(Payload("test"));
+  ssm.handleError(std::runtime_error("test"));
   ssm.handlePayload(Payload{}, false, true, false);
   ssm.handleRequestN(1);
 }
@@ -134,7 +134,7 @@ TEST(StreamState, ChannelRequesterHandleError) {
   ASSERT_FALSE(requester->publisherClosed());
 
   ConsumerBase* consumer = requester.get();
-  consumer->handleError(Payload("test"));
+  consumer->handleError(std::runtime_error("test"));
 
   ASSERT_TRUE(requester->consumerClosed());
   ASSERT_TRUE(requester->publisherClosed());
@@ -167,7 +167,7 @@ TEST(StreamState, ChannelResponderHandleError) {
   ASSERT_FALSE(responder->publisherClosed());
 
   ConsumerBase* consumer = responder.get();
-  consumer->handleError(Payload("test"));
+  consumer->handleError(std::runtime_error("test"));
 
   ASSERT_TRUE(responder->consumerClosed());
   ASSERT_TRUE(responder->publisherClosed());
