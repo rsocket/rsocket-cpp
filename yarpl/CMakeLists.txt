@@ -123,8 +123,7 @@ target_link_libraries(
   ${GLOG_LIBRARY})
 
 install(TARGETS yarpl DESTINATION lib)
-install(DIRECTORY yarpl DESTINATION include
-  FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} DESTINATION include FILES_MATCHING PATTERN "*.h")
 
 # RSocket's tests also has dependency on this library
 add_library(

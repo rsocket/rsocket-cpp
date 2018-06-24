@@ -311,9 +311,6 @@ add_library(
   rsocket/transports/tcp/TcpDuplexConnection.cpp
   rsocket/transports/tcp/TcpDuplexConnection.h)
 
-target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/include")
-target_include_directories(ReactiveSocket PUBLIC "${PROJECT_SOURCE_DIR}/yarpl/src")
-
 target_link_libraries(ReactiveSocket yarpl ${GFLAGS_LIBRARY} ${GLOG_LIBRARY})
 
 target_compile_options(
@@ -324,11 +321,6 @@ enable_testing()
 
 install(TARGETS ReactiveSocket DESTINATION lib)
 install(DIRECTORY rsocket DESTINATION include FILES_MATCHING PATTERN "*.h")
-
-# CMake doesn't seem to support "transitive" installing, and I can't access the
-# "yarpl" target from this file, so just grab the library file directly.
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/yarpl/libyarpl.a" DESTINATION lib)
-install(DIRECTORY yarpl/include/yarpl DESTINATION include FILES_MATCHING PATTERN "*.h")
 
 add_executable(
   tests
@@ -456,11 +448,13 @@ target_link_libraries(
 
 # Download the latest TCK drivers JAR.
 set(TCK_DRIVERS_JAR rsocket-tck-drivers-0.9.10.jar)
-join(TCK_DRIVERS_URL
-  "https://oss.jfrog.org/libs-release/io/rsocket/"
-  "rsocket-tck-drivers/0.9.10/${TCK_DRIVERS_JAR}")
-message(STATUS "Downloading ${TCK_DRIVERS_URL}")
-file(DOWNLOAD ${TCK_DRIVERS_URL} ${CMAKE_SOURCE_DIR}/${TCK_DRIVERS_JAR})
+if (NOT EXISTS ${CMAKE_SOURCE_DIR}/${TCK_DRIVERS_JAR})
+  join(TCK_DRIVERS_URL
+    "https://oss.jfrog.org/libs-release/io/rsocket/"
+    "rsocket-tck-drivers/0.9.10/${TCK_DRIVERS_JAR}")
+  message(STATUS "Downloading ${TCK_DRIVERS_URL}")
+  file(DOWNLOAD ${TCK_DRIVERS_URL} ${CMAKE_SOURCE_DIR}/${TCK_DRIVERS_JAR})
+endif ()
 
 ########################################
 # Examples
