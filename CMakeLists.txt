@@ -1,19 +1,5 @@
 cmake_minimum_required(VERSION 3.2)
 
-# The RSOCKET_CC CMake variable specifies the C compiler, e.g. gcc-4.9.
-# The C++ compiler name is obtained by replacing "gcc" with "g++" and "clang"
-# with "clang++"". If RSOCKET_CC is not given, the compiler is detected
-# automatically.
-if (RSOCKET_CC)
-  set(ENV{CC} ${RSOCKET_CC})
-  if (${RSOCKET_CC} MATCHES clang)
-    string(REPLACE clang clang++ CXX ${RSOCKET_CC})
-  else ()
-    string(REPLACE gcc g++ CXX ${RSOCKET_CC})
-  endif ()
-  set(ENV{CXX} ${CXX})
-endif ()
-
 project(ReactiveSocket)
 
 # CMake modules.

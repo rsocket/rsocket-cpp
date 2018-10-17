@@ -37,22 +37,18 @@ addons:
 
 matrix:
   include:
-    # Set COMPILER environment variable instead of CC or CXX because the latter
-    # are overriden by Travis. Setting the compiler in Travis doesn't work
-    # either because it strips version.
-
-    - env: COMPILER=clang-4.0
+    - env: COMPILER_EVAL="CC=clang-6.0 CXX=clang++-6.0"
       addons:
         apt:
           sources:
             - *common_srcs
-            - llvm-toolchain-trusty-4.0
+            - llvm-toolchain-trusty-6.0
           packages:
             - *common_deps
-            - clang-4.0
+            - clang-6.0
             - libstdc++-4.9-dev
 
-    - env: COMPILER=gcc-5
+    - env: COMPILER_EVAL="CC=gcc-5 CXX=g++-5"
       addons:
         apt:
           sources:
@@ -61,7 +57,7 @@ matrix:
             - *common_deps
             - g++-5
 
-    - env: COMPILER=gcc-6
+    - env: COMPILER_EVAL="CC=gcc-6 CXX=g++-6"
       addons:
         apt:
           sources:
@@ -93,11 +89,12 @@ before_script:
   # Install lcov to coveralls conversion + upload tool.
   - gem install coveralls-lcov
   - lcov --version
+  - eval "$COMPILER_EVAL"
 
 script:
   - mkdir build
   - cd build
-  - cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DRSOCKET_CC=$COMPILER
+  - cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE
           -DRSOCKET_ASAN=$ASAN -DRSOCKET_INSTALL_DEPS=True
           -DRSOCKET_BUILD_WITH_COVERAGE=ON ..
   - make -j4
