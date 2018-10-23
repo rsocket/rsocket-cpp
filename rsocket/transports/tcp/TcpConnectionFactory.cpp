@@ -43,8 +43,14 @@ class ConnectCallback : public folly::AsyncSocket::ConnectCallback {
     DCHECK(evb);
 
     if (sslContext) {
+#if !FOLLY_OPENSSL_HAS_ALPN
+      // setAdvertisedNextProtocols() is unavailable
+#error ALPN is required for rsockets. \
+      Your version of OpenSSL is likely too old.
+#else
       VLOG(3) << "Starting SSL socket";
       sslContext->setAdvertisedNextProtocols({"rs"});
+#endif
       socket_.reset(new folly::AsyncSSLSocket(sslContext, evb));
     } else {
       VLOG(3) << "Starting socket";
