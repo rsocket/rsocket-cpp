@@ -87,16 +87,27 @@ cache:
     - $HOME/folly
 
 before_script:
+  - eval "$COMPILER_EVAL"
+  - export DEP_INSTALL_DIR=$PWD/build/dep-install
+  # Ubuntu trusty only comes with OpenSSL 1.0.1f, but we require
+  # at least OpenSSL 1.0.2 for ALPN support.
+  - curl -L https://github.com/openssl/openssl/archive/OpenSSL_1_1_1.tar.gz -o OpenSSL_1_1_1.tar.gz
+  - tar -xzf OpenSSL_1_1_1.tar.gz
+  - cd openssl-OpenSSL_1_1_1
+  - ./config --prefix=$DEP_INSTALL_DIR no-shared
+  - make -j4
+  - make install_sw install_ssldirs
+  - cd ..
   # Install lcov to coveralls conversion + upload tool.
   - gem install coveralls-lcov
   - lcov --version
-  - eval "$COMPILER_EVAL"
 
 script:
   - mkdir build
   - cd build
   - cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE
           -DRSOCKET_ASAN=$ASAN -DRSOCKET_INSTALL_DEPS=True
+          -DCMAKE_PREFIX_PATH=$DEP_INSTALL_DIR
           -DRSOCKET_BUILD_WITH_COVERAGE=ON ..
   - make -j4
   - lcov --directory . --zerocounters
