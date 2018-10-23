@@ -1,5 +1,5 @@
 add_library(fixture Fixture.cpp Fixture.h)
-target_link_libraries(fixture ReactiveSocket folly)
+target_link_libraries(fixture ReactiveSocket Folly::folly)
 
 function(benchmark NAME FILE)
   add_executable(${NAME} ${FILE} Benchmarks.cpp)
@@ -7,7 +7,7 @@ function(benchmark NAME FILE)
     ${NAME}
     fixture
     ReactiveSocket
-    folly-benchmark
+    Folly::follybenchmark
     ${GFLAGS_LIBRARY}
     ${GLOG_LIBRARY})
 endfunction()

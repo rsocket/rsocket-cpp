@@ -119,8 +119,8 @@ message("yarpl source dir: ${CMAKE_CURRENT_SOURCE_DIR}")
 
 target_link_libraries(
   yarpl
-  folly
-  ${GLOG_LIBRARY})
+  PUBLIC Folly::folly ${GLOG_LIBRARY}
+  INTERFACE ${EXTRA_LINK_FLAGS})
 
 install(TARGETS yarpl DESTINATION lib)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} DESTINATION include FILES_MATCHING PATTERN "*.h")

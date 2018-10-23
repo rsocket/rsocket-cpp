@@ -306,7 +306,9 @@ add_library(
   rsocket/transports/tcp/TcpDuplexConnection.cpp
   rsocket/transports/tcp/TcpDuplexConnection.h)
 
-target_link_libraries(ReactiveSocket yarpl ${GFLAGS_LIBRARY} ${GLOG_LIBRARY})
+target_link_libraries(ReactiveSocket
+    PUBLIC yarpl ${GFLAGS_LIBRARY} ${GLOG_LIBRARY}
+    INTERFACE ${EXTRA_LINK_FLAGS})
 
 target_compile_options(
   ReactiveSocket

@@ -14,9 +14,6 @@ addons:
     packages: &common_deps
       - lcov
       # Folly dependencies
-      - autoconf
-      - autoconf-archive
-      - automake
       - binutils-dev
       - g++
       - libboost-all-dev
@@ -29,9 +26,7 @@ addons:
       - liblzma-dev
       - libsnappy-dev
       - libssl-dev
-      - libtool
       - make
-      - pkg-config
       - zlib1g-dev
 
 matrix:
@@ -82,10 +77,6 @@ env:
         eHz/lHAoLXWg/BhtgQbPmMYYKRrQaH7EKzBbqEHv6PhOk7vLMtdx5X7KmhVuFjpAMbaYoj
         zwxxH0u+VAnVB5iazzyjhySjvzkvx6pGzZtTnjLJHxKcp9633z4OU=
 
-cache:
-  directories:
-    - $HOME/folly
-
 before_script:
   - eval "$COMPILER_EVAL"
   - export DEP_INSTALL_DIR=$PWD/build/dep-install
@@ -101,12 +92,12 @@ before_script:
   # Install lcov to coveralls conversion + upload tool.
   - gem install coveralls-lcov
   - lcov --version
+  # Build folly
+  - ./scripts/build_folly.sh build/folly-src $DEP_INSTALL_DIR
 
 script:
-  - mkdir build
   - cd build
-  - cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE
-          -DRSOCKET_ASAN=$ASAN -DRSOCKET_INSTALL_DEPS=True
+  - cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DRSOCKET_ASAN=$ASAN
           -DCMAKE_PREFIX_PATH=$DEP_INSTALL_DIR
           -DRSOCKET_BUILD_WITH_COVERAGE=ON ..
   - make -j4
