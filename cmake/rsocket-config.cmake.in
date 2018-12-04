@@ -1,0 +1,12 @@
+# Copyright (c) 2018, Facebook, Inc.
+# All rights reserved.
+
+@PACKAGE_INIT@
+
+if(NOT TARGET rsocket::ReactiveSocket)
+    include("${PACKAGE_PREFIX_DIR}/lib/cmake/rsocket/rsocket-exports.cmake")
+endif()
+
+if (NOT rsocket_FIND_QUIETLY)
+    message(STATUS "Found rsocket: ${PACKAGE_PREFIX_DIR}")
+endif()

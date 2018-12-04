@@ -1,8 +1,4 @@
 cmake_minimum_required (VERSION 3.2)
-
-# To debug the project, set the build type.
-set(CMAKE_BUILD_TYPE Debug)
-
 project (yarpl)
 
 # CMake Config
@@ -57,9 +53,6 @@ message("glog include_dir <${GLOG_INCLUDE_DIR}> lib <${GLOG_LIBRARY}>")
 
 include_directories(SYSTEM ${GLOG_INCLUDE_DIR})
 
-message("including ${CMAKE_CURRENT_SOURCE_DIR}")
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-
 # library source
 add_library(
         yarpl
@@ -109,11 +102,12 @@ add_library(
         # utils
         utils/credits.h
         utils/credits.cpp)
-
 target_include_directories(
-        yarpl
-        PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/../" # allow include paths such as "yarpl/observable.h"
-        )
+    yarpl
+    PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../>
+    $<INSTALL_INTERFACE:include>
+)
 
 message("yarpl source dir: ${CMAKE_CURRENT_SOURCE_DIR}")
 
@@ -122,8 +116,23 @@ target_link_libraries(
   PUBLIC Folly::folly ${GLOG_LIBRARY}
   INTERFACE ${EXTRA_LINK_FLAGS})
 
-install(TARGETS yarpl DESTINATION lib)
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+    cmake/yarpl-config.cmake.in
+    yarpl-config.cmake
+    INSTALL_DESTINATION lib/cmake/yarpl
+)
+install(TARGETS yarpl EXPORT yarpl-exports DESTINATION lib)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} DESTINATION include FILES_MATCHING PATTERN "*.h")
+install(
+    EXPORT yarpl-exports
+    NAMESPACE yarpl::
+    DESTINATION lib/cmake/yarpl
+)
+install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/yarpl-config.cmake
+    DESTINATION lib/cmake/yarpl
+)
 
 # RSocket's tests also has dependency on this library
 add_library(

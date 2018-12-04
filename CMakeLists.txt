@@ -115,6 +115,7 @@ endif ()
 
 option(BUILD_BENCHMARKS "Build benchmarks" ON)
 option(BUILD_EXAMPLES "Build examples" ON)
+option(BUILD_TESTS "Build tests" ON)
 
 enable_testing()
 
@@ -186,9 +187,6 @@ include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
 include_directories(SYSTEM ${GFLAGS_INCLUDE_DIR})
 include_directories(SYSTEM ${GLOG_INCLUDE_DIR})
 
-include_directories(${CMAKE_SOURCE_DIR})
-
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/reactivestreams/include)
 include_directories(${GMOCK_SOURCE_DIR}/googlemock/include)
 include_directories(${GMOCK_SOURCE_DIR}/googletest/include)
 
@@ -307,6 +305,14 @@ add_library(
   rsocket/transports/tcp/TcpDuplexConnection.cpp
   rsocket/transports/tcp/TcpDuplexConnection.h)
 
+target_include_directories(
+    ReactiveSocket
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+        $<INSTALL_INTERFACE:include>
+)
+
+
 target_link_libraries(ReactiveSocket
     PUBLIC yarpl ${GFLAGS_LIBRARY} ${GLOG_LIBRARY}
     INTERFACE ${EXTRA_LINK_FLAGS})
@@ -317,9 +323,21 @@ target_compile_options(
 
 enable_testing()
 
-install(TARGETS ReactiveSocket DESTINATION lib)
+install(TARGETS ReactiveSocket EXPORT rsocket-exports DESTINATION lib)
 install(DIRECTORY rsocket DESTINATION include FILES_MATCHING PATTERN "*.h")
+install(EXPORT rsocket-exports NAMESPACE rsocket:: DESTINATION lib/cmake/rsocket)
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+    cmake/rsocket-config.cmake.in
+    rsocket-config.cmake
+    INSTALL_DESTINATION lib/cmake/rsocket
+)
+install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/rsocket-config.cmake
+    DESTINATION lib/cmake/rsocket
+)
 
+if(BUILD_TESTS)
 add_executable(
   tests
   rsocket/test/ColdResumptionTest.cpp
@@ -398,6 +416,7 @@ add_test(
   NAME FrameFuzzerTests
   COMMAND ./scripts/frame_fuzzer_test.sh
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endif()
 
 ########################################
 # TCK Drivers
