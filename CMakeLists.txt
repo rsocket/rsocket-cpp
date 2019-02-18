@@ -116,6 +116,7 @@ endif ()
 option(BUILD_BENCHMARKS "Build benchmarks" ON)
 option(BUILD_EXAMPLES "Build examples" ON)
 option(BUILD_TESTS "Build tests" ON)
+option(BUILD_TCK_TESTS "Build TCK tests" ON)
 
 enable_testing()
 
@@ -416,6 +417,7 @@ endif()
 # TCK Drivers
 ########################################
 
+if(BUILD_TCK_TESTS)
 add_executable(
   tckclient
   rsocket/tck-test/client.cpp
@@ -466,6 +468,8 @@ if (NOT EXISTS ${CMAKE_SOURCE_DIR}/${TCK_DRIVERS_JAR})
   message(STATUS "Downloading ${TCK_DRIVERS_URL}")
   file(DOWNLOAD ${TCK_DRIVERS_URL} ${CMAKE_SOURCE_DIR}/${TCK_DRIVERS_JAR})
 endif ()
+
+endif () # BUILD_TCK_TESTS
 
 ########################################
 # Examples
