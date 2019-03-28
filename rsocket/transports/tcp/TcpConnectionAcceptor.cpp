@@ -30,7 +30,7 @@ class TcpConnectionAcceptor::SocketCallback
       : thread_{folly::sformat("rstcp-acceptor")}, onAccept_{onAccept} {}
 
   void connectionAccepted(
-      folly::NetworkSocket fdNetworkSocket,
+      const folly::NetworkSocket fdNetworkSocket,
       const folly::SocketAddress& address) noexcept override {
     int fd = fdNetworkSocket.toFd();
 
