@@ -59,7 +59,7 @@ TEST(StreamState, ChannelRequesterOnError) {
   EXPECT_CALL(*subscription, request_(1));
 
   auto mockSubscriber =
-      std::make_shared<StrictMock<MockSubscriber<rsocket::Payload>>>();
+      std::make_shared<StrictMock<MockSubscriber<rsocket::Payload>>>(1000);
   EXPECT_CALL(*mockSubscriber, onSubscribe_(_));
   EXPECT_CALL(*mockSubscriber, onError_(_));
   requester->subscribe(mockSubscriber);
@@ -116,7 +116,7 @@ TEST(StreamState, ChannelRequesterHandleError) {
   EXPECT_CALL(*writer, onStreamClosed(1u)).Times(0);
 
   auto mockSubscriber =
-      std::make_shared<StrictMock<MockSubscriber<rsocket::Payload>>>();
+      std::make_shared<StrictMock<MockSubscriber<rsocket::Payload>>>(1000);
   EXPECT_CALL(*mockSubscriber, onSubscribe_(_));
   EXPECT_CALL(*mockSubscriber, onError_(_));
   requester->subscribe(mockSubscriber);
@@ -184,7 +184,7 @@ TEST(StreamState, ChannelRequesterCancel) {
   EXPECT_CALL(*writer, onStreamClosed(1u)).Times(0);
 
   auto mockSubscriber =
-      std::make_shared<StrictMock<MockSubscriber<rsocket::Payload>>>();
+      std::make_shared<StrictMock<MockSubscriber<rsocket::Payload>>>(1000);
   EXPECT_CALL(*mockSubscriber, onSubscribe_(_));
   requester->subscribe(mockSubscriber);
 
@@ -261,7 +261,7 @@ TEST(StreamState, ChannelRequesterHandleCancel) {
   EXPECT_CALL(*writer, onStreamClosed(1u));
 
   auto mockSubscriber =
-      std::make_shared<StrictMock<MockSubscriber<rsocket::Payload>>>();
+      std::make_shared<StrictMock<MockSubscriber<rsocket::Payload>>>(1000);
   EXPECT_CALL(*mockSubscriber, onSubscribe_(_));
   requester->subscribe(mockSubscriber); // cycle: requester <-> mockSubscriber
 

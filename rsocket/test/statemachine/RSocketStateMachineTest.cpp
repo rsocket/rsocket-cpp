@@ -179,7 +179,7 @@ TEST_F(RSocketStateMachineTest, RequestStream) {
   auto stateMachine =
       createClient(std::move(connection), std::make_shared<RSocketResponder>());
 
-  auto subscriber = std::make_shared<StrictMock<MockSubscriber<Payload>>>();
+  auto subscriber = std::make_shared<StrictMock<MockSubscriber<Payload>>>(1000);
   EXPECT_CALL(*subscriber, onSubscribe_(_));
   EXPECT_CALL(*subscriber, onComplete_());
 
@@ -202,7 +202,7 @@ TEST_F(RSocketStateMachineTest, RequestStream_EarlyClose) {
   auto stateMachine =
       createClient(std::move(connection), std::make_shared<RSocketResponder>());
 
-  auto subscriber = std::make_shared<StrictMock<MockSubscriber<Payload>>>();
+  auto subscriber = std::make_shared<StrictMock<MockSubscriber<Payload>>>(1000);
   EXPECT_CALL(*subscriber, onSubscribe_(_)).Times(2);
   EXPECT_CALL(*subscriber, onComplete_());
 
@@ -239,7 +239,7 @@ TEST_F(RSocketStateMachineTest, RequestChannel) {
   auto stateMachine =
       createClient(std::move(connection), std::make_shared<RSocketResponder>());
 
-  auto in = std::make_shared<StrictMock<MockSubscriber<Payload>>>();
+  auto in = std::make_shared<StrictMock<MockSubscriber<Payload>>>(1000);
   EXPECT_CALL(*in, onSubscribe_(_));
   EXPECT_CALL(*in, onComplete_());
 

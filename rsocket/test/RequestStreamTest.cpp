@@ -96,7 +96,7 @@ TEST(RequestStreamTest, HelloNoFlowControl) {
   auto client = makeClient(
       worker.getEventBase(), *server->listeningPort(), nullptr, stats);
   auto requester = client->getRequester();
-  auto ts = TestSubscriber<std::string>::create();
+  auto ts = TestSubscriber<std::string>::create(1000);
   requester->requestStream(Payload("Bob"))
       ->map([](auto p) { return p.moveDataToString(); })
       ->subscribe(ts);
