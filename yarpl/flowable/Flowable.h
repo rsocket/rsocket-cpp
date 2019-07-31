@@ -403,9 +403,10 @@ class Flowable : public yarpl::enable_get_ref {
           OnSubscribe&&,
           std::shared_ptr<Subscriber<T>>>::value>::type>
   // TODO(lehecka): enable this warning once mobile code is clear
-  // FOLLY_DEPRECATED(
+  // [[deprecated(
   //     "Flowable<T>::fromPublisher is deprecated: Use PublishProcessor or "
-  //     "contact rsocket team if you can't figure out what to replace it with")
+  //     "contact rsocket team if you can't figure out what to replace it "
+  //     "with")]]
   static std::shared_ptr<Flowable<T>> fromPublisher(OnSubscribe&& function);
 };
 
