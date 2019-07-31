@@ -388,12 +388,13 @@ add_executable(
   rsocket/test/transport/DuplexConnectionTest.h
   rsocket/test/transport/TcpDuplexConnectionTest.cpp)
 
+add_dependencies(tests gmock)
 target_link_libraries(
   tests
   ReactiveSocket
   yarpl
   yarpl-test-utils
-  ${GMOCK_LIBS}
+  ${GMOCK_LIBS}  # This also needs the preceding `add_dependencies`
   glog::glog
   gflags)
 
@@ -463,11 +464,12 @@ if(BUILD_TESTS)
     rsocket/test/test_utils/StatsPrinter.cpp
     rsocket/test/test_utils/StatsPrinter.h)
 
+  add_dependencies(tckserver gmock)
   target_link_libraries(
     tckserver
     ReactiveSocket
     yarpl
-    ${GMOCK_LIBS}
+    ${GMOCK_LIBS}  # This also needs the preceding `add_dependencies`
     glog::glog
     gflags
     ${DOUBLE-CONVERSION})

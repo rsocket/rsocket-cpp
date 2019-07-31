@@ -174,6 +174,7 @@ if (BUILD_TESTS)
     test/credits-test.cpp
     test/yarpl-tests.cpp)
 
+  add_dependencies(yarpl-tests gmock)
   target_link_libraries(
     yarpl-tests
     yarpl
@@ -182,7 +183,8 @@ if (BUILD_TESTS)
     gflags
 
     # Inherited from rsocket-cpp CMake.
-    ${GMOCK_LIBS})
+    ${GMOCK_LIBS}  # This also needs the preceding `add_dependencies`
+  )
 
   add_dependencies(yarpl-tests yarpl-test-utils gmock)
 
