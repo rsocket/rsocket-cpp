@@ -1190,18 +1190,12 @@ void RSocketStateMachine::setProtocolVersionOrThrow(
 }
 
 StreamId RSocketStateMachine::getNextStreamId() {
-  constexpr auto limit =
-      static_cast<uint32_t>(std::numeric_limits<int32_t>::max() - 2);
-
-  auto const streamId = nextStreamId_;
-  if (streamId >= limit) {
-    throw std::runtime_error{"Ran out of stream IDs"};
-  }
-
-  CHECK_EQ(0, streams_.count(streamId))
-      << "Next stream ID already exists in the streams map";
-
-  nextStreamId_ += 2;
+  constexpr unsigned int MASK = 0x7FFFFFFF;
+  StreamId streamId;
+  do {
+      streamId = nextStreamId_ & MASK;
+      nextStreamId_ = (nextStreamId_ + 2) & MASK;
+  } while( streamId == 0  || streams_.count(streamId) > 0);
   return streamId;
 }
 
