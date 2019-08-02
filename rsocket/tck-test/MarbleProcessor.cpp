@@ -83,20 +83,19 @@ void MarbleProcessor::run(
     yarpl::flowable::Subscriber<rsocket::Payload>& subscriber,
     int64_t requested) {
   canSend_ += requested;
-  if (index_ > marble_.size()) {
-    return;
-  }
 
-  while (true) {
+  while (canSend_ > 0 && index_ < marble_.size()) {
     const auto c = marble_[index_];
     switch (c) {
       case '#':
         LOG(INFO) << "Sending onError";
         subscriber.onError(std::runtime_error("Marble Error"));
+        break;
       case '|':
         LOG(INFO) << "Sending onComplete";
         subscriber.onComplete();
-      default: {
+        break;
+      default:
         if (canSend_ > 0) {
           Payload payload;
           const auto it = argMap_.find(folly::to<std::string>(c));
@@ -115,7 +114,7 @@ void MarbleProcessor::run(
           subscriber.onNext(std::move(payload));
           canSend_--;
         }
-      }
+        break;
     }
     index_++;
   }
