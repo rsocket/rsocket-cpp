@@ -1190,17 +1190,15 @@ void RSocketStateMachine::setProtocolVersionOrThrow(
 }
 
 StreamId RSocketStateMachine::getNextStreamId() {
-  constexpr unsigned int MASK = 0x7FFFFFFF;
   StreamId streamId;
   do {
-      streamId = nextStreamId_ & MASK;
-      nextStreamId_ = (nextStreamId_ + 2) & MASK;
+      streamId = nextStreamId_.fetch_add(2);
   } while( streamId == 0  || streams_.count(streamId) > 0);
   return streamId;
 }
 
 void RSocketStateMachine::setNextStreamId(StreamId streamId) {
-  nextStreamId_ = streamId + 2;
+  nextStreamId_.store(streamId + 2);
 }
 
 bool RSocketStateMachine::registerNewPeerStreamId(StreamId streamId) {
