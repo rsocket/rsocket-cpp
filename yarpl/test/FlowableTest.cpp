@@ -830,22 +830,24 @@ TEST(FlowableTest, DoOnCancelTest) {
   a->doOnCancel([&]() { checkpoint.Call(); })->take(1)->subscribe();
 }
 
-TEST(FlowableTest, CancelDuringMapOnNext) {
+template <typename Op, typename F>
+void cancelDuringOnNext(Op&& op, F&& f) {
   folly::Baton<> next, cancelled;
 
   folly::ScopedEventBaseThread thread;
-  auto d = Flowable<>::just(1)
-               ->map([&, marker = std::make_shared<int>(1)](int value) {
-                 auto weak = std::weak_ptr<int>(marker);
-                 // This simulates subscription cancellation during onNext
-                 next.post();
-                 cancelled.wait();
-                 // Lambda with all captures should still exist, while it's
-                 // handling onNext call. If it doesn't exist, the following
-                 // lock will fail.
-                 EXPECT_TRUE(weak.lock());
-                 return value;
-               })
+
+  auto d = op(Flowable<>::justN({1, 2}),
+              [&, marker = std::make_shared<int>(1), f](auto&&... args) {
+                auto weak = std::weak_ptr<int>(marker);
+                // This simulates subscription cancellation during onNext
+                next.post();
+                cancelled.wait();
+                // Lambda with all captures should still exist, while it's
+                // handling onNext call. If it doesn't exist, the following
+                // lock will fail.
+                EXPECT_TRUE(weak.lock());
+                return f(args...);
+              })
                ->observeOn(thread.getEventBase())
                ->subscribe([](int) {});
 
@@ -856,6 +858,24 @@ TEST(FlowableTest, CancelDuringMapOnNext) {
 
   // Let onNext finish
   cancelled.post();
+}
+
+TEST(FlowableTest, CancelDuringMapOnNext) {
+  cancelDuringOnNext(
+      [](auto&& flowable, auto&& f) { return flowable->map(f); },
+      [](int value) { return value; });
+}
+
+TEST(FlowableTest, CancelDuringFilterOnNext) {
+  cancelDuringOnNext(
+      [](auto&& flowable, auto&& f) { return flowable->filter(f); },
+      [](int value) { return value > 0; });
+}
+
+TEST(FlowableTest, CancelDuringReduceOnNext) {
+  cancelDuringOnNext(
+      [](auto&& flowable, auto&& f) { return flowable->reduce(f); },
+      [](int acc, int value) { return acc + value; });
 }
 
 TEST(FlowableTest, DoOnRequestTest) {

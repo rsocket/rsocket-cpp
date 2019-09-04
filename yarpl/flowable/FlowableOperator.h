@@ -237,20 +237,22 @@ class FilterOperator : public FlowableOperator<U, U> {
           flowable_(std::move(flowable)) {}
 
     void onNextImpl(U value) override {
-      if (flowable_->function_(value)) {
-        SuperSubscription::subscriberOnNext(std::move(value));
-      } else {
-        SuperSubscription::request(1);
+      if (auto flowable = yarpl::atomic_load(&flowable_)) {
+        if (flowable->function_(value)) {
+          SuperSubscription::subscriberOnNext(std::move(value));
+        } else {
+          SuperSubscription::request(1);
+        }
       }
     }
 
     void onTerminateImpl() override {
-      flowable_.reset();
+      yarpl::atomic_exchange(&flowable_, nullptr);
       SuperSubscription::onTerminateImpl();
     }
 
    private:
-    std::shared_ptr<FilterOperator> flowable_;
+    AtomicReference<FilterOperator> flowable_;
   };
 
   std::shared_ptr<Flowable<U>> upstream_;
@@ -293,7 +295,9 @@ class ReduceOperator : public FlowableOperator<U, D> {
 
     void onNextImpl(U value) override {
       if (accInitialized_) {
-        acc_ = flowable_->function_(std::move(acc_), std::move(value));
+        if (auto flowable = yarpl::atomic_load(&flowable_)) {
+          acc_ = flowable->function_(std::move(acc_), std::move(value));
+        }
       } else {
         acc_ = std::move(value);
         accInitialized_ = true;
@@ -308,12 +312,12 @@ class ReduceOperator : public FlowableOperator<U, D> {
     }
 
     void onTerminateImpl() override {
-      flowable_.reset();
+      yarpl::atomic_exchange(&flowable_, nullptr);
       SuperSubscription::onTerminateImpl();
     }
 
    private:
-    std::shared_ptr<ReduceOperator> flowable_;
+    AtomicReference<ReduceOperator> flowable_;
     bool accInitialized_;
     D acc_;
   };
