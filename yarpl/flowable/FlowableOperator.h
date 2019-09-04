@@ -174,7 +174,9 @@ class MapOperator : public FlowableOperator<U, D> {
 
     void onNextImpl(U value) override {
       try {
-        this->subscriberOnNext(flowable_->function_(std::move(value)));
+        if (auto flowable = yarpl::atomic_load(&flowable_)) {
+          this->subscriberOnNext(flowable->function_(std::move(value)));
+        }
       } catch (const std::exception& exn) {
         folly::exception_wrapper ew{std::current_exception(), exn};
         this->terminateErr(std::move(ew));
@@ -183,7 +185,9 @@ class MapOperator : public FlowableOperator<U, D> {
 
     void onErrorImpl(folly::exception_wrapper ew) override {
       try {
-        SuperSubscription::onErrorImpl(flowable_->errFunction_(std::move(ew)));
+        if (auto flowable = yarpl::atomic_load(&flowable_)) {
+          SuperSubscription::onErrorImpl(flowable->errFunction_(std::move(ew)));
+        }
       } catch (const std::exception& exn) {
         this->terminateErr(
             folly::exception_wrapper{std::current_exception(), exn});
@@ -191,12 +195,12 @@ class MapOperator : public FlowableOperator<U, D> {
     }
 
     void onTerminateImpl() override {
-      flowable_.reset();
+      yarpl::atomic_exchange(&flowable_, nullptr);
       SuperSubscription::onTerminateImpl();
     }
 
    private:
-    std::shared_ptr<MapOperator> flowable_;
+    AtomicReference<MapOperator> flowable_;
   };
 
   std::shared_ptr<Flowable<U>> upstream_;

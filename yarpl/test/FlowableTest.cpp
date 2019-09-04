@@ -26,6 +26,7 @@
 #include "yarpl/test_utils/Mocks.h"
 
 using namespace yarpl::flowable;
+using yarpl::Disposable;
 using namespace testing;
 
 namespace {
@@ -827,6 +828,34 @@ TEST(FlowableTest, DoOnCancelTest) {
   EXPECT_CALL(checkpoint, Call());
 
   a->doOnCancel([&]() { checkpoint.Call(); })->take(1)->subscribe();
+}
+
+TEST(FlowableTest, CancelDuringMapOnNext) {
+  folly::Baton<> next, cancelled;
+
+  folly::ScopedEventBaseThread thread;
+  auto d = Flowable<>::just(1)
+               ->map([&, marker = std::make_shared<int>(1)](int value) {
+                 auto weak = std::weak_ptr<int>(marker);
+                 // This simulates subscription cancellation during onNext
+                 next.post();
+                 cancelled.wait();
+                 // Lambda with all captures should still exist, while it's
+                 // handling onNext call. If it doesn't exist, the following
+                 // lock will fail.
+                 EXPECT_TRUE(weak.lock());
+                 return value;
+               })
+               ->observeOn(thread.getEventBase())
+               ->subscribe([](int) {});
+
+  // Wait till onNext is called, and cancel subscription while onNext is still
+  // in progress
+  ASSERT_TRUE(next.try_wait_for(std::chrono::seconds(1)));
+  d->dispose();
+
+  // Let onNext finish
+  cancelled.post();
 }
 
 TEST(FlowableTest, DoOnRequestTest) {
