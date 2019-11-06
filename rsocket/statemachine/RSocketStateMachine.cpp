@@ -56,7 +56,8 @@ void disconnectError(
 
 void disconnectError(
     std::shared_ptr<yarpl::single::SingleObserver<Payload>> observer) {
-  std::runtime_error exn{"RSocket connection is disconnected or closed"};
+  auto exn = folly::make_exception_wrapper<std::runtime_error>(
+      "RSocket connection is disconnected or closed");
   observer->onSubscribe(yarpl::single::SingleSubscriptions::empty());
   observer->onError(std::move(exn));
 }
