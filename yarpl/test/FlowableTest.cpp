@@ -697,7 +697,7 @@ TEST(FlowableTest, ConsumerThrows_OnNext_Cancel) {
 
       try {
         subscriber->onNext(1);
-      } catch (const std::exception& ex) {
+      } catch (const std::exception&) {
         FAIL()
             << "onNext should not throw but subscription should get canceled.";
       }
