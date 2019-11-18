@@ -55,6 +55,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG")
 
 find_package(Gflags REQUIRED)
 find_package(Glog REQUIRED)
+find_package(fmt CONFIG REQUIRED)
 
 IF(NOT FOLLY_VERSION)
   include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/InstallFolly.cmake)
