@@ -1,3 +1,4 @@
+if (NOT MSVC)
 add_library(fixture Fixture.cpp Fixture.h)
 target_link_libraries(fixture ReactiveSocket Folly::folly)
 
@@ -27,3 +28,4 @@ add_test(NAME FireForgetThroughputTcpTest COMMAND fire-forget-throughput-tcp --i
 
 #TODO(lehecka):enable test
 #add_test(NAME StreamThroughputMemoryTest COMMAND stream-throughput-mem --items 100000)
+endif()
