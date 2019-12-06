@@ -878,6 +878,12 @@ TEST(FlowableTest, CancelDuringReduceOnNext) {
       [](int acc, int value) { return acc + value; });
 }
 
+TEST(FlowableTest, CancelDuringDoOnNext) {
+  cancelDuringOnNext(
+      [](auto&& flowable, auto&& f) { return flowable->doOnNext(f); },
+      [](int) {});
+}
+
 TEST(FlowableTest, DoOnRequestTest) {
   auto a = Flowable<>::range(1, 10);
 
