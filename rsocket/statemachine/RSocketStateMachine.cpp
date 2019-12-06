@@ -19,6 +19,7 @@
 #include <folly/Optional.h>
 #include <folly/String.h>
 #include <folly/io/async/EventBaseManager.h>
+#include <folly/lang/Assume.h>
 
 #include "rsocket/DuplexConnection.h"
 #include "rsocket/RSocketConnectionEvents.h"
@@ -954,6 +955,7 @@ RSocketStateMachine::onNewStreamReady(
     case StreamType::REQUEST_RESPONSE:
       // the other overload method should be called
       CHECK(false);
+      folly::assume_unreachable();
 
     case StreamType::FNF:
       requestResponder_->handleFireAndForget(std::move(payload), streamId);
@@ -961,6 +963,7 @@ RSocketStateMachine::onNewStreamReady(
 
     default:
       CHECK(false) << "unknown value: " << streamType;
+      folly::assume_unreachable();
   }
 }
 
