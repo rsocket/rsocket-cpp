@@ -170,10 +170,6 @@ if (COMPILER_HAS_W_NOEXCEPT_TYPE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-noexcept-type")
 endif()
 
-if (NOT MSVC)
-  set(EXTRA_CXX_FLAGS ${EXTRA_CXX_FLAGS} -Werror)
-endif()
-
 if("${BUILD_TYPE_LOWER}" MATCHES "debug")
   message("debug mode was set")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unreachable-code")
