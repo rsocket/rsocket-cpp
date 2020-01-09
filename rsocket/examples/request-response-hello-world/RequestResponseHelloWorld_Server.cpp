@@ -24,7 +24,6 @@
 #include "yarpl/Single.h"
 
 using namespace rsocket;
-using namespace yarpl;
 using namespace yarpl::single;
 
 DEFINE_int32(port, 9898, "port to connect to");

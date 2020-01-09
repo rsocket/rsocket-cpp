@@ -23,9 +23,7 @@
 #include "yarpl/Flowable.h"
 
 using namespace ::folly;
-using namespace ::rsocket_example;
 using namespace ::rsocket;
-using namespace yarpl::flowable;
 
 DEFINE_string(host, "localhost", "host to connect to");
 DEFINE_int32(port, 9898, "host:port to connect to");

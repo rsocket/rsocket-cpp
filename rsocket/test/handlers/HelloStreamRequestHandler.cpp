@@ -17,8 +17,6 @@
 #include <sstream>
 #include "yarpl/Flowable.h"
 
-using namespace ::rsocket;
-using namespace yarpl;
 using namespace yarpl::flowable;
 
 namespace rsocket {

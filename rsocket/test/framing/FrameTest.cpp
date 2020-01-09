@@ -20,7 +20,6 @@
 #include "rsocket/framing/Frame.h"
 #include "rsocket/framing/FrameSerializer.h"
 
-using namespace ::testing;
 using namespace ::rsocket;
 
 template <typename Frame, typename... Args>

@@ -21,8 +21,6 @@
 #include "rsocket/transports/tcp/TcpConnectionFactory.h"
 
 using namespace rsocket;
-using namespace rsocket::tests;
-using namespace rsocket::tests::client_server;
 using namespace testing;
 using namespace yarpl::single;
 

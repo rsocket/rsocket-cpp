@@ -24,7 +24,6 @@
 
 #include "yarpl/Flowable.h"
 
-using namespace rsocket_example;
 using namespace rsocket;
 
 DEFINE_string(host, "localhost", "host to connect to");

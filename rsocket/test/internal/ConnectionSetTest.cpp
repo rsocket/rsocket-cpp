@@ -24,7 +24,6 @@
 #include "rsocket/statemachine/RSocketStateMachine.h"
 
 using namespace rsocket;
-using namespace testing;
 
 namespace {
 

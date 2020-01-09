@@ -24,10 +24,7 @@
 
 #include "yarpl/Single.h"
 
-using namespace rsocket_example;
 using namespace rsocket;
-using namespace yarpl;
-using namespace yarpl::single;
 
 DEFINE_string(host, "localhost", "host to connect to");
 DEFINE_int32(port, 9898, "host:port to connect to");

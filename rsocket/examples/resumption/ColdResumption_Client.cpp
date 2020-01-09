@@ -24,7 +24,6 @@
 #include "rsocket/transports/tcp/TcpConnectionFactory.h"
 
 using namespace rsocket;
-using namespace yarpl;
 using namespace yarpl::flowable;
 
 DEFINE_string(host, "localhost", "host to connect to");

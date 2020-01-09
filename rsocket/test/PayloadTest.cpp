@@ -21,7 +21,6 @@
 #include "rsocket/framing/Frame.h"
 #include "rsocket/framing/FrameSerializer_v1_0.h"
 
-using namespace ::testing;
 using namespace ::rsocket;
 
 TEST(PayloadTest, EmptyMetadata) {

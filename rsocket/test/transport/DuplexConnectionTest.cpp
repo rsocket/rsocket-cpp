@@ -23,7 +23,6 @@ namespace tests {
 using namespace folly;
 using namespace rsocket;
 using namespace ::testing;
-using namespace yarpl::flowable;
 
 void makeMultipleSetInputGetOutputCalls(
     std::unique_ptr<DuplexConnection> serverConnection,

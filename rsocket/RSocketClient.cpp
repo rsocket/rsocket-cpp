@@ -22,8 +22,6 @@
 #include "rsocket/internal/ClientResumeStatusCallback.h"
 #include "rsocket/internal/KeepaliveTimer.h"
 
-using namespace folly;
-
 namespace rsocket {
 
 RSocketClient::RSocketClient(

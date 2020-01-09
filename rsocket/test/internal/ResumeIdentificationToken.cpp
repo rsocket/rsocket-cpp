@@ -17,7 +17,6 @@
 
 #include "rsocket/framing/ResumeIdentificationToken.h"
 
-using namespace testing;
 using namespace rsocket;
 
 TEST(ResumeIdentificationTokenTest, Conversion) {

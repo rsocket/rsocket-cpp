@@ -21,7 +21,6 @@
 
 using namespace rsocket;
 using namespace testing;
-using namespace yarpl::mocks;
 
 TEST(StreamsWriterTest, DelegateMock) {
   auto writer = std::make_shared<StrictMock<MockStreamsWriter>>();

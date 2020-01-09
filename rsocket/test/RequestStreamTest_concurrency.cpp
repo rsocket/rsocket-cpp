@@ -23,10 +23,8 @@
 
 #include "yarpl/test_utils/Mocks.h"
 
-using namespace yarpl;
 using namespace yarpl::flowable;
 using namespace rsocket;
-using namespace rsocket::tests;
 using namespace rsocket::tests::client_server;
 
 struct LockstepBatons {
@@ -39,7 +37,6 @@ struct LockstepBatons {
   folly::Baton<> serverFinished;
 };
 
-using namespace yarpl::mocks;
 using namespace ::testing;
 
 constexpr std::chrono::milliseconds timeout{100};

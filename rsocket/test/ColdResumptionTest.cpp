@@ -29,7 +29,6 @@ DEFINE_int32(num_clients, 5, "Number of clients to parallely cold-resume");
 using namespace rsocket;
 using namespace rsocket::tests;
 using namespace rsocket::tests::client_server;
-using namespace yarpl;
 using namespace yarpl::flowable;
 
 typedef std::map<std::string, std::shared_ptr<Subscriber<Payload>>>

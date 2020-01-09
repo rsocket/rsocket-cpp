@@ -22,7 +22,6 @@
 #include "yarpl/Single.h"
 #include "yarpl/single/SingleTestObserver.h"
 
-using namespace yarpl;
 using namespace yarpl::single;
 using namespace rsocket;
 using namespace rsocket::tests;

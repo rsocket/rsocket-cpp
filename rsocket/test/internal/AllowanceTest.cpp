@@ -16,7 +16,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-using namespace ::testing;
 using namespace ::rsocket;
 
 TEST(AllowanceTest, Finite) {

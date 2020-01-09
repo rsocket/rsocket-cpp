@@ -32,7 +32,6 @@
 using namespace testing;
 using namespace yarpl::mocks;
 using namespace yarpl::single;
-using namespace yarpl::flowable;
 
 namespace rsocket {
 

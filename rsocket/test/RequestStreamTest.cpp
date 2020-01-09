@@ -20,7 +20,6 @@
 #include "yarpl/Flowable.h"
 #include "yarpl/flowable/TestSubscriber.h"
 
-using namespace yarpl;
 using namespace yarpl::flowable;
 using namespace rsocket;
 using namespace rsocket::tests;
@@ -35,13 +34,13 @@ class TestHandlerSync : public rsocket::RSocketResponder {
     // string from payload data
     auto requestString = request.moveDataToString();
 
-    return Flowable<>::range(1, 10)->map([name = std::move(requestString)](
-        int64_t v) {
-      std::stringstream ss;
-      ss << "Hello " << name << " " << v << "!";
-      std::string s = ss.str();
-      return Payload(s, "metadata");
-    });
+    return Flowable<>::range(1, 10)->map(
+        [name = std::move(requestString)](int64_t v) {
+          std::stringstream ss;
+          ss << "Hello " << name << " " << v << "!";
+          std::string s = ss.str();
+          return Payload(s, "metadata");
+        });
   }
 };
 
@@ -130,7 +129,8 @@ class TestHandlerAsync : public rsocket::RSocketResponder {
         })
         ->subscribeOn(executor_);
   }
-private:
+
+ private:
   folly::Executor& executor_;
 };
 } // namespace
@@ -215,15 +215,16 @@ class TestErrorAfterOnNextResponder : public rsocket::RSocketResponder {
     // string from payload data
     auto requestString = request.moveDataToString();
 
-    return Flowable<Payload>::create([name = std::move(requestString)](
-        Subscriber<Payload>& subscriber, int64_t requested) {
-      EXPECT_GT(requested, 1);
-      subscriber.onNext(Payload(name, "meta"));
-      subscriber.onNext(Payload(name, "meta"));
-      subscriber.onNext(Payload(name, "meta"));
-      subscriber.onNext(Payload(name, "meta"));
-      subscriber.onError(std::runtime_error("A wild Error appeared!"));
-    });
+    return Flowable<Payload>::create(
+        [name = std::move(requestString)](
+            Subscriber<Payload>& subscriber, int64_t requested) {
+          EXPECT_GT(requested, 1);
+          subscriber.onNext(Payload(name, "meta"));
+          subscriber.onNext(Payload(name, "meta"));
+          subscriber.onNext(Payload(name, "meta"));
+          subscriber.onNext(Payload(name, "meta"));
+          subscriber.onError(std::runtime_error("A wild Error appeared!"));
+        });
   }
 };
 
@@ -333,8 +334,9 @@ TEST(RequestStreamTest, MultiSubscribe) {
   auto client = makeClient(worker.getEventBase(), *server->listeningPort());
   auto requester = client->getRequester();
   auto ts = TestSubscriber<std::string>::create();
-  auto stream = requester->requestStream(Payload("Bob"))
-      ->map([](auto p) { return p.moveDataToString(); });
+  auto stream = requester->requestStream(Payload("Bob"))->map([](auto p) {
+    return p.moveDataToString();
+  });
 
   // First subscribe
   stream->subscribe(ts);

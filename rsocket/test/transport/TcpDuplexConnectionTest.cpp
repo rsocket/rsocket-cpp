@@ -27,7 +27,6 @@ namespace tests {
 
 using namespace folly;
 using namespace rsocket;
-using namespace ::testing;
 
 /**
  * Synchronously create a server and a client.

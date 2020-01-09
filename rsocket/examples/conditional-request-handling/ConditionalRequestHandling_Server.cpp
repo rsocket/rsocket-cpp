@@ -21,7 +21,6 @@
 #include "rsocket/RSocket.h"
 #include "rsocket/transports/tcp/TcpConnectionAcceptor.h"
 
-using namespace ::folly;
 using namespace ::rsocket;
 
 DEFINE_int32(port, 9898, "port to connect to");
