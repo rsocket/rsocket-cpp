@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <folly/Portability.h>
+#if FOLLY_HAS_COROUTINES
+#include <folly/experimental/coro/AsyncGenerator.h>
+#endif
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <folly/synchronization/Baton.h>
@@ -21,6 +25,7 @@
 #include <vector>
 
 #include "yarpl/Flowable.h"
+#include "yarpl/flowable/AsyncGeneratorShim.h"
 #include "yarpl/flowable/Subscriber.h"
 #include "yarpl/flowable/TestSubscriber.h"
 #include "yarpl/test_utils/Mocks.h"
@@ -1311,3 +1316,204 @@ TEST(FlowableTest, SwapException) {
   EXPECT_TRUE(subscriber->isError());
   EXPECT_EQ(subscriber->getErrorMsg(), "public");
 }
+
+#if FOLLY_HAS_COROUTINES
+TEST(AsyncGeneratorShimTest, CoroAsyncGeneratorIntType) {
+  folly::ScopedEventBaseThread th;
+  const int length = 5;
+  folly::Baton<> baton;
+  auto stream =
+      folly::coro::co_invoke([]() -> folly::coro::AsyncGenerator<int&&> {
+        for (int i = 0; i < length; i++) {
+          co_yield std::move(i);
+        }
+      });
+
+  int expected_i = 0;
+  yarpl::toFlowable(std::move(stream), th.getEventBase())
+      ->subscribe(
+          [&](int i) { EXPECT_EQ(expected_i++, i); },
+          [&](folly::exception_wrapper) {
+            ADD_FAILURE() << "on Error";
+            baton.post();
+          },
+          [&] {
+            EXPECT_EQ(expected_i, length);
+            baton.post();
+          },
+          2);
+  baton.wait();
+}
+
+TEST(AsyncGeneratorShimTest, CoroAsyncGeneratorStringType) {
+  folly::ScopedEventBaseThread th;
+  const int length = 5;
+  folly::Baton<> baton;
+  auto stream = folly::coro::co_invoke(
+      []() -> folly::coro::AsyncGenerator<std::string&&> {
+        for (int i = 0; i < length; i++) {
+          co_yield folly::to<std::string>(i);
+        }
+      });
+
+  int expected_i = 0;
+  yarpl::toFlowable(std::move(stream), th.getEventBase())
+      ->subscribe(
+          [&](std::string i) { EXPECT_EQ(expected_i++, folly::to<int>(i)); },
+          [&](folly::exception_wrapper) {
+            ADD_FAILURE() << "on Error";
+            baton.post();
+          },
+          [&] {
+            EXPECT_EQ(expected_i, length);
+            baton.post();
+          },
+          2);
+  baton.wait();
+}
+
+TEST(AsyncGeneratorShimTest, CoroAsyncGeneratorReverseFulfill) {
+  folly::ScopedEventBaseThread th;
+  folly::ScopedEventBaseThread pth;
+  const int length = 5;
+  std::vector<folly::Promise<int>> vp(length);
+
+  int i = 0;
+  folly::Baton<> baton;
+  auto stream =
+      folly::coro::co_invoke([&]() -> folly::coro::AsyncGenerator<int&&> {
+        while (i < length) {
+          co_yield co_await vp[i++].getSemiFuture();
+        }
+      });
+
+  // intentionally let promised fulfilled in reverse order, but the result
+  // should come back to stream in order
+  for (int i = length - 1; i >= 0; i--) {
+    pth.add([&vp, i]() { vp[i].setValue(i); });
+  }
+
+  int expected_i = 0;
+  yarpl::toFlowable(std::move(stream), th.getEventBase())
+      ->subscribe(
+          [&](int i) { EXPECT_EQ(expected_i++, i); },
+          [&](folly::exception_wrapper) {
+            ADD_FAILURE() << "on Error";
+            baton.post();
+          },
+          [&] {
+            EXPECT_EQ(expected_i, length);
+            baton.post();
+          },
+          2);
+  baton.wait();
+}
+
+TEST(AsyncGeneratorShimTest, CoroAsyncGeneratorLambdaGaptureVariable) {
+  folly::ScopedEventBaseThread th;
+  std::string t = "test";
+  folly::Baton<> baton;
+  auto stream = folly::coro::co_invoke(
+      [&, t = std::move(t) ]() mutable
+      -> folly::coro::AsyncGenerator<std::string&&> {
+        co_yield std::move(t);
+        co_return;
+      });
+
+  std::string result;
+  yarpl::toFlowable(std::move(stream), th.getEventBase())
+      ->subscribe(
+          [&](std::string t) { result = t; },
+          [&](folly::exception_wrapper ex) {
+            ADD_FAILURE() << "on Error " << ex.what();
+            baton.post();
+          },
+          [&] { baton.post(); },
+          2);
+  baton.wait();
+
+  EXPECT_EQ("test", result);
+}
+
+TEST(AsyncGeneratorShimTest, ShouldNotHaveCoAwaitMoreThanOnce) {
+  folly::ScopedEventBaseThread th;
+  folly::ScopedEventBaseThread pth;
+  const int length = 5;
+  std::vector<folly::Promise<int>> vp(length);
+
+  int i = 0;
+  folly::Baton<> baton;
+  auto stream =
+      folly::coro::co_invoke([&]() -> folly::coro::AsyncGenerator<int&&> {
+        while (i < length) {
+          co_yield co_await vp[i++].getSemiFuture();
+        }
+      });
+
+  int expected_i = 0;
+  yarpl::toFlowable(std::move(stream), th.getEventBase())
+      ->subscribe(
+          [&](int i) { EXPECT_EQ(expected_i++, i); },
+          [&](folly::exception_wrapper) {
+            ADD_FAILURE() << "on Error";
+            baton.post();
+          },
+          [&] {
+            EXPECT_EQ(expected_i, length);
+            baton.post();
+          },
+          5);
+  // subscribe before fulfill future, expecting co_await on the future will
+  // happen before setValue()
+  for (int i = 0; i < length; i++) {
+    pth.add([&vp, i]() { vp[i].setValue(i); });
+  }
+  baton.wait();
+}
+
+TEST(AsyncGeneratorShimTest, CoroAsyncGeneratorPreemptiveCancel) {
+  folly::ScopedEventBaseThread th;
+  folly::coro::Baton b;
+  bool canceled = false;
+  auto stream = folly::coro::
+      co_invoke([&]() -> folly::coro::AsyncGenerator<std::string&&> {
+        // cancelCallback will be execute in the same event loop
+        // as async generator
+        folly::CancellationCallback cancelCallback(
+            co_await folly::coro::co_current_cancellation_token, [&]() {
+              canceled = true;
+              b.post();
+            });
+        co_yield "first";
+        co_await b;
+        if (!canceled) {
+          co_yield "never_reach";
+        }
+      });
+
+  struct TestSubscriber : public Subscriber<std::string> {
+    void onSubscribe(std::shared_ptr<Subscription> s) override final {
+      s->request(2);
+      s_ = std::move(s);
+    }
+
+    void onNext(std::string s) override {
+      EXPECT_EQ("first", s);
+      b1_.post();
+    }
+    void onComplete() override {
+      b2_.post();
+    }
+    void onError(folly::exception_wrapper) override {}
+    std::shared_ptr<Subscription> s_;
+    folly::Baton<> b1_, b2_;
+  };
+  auto subscriber = std::make_shared<TestSubscriber>();
+  yarpl::toFlowable(std::move(stream), th.getEventBase())
+      ->subscribe(subscriber);
+  subscriber->b1_.wait();
+  subscriber->s_->cancel();
+  subscriber->b2_.wait();
+  EXPECT_TRUE(canceled);
+}
+#endif
