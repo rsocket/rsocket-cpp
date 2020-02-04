@@ -13,9 +13,6 @@
 // limitations under the License.
 
 #include <folly/Portability.h>
-#if FOLLY_HAS_COROUTINES
-#include <folly/experimental/coro/AsyncGenerator.h>
-#endif
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <folly/synchronization/Baton.h>
@@ -25,10 +22,14 @@
 #include <vector>
 
 #include "yarpl/Flowable.h"
-#include "yarpl/flowable/AsyncGeneratorShim.h"
 #include "yarpl/flowable/Subscriber.h"
 #include "yarpl/flowable/TestSubscriber.h"
 #include "yarpl/test_utils/Mocks.h"
+
+#if FOLLY_HAS_COROUTINES
+#include <folly/experimental/coro/AsyncGenerator.h>
+#include "yarpl/flowable/AsyncGeneratorShim.h"
+#endif
 
 using namespace yarpl::flowable;
 using yarpl::Disposable;
