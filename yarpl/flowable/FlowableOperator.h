@@ -573,7 +573,7 @@ class FlatMapOperator : public FlowableOperator<T, R> {
         folly::exception_wrapper ew{std::current_exception(), exn};
         {
           std::lock_guard<std::mutex> g(onErrorExGuard_);
-          onErrorEx_ = std::move(folly::exception_wrapper{ew});
+          onErrorEx_ = ew;
         }
         // next iteration of drainLoop will cancel this subscriber as well
         drainLoop();
