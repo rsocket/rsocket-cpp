@@ -19,7 +19,6 @@
 
 using namespace yarpl;
 using namespace yarpl::flowable;
-using namespace testing;
 
 TEST(PublishProcessorTest, OnNextTest) {
   auto pp = PublishProcessor<int>::create();

@@ -32,7 +32,6 @@
 #endif
 
 using namespace yarpl::flowable;
-using yarpl::Disposable;
 using namespace testing;
 
 namespace {

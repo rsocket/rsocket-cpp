@@ -20,7 +20,6 @@
 #include <thread>
 #include "yarpl/Flowable.h"
 
-using namespace yarpl;
 using namespace yarpl::flowable;
 
 namespace {
