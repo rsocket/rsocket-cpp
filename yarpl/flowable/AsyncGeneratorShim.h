@@ -1,11 +1,12 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #pragma once
-#include <memory>
+#include <folly/executors/GlobalExecutor.h>
 #include <folly/experimental/coro/AsyncGenerator.h>
 #include <folly/experimental/coro/Baton.h>
 #include <folly/experimental/coro/Task.h>
 #include <folly/experimental/coro/WithCancellation.h>
+#include <memory>
 #include "yarpl/flowable/Flowable.h"
 
 namespace yarpl {
@@ -87,7 +88,6 @@ class AsyncGeneratorShim {
                   co_return;
                 }
 
-                size_t i = 0;
                 folly::Try<T> value;
                 try {
                   auto item = co_await self.generator_.next();
@@ -154,7 +154,7 @@ class AsyncGeneratorShim {
 template <typename T>
 std::shared_ptr<yarpl::flowable::Flowable<T>> toFlowable(
     folly::coro::AsyncGenerator<T&&> gen,
-    folly::SequencedExecutor* ex) {
+    folly::SequencedExecutor* ex = folly::getEventBase()) {
   return yarpl::flowable::internal::flowableFromSubscriber<T>(
       [gen = std::move(gen),
        ex](std::shared_ptr<yarpl::flowable::Subscriber<T>> subscriber) mutable {
