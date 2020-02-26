@@ -156,9 +156,9 @@ class Flowable : public yarpl::enable_get_ref {
 
   static std::shared_ptr<Flowable<T>> just(T value) {
     auto lambda = [value = std::move(value)](
-                      Subscriber<T>& subscriber, int64_t requested) {
+                      Subscriber<T>& subscriber, int64_t requested) mutable {
       DCHECK_GT(requested, 0);
-      subscriber.onNext(value);
+      subscriber.onNext(std::move(value));
       subscriber.onComplete();
     };
 

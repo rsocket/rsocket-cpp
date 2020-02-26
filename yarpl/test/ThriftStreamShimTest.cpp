@@ -69,4 +69,6 @@ TEST(ThriftStreamShimTest, ServerStream) {
       folly::getEventBase(), [](auto) {});
   sub.cancel();
   std::move(sub).join();
+
+  ThriftStreamShim::toServerStream(Flowable<>::just(std::make_unique<int>(42)));
 }

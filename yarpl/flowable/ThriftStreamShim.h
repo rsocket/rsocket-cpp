@@ -111,11 +111,10 @@ class ThriftStreamShim {
                   {
                     auto& payload = queue.front();
                     if (!payload.hasValue() && !payload.hasException()) {
-                      state->ex_->add(
-                          [subscriber = std::move(subscriber),
-                           keepAlive = state->ex_.copy()]() mutable {
-                            subscriber->onComplete();
-                          });
+                      state->ex_->add([subscriber = std::move(subscriber),
+                                       keepAlive = state->ex_.copy()] {
+                        subscriber->onComplete();
+                      });
                       break;
                     }
                     auto value = decode(std::move(payload));
@@ -180,7 +179,7 @@ class ThriftStreamShim {
 
       // Subscriber implementation
       void onSubscribe(std::shared_ptr<Subscription> subscription) override {
-        eb_->add([this, subscription = std::move(subscription)] {
+        eb_->add([this, subscription = std::move(subscription)]() mutable {
           if (!clientCallback_) {
             return subscription->cancel();
           }
@@ -192,7 +191,7 @@ class ThriftStreamShim {
         });
       }
       void onNext(T next) override {
-        eb_->add([this, next = std::move(next), s = self_] {
+        eb_->add([this, next = std::move(next), s = self_]() mutable {
           if (clientCallback_) {
             std::ignore =
                 clientCallback_->onStreamNext(apache::thrift::StreamPayload{
@@ -202,7 +201,7 @@ class ThriftStreamShim {
         });
       }
       void onError(folly::exception_wrapper ew) override {
-        eb_->add([this, ew = std::move(ew), s = self_] {
+        eb_->add([this, ew = std::move(ew), s = self_]() mutable {
           if (clientCallback_) {
             std::exchange(clientCallback_, nullptr)
                 ->onStreamError(
