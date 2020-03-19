@@ -22,7 +22,6 @@
 #include "yarpl/flowable/ThriftStreamShim.h"
 
 using namespace yarpl::flowable;
-using namespace testing;
 
 template <typename T>
 std::vector<T> run(
