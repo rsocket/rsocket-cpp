@@ -8,6 +8,7 @@
 #include <folly/experimental/coro/Invoke.h>
 #include <folly/experimental/coro/Task.h>
 #endif
+#include <folly/executors/SerialExecutor.h>
 
 #include <thrift/lib/cpp2/async/ClientBufferedStream.h>
 #include <thrift/lib/cpp2/async/ServerStream.h>
@@ -21,12 +22,13 @@ class ThriftStreamShim {
   template <typename T>
   static std::shared_ptr<yarpl::flowable::Flowable<T>> fromClientStream(
       apache::thrift::ClientBufferedStream<T>&& stream,
-      folly::Executor::KeepAlive<folly::SequencedExecutor> ex) {
+      folly::Executor::KeepAlive<> ex) {
     struct SharedState {
       SharedState(
           apache::thrift::detail::ClientStreamBridge::ClientPtr streamBridge,
-          folly::Executor::KeepAlive<folly::SequencedExecutor> ex)
-          : streamBridge_(std::move(streamBridge)), ex_(std::move(ex)) {}
+          folly::Executor::KeepAlive<> ex)
+          : streamBridge_(std::move(streamBridge)),
+            ex_(folly::SerialExecutor::create(std::move(ex))) {}
       apache::thrift::detail::ClientStreamBridge::Ptr streamBridge_;
       folly::Executor::KeepAlive<folly::SequencedExecutor> ex_;
       std::atomic<bool> canceled_{false};
