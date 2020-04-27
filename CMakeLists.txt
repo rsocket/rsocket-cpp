@@ -190,10 +190,6 @@ find_package(Gflags REQUIRED)
 # find glog::glog to satisfy the folly dep.
 find_package(Glog REQUIRED)
 
-# find boost::* to satisfy the folly dep
-find_package(Boost REQUIRED COMPONENTS system thread filesystem regex context
-                                       program_options)
-
 find_package(fmt CONFIG REQUIRED)
 
 include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
