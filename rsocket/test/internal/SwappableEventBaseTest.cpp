@@ -32,7 +32,7 @@ struct DidExecTracker {
   const std::string file;
   const std::string name;
   DidExecTracker(int line, std::string file, std::string name)
-    : line(line), file(file), name(name) {}
+      : line(line), file(file), name(name) {}
   MOCK_METHOD0(mark, void());
 };
 
@@ -40,10 +40,18 @@ struct DETMarkedOnce : public ::testing::CardinalityInterface {
   explicit DETMarkedOnce(DidExecTracker const& det) : det(det) {}
   DidExecTracker const& det;
 
-  int ConservativeLowerBound() const override { return 1; }
-  int ConservativeUpperBound() const override { return 1; }
-  bool IsSatisfiedByCallCount(int cc) const override { return cc == 1; }
-  bool IsSaturatedByCallCount(int cc) const override { return cc == 1; }
+  int ConservativeLowerBound() const override {
+    return 1;
+  }
+  int ConservativeUpperBound() const override {
+    return 1;
+  }
+  bool IsSatisfiedByCallCount(int cc) const override {
+    return cc == 1;
+  }
+  bool IsSaturatedByCallCount(int cc) const override {
+    return cc == 1;
+  }
 
   void DescribeTo(std::ostream* os) const override {
     *os << "is called exactly once on ";
@@ -55,19 +63,19 @@ struct DETMarkedOnce : public ::testing::CardinalityInterface {
 }
 
 class SwappableEbTest : public ::testing::Test {
-public:
+ public:
   std::vector<std::unique_ptr<folly::EventBase>> ebs;
   std::vector<std::shared_ptr<DidExecTracker>> did_exec_trackers;
 
   void loop_ebs() {
     {
       ::testing::InSequence s;
-      for(auto tracker : did_exec_trackers) {
+      for (auto tracker : did_exec_trackers) {
         EXPECT_CALL(*tracker, mark()).Times(MarkedOnce(*tracker));
       }
     }
 
-    for(auto& eb : ebs) {
+    for (auto& eb : ebs) {
       ASSERT_TRUE(eb->loop());
     }
 
@@ -76,10 +84,9 @@ public:
   }
 
   std::shared_ptr<DidExecTracker> make_did_exec_tracker_impl(
-    int line,
-    std::string const& file,
-    std::string const& name
-  ) {
+      int line,
+      std::string const& file,
+      std::string const& name) {
     did_exec_trackers.emplace_back(new DidExecTracker(line, file, name));
     return did_exec_trackers.back();
   }
