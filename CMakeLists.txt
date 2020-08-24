@@ -2,6 +2,11 @@ cmake_minimum_required(VERSION 3.2)
 
 project(ReactiveSocket)
 
+if (NOT DEFINED CPACK_GENERATOR)
+  set(CPACK_GENERATOR "RPM")
+endif()
+include(CPack)
+
 # CMake modules.
 set(CMAKE_MODULE_PATH
   "${CMAKE_SOURCE_DIR}/cmake/"
