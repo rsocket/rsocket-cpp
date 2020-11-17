@@ -35,7 +35,7 @@ std::vector<T> run(
 template <typename T>
 std::vector<T> run(apache::thrift::ServerStream<T>&& stream) {
   std::vector<T> values;
-  std::move(stream).toClientStream().subscribeInline([&](auto&& val) {
+  std::move(stream).toClientStreamUnsafeDoNotUse().subscribeInline([&](auto&& val) {
     if (val.hasValue()) {
       values.push_back(std::move(*val));
     }
@@ -50,7 +50,7 @@ apache::thrift::ClientBufferedStream<int> makeRange(int start, int count) {
     streamAndPublisher.second.next(i + start);
   }
   std::move(streamAndPublisher.second).complete();
-  return std::move(streamAndPublisher.first).toClientStream();
+  return std::move(streamAndPublisher.first).toClientStreamUnsafeDoNotUse();
 }
 
 TEST(ThriftStreamShimTest, ClientStream) {
@@ -64,7 +64,7 @@ TEST(ThriftStreamShimTest, ServerStream) {
   EXPECT_EQ(run(std::move(stream)), std::vector<long>({1, 2, 3, 4, 5}));
 
   stream = ThriftStreamShim::toServerStream(Flowable<long>::never());
-  auto sub = std::move(stream).toClientStream().subscribeExTry(
+  auto sub = std::move(stream).toClientStreamUnsafeDoNotUse().subscribeExTry(
       folly::getEventBase(), [](auto) {});
   sub.cancel();
   std::move(sub).join();
