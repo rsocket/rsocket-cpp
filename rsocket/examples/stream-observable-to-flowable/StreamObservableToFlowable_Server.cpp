@@ -73,8 +73,7 @@ class PushStreamRequestResponder : public rsocket::RSocketResponder {
                      std::string payloadData = ss.str();
                      s->onNext(Payload(payloadData, "metadata"));
                    }
-                 })
-                     .detach();
+                 }).detach();
                })
         ->toFlowable(BackpressureStrategy::DROP);
   }

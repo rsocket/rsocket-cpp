@@ -66,8 +66,7 @@ class TestHandlerCancel : public rsocket::RSocketResponder {
         } else {
           // if not cancelled would do work and emit here
         }
-      })
-          .detach();
+      }).detach();
     });
   }
 

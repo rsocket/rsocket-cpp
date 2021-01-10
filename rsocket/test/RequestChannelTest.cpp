@@ -442,13 +442,13 @@ TEST(RequestChannelTest, TestLargePayload) {
       return Payload(seedPayload.data->clone(), seedPayload.metadata->clone());
     };
 
-    auto requests = yarpl::flowable::Flowable<Payload>::create(
-                        [&](auto& subscriber, int64_t num) {
-                          while (num--) {
-                            subscriber.onNext(makePayload());
-                          }
-                        })
-                        ->take(3);
+    auto requests =
+        yarpl::flowable::Flowable<Payload>::create([&](auto& subscriber,
+                                                       int64_t num) {
+          while (num--) {
+            subscriber.onNext(makePayload());
+          }
+        })->take(3);
 
     requester->requestChannel(std::move(requests))
         ->map([&](Payload p) {

@@ -91,24 +91,20 @@ void TcpConnectionAcceptor::start(OnDuplexConnectionAccept onAccept) {
 
   // The AsyncServerSocket needs to be accessed from the listener thread only.
   // This will propagate out any exceptions the listener throws.
-  folly::via(
-      serverThread_->getEventBase(),
-      [this] {
-        serverSocket_->bind(options_.address);
+  folly::via(serverThread_->getEventBase(), [this] {
+    serverSocket_->bind(options_.address);
 
-        for (auto const& callback : callbacks_) {
-          serverSocket_->addAcceptCallback(
-              callback.get(), callback->eventBase());
-        }
+    for (auto const& callback : callbacks_) {
+      serverSocket_->addAcceptCallback(callback.get(), callback->eventBase());
+    }
 
-        serverSocket_->listen(options_.backlog);
-        serverSocket_->startAccepting();
+    serverSocket_->listen(options_.backlog);
+    serverSocket_->startAccepting();
 
-        for (const auto& i : serverSocket_->getAddresses()) {
-          VLOG(1) << "Listening on " << i.describe();
-        }
-      })
-      .get();
+    for (const auto& i : serverSocket_->getAddresses()) {
+      VLOG(1) << "Listening on " << i.describe();
+    }
+  }).get();
 }
 
 void TcpConnectionAcceptor::stop() {
