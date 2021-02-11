@@ -16,6 +16,8 @@
 
 #include <folly/synchronization/Baton.h>
 
+using namespace std::chrono;
+
 /// Simple implementation of a latch synchronization primitive, for testing.
 class Latch {
  public:
@@ -23,21 +25,33 @@ class Latch {
 
   void wait() {
     baton_.wait();
+    end = high_resolution_clock::now();
   }
 
-  bool timed_wait(std::chrono::milliseconds timeout) {
+  bool timed_wait(milliseconds timeout) {
     return baton_.timed_wait(timeout);
   }
 
   void post() {
     auto const old = count_.fetch_add(1);
+    if (old == 0) {
+        start = high_resolution_clock::now();
+    }
+
     if (old == limit_ - 1) {
       baton_.post();
     }
+  }
+
+  int elapsed_ms() {
+      auto duration = duration_cast<milliseconds>(end - start);
+      return duration.count();
   }
 
  private:
   folly::Baton<> baton_;
   std::atomic<size_t> count_{0};
   const size_t limit_{0};
+  time_point<high_resolution_clock> start;
+  time_point<high_resolution_clock> end;
 };

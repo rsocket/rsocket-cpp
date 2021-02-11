@@ -511,6 +511,34 @@ target_link_libraries(
 # request-response-hello-world
 
 add_executable(
+  benchmark-server
+  rsocket/examples/bench/Benchmark_Server.cpp
+)
+
+target_link_libraries(
+  benchmark-server
+  ReactiveSocket
+  reactivesocket_examples_util
+  yarpl
+  glog::glog
+  gflags)
+
+add_executable(
+  benchmark-client
+  rsocket/examples/bench/Benchmark_Client.cpp
+)
+
+target_link_libraries(
+  benchmark-client
+  ReactiveSocket
+  reactivesocket_examples_util
+  yarpl
+  glog::glog
+  gflags)
+
+# request-response-hello-world
+
+add_executable(
   example_request-response-hello-world-server
   rsocket/examples/request-response-hello-world/RequestResponseHelloWorld_Server.cpp
 )
