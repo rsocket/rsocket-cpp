@@ -43,8 +43,8 @@ class TcpConnectionAcceptor::SocketCallback
     onAccept_(std::move(connection), *eventBase());
   }
 
-  void acceptError(const std::exception& ex) noexcept override {
-    VLOG(2) << "TCP error: " << ex.what();
+  void acceptError(folly::exception_wrapper ex) noexcept override {
+    VLOG(2) << "TCP error: " << ex;
   }
 
   folly::EventBase* eventBase() const {
