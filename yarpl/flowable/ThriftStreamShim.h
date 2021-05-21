@@ -161,7 +161,8 @@ class ThriftStreamShim {
       ~StreamServerCallbackAdaptor() {
         if (interaction_) {
           std::move(eb_).add([interaction = interaction_](auto eb) {
-            interaction->__fbthrift_releaseRef(*eb);
+            interaction->__fbthrift_releaseRef(
+                *eb, apache::thrift::InteractionReleaseEvent::STREAM_END);
           });
         }
       }
