@@ -156,16 +156,11 @@ class ThriftStreamShim {
       StreamServerCallbackAdaptor(
           folly::Try<apache::thrift::StreamPayload> (*encode)(folly::Try<T>&&),
           folly::EventBase* eb,
-          apache::thrift::Tile* interaction)
-          : encode_(encode), eb_(eb), interaction_(interaction) {}
-      ~StreamServerCallbackAdaptor() {
-        if (interaction_) {
-          std::move(eb_).add([interaction = interaction_](auto eb) {
-            interaction->__fbthrift_releaseRef(
-                *eb, apache::thrift::InteractionReleaseEvent::STREAM_END);
-          });
-        }
-      }
+          apache::thrift::TilePtr&& interaction)
+          : encode_(encode),
+            eb_(eb),
+            interaction_(apache::thrift::TileStreamGuard::transferFrom(
+                std::move(interaction))) {}
       // StreamServerCallback implementation
       bool onStreamRequestN(uint64_t tokens) override {
         if (!subscription_) {
@@ -241,7 +236,7 @@ class ThriftStreamShim {
       folly::Try<apache::thrift::StreamPayload> (*encode_)(folly::Try<T>&&);
       folly::Executor::KeepAlive<folly::EventBase> eb_;
       std::shared_ptr<StreamServerCallbackAdaptor> self_;
-      apache::thrift::Tile* interaction_;
+      apache::thrift::TileStreamGuard interaction_;
     };
 
     return apache::thrift::ServerStream<T>(
@@ -254,9 +249,9 @@ class ThriftStreamShim {
                   apache::thrift::FirstResponsePayload&& payload,
                   apache::thrift::StreamClientCallback* callback,
                   folly::EventBase* clientEb,
-                  apache::thrift::Tile* interaction) mutable {
+                  apache::thrift::TilePtr&& interaction) mutable {
                 auto stream = std::make_shared<StreamServerCallbackAdaptor>(
-                    encode, clientEb, interaction);
+                    encode, clientEb, std::move(interaction));
                 stream->takeRef(stream);
                 stream->resetClientCallback(*callback);
                 std::ignore = callback->onFirstResponse(
