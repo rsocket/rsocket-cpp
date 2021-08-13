@@ -12,6 +12,7 @@
 
 #include <thrift/lib/cpp2/async/ClientBufferedStream.h>
 #include <thrift/lib/cpp2/async/ServerStream.h>
+#include <thrift/lib/cpp2/async/StreamCallbacks.h>
 #include <yarpl/flowable/Flowable.h>
 
 namespace yarpl {
@@ -154,7 +155,7 @@ class ThriftStreamShim {
           public Subscriber<T> {
      public:
       StreamServerCallbackAdaptor(
-          folly::Try<apache::thrift::StreamPayload> (*encode)(folly::Try<T>&&),
+          apache::thrift::detail::StreamElementEncoder<T>* encode,
           folly::EventBase* eb,
           apache::thrift::TilePtr&& interaction)
           : encode_(encode),
@@ -201,8 +202,7 @@ class ThriftStreamShim {
           if (clientCallback_) {
             std::ignore =
                 clientCallback_->onStreamNext(apache::thrift::StreamPayload{
-                    encode_(folly::Try<T>(std::move(next))).value().payload,
-                    {}});
+                    (*encode_)(std::move(next)).value().payload, {}});
           }
         });
       }
@@ -210,8 +210,7 @@ class ThriftStreamShim {
         eb_->add([this, ew = std::move(ew), s = self_]() mutable {
           if (clientCallback_) {
             std::exchange(clientCallback_, nullptr)
-                ->onStreamError(
-                    encode_(folly::Try<T>(std::move(ew))).exception());
+                ->onStreamError((*encode_)(std::move(ew)).exception());
             self_.reset();
           }
         });
@@ -233,7 +232,7 @@ class ThriftStreamShim {
       apache::thrift::StreamClientCallback* clientCallback_{nullptr};
       std::shared_ptr<Subscription> subscription_;
       uint32_t tokensBeforeSubscribe_{0};
-      folly::Try<apache::thrift::StreamPayload> (*encode_)(folly::Try<T>&&);
+      apache::thrift::detail::StreamElementEncoder<T>* encode_;
       folly::Executor::KeepAlive<folly::EventBase> eb_;
       std::shared_ptr<StreamServerCallbackAdaptor> self_;
       apache::thrift::TileStreamGuard interaction_;
@@ -242,8 +241,7 @@ class ThriftStreamShim {
     return apache::thrift::ServerStream<T>(
         [flowable = std::move(flowable)](
             folly::Executor::KeepAlive<>,
-            folly::Try<apache::thrift::StreamPayload> (*encode)(
-                folly::Try<T> &&)) mutable {
+            apache::thrift::detail::StreamElementEncoder<T>* encode) mutable {
           return apache::thrift::detail::ServerStreamFactory(
               [flowable = std::move(flowable), encode](
                   apache::thrift::FirstResponsePayload&& payload,
