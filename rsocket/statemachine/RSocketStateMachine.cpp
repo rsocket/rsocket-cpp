@@ -530,8 +530,7 @@ void RSocketStateMachine::onKeepAliveFrame(
     }
   } else {
     if (keepAliveRespond) {
-      closeWithError(Frame_ERROR::connectionError(
-          "client received keepalive with respond flag"));
+      sendKeepalive(FrameFlags::EMPTY_, std::move(data));
     } else if (keepaliveTimer_) {
       keepaliveTimer_->keepaliveReceived();
     }
