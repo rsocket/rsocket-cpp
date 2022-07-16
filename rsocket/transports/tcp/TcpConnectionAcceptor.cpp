@@ -31,7 +31,8 @@ class TcpConnectionAcceptor::SocketCallback
 
   void connectionAccepted(
       folly::NetworkSocket fdNetworkSocket,
-      const folly::SocketAddress& address) noexcept override {
+      const folly::SocketAddress& address,
+      folly::AsyncServerSocket::AcceptCallback::AcceptInfo info) noexcept override {
     int fd = fdNetworkSocket.toFd();
 
     VLOG(2) << "Accepting TCP connection from " << address << " on FD " << fd;
